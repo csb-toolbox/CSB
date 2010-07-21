@@ -1,5 +1,3 @@
-
-
 def fit(X, Y):
     """
     returns the translation vector and the rotation matrix
@@ -16,8 +14,8 @@ def fit(X, Y):
     @param Y: 3 x n  input vector
     @type Y: numpy array
 
-    @return 3 x 3 rotation matrix and 3 x 1 translation vector
-    @rtype tuple
+    @return: 3 x 3 rotation matrix and 3 x 1 translation vector
+    @rtype: tuple
     """
 
     from numpy.linalg import svd, det
@@ -30,7 +28,7 @@ def fit(X, Y):
 
     ## SVD of correlation matrix
 
-    V, L, U = svd(dot(transpose(X-x), Y-y))
+    V, _L, U = svd(dot(transpose(X-x), Y-y))
 
     ## calculate rotation and translation
 
@@ -63,8 +61,8 @@ def wfit(X, Y, w):
     @param w: input weights
     @type w: numpy array
 
-    @return 3 x 3 rotation matrix and 3 x 1 translation vector
-    @rtype tuple
+    @return: 3 x 3 rotation matrix and 3 x 1 translation vector
+    @rtype: tuple
     """
 
     from numpy.linalg import svd, det
@@ -78,7 +76,7 @@ def wfit(X, Y, w):
 
     ## SVD of correlation matrix
 
-    V, L, U = svd(dot(transpose(X-x)*w, Y-y))
+    V, _L, U = svd(dot(transpose(X-x)*w, Y-y))
 
     ## calculate rotation and translation
 
@@ -99,7 +97,7 @@ def fit_wellordered(X, Y, n_iter = None, n_stdv = 2, tol_rmsd = .5,
     highly deviating entries
 
     (Reference: Nilges et al.: Delineating well-ordered regions in
-                protein structure ensembles).
+    protein structure ensembles).
 
 
     @param X: 3 x n input vector
@@ -167,14 +165,12 @@ def fit_wellordered(X, Y, n_iter = None, n_stdv = 2, tol_rmsd = .5,
 
         ## throw out non-matching rows
 
-	new_mask = mask * (d < rmsd + n_stdv * stdv)
-	    
-	outliers = nonzero(mask - new_mask)
-	
+        new_mask = mask * (d < rmsd + n_stdv * stdv)
+        outliers = nonzero(mask - new_mask)    
         rmsd_list.append([perc, rmsd, outliers])
 
-	mask = new_mask
-	
+        mask = new_mask
+    
         if n_iter and n >= n_iter: break
 
         n += 1
@@ -195,7 +191,7 @@ def rmsd(X,Y):
     @param Y: 3 x n  input vector
     @type Y: numpy array
 
-    @return rmsd value between the input vactor
+    @return: rmsd value between the input vectors
     """
 
     from numpy import sum, dot, transpose, sqrt, clip, average
@@ -210,3 +206,66 @@ def rmsd(X,Y):
     L = svd(dot(transpose(Y),X))[1]
 
     return sqrt(clip(R_x + R_y - 2*sum(L), 0., 1e300) / len(X))
+
+def tm_score(x, y, fit_method=None):
+    """
+    Compute the TM-score of two protein coordinate vector sets. 
+    Reference:  hang.bioinformatics.ku.edu/TM-score
+    
+    @param x: 3 x n input vector
+    @type x: numpy.array
+    @param y: 3 x n  input vector
+    @type y: numpy.array
+    @param fit_method: a reference to a proper fitting function, e.g. fit
+                       or fit_wellordered    
+    @type fit_method: function
+    
+    @return: computed TM-Score between the vectors
+    @rtype: float
+    """
+    from numpy import array, sum, dot, compress, power
+
+    if fit_method is None:
+        fit_method = fit
+        
+    x = array(x)
+    y = array(y)        
+    
+    Lmin = len(x)
+    if Lmin > 15:
+        d0 = 1.24 * power(Lmin - 15.0, 1.0 / 3.0) - 1.8
+    else:
+        d0 = 0.5
+        
+    R, t = fit_method(x, y)
+
+    d = sum((x - dot(y, R.T) - t)**2, 1)**0.5
+    a = sum(1 / (1 + (d / d0)**2))
+
+    # first iteration
+    cutoff = min(max(4.5, d0), 8.0)
+
+    while True:
+        mask = (d < cutoff).astype('i')
+        if sum(mask) > 3: 
+            break
+        cutoff += 0.5
+        
+    R, t = fit_method(compress(mask, x, 0), compress(mask, y, 0))
+    d = sum((x - dot(y, R.T) - t)**2, 1)**0.5
+    b = sum(1 / (1 + (d / d0)**2))
+
+    # second iteration
+    cutoff = min(max(4.5, d0), 8.0) + 1
+
+    while True:
+        mask = (d < cutoff).astype('i')
+        if sum(mask) > 3: 
+            break
+        cutoff += 0.5
+
+    R, t = fit_method(compress(mask, x, 0), compress(mask, y, 0))
+    d = sum((x - dot(y, R.T) - t)**2, 1)**0.5
+    c = sum(1 / (1 + (d / d0)**2))
+
+    return max([a, b, c]) / len(x) 

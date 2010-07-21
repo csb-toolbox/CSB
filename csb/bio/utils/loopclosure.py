@@ -46,7 +46,7 @@ def loop_closure(moving, fixed, min_rmsd = 0.1, maxit = 10000):
             pivot = result[i,:]
 
             # Solve for rotation by svd
-            V, L, U = svd(dot(transpose(fixed - pivot),
+            V, _L, U = svd(dot(transpose(fixed - pivot),
                               result[-3:,:] - pivot))
 
             # Calc rotation 
@@ -103,7 +103,7 @@ def rotate_last_three(chain):
 
     from numpy.random import random
     from numpy import pi, arccos, dot, transpose
-    from csbtbx.random.random_rotation import euler
+    from csb.random.random_rotation import euler
 
     alpha = random() * 2 * pi
     gamma = random() * 2 * pi

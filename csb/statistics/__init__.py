@@ -142,7 +142,7 @@ def entropy(p):
     Calculates the entropy of p 
     @return: entropy of p
     """
-    from cstbx.math import log
+    from csb.math import log
     from numpy import sum
     
     return -sum(p * log(p))

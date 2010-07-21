@@ -28,7 +28,7 @@ def kl(p, q):
     @type q: numpy array
     """
     
-    from csbtbx import log
+    from csb.math import log
     from numpy import sum
 
     lp = log(p)
@@ -48,7 +48,7 @@ def symmetrizedkl(p,q):
     @type q: numpy array
     """
     
-    from csbtbx import log
+    from csb.math import log
     from numpy import sum
 
     lp = log(p)

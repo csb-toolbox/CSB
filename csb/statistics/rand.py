@@ -24,7 +24,7 @@ def truncated_gamma(shape=None, alpha=1., beta=1., x_min=None, x_max=None):
     @return: random variates of lower-bounded gamma distribution
     """
     from scipy.special import gammainc, gammaincinv
-    from csbtbx.math import log
+    from csb.math import log
     from numpy.random import random, gamma
     from numpy import inf
 
@@ -55,7 +55,7 @@ def truncated_normal(shape=None, mu=0., sigma=1., x_min=None, x_max=None):
     @return: random variates of lower-bounded normal distribution
     """
     from scipy.special import erf, erfinv
-    from csbtbx.math import log
+    from csb.math import log
     from numpy.random import random, standard_normal
     from numpy import inf, sqrt
 
@@ -81,7 +81,7 @@ def test_truncated_gamma(alpha = 2., beta  = 1., x_min = 0.1, x_max = 5.):
     from numpy import histogram, linspace
     from gnuplot import plot
     from scipy.special import gammaln
-    from csbtbx.math import exp, log_sum_exp, log
+    from csb.math import exp, log_sum_exp, log
     
     x = truncated_gamma(10000, alpha, beta, x_min, x_max)
 
@@ -102,7 +102,7 @@ def test_truncated_normal(mu = 2., sigma  = 1., x_min = 0.1, x_max = 5.):
     from numpy import histogram, linspace
     from gnuplot import plot
     from scipy.special import gammaln
-    from csbtbx.math import exp, log_sum_exp, log
+    from csb.math import exp, log_sum_exp, log
     
     x = truncated_normal(10000, mu, sigma, x_min, x_max)
 
