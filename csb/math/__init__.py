@@ -11,10 +11,10 @@ def log(x, x_min=LOG_MIN, x_max=LOG_MAX):
     @type x: numpy array or float or int
 
     @param x_min: lower value for clipping
-    @type x: float
+    @type x_min: float
 
     @param x_max: upper value for clipping
-    @type x: float
+    @type x_max: float
     """    
     from numpy import log, clip
 
@@ -31,10 +31,10 @@ def exp(x, x_min=EXP_MIN, x_max=EXP_MAX):
     @type x: numpy array or float or int
 
     @param x_min: lower value for clipping
-    @type x: float
+    @type x_min: float
 
     @param x_max: upper value for clipping
-    @type x: float
+    @type x_max: float
     """
     from numpy import exp, clip
 

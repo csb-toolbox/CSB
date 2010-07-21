@@ -10,7 +10,7 @@ def load_data(aa, ss='all', path = '~/data/dunbrack', isd = True):
     """
     from numpy import array, compress, transpose, where, pi, fmod
     import sys, os
-    from csbtbx.math import degree2radian
+    from csb.math import degree2radian
     
     sys.path.insert(0,os.path.expanduser(path))
     from pystartup import Load
@@ -30,7 +30,7 @@ def map_to_isd(angles):
     """
     map dihedrals angles in torsion degrees to the ISD definition
     """
-    from csbtbx.math import degree2radian
+    from csb.math import degree2radian
     from numpy import array, pi, fmod
     angles = fmod(array(angles),180.)
 
@@ -62,7 +62,7 @@ def torsion_to_radian(phi, psi, radian = 0):
     Comverts a torsian angle to radian
     """
     
-    from csbtbx.math import degree2radian
+    from csb.math import degree2radian
     if radian == 1:
         phi = degree2radian(phi)
         psi = degree2radian(psi)
@@ -95,7 +95,7 @@ class MaxentModel:
         """
 
         from numpy import arange, meshgrid, pi, array
-        from csbtbx.math import exp
+        from csb.math import exp
         try:
             import matplotlib.cm as cm
             import matplotlib.pyplot as plt
@@ -137,7 +137,7 @@ class MaxentModel:
                  aa, path = '~/mnt/tay/mechelke/projects/isd/toppar/maxent_potentials'):
         import os
         from numpy import arange, zeros
-        from csbtbx.io import Load
+        from csb.io import Load
 
         
         params, energies = eval(open(os.path.expanduser(path)).read())
@@ -158,7 +158,7 @@ class MaxentModel:
              path = '~/mnt/tay/mechelke/projects/isd/toppar/maxent_potentials_v3'):
         import os
         from numpy import arange, zeros, reshape, array
-        from csbtbx.io import Load
+        from csb.io import Load
         
         path = os.path.expanduser(path)
         params, energies = Load(path)
@@ -234,7 +234,7 @@ class MaxentModel:
         self.normalize(True)
         
     def prob(self, x, y):
-        from csbtbx.math import exp
+        from csb.math import exp
         return exp(-self.beta * self(x, y))
         
     def Z(self):
@@ -247,7 +247,7 @@ class MaxentModel:
     def logZ2(self, n=500):
 
         from numpy import pi, linspace, sum, array
-        from csbtbx.math import log_sum_exp, log, exp
+        from csb.math import log_sum_exp, log, exp
 
         x = linspace(0.,2*pi,n)
         dx= x[1]-x[0]
@@ -259,8 +259,8 @@ class MaxentModel:
         using trapezoidal rule
         """
         from numpy import pi, linspace, sum, array
-        from csbtbx.numeric import trapezoidal2D
-        from csbtbx.math import log_sum_exp, log, exp
+        from csb.numeric import trapezoidal2D
+        from csb.math import log_sum_exp, log, exp
 
         x = linspace(0.,2*pi,n)
         dx= x[1]-x[0]
@@ -278,8 +278,8 @@ class MaxentModel:
         using Simpson rule
         """
         from numpy import pi, linspace, sum, array
-        from csbtbx.numeric import simpson2D
-        from csbtbx.math import log_sum_exp, log, exp
+        from csb.numeric import simpson2D
+        from csb.math import log_sum_exp, log, exp
         
         x = linspace(0.,2*pi,2*n+1)
         dx= x[1]-x[0]
@@ -293,9 +293,9 @@ class MaxentModel:
         return log(I) + f_max + 2 * log(dx)
 
     def entropy(self,n=500):
-        from csbtbx.numeric import trapezoidal2D
+        from csb.numeric import trapezoidal2D
         from numpy import pi, linspace, sum, array
-        from csbtbx.math import log_sum_exp, log, exp
+        from csb.math import log_sum_exp, log, exp
         
         x = linspace(0.,2*pi,n)
         dx= x[1]-x[0]
@@ -428,8 +428,8 @@ class MetropolisSampler:
 
 if __name__ == '__main__':
     from numpy import *
-    from csbtbx.statistics import Posterior, MetropolisSampler, MaxentModel
-    from csbtbx.statistics.MaxEnt import load_data
+    from csb.statistics import Posterior, MetropolisSampler, MaxentModel
+    from csb.statistics.MaxEnt import load_data
     from scipy.optimize import fmin_powell
     aa, ss = 'ALA','H'
     k = 5
