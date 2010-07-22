@@ -6,14 +6,14 @@ class UnbufferedStreamWrapper(object):
     @param stream: the stream object to wrap
     @type stream: file
     """
-    
+
     def __init__(self, stream):
         self.stream = stream
-    
+
     def write(self, data):
-        self.stream.write(data)    
+        self.stream.write(data)
         self.stream.flush()
-        
+
     def flush(self):
         self.stream.flush()
 
@@ -30,16 +30,16 @@ class EntryReader(object):
     @type end_marker: str, None
     """
     def __init__(self, stream, start_marker, end_marker):
-        
+
         if not (hasattr(stream, 'seek') and hasattr(stream, 'readline')):
             raise TypeError('The entry reader requires an opened stream.')
-        
+
         stream.seek(0)
         self._stream = stream
-        
+
         self.start_marker = start_marker
-        self.end_marker = end_marker 
-    
+        self.end_marker = end_marker
+
     def entries(self):
         """
         Return an iterator over all entries from the stream/flat file.
@@ -50,14 +50,14 @@ class EntryReader(object):
 
         entry = ''
         in_entry = False
-        
-        while True:            
+
+        while True:
             line = self._stream.readline()
-            
+
             if not in_entry:
                 if line.startswith(self.start_marker):
                     in_entry = True
-                    entry = line                    
+                    entry = line
             else:
                 if line.startswith(self.start_marker):
                     yield entry
@@ -66,13 +66,13 @@ class EntryReader(object):
                     yield entry
                     break
                 else:
-                    entry += line                    
-                    
+                    entry += line
+
             if not line:
                 break
 
-        self._stream.close()     
-        
+        self._stream.close()
+
     def readall(self):
         """
         Return a list of all entries in the stream.
@@ -81,7 +81,7 @@ class EntryReader(object):
         """
         return list(self.entries())
 
-def dump(this, filename, gzip=False, lock=None, lock_path = '~/'):
+def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
     """
     Writes a python object to a file, using python cPickle
     Supports also '~' or '~user'.
@@ -99,7 +99,7 @@ def dump(this, filename, gzip=False, lock=None, lock_path = '~/'):
     ## check whether file is locked
     if lock is not None:
 
-        path, file = os.path.split(filename)
+        _path, file = os.path.split(filename)
         lockfile = '%s/%s.lock' % (lock_path, file)
 
         if os.path.exists(lockfile):
@@ -109,13 +109,13 @@ def dump(this, filename, gzip=False, lock=None, lock_path = '~/'):
         open(lockfile, 'w').close()
 
     filename = os.path.expanduser(filename)
-        
+
     if gzip:
         import gzip
         f_handle = gzip.GzipFile(filename, 'w')
     else:
         f_handle = open(filename, 'w')
-        
+
     if type(this).__name__ == 'array':
         import Numeric
         p = Numeric.Pickler(f_handle)
@@ -124,7 +124,7 @@ def dump(this, filename, gzip=False, lock=None, lock_path = '~/'):
     else:
         import cPickle
         cPickle.dump(this, f_handle, 1)
-        
+
     f_handle.close()
 
     if lock is not None:
@@ -135,7 +135,7 @@ def dump(this, filename, gzip=False, lock=None, lock_path = '~/'):
             raise IOError('missing lockfile %s' % lockfile)
 
 
-def load(filename, gzip=False, lock=None, lock_path = '~/'):
+def load(filename, gzip=False, lock=None, lock_path='~/'):
     """
     Unpickle an object from filename
     
@@ -151,9 +151,9 @@ def load(filename, gzip=False, lock=None, lock_path = '~/'):
 
     ## file locked?
     if lock is not None:
-        path, file = os.path.split(filename)
+        _path, file = os.path.split(filename)
         lockfile = '%s/%s.lock' % (lock_path, file)
-        
+
         if os.path.exists(lockfile):
             raise IOError('%s is locked (%s)' % (filename, lockfile))
 
@@ -161,14 +161,14 @@ def load(filename, gzip=False, lock=None, lock_path = '~/'):
         open(lockfile, 'w').close()
 
     filename = os.path.expanduser(filename)
-        
+
     if gzip:
         import gzip
         try:
             f_handle = gzip.GzipFile(filename)
         except:
             return
-        
+
     f_handle = open(filename)
 
     try:
@@ -180,7 +180,7 @@ def load(filename, gzip=False, lock=None, lock_path = '~/'):
             f_handle = gzip.GzipFile(filename)
         except:
             f_handle = open(filename)
-        
+
         unpickler = Numeric.Unpickler(f_handle)
         this = unpickler.load()
 

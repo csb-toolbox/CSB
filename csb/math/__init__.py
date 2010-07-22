@@ -15,7 +15,7 @@ def log(x, x_min=LOG_MIN, x_max=LOG_MAX):
 
     @param x_max: upper value for clipping
     @type x_max: float
-    """    
+    """
     from numpy import log, clip
 
     x_min = max(x_min, LOG_MIN)
@@ -47,7 +47,7 @@ def sign(x):
     """
     Return the sign of the input.
     """
-    return 2 * int(x>=0.) - 1
+    return 2 * int(x >= 0.) - 1
 
 def isreal(x, tol=1e-14):
     """
@@ -59,7 +59,7 @@ def isreal(x, tol=1e-14):
     @param tol: tolerance to check for equality zero
     @type tol: float
     """
-    return not hasattr(x,'real') or abs(x.imag) < tol
+    return not hasattr(x, 'real') or abs(x.imag) < tol
 
 def log_sum_exp(x, axis=0):
     """
@@ -69,7 +69,7 @@ def log_sum_exp(x, axis=0):
     """
     xmax = x.max(axis)
 
-    return log(exp(x-xmax).sum(axis)) + xmax
+    return log(exp(x - xmax).sum(axis)) + xmax
 
 def radian2degree(x):
     """
@@ -80,8 +80,8 @@ def radian2degree(x):
     """
     from numpy import pi, putmask
 
-    x = x % (2*pi)
-    putmask(x, x>pi, x-2*pi)
+    x = x % (2 * pi)
+    putmask(x, x > pi, x - 2 * pi)
     return x * 180. / pi
 
 def degree2radian(x):
@@ -93,6 +93,6 @@ def degree2radian(x):
     """
     from numpy import pi, putmask
 
-    putmask(x, x<0., x+360.)
+    putmask(x, x < 0., x + 360.)
     return x * pi / 180.
 
