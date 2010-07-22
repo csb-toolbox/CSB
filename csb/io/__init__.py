@@ -81,7 +81,7 @@ class EntryReader(object):
         """
         return list(self.entries())
 
-def Dump(this, filename, gzip=False, lock=None):
+def dump(this, filename, gzip=False, lock=None, lock_path = '~/'):
     """
     Writes a python object to a file, using python cPickle
     Supports also '~' or '~user'.
@@ -96,13 +96,11 @@ def Dump(this, filename, gzip=False, lock=None):
     """
 
     import os
-    
     ## check whether file is locked
     if lock is not None:
-        import os
 
         path, file = os.path.split(filename)
-        lockfile = '%s/%s.lock' % (__lockPath, file)
+        lockfile = '%s/%s.lock' % (lock_path, file)
 
         if os.path.exists(lockfile):
             raise '%s is locked (%s)' % (filename, lockfile)
@@ -114,31 +112,30 @@ def Dump(this, filename, gzip=False, lock=None):
         
     if gzip:
         import gzip
-        f = gzip.GzipFile(filename, 'w')
+        f_handle = gzip.GzipFile(filename, 'w')
     else:
-        f = open(filename, 'w')
+        f_handle = open(filename, 'w')
         
     if type(this).__name__ == 'array':
         import Numeric
-        p = Numeric.Pickler(f)
+        p = Numeric.Pickler(f_handle)
         p.dump(this)
 
     else:
         import cPickle
-        cPickle.dump(this, f, 1)
+        cPickle.dump(this, f_handle, 1)
         
-    f.close()
+    f_handle.close()
 
     if lock is not None:
         ## release lock
-        import os
         try:
             os.remove(lockfile)
         except:
-            raise 'missing lockfile %s' % lockfile
+            raise IOError('missing lockfile %s' % lockfile)
 
 
-def Load(filename, gzip=False, lock=None):
+def load(filename, gzip=False, lock=None, lock_path = '~/'):
     """
     Unpickle an object from filename
     
@@ -151,15 +148,14 @@ def Load(filename, gzip=False, lock=None):
     """
     import cPickle, os
 
+
     ## file locked?
     if lock is not None:
-        import os
-
         path, file = os.path.split(filename)
-        lockfile = '%s/%s.lock' % (__lockPath, file)
+        lockfile = '%s/%s.lock' % (lock_path, file)
         
         if os.path.exists(lockfile):
-            raise '%s is locked (%s)' % (filename, lockfile)
+            raise IOError('%s is locked (%s)' % (filename, lockfile))
 
         ## lock file
         open(lockfile, 'w').close()
@@ -169,35 +165,33 @@ def Load(filename, gzip=False, lock=None):
     if gzip:
         import gzip
         try:
-            f = gzip.GzipFile(filename)
+            f_handle = gzip.GzipFile(filename)
         except:
             return
         
-    f = open(filename)
+    f_handle = open(filename)
 
     try:
-        this = cPickle.load(f)
+        this = cPickle.load(f_handle)
     except:
         import Numeric
-
-        f.close()
+        f_handle.close()
         try:
-            f = gzip.GzipFile(filename)
+            f_handle = gzip.GzipFile(filename)
         except:
-            f = open(filename)
+            f_handle = open(filename)
         
-        u = Numeric.Unpickler(f)
-        this = u.load()
+        unpickler = Numeric.Unpickler(f_handle)
+        this = unpickler.load()
 
-    f.close()
+    f_handle.close()
 
     if lock is not None:
         ## release lock
-        import os
         try:
             os.remove(lockfile)
         except:
-            raise 'missing lockfile %s' % lockfile
+            raise IOError('missing lockfile %s' % lockfile)
 
     return this
 
