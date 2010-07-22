@@ -133,7 +133,7 @@ class ProfileHMM(object):
         @param output_file: the output file name
         @type output_file: str
         @param convert_scores: if True, forces automatic convertion to
-                              L{ScoreUnits.LogScales}, which is required
+                              L{ScoreUnits}.LogScales, which is required
                               by the output file format
         @type convert_scores: bool
         """          
