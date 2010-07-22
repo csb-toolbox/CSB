@@ -106,28 +106,6 @@ class Sequence(object):
         
         return seq     
     
-    @staticmethod
-    def parse(fasta_file):
-        """
-        Read a FASTA formatted file.
-        
-        @param fasta_file: the input FASTA file name
-        @type fasta_file: str
-        
-        @return: a list of L{Sequence}s
-        @rtype: list
-        
-        @raise ValueError: if the sequence contains invalid characters
-                           according to the protein FASTA format
-        """
-        seqs = []
-        reader = csb.io.EntryReader(open(fasta_file), '>', None)
-        
-        for entry in reader.entries():
-            seqs.append(Sequence.from_string(entry))
-        
-        return seqs   
-    
 class PDBSequence(Sequence):
     """ 
     Simple FASTA sequence entry.
@@ -182,28 +160,6 @@ class PDBSequence(Sequence):
             stype = SequenceTypes.Unknown
         
         return PDBSequence(id=id, header=seq.header, sequence=seq.sequence, type=stype)
-    
-    @staticmethod
-    def parse(fasta_file):
-        """
-        Read a PDB FASTA formatted file.
-        
-        @param fasta_file: the input PDB FASTA file name
-        @type fasta_file: str
-        
-        @return: a list of L{PDBSequence}s
-        @rtype: list
-        
-        @raise ValueError: if the sequence contains invalid characters
-                           according to the protein FASTA format
-        """
-        seqs = []
-        reader = csb.io.EntryReader(open(fasta_file), '>', None)
-        
-        for entry in reader.entries():
-            seqs.append(PDBSequence.from_string(entry))
-        
-        return seqs     
 
 class _A3MFormatter(object):
     
