@@ -20,15 +20,15 @@ def fit(X, Y):
 
     from numpy.linalg import svd, det
     from numpy import dot, transpose, average
-    
+
     ## center configurations
 
-    x = average(X,0)
-    y = average(Y,0)
+    x = average(X, 0)
+    y = average(Y, 0)
 
     ## SVD of correlation matrix
 
-    V, _L, U = svd(dot(transpose(X-x), Y-y))
+    V, _L, U = svd(dot(transpose(X - x), Y - y))
 
     ## calculate rotation and translation
 
@@ -37,9 +37,9 @@ def fit(X, Y):
     if det(R) < 0.:
         U[-1] *= -1
         R = dot(V, U)
-        
+
     t = x - dot(R, y)
-    
+
     return R, t
 
 def wfit(X, Y, w):
@@ -67,16 +67,16 @@ def wfit(X, Y, w):
 
     from numpy.linalg import svd, det
     from numpy import dot, transpose, average
-    
+
     ## center configurations
 
     norm = sum(w)
-    x = dot(w,X) / norm
-    y = dot(w,Y) / norm
+    x = dot(w, X) / norm
+    y = dot(w, Y) / norm
 
     ## SVD of correlation matrix
 
-    V, _L, U = svd(dot(transpose(X-x)*w, Y-y))
+    V, _L, U = svd(dot(transpose(X - x) * w, Y - y))
 
     ## calculate rotation and translation
 
@@ -85,13 +85,13 @@ def wfit(X, Y, w):
     if det(R) < 0.:
         U[2] *= -1
         R = dot(V, U)
-        
+
     t = x - dot(R, y)
-    
+
     return R, t
 
-def fit_wellordered(X, Y, n_iter = None, n_stdv = 2, tol_rmsd = .5,
-                    tol_stdv = 0.05, full_output = False):
+def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
+                    tol_stdv=0.05, full_output=False):
     """
     Matches two arrays onto each other by iteratively throwing out
     highly deviating entries
@@ -114,10 +114,10 @@ def fit_wellordered(X, Y, n_iter = None, n_stdv = 2, tol_rmsd = .5,
 
     @param full_output: also return full history of values calculated by the algorithm
     """
-    
+
     from numpy import ones, compress, dot, transpose, sqrt, sum, nonzero, std, average
-    
-    
+
+
     rmsd_list = []
 
     rmsd_old = 0.
@@ -127,20 +127,20 @@ def fit_wellordered(X, Y, n_iter = None, n_stdv = 2, tol_rmsd = .5,
     converged = False
 
     mask = ones(X.shape[0])
-    
+
     while not converged:
 
         ## find transformation for best match
-        
+
         R, t = fit(compress(mask, X, 0), compress(mask, Y, 0))
 
         ## calculate RMSD profile
-        
-        d = sqrt(sum((X - dot(Y,transpose(R))-t)**2, 1))
-        
+
+        d = sqrt(sum((X - dot(Y, transpose(R)) - t) ** 2, 1))
+
         ## calculate rmsd and stdv
-        
-        rmsd = sqrt(average(compress(mask, d)**2,0))
+
+        rmsd = sqrt(average(compress(mask, d) ** 2, 0))
         stdv = std(compress(mask, d))
 
         ## check conditions for convergence
@@ -166,22 +166,22 @@ def fit_wellordered(X, Y, n_iter = None, n_stdv = 2, tol_rmsd = .5,
         ## throw out non-matching rows
 
         new_mask = mask * (d < rmsd + n_stdv * stdv)
-        outliers = nonzero(mask - new_mask)    
+        outliers = nonzero(mask - new_mask)
         rmsd_list.append([perc, rmsd, outliers])
 
         mask = new_mask
-    
+
         if n_iter and n >= n_iter: break
 
         n += 1
 
     if full_output:
-        return (R,t), rmsd_list
+        return (R, t), rmsd_list
     else:
-        return (R,t)
-    
+        return (R, t)
 
-def rmsd(X,Y):
+
+def rmsd(X, Y):
     """
     Calculate the root mean squared deviation (RMSD) using Kabsch' formula 
 
@@ -196,16 +196,16 @@ def rmsd(X,Y):
 
     from numpy import sum, dot, transpose, sqrt, clip, average
     from numpy.linalg import svd
-    
-    X = X - average(X,0)
-    Y = Y - average(Y,0)
 
-    R_x = sum(X**2)
-    R_y = sum(Y**2)
-    
-    L = svd(dot(transpose(Y),X))[1]
+    X = X - average(X, 0)
+    Y = Y - average(Y, 0)
 
-    return sqrt(clip(R_x + R_y - 2*sum(L), 0., 1e300) / len(X))
+    R_x = sum(X ** 2)
+    R_y = sum(Y ** 2)
+
+    L = svd(dot(transpose(Y), X))[1]
+
+    return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300) / len(X))
 
 def tm_score(x, y, fit_method=None):
     """
@@ -227,45 +227,45 @@ def tm_score(x, y, fit_method=None):
 
     if fit_method is None:
         fit_method = fit
-        
+
     x = array(x)
-    y = array(y)        
-    
+    y = array(y)
+
     Lmin = len(x)
     if Lmin > 15:
         d0 = 1.24 * power(Lmin - 15.0, 1.0 / 3.0) - 1.8
     else:
         d0 = 0.5
-        
+
     R, t = fit_method(x, y)
 
-    d = sum((x - dot(y, R.T) - t)**2, 1)**0.5
-    a = sum(1 / (1 + (d / d0)**2))
+    d = sum((x - dot(y, R.T) - t) ** 2, 1) ** 0.5
+    a = sum(1 / (1 + (d / d0) ** 2))
 
     # first iteration
     cutoff = min(max(4.5, d0), 8.0)
 
     while True:
         mask = (d < cutoff).astype('i')
-        if sum(mask) > 3: 
+        if sum(mask) > 3:
             break
         cutoff += 0.5
-        
+
     R, t = fit_method(compress(mask, x, 0), compress(mask, y, 0))
-    d = sum((x - dot(y, R.T) - t)**2, 1)**0.5
-    b = sum(1 / (1 + (d / d0)**2))
+    d = sum((x - dot(y, R.T) - t) ** 2, 1) ** 0.5
+    b = sum(1 / (1 + (d / d0) ** 2))
 
     # second iteration
     cutoff = min(max(4.5, d0), 8.0) + 1
 
     while True:
         mask = (d < cutoff).astype('i')
-        if sum(mask) > 3: 
+        if sum(mask) > 3:
             break
         cutoff += 0.5
 
     R, t = fit_method(compress(mask, x, 0), compress(mask, y, 0))
-    d = sum((x - dot(y, R.T) - t)**2, 1)**0.5
-    c = sum(1 / (1 + (d / d0)**2))
+    d = sum((x - dot(y, R.T) - t) ** 2, 1) ** 0.5
+    c = sum(1 / (1 + (d / d0) ** 2))
 
-    return max([a, b, c]) / len(x) 
+    return max([a, b, c]) / len(x)

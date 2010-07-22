@@ -111,7 +111,7 @@ def principal_coordinates(D, nd = None):
     
     ## calculate centered similarity matrix
     
-    B = - clip(D2, 1e-150, 1e150)**2 / 2.
+    B = - clip(D, 1e-150, 1e150)**2 / 2.
 
     b = B.mean(0)
 
