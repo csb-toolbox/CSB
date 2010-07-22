@@ -96,3 +96,37 @@ def degree2radian(x):
     putmask(x, x < 0., x + 360.)
     return x * pi / 180.
 
+
+def euler_angles(r):
+    """
+    Calculate the euler angles from a three dimensional rotation matrix
+
+    @param r: 3x3 Rotation matrix, 
+    """
+    from numpy import arctan2, cos, sin, pi
+
+    a = arctan2(r[2,1],r[2,0]) % (2*pi)
+    b = arctan2((r[2,0]+r[2,1]) / (cos(a) + sin(a)), r[2,2]) % (2*pi)
+    c = arctan2(r[1,2],-r[0,2]) % (2*pi)
+
+    return a, b, c
+
+
+def euler(a, b, c):
+    """
+    Calculate  a three dimensional rotation matrix from the euler angles 
+
+    @param a: alpha, angle between the x-axis and the line of nodes
+    @param b: beta, angle between the z axis of the different coordinate systems
+    @param c: gamma,  angle between the line of nodes and the X-axis
+    """
+    from numpy import cos, sin, array
+
+    ca, cb, cc = cos(a), cos(b), cos(c)
+    sa, sb, sc = sin(a), sin(b), sin(c)
+
+    return array([[ cc*cb*ca-sc*sa,  cc*cb*sa+sc*ca, -cc*sb],
+                  [-sc*cb*ca-cc*sa, -sc*cb*sa+cc*ca,  sc*sb],
+                  [     sb*ca,            sb*sa,        cb ]])
+
+

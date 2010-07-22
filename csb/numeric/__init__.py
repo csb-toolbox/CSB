@@ -1,5 +1,5 @@
 
-def trapezoidal2D(f):
+def trapezoidal_2d(f):
     """
     Approximate the integral of f from a to b in two dimensions, using trepezoidal approximation
 
@@ -13,7 +13,7 @@ def trapezoidal2D(f):
 
     return I / 4.
 
-def simpson2D(f):
+def simpson_2d(f):
     """
     Approximate the integral of f from a to b in two dimensions, using Composite Simpson's rule
 

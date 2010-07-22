@@ -23,7 +23,7 @@ def loop_closure(moving, fixed, min_rmsd=0.1, maxit=10000):
     
     """
 
-    from numpy import zeros, eye, dot, transpose, average, array, sqrt
+    from numpy import zeros, dot, transpose, average, array, sqrt
     from numpy.linalg import svd, det
 
     if len(moving) < 6:
@@ -57,7 +57,8 @@ def loop_closure(moving, fixed, min_rmsd=0.1, maxit=10000):
                 R = dot(V, U)
 
             # Apply rotation
-            result[(i + 1):] = dot(result[(i + 1):] - pivot , transpose(R)) + pivot
+            result[(i + 1):] = dot(result[(i + 1):] - pivot, transpose(R))\
+                               + pivot
             # Calculate rmsd of fixed and moved residues
             rmsd = sqrt(average((result[-3:] - fixed[-3:]) ** 2))
 
@@ -80,7 +81,8 @@ def make_random_chain(n=12):
 
     from numpy import zeros
     from numpy.random import random
-    from utils import norm
+    from numpy.linalg import norm
+
     v = zeros(3)
     l = [v]
     for i in range(0, n - 1):
@@ -103,7 +105,7 @@ def rotate_last_three(chain):
 
     from numpy.random import random
     from numpy import pi, arccos, dot, transpose
-    from csb.random.random_rotation import euler
+    from csb.math import euler
 
     alpha = random() * 2 * pi
     gamma = random() * 2 * pi
