@@ -589,7 +589,8 @@ class HHpredOutputParser(object):
         
         @raise InvalidHHpredOutputError: if the output is corrupt
         """
-        return self._parse(open(hhr_file).readlines())
+        import os
+        return self._parse(open(os.path.expanduser(hhr_file)).readlines())
     
     def parse_string(self, output):
         """
@@ -612,20 +613,35 @@ class HHpredOutputParser(object):
         in_alis = False
         has_alis = False
         c_rank = 0
+        header = {}
         hits = {}
         alis = {}
         
         for line in lines:
             
-            if not in_hits:
-                if line.startswith('Match_columns'):
-                    qlen = int(line[14:])
-                elif line.replace(' ', '').startswith('NoHitProbE-value'):
+            if not in_hits and not in_alis:
+                
+                if line.replace(' ', '').startswith('NoHitProbE-value'):
                     in_hits = True
                     continue
-            
-            if in_hits:         
-                if not line.strip(): 
+                elif line.strip() == '':
+                    continue
+                else: ## parse header data (stuff above the hits table)
+                    identifier, data = line.strip().split(None, 1)
+                    if identifier in ('Query', 'Command'):
+                        data = data.strip()
+                    elif identifier == 'Neff':
+                        data = float(data)
+                    elif identifier in ('Searched_HMMs', 'Match_columns'):
+                        data = int(data)
+                    
+                    header[identifier] = data
+
+                    if identifier == 'Match_columns':
+                        qlen = data
+                
+            if in_hits:
+                if not line.strip(): ## maybe not the best way to handle block traversals
                     in_hits = False
                     in_alis = True                    
                     if self.alignments:
@@ -702,6 +718,24 @@ class HHpredOutputParser(object):
         del alis
                 
         hits = HHpredHitList(hits.values())
+
         hits.sort()
+        
+        ## add data obtained from the header to the HHpredHitList
+        for identifier, data in header.items():
+            if identifier == 'Query':
+                hits.query_name = data
+            elif identifier == 'Match_columns':
+                hits.match_columns = data
+            elif identifier == 'No_of_seqs':
+                hits.no_of_seqs = data
+            elif identifier == 'Neff':
+                hits.neff = data
+            elif identifier == 'Searched_HMMs':
+                hits.searched_hmms = data
+            elif identifier == 'Date':
+                hits.date = data
+            elif identifier == 'Command':
+                hits.command = data
                    
         return hits 

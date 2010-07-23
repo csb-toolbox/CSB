@@ -1216,13 +1216,24 @@ class HHpredHit(object):
         return '<HHpredHit: {0!s}>'.format(self)
     
     def __cmp__(self, other):
+        '''TODO: __cmp__ and the rich comparisons (__eq__ and __gt__ in this
+        case) should compare the same fields (e.g. rank), otherwise this is
+        confusing for users. Ivan wants to check his code for uses of these
+        functions, hence they are retained for the moment.'''
         return cmp(self.rank, other.rank)
     
     def __eq__(self, other):
+        '''TODO: __cmp__ and the rich comparisons (__eq__ and __gt__ in this
+        case) should compare the same fields (e.g. rank), otherwise this is
+        confusing for users. Ivan wants to check his code for uses of these
+        functions, hence they are retained for the moment.'''
         return (self.id == other.id and self.start == other.start and self.end == other.end)
         
     def __gt__(self, other):
-        
+        '''TODO: __cmp__ and the rich comparisons (__eq__ and __gt__ in this
+        case) should compare the same fields (e.g. rank), otherwise this is
+        confusing for users. Ivan wants to check his code for uses of these
+        functions, hence they are retained for the moment.'''
         if self.length > other.length:
             return True
         elif self.length == other.length:
@@ -1365,9 +1376,18 @@ class HHpredHit(object):
 
 class HHpredHitList(object):
     
-    def __init__(self, hits):
+    def __init__(self, hits, query_name='', match_columns=-1, no_of_seqs='',
+                 neff=-1., searched_hmms=-1, date= '', command=''):
         self._hits = list(hits)
-    
+
+        self.query_name = query_name
+        self.match_columns = match_columns
+        self.no_of_seqs = no_of_seqs
+        self.neff = neff
+        self.searched_hmms = searched_hmms
+        self.date = date
+        self.command = command
+        
     def __getitem__(self, index):
         return self._hits[index]
     
@@ -1378,7 +1398,8 @@ class HHpredHitList(object):
         return len(self._hits)
         
     def sort(self):
-        self._hits.sort(reverse=True)
+        from operator import attrgetter
+        self._hits.sort(key=attrgetter('rank'))
         
     def align(self, query_sequence):
         """
