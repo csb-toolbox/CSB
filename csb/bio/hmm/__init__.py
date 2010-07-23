@@ -1253,41 +1253,75 @@ class HHpredHit(object):
         self.prob_sum = None
 
     def __str__(self):
-        return '{0.id} {0.probability} {0.start}-{0.end}'.format(self)
-
+        return "{0.id} {0.probability} {0.start}-{0.end}".format(self)
+    
     def __repr__(self):
-        return '<HHpredHit: {0!s}>'.format(self)
-
+        return "<HHpredHit: {0!s}>".format(self)
+    
     def __cmp__(self, other):
-        '''TODO: __cmp__ and the rich comparisons (__eq__ and __gt__ in this
-        case) should compare the same fields (e.g. rank), otherwise this is
-        confusing for users. Ivan wants to check his code for uses of these
-        functions, hence they are retained for the moment.'''
         return cmp(self.rank, other.rank)
 
-    def __eq__(self, other):
-        '''TODO: __cmp__ and the rich comparisons (__eq__ and __gt__ in this
-        case) should compare the same fields (e.g. rank), otherwise this is
-        confusing for users. Ivan wants to check his code for uses of these
-        functions, hence they are retained for the moment.'''
-        return (self.id == other.id and self.start == other.start and
-                self.end == other.end)
-
-    def __gt__(self, other):
-        '''TODO: __cmp__ and the rich comparisons (__eq__ and __gt__ in this
-        case) should compare the same fields (e.g. rank), otherwise this is
-        confusing for users. Ivan wants to check his code for uses of these
-        functions, hence they are retained for the moment.'''
+    def equals(self, other):
+        """
+        Return True if C{self} is completely identical to C{other} (same id, same start
+        and end positions).
+        
+        @param other: right-hand-term
+        @type other: HHpredHit
+        
+        @rtype: bool        
+        """
+        return (self.id == other.id and self.start == other.start and self.end == other.end)
+        
+    def surpasses(self, other):
+        """
+        Return True if C{self} is a superior to C{other} in terms of length 
+        and probability. These criteria are applied in the following order:
+        
+            1. Length (the longer hit is better)
+            2. Probability (if they have the same length, the one with the higher
+               probability is better)
+            3. Address (if they have the same length and probability, the one with
+               higher memory ID wins; for purely practical reasons) 
+        
+        @param other: right-hand-term
+        @type other: HHpredHit
+        
+        @rtype: bool        
+        """
         if self.length > other.length:
             return True
         elif self.length == other.length:
             if self.probability > other.probability:
-                return True
+                return True      
             elif self.probability == other.probability:
                 if id(self) > id(other):
                     return True
         return False
-
+            
+    def includes(self, other, tolerance=1):
+        """
+        Return True if C{other} overlaps with C{self}, that means C{other}
+        is fully or partially included in C{self} when aligned over the query.
+        
+        @param other: right-hand-term
+        @type other: HHpredHit
+        @param tolerance: allow partial overlaps for that number of residues at
+                          either end
+        @type tolerance: int
+        
+        @rtype: bool 
+        """
+        if self.id == other.id:
+            if other.start >= self.start:
+                if other.end <= self.end or other.start <= (self.end - tolerance):
+                    return True
+            elif other.end <= self.end:
+                if other.end >= (self.start + tolerance):
+                    return True
+        
+        return False
+    
     def add_alignment(self, query, subject):
         """
         Add query/subject alignment to the hit.
