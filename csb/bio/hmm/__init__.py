@@ -1,6 +1,4 @@
-import io
 import os
-import re
 import sys
 import math
 import csb.pyutils
@@ -11,39 +9,49 @@ import csb.bio.sequence as sequence
 from itertools import izip
 from collections import namedtuple
 
+
 class UnobservableStateError(AttributeError):
     pass
+
+
 class StateExistsError(KeyError):
-    pass    
+    pass
+
+
 class TransitionExistsError(KeyError):
     pass
+
+
 class EmissionExistsError(KeyError):
     pass
-         
-States = csb.pyutils.enum( Match='M', Insertion='I', Deletion='D', Start='S', End='E' )
+
+States = csb.pyutils.enum(Match='M', Insertion='I', Deletion='D',
+                          Start='S', End='E')
 """
 @var States: HMM state types
 """
 
-ScoreUnits = csb.pyutils.enum( LogScales='LogScales', Probability='Probability' )
+ScoreUnits = csb.pyutils.enum(LogScales='LogScales', Probability='Probability')
 """
 @var ScoreUnits: HMM emission and transition score units
 """
-       
+
+
 class ProfileHMM(object):
     """
     Describes a protein profile Hidden Markov Model.
     Optional parameters:
-    
+
     @param units: defines the units of the transition and emission scores
     @type units: L{ScoreUnits}
-    @param scale: the scaling factor used to convert emission/transition probabilities
+    @param scale: the scaling factor used to convert emission/transition
+                  probabilities
     @type scale: float
     @param logbase: the base of the logarithm used for scaling the emission and
                     transition probabilities
     @type logbase: float
-    """ 
-       
+    """
+
     def __init__(self, units=ScoreUnits.LogScales, scale=-1000., logbase=2):
 
         self.name = None
@@ -58,42 +66,43 @@ class ProfileHMM(object):
         self.pseudocounts = False
         self.layers = HMMLayersCollection()
         self.start = State(States.Start)
-        self.end = State(States.End) 
+        self.end = State(States.End)
         if units is None:
             self._score_units = ScoreUnits.LogScales
         else:
             self._score_units = units
-             
+
         self.scale = scale
-        self.logbase = logbase  
-        
+        self.logbase = logbase
+
         self._issues = csb.pyutils.CollectionContainer()
-        
+
     @property
     def residues(self):
-        res = [ layer.residue for layer in self.layers ]
-        return csb.pyutils.CollectionContainer(res, type=structure.Residue, start_index=1)   
-            
+        res = [layer.residue for layer in self.layers]
+        return csb.pyutils.CollectionContainer(res, type=structure.Residue,
+                                               start_index=1)
+
     @property
     def has_structure(self):
         has = False
         for layer in self.layers:
             if layer.residue.has_structure:
                 return True
-        return has          
-    
+        return has
+
     @property
     def score_units(self):
         return self._score_units
-    
+
     @property
     def known_issues(self):
         return list(self._issues)
-    
+
     def serialize(self, file_name):
         """
         Serialize this HMM to a file.
-        
+
         @param file_name: target file name
         @type file_name: str
         """
@@ -101,64 +110,65 @@ class ProfileHMM(object):
         sys.setrecursionlimit(10000)
         cPickle.dump(self, open(file_name, 'w'))
         sys.setrecursionlimit(1000)
-                
+
     @staticmethod
     def deserialize(file_name):
         """
         De-serialize an HMM from a file.
 
         @param file_name: source file name
-        @type file_name: str        
+        @type file_name: str
         """
         import cPickle
         sys.setrecursionlimit(10000)
         return cPickle.load(open(file_name, 'r'))
-        sys.setrecursionlimit(1000)  
-        
+        sys.setrecursionlimit(1000)
+
     def _convert(self, units, score, scale, logbase):
         if units == ScoreUnits.Probability:
-            return logbase**(score / scale)
+            return logbase ** (score / scale)
         elif units == ScoreUnits.LogScales:
             if score == 0:
                 #score = sys.float_info.min
-                return None                
+                return None
             return math.log(score, logbase) * scale
         else:
-            raise ValueError('Unknown target unit {0}'.format(units))        
-        
+            raise ValueError('Unknown target unit {0}'.format(units))
+
     def to_hmm(self, output_file=None, convert_scores=False):
         """
         Dump the profile in HHM format.
-        
+
         @param output_file: the output file name
         @type output_file: str
         @param convert_scores: if True, forces automatic convertion to
                               L{ScoreUnits}.LogScales, which is required
                               by the output file format
         @type convert_scores: bool
-        """          
+        """
         import StringIO
-        
+
         class MyStringIO(StringIO.StringIO):
+
             def writeline(self, data):
                 self.write(data)
                 self.write(os.linesep)
-        
+
         stream = MyStringIO()
         hmm = self
-        
+
         if convert_scores:
             hmm.convert_scores(ScoreUnits.LogScales)
         elif hmm.score_units != ScoreUnits.LogScales:
-            raise ValueError('Scores must be converted to LogScales first.') 
-        
+            raise ValueError('Scores must be converted to LogScales first.')
+
         stream.writeline('''HHsearch {0.version}
 NAME  {0.name}
-FAM   {0.family} 
+FAM   {0.family}
 LENG  {0.length.matches} match states, {0.length.layers} columns in multiple alignment
-NEFF  {0.effective_matches} 
+NEFF  {0.effective_matches}
 PCT   {0.pseudocounts}'''.format(hmm))
-        
+
         stream.writeline('SEQ')
         if hmm.dssp:
             stream.writeline('>ss_dssp')
@@ -167,40 +177,44 @@ PCT   {0.pseudocounts}'''.format(hmm))
             stream.writeline('>ss_pred')
             stream.writeline(hmm.psipred.tostring())
             stream.writeline('>ss_conf')
-            confidence = [ ''.join(map(str, m.score)) for m in hmm.psipred ]
+            confidence = [''.join(map(str, m.score)) for m in hmm.psipred]
             stream.writeline(''.join(confidence))
-        
+
         if hmm.alignment:
-            if hmm.alignment.consensus:            
+            if hmm.alignment.consensus:
                 stream.writeline(hmm.alignment.consensus.to_fasta())
             stream.writeline(hmm.alignment.to_string())
-    
+
         stream.writeline('#')
-        
+
         first_match = hmm.layers[1][States.Match]
-        null = [ int(first_match.background[aa]) for aa in sorted(map(str, first_match.background)) ]
+        null = [int(first_match.background[aa])
+                for aa in sorted(map(str, first_match.background))]
         stream.writeline('NULL   {0}'.format('\t'.join(map(str, null))))
-        stream.writeline('HMM    {0}'.format('\t'.join(sorted(map(str, first_match.emission)))))
-        
+        stream.writeline('HMM    {0}'.format(
+            '\t'.join(sorted(map(str, first_match.emission)))))
+
         tran_types = 'M->M    M->I    M->D    I->M    I->I    D->M    D->D'.split()
-        stream.writeline('       {0}'.format('\t'.join(tran_types + 'Neff    Neff_I    Neff_D'.split())))
-        
-        stream.write("       ")     
-        for tran_type in tran_types: 
+        stream.writeline('       {0}'.format(
+            '\t'.join(tran_types + 'Neff    Neff_I    Neff_D'.split())))
+
+        stream.write("       ")
+        for tran_type in tran_types:
             source_statekind = csb.pyutils.Enum.parse(States, tran_type[0])
             target_statekind = csb.pyutils.Enum.parse(States, tran_type[3])
             if source_statekind == States.Match:
                 try:
-                    stream.write("{0:<7}\t".format(int(hmm.start.transitions[target_statekind].probability)))
+                    stream.write("{0:<7}\t".format(
+                        int(hmm.start.transitions[target_statekind].probability)))
                 except csb.pyutils.ItemNotFoundError:
                     stream.write("*\t")
             else:
                 stream.write("*\t")
-        stream.writeline( '*\t' * 3)
-            
+        stream.writeline('*\t' * 3)
+
         for layer in hmm.layers:
-            
-            stream.write("{0} {1:<5}".format(layer.residue.type, layer.rank))        
+
+            stream.write("{0} {1:<5}".format(layer.residue.type, layer.rank))
             for aa in sorted(layer[States.Match].emission):
                 emission = layer[States.Match].emission[aa]
                 if emission is None:
@@ -208,51 +222,54 @@ PCT   {0.pseudocounts}'''.format(hmm))
                 else:
                     emission = int(emission)
                 stream.write("{0:<7}\t".format(emission))
-            stream.writeline( "{0}".format(layer.rank))
-            
-            stream.write( "       ")        
-            for tran_type in tran_types:       
+            stream.writeline("{0}".format(layer.rank))
+
+            stream.write("       ")
+            for tran_type in tran_types:
                 source_statekind = csb.pyutils.Enum.parse(States, tran_type[0])
                 target_statekind = csb.pyutils.Enum.parse(States, tran_type[3])
-                
-                if target_statekind == States.Match and layer.rank == hmm.layers.last_index:
+
+                if target_statekind == States.Match and \
+                       layer.rank == hmm.layers.last_index:
                     target_statekind = States.End
-               
+
                 try:
                     state = layer[source_statekind]
-                    stream.write("{0:<7}\t".format(int(state.transitions[target_statekind].probability)))
+                    stream.write("{0:<7}\t".format(
+                        int(state.transitions[target_statekind].probability)))
                 except csb.pyutils.ItemNotFoundError:
                     stream.write("*\t")
-                    
-            for data in (layer.effective_matches, layer.effective_insertions, layer.effective_deletions):
+
+            for data in (layer.effective_matches, layer.effective_insertions,
+                         layer.effective_deletions):
                 if data is None:
                     data = '*'
                 else:
                     data = int(data)
                 stream.write("{0:<7}\t".format(data))
-    
+
             stream.writeline("\n")
-        
+
         stream.writeline('//')
-        
-        data = stream.getvalue()        
+
+        data = stream.getvalue()
         stream.close()
-        
+
         if not output_file:
             return data
         else:
             with open(output_file, 'w') as out:
-                out.write(data)  
+                out.write(data)
 
     def segment(self, start, end):
         """
         Extract a sub-segment of the profile.
-        
+
         @param start: start layer of the segment (rank)
         @type start: int
         @param end: end layer of the segment (rank)
-        @type end: int        
-        
+        @type end: int
+
         @return: a deepcopy of the extracted HMM segment
         @rtype: L{ProfileHMMSegment}
         """
@@ -261,98 +278,104 @@ PCT   {0.pseudocounts}'''.format(hmm))
     def structure(self, chain_id=None, accession=None):
         """
         Extract the structural information from the HMM.
-        
+
         @param accession: defines the accession number of the structure
         @type accession: str
         @param chain_id: defines explicitly the chain identifier
         @type chain_id: str
-                
+
         @return: a shallow L{Structure} wrapper around the residues in the HMM.
         @rtype: L{structure.Structure}
         """
         struct = structure.Structure(accession or self.id)
-        chain = self.chain(chain_id)        
+        chain = self.chain(chain_id)
         struct.chains.append(chain)
-        
-        return struct      
-    
+
+        return struct
+
     def chain(self, chain_id=None):
         """
         Extract the structural information from the HMM.
-        
+
         @param chain_id: defines explicitly the chain identifier
         @type chain_id: str
-        
+
         @return: a shallow L{Chain} wrapper around the residues in the HMM.
-        @rtype: L{structure.Chain}        
+        @rtype: L{structure.Chain}
         """
         if chain_id is None:
             if self.id:
                 chain_id = self.id.rstrip()[-1]
             else:
-                chain_id = '_'        
+                chain_id = '_'
         chain = structure.Chain(chain_id, type=sequence.SequenceTypes.Protein, residues=self.residues)
-        
+
         return chain
-                
+
     def emission_profile(self):
         """
         Extract the emission scores of all match states in the profile.
-        The metric of the emission scores returned depends on the current 
+        The metric of the emission scores returned depends on the current
         hmm.score_units setting - you may need to call hmm.convert_scores()
         to adjust the hmm to your particular needs.
-        
+
         @return: a list of dictionaries; each dict key is a single amino acid
-        @rtype: list 
+        @rtype: list
         """
-        profile = [ ] 
-        
-        for layer in self.layers:                
-            emission = { }    
-            
+        profile = []
+
+        for layer in self.layers:
+            emission = {}
+
             for aa in layer[States.Match].emission:
-                emission[ str(aa) ] = layer[States.Match].emission[aa] or 0.0
+                emission[str(aa)] = layer[States.Match].emission[aa] or 0.0
             profile.append(emission)
-            
-        return profile    
-        
+
+        return profile
+
     def convert_scores(self, units=ScoreUnits.Probability, method=None):
         """
         Convert emission and transition scores to the specified units.
-        
-        @param units: the target units for the conversion (a member of L{ScoreUnits}).
-        @type units: L{csb.pyutils.EnumItem}
-        @param method: if defined, implements the exact mathematical transformation
-                       that will be applied. It must be a function or lambda expression
-                       with the following signature::
 
+        @param units: the target units for the conversion (a member of
+                      L{ScoreUnits}).
+        @type units: L{csb.pyutils.EnumItem}
+        @param method: if defined, implements the exact mathematical
+                       transformation that will be applied. It must be a
+                       function or lambda expression with the following
+                       signature::
                              def (target_units, score, scale, logbase)
-                             
-                       and it has to return the score converted to C{target_units}. 
-                       If method performs a conversion from probabilities to scaled logs,
-                       you should also update C{hmm.scale} and C{hmm.logbase}.
-        @type method: function, lambda                             
+
+                       and it has to return the score converted to
+                       C{target_units}. If method performs a conversion from
+                       probabilities to scaled logs, you should also update
+                       C{hmm.scale} and C{hmm.logbase}.
+        @type method: function, lambda
         """
-        
+
         if self._score_units == units:
             return
-        
+
         if method is not None:
             convert = method
         else:
-            convert = self._convert        
-        
+            convert = self._convert
+
         for layer in self.layers:
             for state_kind in layer:
                 state = layer[state_kind]
                 if not state.silent:
                     for residue in state.emission:
                         if state.emission[residue] is not None:
-                            state.emission.update(residue, convert(units, state.emission[residue], self.scale, self.logbase))
+                            state.emission.update(residue, convert(
+                            units, state.emission[residue],
+                            self.scale, self.logbase))
                     for residue in state.background:
                         if state.background[residue] is not None:
-                            state.background.update(residue, convert(units, state.background[residue], self.scale, self.logbase))           
-                for tran_kind in state.transitions:     
+                            state.background.update(residue, convert(
+                            units, state.background[residue],
+                            self.scale, self.logbase))
+                for tran_kind in state.transitions:
                     transition = state.transitions[tran_kind]
                     transition.probability = convert(units, transition.probability, self.scale, self.logbase)
             if layer.effective_matches is not None:
@@ -362,15 +385,16 @@ PCT   {0.pseudocounts}'''.format(hmm))
             if layer.effective_deletions is not None:
                 layer.effective_deletions = convert(units, layer.effective_deletions, self.scale, self.logbase)
         for tran_kind in self.start.transitions:
-            transition = self.start.transitions[tran_kind]     
+            transition = self.start.transitions[tran_kind]
             transition.probability = convert(units, transition.probability, self.scale, self.logbase)
-            
-        self._score_units = units             
-        
-    def to_isite(self, cluster_id, start=None, end=None, rep_accession=None, rep_chain=None, alpha=0.2):
+
+        self._score_units = units
+
+    def to_isite(self, cluster_id, start=None, end=None, rep_accession=None,
+                 rep_chain=None, alpha=0.2):
         """
         Convert and return this HMM as it was an I-Sites Library fragment.
-        
+
         @param cluster_id: ID of the I-Site
         @type cluster_id: int
         @param start: start position (optional)
@@ -382,145 +406,157 @@ PCT   {0.pseudocounts}'''.format(hmm))
         @param rep_chain: chain ID for I{cluster.representative}
         @type rep_chain: str
         @param alpha: alpha parameter for I{cluster.profile.pssm}
-        @type alpha: float        
-        
+        @type alpha: float
+
         @return: an I-Sites cluster wrapper
         @rtype: L{isites.Cluster}
-        
-        @raise TypeError: when the HMM's structural data is missing or interrupted
-        """     
-        
+
+        @raise TypeError: when the HMM's structural data is missing or
+                          interrupted
+        """
+
         if not self.has_structure:
-            raise TypeError('This HMM has no structural data assigned and cannot be converted.')
-        
+            raise TypeError('This HMM has no structural data assigned and ' +
+                            'cannot be converted.')
+
         if start is None:
             start = self.layers.start_index
         if end is None:
             end = self.layers.last_index
-        
+
         score_units = self.score_units
         self.convert_scores(ScoreUnits.Probability)
-        
+
         background = dict(isites.ProteinProfile.BackgroundFreqs)
         for aa in self.layers[1][States.Match].emission:
-            background[ str(aa) ] = self.layers[1][States.Match].background[aa]
-        
+            background[str(aa)] = self.layers[1][States.Match].background[aa]
+
         cluster = isites.Cluster()
         cluster.id = cluster_id
         cluster.overhang = 0
-        cluster.profile = isites.ProteinProfile(background, alpha=alpha)        
-        
+        cluster.profile = isites.ProteinProfile(background, alpha=alpha)
+
         residues = []
         for layer in self.layers:
 
             residues.append(csb.pyutils.deepcopy(layer.residue))
-                        
+
             if start <= layer.rank <= end:
                 if not layer.residue.has_structure:
-                    raise TypeError("The HMM's structure is interrupted at layer {0}.".format(layer.rank))
-                    
-                emission = { }
-            
+                    raise TypeError(
+                        "The HMM's structure is interrupted at layer {0}.".format(
+                            layer.rank))
+
+                emission = {}
+
                 for aa in layer[States.Match].emission:
-                    emission[ str(aa) ] = layer[States.Match].emission[aa]
-                
+                    emission[str(aa)] = layer[States.Match].emission[aa]
+
                 cluster.profile.add_column(**dict(emission))
-            
-        cluster.profilelen = cluster.profile.length       
+
+        cluster.profilelen = cluster.profile.length
         cluster.motiflen = cluster.profile.length - 2 * cluster.overhang
-                
+
         if rep_accession is None:
             rep_accession = self.id[1:5].lower()
         if rep_chain is None:
             rep_chain = self.id[5].upper()
-            
-        chain = structure.Chain(
-                    rep_chain, sequence.SequenceTypes.Protein, None, residues, rep_accession)
-        chain.compute_torsion()       
-        
+
+        chain = structure.Chain(rep_chain, sequence.SequenceTypes.Protein,
+                                None, residues, rep_accession)
+        chain.compute_torsion()
+
         source = isites.ChainSequence()
         source.sequence = chain.sequence
         source.accession = chain.accession
         source.id = chain.id
         source.type = chain.type
         source.torsion = chain.torsion
-        
-        cluster.representative = isites.RepStructureFragment(chain.accession, chain.id, start)        
+
+        cluster.representative = isites.RepStructureFragment(chain.accession,
+                                                             chain.id, start)
         cluster.representative.source = source
-        cluster.representative.structure = chain.subregion(start, end)        
-        cluster.representative.angles = cluster.representative.structure.torsion        
-        
-        assert cluster.representative.angles.length == cluster.motiflen 
+        cluster.representative.structure = chain.subregion(start, end)
+        cluster.representative.angles = cluster.representative.structure.torsion
+
+        assert cluster.representative.angles.length == cluster.motiflen
         assert cluster.profile.length == cluster.representative.structure.length
-        assert cluster.representative.angles.length == (cluster.profile.length - 2*cluster.overhang)
-        
+        assert cluster.representative.angles.length == (cluster.profile.length -
+                                                        2 * cluster.overhang)
+
         self.convert_scores(score_units)
         return cluster
 
     def emission_similarity(self, other):
         """
-        Compute the Log-sum-of-odds score between the emission tables of self and
-        other (Soeding 2004). If no observable Match state is found at a given layer,
-        the Insertion state is used instead.
-                
-        @note: This is not a full implementation of the formula since only emission
-        vectors are involved in the computation and any transition probabilities 
-        are ignored.
-        
+        Compute the Log-sum-of-odds score between the emission tables of self
+        and other (Soeding 2004). If no observable Match state is found at a
+        given layer, the Insertion state is used instead.
+
+        @note: This is not a full implementation of the formula since only
+        emission vectors are involved in the computation and any transition
+        probabilities are ignored.
+
         @param other: the subject HMM
         @type other: L{ProfileHMM}
-        
-        @return: emission log-sum-of-odds similarity between C{self} and C{other}
-        @rtype: float  
-        
-        @raise ValueError: when self and other differ in their length, when the 
-                           score_units are not Probability, or when no observable 
-                           states are present
+
+        @return: emission log-sum-of-odds similarity between C{self} and
+                 C{other}
+        @rtype: float
+
+        @raise ValueError: when self and other differ in their length, when the
+                           score_units are not Probability, or when no
+                           observable states are present
         """
         score = 1
-        
+
         if self.layers.length != other.layers.length or self.layers.length < 1:
-            raise ValueError('Both HMMs must have the same and positive number of layers')
-        if self.score_units != ScoreUnits.Probability:
-            raise ValueError('Scores must be converted to probabilities first.')
-        if other.score_units != ScoreUnits.Probability:
-            raise ValueError('Scores must be converted to probabilities first.')                  
-        
+            raise ValueError(
+                'Both HMMs must have the same and positive number of layers')
+        if self.score_units != ScoreUnits.Probability or \
+               other.score_units != ScoreUnits.Probability:
+            raise ValueError(
+                'Scores must be converted to probabilities first.')
+
         for q_layer, s_layer in izip(iter(self.layers), iter(other.layers)):
-            
+
             try:
-                if States.Match in q_layer and not q_layer[States.Match].silent:
+                if States.Match in q_layer and \
+                       not q_layer[States.Match].silent:
                     q_state = q_layer[States.Match]
                 else:
                     q_state = q_layer[States.Insertion]
-    
-                if States.Match in s_layer and not s_layer[States.Match].silent:
+
+                if States.Match in s_layer and \
+                       not s_layer[States.Match].silent:
                     s_state = s_layer[States.Match]
                 else:
                     s_state = s_layer[States.Insertion]
             except csb.pyutils.ItemNotFoundError:
-                raise ValueError('Query and subject must contain observable states at each layer')
-                       
-            #assert set(q_state.emission) == set(s_state.emission) 
+                raise ValueError('Query and subject must contain observable ' +
+                                 'states at each layer')
+
+            #assert set(q_state.emission) == set(s_state.emission)
             #assert len(q_state.emission) > 0
-            
+
             emission_dotproduct = 0
-            
+
             for aa in q_state.emission:
                 #assert q_state.background[aa] == s_state.background[aa], 'Identical background probabilities expected'
                 #assert q_state.background[aa] not in (0, None), 'Positive background probabilities expected'
-                
+
                 #assert q_state.emission[aa] not in (0, None)
                 #assert s_state.emission[aa] not in (0, None), 'subject emission for {0!r}: {1}'.format(aa, s_state.emission[aa])
-                
+
                 q_emission = q_state.emission[aa] or sys.float_info.min
                 s_emission = s_state.emission[aa] or sys.float_info.min
-                emission_dotproduct += (q_emission * s_emission / q_state.background[aa])
-            
-            score *= emission_dotproduct 
-                 
-        return math.log(score)  
-    
+                emission_dotproduct += (q_emission * s_emission /
+                                        q_state.background[aa])
+
+            score *= emission_dotproduct
+
+        return math.log(score)
+
     def _assign_secstructure(self):
         """
         Attach references from each profile layer to the relevant DSSP secondary 
@@ -1054,114 +1090,120 @@ class Transition(object):
                 
 _AlignedPair = namedtuple('AlignedPair', 'query subject insertions')
 
+
 class HHpredHitAlignment(object):
     """
     Represents a query-template alignment in a HHpred result.
-    
+
     @param query: the query sequence in the alignment region, with gaps
     @type query: str
     @param subject: the subject sequence in the alignment region, with gaps
     @type subject: str
-    
+
     @raise ValueError: if query and subject differ in their lengths; or when
                        they contain invalid characters
     """
-        
+
     def __init__(self, hit, query, subject):
-        
+
         try:
             query = list(query)
             subject = list(subject)
         except:
-            raise TypeError('query and subject must be iterable')            
-        
+            raise TypeError('query and subject must be iterable')
+
         if not isinstance(hit, HHpredHit):
             raise TypeError(hit)
-        
+
         if not (len(query) == len(subject)) or not len(query) > 0:
-            raise ValueError('query and subject must be of the same and positive length (got {0} and {1})'.format(len(query), len(subject)))
-                     
-        self._query = [ ]
-        self._subject = [ ]
+            raise ValueError(
+                'query and subject must be of the same and positive length (got {0} and {1})'.format(
+                    len(query), len(subject)))
+
+        self._query = []
+        self._subject = []
         self._hit = hit
-        
+
         for q, s in izip(query, subject):
-            
+
             q, s = str(q), str(s)
-                        
+
             for i in (q, s):
                 if not (i.isalpha() or i == '-'):
                     raise ValueError('Invalid residue: {0}'.format(i))
-            
+
             if q != '-':
                 self._query.append([q])
-                self._subject.append([s])                
+                self._subject.append([s])
             else:
                 self._query[-1].append(q)
                 self._subject[-1].append(s.lower())
-    
+
     def __str__(self):
         return '\n{0.qstart:4} {1} {0.qend:4}\n{0.start:4} {2} {0.end:4}\n'.format(
-                                                        self._hit, self.query, self.subject)        
-    
+            self._hit, self.query, self.subject)
+
     def __getitem__(self, position):
-        
-        if (1 <= position < self._hit.qstart) or (self._hit.qend < position <= self._hit.qlength):
+
+        if (1 <= position < self._hit.qstart) or \
+               (self._hit.qend < position <= self._hit.qlength):
             return _AlignedPair(' ', ' ', [])
-        
-        i = position - self._hit.qstart         
+
+        i = position - self._hit.qstart
         try:
             if i < 0:
                 raise IndexError(position)
-            return _AlignedPair(self._query[i][0], self._subject[i][0], self._subject[i][1:])
+            return _AlignedPair(self._query[i][0], self._subject[i][0],
+                                self._subject[i][1:])
         except IndexError:
-            raise IndexError(position)   
-        
+            raise IndexError(position)
+
     def __iter__(self):
         for i in range(1, self._hit.qlength + 1):
             yield self[i]
-        
+
     @property
     def query(self):
-        return ''.join([ ''.join(pos) for pos in self._query ])
-    
+        return ''.join([''.join(pos) for pos in self._query])
+
     @property
     def subject(self):
-        return ''.join([ ''.join(pos) for pos in self._subject ])    
-    
+        return ''.join([''.join(pos) for pos in self._subject])
+
     def to_a3m(self):
         """
         Format the sequences in the alignment as A3M strings.
-        
-        @return: an object containing the sequences of the query and the subject,
-                 formatted as A3M strings.
+
+        @return: an object containing the sequences of the query and the
+                 subject, formatted as A3M strings.
         @rtype: AlignedPair
         """
-        
+
         query = []
         subject = []
-        
+
         for i in range(1, self._hit.qlength + 1):
-            
+
             pos = self[i]
-            
+
             if pos.query != '-':
                 query.append(pos.query.upper().replace(' ', '-'))
-                
+
             subject.append(pos.subject.upper().replace(' ', '-'))
-            
+
             if pos.insertions:
-                subject.append(''.join(pos.insertions).lower())        
-        
+                subject.append(''.join(pos.insertions).lower())
+
         query = '>query\n{0}'.format(''.join(query))
         subject = '>{0}\n{1}'.format(self._hit.id, ''.join(subject))
-        
-        return _AlignedPair(query, subject, '')       
-        
+
+        return _AlignedPair(query, subject, '')
+
+
 class HHpredHit(object):
     """
     Represents a single HHsearch hit.
-    
+
     @param rank: rank of the hit
     @type rank: int
     @param id: id of the hit
@@ -1179,9 +1221,10 @@ class HHpredHit(object):
     @param qlength: length of the query
     @type qlength: int
     """
-    
-    def __init__(self, rank, id, start, end, qstart, qend, probability, qlength):
-        
+
+    def __init__(self, rank, id, start, end, qstart, qend, probability,
+                 qlength):
+
         self._rank = None
         self._id = None
         self._start = None
@@ -1191,44 +1234,45 @@ class HHpredHit(object):
         self._probability = None
         self._qlength = None
         self._alignment = None
-        
+
         self.rank = rank
         self.id = id
         self.start = start
         self.end = end
         self.qstart = qstart
-        self.qend = qend           
+        self.qend = qend
         self.probability = probability
         self.qlength = qlength
-        
-        self.slength = None        
+
+        self.slength = None
         self.evalue = None
         self.pvalue = None
-        self.score = None 
+        self.score = None
         self.identity = None
         self.similarity = None
         self.prob_sum = None
-        
+
     def __str__(self):
         return '{0.id} {0.probability} {0.start}-{0.end}'.format(self)
-    
+
     def __repr__(self):
         return '<HHpredHit: {0!s}>'.format(self)
-    
+
     def __cmp__(self, other):
         '''TODO: __cmp__ and the rich comparisons (__eq__ and __gt__ in this
         case) should compare the same fields (e.g. rank), otherwise this is
         confusing for users. Ivan wants to check his code for uses of these
         functions, hence they are retained for the moment.'''
         return cmp(self.rank, other.rank)
-    
+
     def __eq__(self, other):
         '''TODO: __cmp__ and the rich comparisons (__eq__ and __gt__ in this
         case) should compare the same fields (e.g. rank), otherwise this is
         confusing for users. Ivan wants to check his code for uses of these
         functions, hence they are retained for the moment.'''
-        return (self.id == other.id and self.start == other.start and self.end == other.end)
-        
+        return (self.id == other.id and self.start == other.start and
+                self.end == other.end)
+
     def __gt__(self, other):
         '''TODO: __cmp__ and the rich comparisons (__eq__ and __gt__ in this
         case) should compare the same fields (e.g. rank), otherwise this is
@@ -1238,23 +1282,24 @@ class HHpredHit(object):
             return True
         elif self.length == other.length:
             if self.probability > other.probability:
-                return True      
+                return True
             elif self.probability == other.probability:
                 if id(self) > id(other):
                     return True
         return False
-     
+
     def add_alignment(self, query, subject):
         """
         Add query/subject alignment to the hit.
-        
+
         @param query: the query sequence within the alignment region, with gaps
         @type query: str
-        @param subject: the subject sequence within the alignment region, with gaps
+        @param subject: the subject sequence within the alignment region, with
+                        gaps
         @type subject: str
         """
         self._alignment = HHpredHitAlignment(self, query, subject)
-        
+
     @property
     def rank(self):
         return self._rank
@@ -1265,7 +1310,7 @@ class HHpredHit(object):
         except:
             raise TypeError('rank must be int, not {1}'.format(type(value)))
         self._rank = value
-    
+
     @property
     def id(self):
         return self._id
@@ -1276,7 +1321,7 @@ class HHpredHit(object):
         except:
             raise TypeError('id must be string, not {0}'.format(type(value)))
         self._id = value
-    
+
     @property
     def start(self):
         return self._start
@@ -1287,7 +1332,7 @@ class HHpredHit(object):
         except:
             raise TypeError('start must be int, not {0}'.format(type(value)))
         self._start = value
-    
+
     @property
     def end(self):
         return self._end
@@ -1298,7 +1343,7 @@ class HHpredHit(object):
         except:
             raise TypeError('end must be int, not {0}'.format(type(value)))
         self._end = value
-    
+
     @property
     def qstart(self):
         return self._qstart
@@ -1309,7 +1354,7 @@ class HHpredHit(object):
         except:
             raise TypeError('qstart must be int, not {0}'.format(type(value)))
         self._qstart = value
-    
+
     @property
     def qend(self):
         return self._qend
@@ -1319,8 +1364,8 @@ class HHpredHit(object):
             value = int(value)
         except:
             raise TypeError('qend must be int, not {0}'.format(type(value)))
-        self._qend = value    
-        
+        self._qend = value
+
     @property
     def qlength(self):
         return self._qlength
@@ -1330,8 +1375,8 @@ class HHpredHit(object):
             value = int(value)
         except:
             raise TypeError('qlength must be int, not {0}'.format(type(value)))
-        self._qlength = value           
-        
+        self._qlength = value
+
     @property
     def probability(self):
         return self._probability
@@ -1340,44 +1385,48 @@ class HHpredHit(object):
         try:
             value = float(value)
         except:
-            raise TypeError('probability must be float, not {0}'.format(type(value)))
-        self._probability = value        
-        
+            raise TypeError(
+                'probability must be float, not {0}'.format(type(value)))
+        self._probability = value
+
     @property
     def alignment(self):
-        return self._alignment  
+        return self._alignment
 
     @property
     def length(self):
         try:
             return self.end - self.start + 1
         except:
-            return 0 
-        
+            return 0
+
     def includes(self, other, tolerance=1):
         """
         Return True if other overlaps with self
-        
+
         @type other: HHpredHit
-        @param tolerance: allow partial overlaps for that number of residues at either end
+        @param tolerance: allow partial overlaps for that number of residues
+                          at either end
         @type tolerance: int
-        
-        @rtype: bool 
+
+        @rtype: bool
         """
         if self.id == other.id:
             if other.start >= self.start:
-                if other.end <= self.end or other.start <= (self.end - tolerance):
+                if other.end <= self.end or \
+                       other.start <= (self.end - tolerance):
                     return True
             elif other.end <= self.end:
                 if other.end >= (self.start + tolerance):
                     return True
-        
+
         return False
 
+
 class HHpredHitList(object):
-    
+
     def __init__(self, hits, query_name='', match_columns=-1, no_of_seqs='',
-                 neff=-1., searched_hmms=-1, date= '', command=''):
+                 neff=-1., searched_hmms=-1, date='', command=''):
         self._hits = list(hits)
 
         self.query_name = query_name
@@ -1387,47 +1436,50 @@ class HHpredHitList(object):
         self.searched_hmms = searched_hmms
         self.date = date
         self.command = command
-        
+
     def __getitem__(self, index):
         return self._hits[index]
-    
+
     def __iter__(self):
         return iter(self._hits)
-    
+
     def __len__(self):
         return len(self._hits)
-        
+
     def sort(self):
         from operator import attrgetter
         self._hits.sort(key=attrgetter('rank'))
-        
+
     def align(self, query_sequence):
         """
         Build a pseudo-multiple HMM alignment, assuming all hits in the
         hitlist have been aligned against the same C{query_sequence}.
-        
-        @param query_sequence: must be the complete sequence of the representative
-                              in the query HHM file
+
+        @param query_sequence: must be the complete sequence of the
+                               representative in the query HHM file
         @type query_sequence: str
-        
+
         @return: a new A3M alignment object
         @rtype: L{sequence.A3MAlignment}
-        
-        @raise ValueError: if any hit does not contain an alignment with the query;
-                           or when the query sequence has a mismatching length
-        """ 
+
+        @raise ValueError: if any hit does not contain an alignment with the
+                           query; or when the query sequence has a mismatching
+                           length
+        """
         qseq = ''.join(query_sequence.split()).upper()
         query = '>query\n{0}'.format(qseq)
-        mha = [query]        
-                
+        mha = [query]
+
         for hit in self:
- 
+
             if not hit.alignment:
-                raise ValueError('Hit {0.id} does not contain an alignment'.format(hit))
+                raise ValueError(
+                    'Hit {0.id} does not contain an alignment'.format(hit))
             elif hit.qlength != len(qseq):
-                raise ValueError('The query sequence is {0} long, while the query in hit {1.rank}.{1.id} was {2}'.format(
-                                                                                len(qseq), hit, hit.qlength))  
-            a3m = hit.alignment.to_a3m()        
+                raise ValueError(
+                    'The query sequence is {0} long, while the query in hit {1.rank}.{1.id} was {2}'.format(
+                        len(qseq), hit, hit.qlength))
+            a3m = hit.alignment.to_a3m()
             mha.append(a3m.subject)
 
-        return sequence.A3MAlignment.parse('\n'.join(mha))        
+        return sequence.A3MAlignment.parse('\n'.join(mha))
