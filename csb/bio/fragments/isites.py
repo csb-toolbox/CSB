@@ -7,6 +7,8 @@ import math
 import csb.pyutils
 import csb.bio.io.pdb
 import csb.bio.structure as structure
+import csb.bio.sequence
+import csb.bio.hmm as hmm
  
     
 FragmentMatching = csb.pyutils.enum('Sequence', 'Bystroff', 'CrossEntropy', 'Soeding', 'Baker')
@@ -404,7 +406,7 @@ class Library(object):
         Compact the library by excluding unimportant information:
         
             - documentation
-            - clusters: file, program, linearfit, covariance
+            - clusters: file, program, covariance
             
         @raise AttributeError: on attempt to compact a delay-parsed library            
         """
@@ -415,7 +417,6 @@ class Library(object):
         for c in self.clusters:
             c.file = None
             c.program = None
-            c.linearfit = None
             c.covariance = None
 
     def serialize(self, file):
@@ -449,46 +450,6 @@ class Library(object):
             library = cPickle.load(output)        
             
         return library
-
-class HMMLibraryWrapper(Library):
-    """
-    Library wrapper for H-Sites fragments.
-    
-    @param fragments: a list of L{hmm.ProfileHMMSegment}s
-    @type list:  
-    """
-    
-    def __init__(self, fragments=None):
-        
-        self._ondemand = False
-        
-        self._fragments = []
-        self._byid = {}
-        self._byrep = {} 
-        self.name = 'HSites'
-        
-        if fragments is not None:
-            self.fragments = fragments        
-        
-    @property
-    def fragments(self):
-        return self._fragments
-    @fragments.setter
-    def fragments(self, fragments):
-        self._fragments = []
-        self._byid = {}
-        self._byrep = {}    
-        for fragment in fragments:
-            self._fragments.append(fragment)
-            self._byid[fragment.isite] = fragment
-            self._byrep[fragment.id] = fragment            
-    
-    @property
-    def clusters(self):
-        return self.fragments
-    @clusters.setter
-    def clusters(self, clusters):
-        self.fragments = clusters
 
 class Cluster(object):
     """
@@ -882,7 +843,169 @@ class Cluster(object):
                 match = ProfileMatch(entry_id, start, score)
                 matches.append(match)   
         
-        return matches    
+        return matches
+    
+    def to_hmm(self):
+        """
+        Convert this fragment into a profile HMM segment. Each column in the
+        fragment's profile becomes a Match state with equivalent emissions.
+        However, all Match states are connected with a fixed transition 
+        probability of 100%.      
+        
+        @return: an HMM wrapper around the cluster's profile
+        @rtype: L{hmm.ProfileHMM}
+        """
+        
+        match_factory = hmm.State.Factory(hmm.States.Match)
+
+        p = hmm.ProfileHMM(hmm.ScoreUnits.Probability)
+        p.family = 'is' + str(self.id)
+        p.name = 'is' + str(self.id)
+        p.id = str(self.id)   
+        p.pseudocounts = False
+        p.version = '1.6'
+        
+        background = dict([ (aa, self.profile.background[aa]) 
+                           for aa in 'ACDEFGHIKLMNPQRSTVWY' ]) 
+        
+        for i, row in enumerate(self.profile.matrix, start=1):
+            
+            row = dict([ (aa, row[aa]) for aa in 'ACDEFGHIKLMNPQRSTVWY' ]) 
+            residue = self.representative.structure.residues[i]
+            
+            match = match_factory(row, background)
+            match.rank = i
+            
+            layer = hmm.HMMLayer(i, residue)
+            layer.append(match)
+            
+            p.layers.append(layer)
+    
+        for layer in p.layers:
+            
+            match = layer[hmm.States.Match]
+            
+            if layer.rank < p.layers.last_index:
+                next_match = p.layers[layer.rank + 1][hmm.States.Match]
+                tran = hmm.Transition(match, next_match, 1.0)
+                match.transitions.append(tran)
+    
+        last_tran = hmm.Transition(p.layers[-1][hmm.States.Match], p.end, 1.0)
+        p.layers[-1][hmm.States.Match].transitions.append(last_tran)
+        
+        start_tran = hmm.Transition(p.start, p.layers[1][hmm.States.Match], 1.0)
+        p.start.transitions.append(start_tran)        
+        
+        p.length.matches = p.layers.length
+        p.length.layers = p.layers.length
+        p.effective_matches = 10
+        
+        rep_sequence = ''.join([ str(l.residue.type) for l in p.layers ])
+        seq = csb.bio.sequence.Sequence('dummy', '>dummy', rep_sequence)
+        p.alignment = csb.bio.sequence.A3MAlignment([seq])
+    
+        return p        
+
+    @staticmethod
+    def from_hmm(source, id, start=None, end=None, rep_accession=None,
+                 rep_chain=None, alpha=0.2):
+        """
+        Build a fragment from a Profile HMM.
+        
+        @param source: the HMM to convert
+        @type source: L{hmm.ProfileHMM}, L{hmm.ProfileHMMSegment} 
+        @param id: ID of the new fragment
+        @type id: int
+        @param start: start position (optional)
+        @type start: int
+        @param end: end position (optional)
+        @type end: int
+        @param rep_accession: accession number for I{cluster.representative}
+        @type rep_accession: str
+        @param rep_chain: chain ID for I{cluster.representative}
+        @type rep_chain: str
+        @param alpha: alpha pseudocount for I{cluster.profile.pssm}
+        @type alpha: float
+
+        @return: an I-Sites cluster wrapper
+        @rtype: L{Cluster}
+
+        @raise TypeError: when the HMM's structural data is missing or
+                          interrupted
+        """
+
+        if not source.has_structure:
+            raise TypeError('This HMM has no structural data assigned and '
+                            'cannot be converted.')
+
+        if start is None:
+            start = source.layers.start_index
+        if end is None:
+            end = source.layers.last_index
+
+        score_units = source.score_units
+        source.convert_scores(hmm.ScoreUnits.Probability)
+
+        background = dict(ProteinProfile.BackgroundFreqs)
+        for aa in source.layers[1][hmm.States.Match].emission:
+            background[str(aa)] = source.layers[1][hmm.States.Match].background[aa]
+
+        cluster = Cluster()
+        cluster.id = id
+        cluster.overhang = 0
+        cluster.profile = ProteinProfile(background, alpha=alpha)
+
+        residues = []
+        for layer in source.layers:
+
+            residues.append(csb.pyutils.deepcopy(layer.residue))
+
+            if start <= layer.rank <= end:
+                if not layer.residue.has_structure:
+                    raise TypeError(
+                        "The HMM's structure is interrupted at layer {0}.".format(
+                            layer.rank))
+
+                emission = {}
+
+                for aa in layer[hmm.States.Match].emission:
+                    emission[str(aa)] = layer[hmm.States.Match].emission[aa]
+
+                cluster.profile.add_column(**dict(emission))
+
+        cluster.profilelen = cluster.profile.length
+        cluster.motiflen = cluster.profile.length - 2 * cluster.overhang
+
+        if rep_accession is None:
+            rep_accession = source.id[1:5].lower()
+        if rep_chain is None:
+            rep_chain = source.id[5].upper()
+
+        chain = structure.Chain(rep_chain, structure.SequenceTypes.Protein,
+                                None, residues, rep_accession)
+        chain.compute_torsion()
+
+        src = ChainSequence()
+        src.sequence = chain.sequence
+        src.accession = chain.accession
+        src.id = chain.id
+        src.type = chain.type
+        src.torsion = chain.torsion
+
+        cluster.representative = RepStructureFragment(chain.accession,
+                                                      chain.id, start)
+        cluster.representative.source = src
+        cluster.representative.structure = chain.subregion(start, end)
+        cluster.representative.angles = cluster.representative.structure.torsion
+
+        assert cluster.representative.angles.length == cluster.motiflen
+        assert cluster.profile.length == cluster.representative.structure.length
+        assert cluster.representative.angles.length == (cluster.profile.length -
+                                                        2 * cluster.overhang)
+
+        source.convert_scores(score_units)
+        
+        return cluster        
 
 class RepStructureFragment(object):
     """
@@ -952,9 +1075,3 @@ class RepStructureFragment(object):
         if not isinstance(chain_fragment, structure.Chain):
             raise TypeError("The structure property must be a Chain instance.")
         self._structure = chain_fragment        
-                                     
-
-
-      
-    
-    

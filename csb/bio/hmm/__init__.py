@@ -3,7 +3,6 @@ import sys
 import math
 import csb.pyutils
 import csb.bio.structure as structure
-import csb.bio.fragments.isites as isites
 import csb.bio.sequence as sequence
 
 from itertools import izip
@@ -390,103 +389,6 @@ PCT   {0.pseudocounts}'''.format(hmm))
 
         self._score_units = units
 
-    def to_isite(self, cluster_id, start=None, end=None, rep_accession=None,
-                 rep_chain=None, alpha=0.2):
-        """
-        Convert and return this HMM as it was an I-Sites Library fragment.
-
-        @param cluster_id: ID of the I-Site
-        @type cluster_id: int
-        @param start: start position (optional)
-        @type start: int
-        @param end: end position (optional)
-        @type end: int
-        @param rep_accession: accession number for I{cluster.representative}
-        @type rep_accession: str
-        @param rep_chain: chain ID for I{cluster.representative}
-        @type rep_chain: str
-        @param alpha: alpha parameter for I{cluster.profile.pssm}
-        @type alpha: float
-
-        @return: an I-Sites cluster wrapper
-        @rtype: L{isites.Cluster}
-
-        @raise TypeError: when the HMM's structural data is missing or
-                          interrupted
-        """
-
-        if not self.has_structure:
-            raise TypeError('This HMM has no structural data assigned and ' +
-                            'cannot be converted.')
-
-        if start is None:
-            start = self.layers.start_index
-        if end is None:
-            end = self.layers.last_index
-
-        score_units = self.score_units
-        self.convert_scores(ScoreUnits.Probability)
-
-        background = dict(isites.ProteinProfile.BackgroundFreqs)
-        for aa in self.layers[1][States.Match].emission:
-            background[str(aa)] = self.layers[1][States.Match].background[aa]
-
-        cluster = isites.Cluster()
-        cluster.id = cluster_id
-        cluster.overhang = 0
-        cluster.profile = isites.ProteinProfile(background, alpha=alpha)
-
-        residues = []
-        for layer in self.layers:
-
-            residues.append(csb.pyutils.deepcopy(layer.residue))
-
-            if start <= layer.rank <= end:
-                if not layer.residue.has_structure:
-                    raise TypeError(
-                        "The HMM's structure is interrupted at layer {0}.".format(
-                            layer.rank))
-
-                emission = {}
-
-                for aa in layer[States.Match].emission:
-                    emission[str(aa)] = layer[States.Match].emission[aa]
-
-                cluster.profile.add_column(**dict(emission))
-
-        cluster.profilelen = cluster.profile.length
-        cluster.motiflen = cluster.profile.length - 2 * cluster.overhang
-
-        if rep_accession is None:
-            rep_accession = self.id[1:5].lower()
-        if rep_chain is None:
-            rep_chain = self.id[5].upper()
-
-        chain = structure.Chain(rep_chain, sequence.SequenceTypes.Protein,
-                                None, residues, rep_accession)
-        chain.compute_torsion()
-
-        source = isites.ChainSequence()
-        source.sequence = chain.sequence
-        source.accession = chain.accession
-        source.id = chain.id
-        source.type = chain.type
-        source.torsion = chain.torsion
-
-        cluster.representative = isites.RepStructureFragment(chain.accession,
-                                                             chain.id, start)
-        cluster.representative.source = source
-        cluster.representative.structure = chain.subregion(start, end)
-        cluster.representative.angles = cluster.representative.structure.torsion
-
-        assert cluster.representative.angles.length == cluster.motiflen
-        assert cluster.profile.length == cluster.representative.structure.length
-        assert cluster.representative.angles.length == (cluster.profile.length -
-                                                        2 * cluster.overhang)
-
-        self.convert_scores(score_units)
-        return cluster
-
     def emission_similarity(self, other):
         """
         Compute the Log-sum-of-odds score between the emission tables of self
@@ -643,49 +545,6 @@ class ProfileHMMSegment(ProfileHMM):
                     else:
                         end_tran = Transition(state, self.end, max_score)
                         state.transitions.set({States.End: end_tran}) # TODO: I->I ?                      
-
-    def slide_over(self, other):
-        """
-        Find instances of self by sliding it over other and computing
-        emission vector similarity and RSMD.
-        
-        @param other: the subject HMM
-        @type other: L{ProfileHMM}
-        
-        @return: a list of L{isites.ProfileMatch}-es
-        @rtype: list
-        """
-
-        query_residues = self.chain()        
-        window = self.layers.length
-        matches = []
-        
-        i = other.layers.start_index
-        while True:
-            if other.layers.last_index - i + 1 < window:
-                break
-            
-            score, tm, tm_out, rmsd_ca = None, None, None, None
-            start = i
-            end = i + window - 1
-            
-            subject = ProfileHMMRegion(other, start, end)
-            subject_residues = structure.Chain(other.id[4].upper(), residues=other.residues[start : start + window])  
-
-            score = self.emission_similarity(subject)         
-                        
-            try:
-                rmsd_ca = query_residues.rmsd(subject_residues)
-            except structure.Broken3DStructureError:
-                rmsd_ca = None                          
-                                    
-            if score is not None and (rmsd_ca is not None):
-                match = isites.ProfileMatch(other.id, start, score, rmsd_ca, None, tm, tm_out)
-                matches.append(match)               
-            
-            i += 1
-                        
-        return matches
 
 class EmissionProfileSegment(ProfileHMMSegment):
     """
