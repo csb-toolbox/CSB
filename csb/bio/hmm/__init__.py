@@ -644,7 +644,7 @@ class ProfileHMMSegment(ProfileHMM):
                         end_tran = Transition(state, self.end, max_score)
                         state.transitions.set({States.End: end_tran}) # TODO: I->I ?                      
 
-    def slideover(self, other):
+    def slide_over(self, other):
         """
         Find instances of self by sliding it over other and computing
         emission vector similarity and RSMD.
