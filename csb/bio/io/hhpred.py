@@ -633,34 +633,41 @@ class HHpredOutputParser(object):
     def parse_file(self, hhr_file):
         """
         Parse all hits from this HHpred result file.
-
+        
         @param hhr_file: input HHR file name
         @type hhr_file: str
-
+        
         @return: parsed hits
         @rtype: HHpredHitList
-
+        
         @raise InvalidHHpredOutputError: if the output is corrupt
         """
-        import os
-        return self._parse(open(os.path.expanduser(hhr_file)).readlines())
 
+        with open(os.path.expanduser(hhr_file)) as stream:
+            return self._parse(stream)
+    
     def parse_string(self, output):
         """
         Get all hits from an C{output} string.
-
+        
         @param output: HHpred standard output
         @type output: str
-
+        
         @return: parsed hits
         @rtype: HHpredHitList
-
-        @raise InvalidHHpredOutputError: if the output is corrupt
-        """
-        return self._parse(output.splitlines())
-
-    def _parse(self, lines):
-
+        
+        @raise InvalidHHpredOutputError: if the output is corrupt         
+        """        
+        import StringIO
+        
+        stream = StringIO.StringIO()
+        stream.write(output)
+        stream.seek(0)
+        
+        return self._parse(stream)
+    
+    def _parse(self, stream):
+        
         qlen = None
         in_hits = False
         in_alis = False
@@ -669,9 +676,9 @@ class HHpredOutputParser(object):
         header = {}
         hits = {}
         alis = {}
-
-        for line in lines:
-
+        
+        for line in stream:
+            
             if not in_hits and not in_alis:
 
                 if line.replace(' ', '').startswith('NoHitProbE-value'):
@@ -680,18 +687,21 @@ class HHpredOutputParser(object):
                 elif line.strip() == '':
                     continue
                 else: ## parse header data (stuff above the hits table)
-                    identifier, data = line.strip().split(None, 1)
-                    if identifier in ('Query', 'Command'):
-                        data = data.strip()
-                    elif identifier == 'Neff':
-                        data = float(data)
-                    elif identifier in ('Searched_HMMs', 'Match_columns'):
-                        data = int(data)
-
-                    header[identifier] = data
-
-                    if identifier == 'Match_columns':
-                        qlen = data
+                    columns = line.strip().split(None, 1)
+                    if len(columns) == 2:
+                        
+                        identifier, data = columns
+                        if identifier in ('Query', 'Command'):
+                            data = data.strip()
+                        elif identifier == 'Neff':
+                            data = float(data)
+                        elif identifier in ('Searched_HMMs', 'Match_columns'):
+                            data = int(data)
+                    
+                        header[identifier] = data
+    
+                        if identifier == 'Match_columns':
+                            qlen = data
 
             if in_hits:
                 if not line.strip(): ## suboptimal way to handle block switch
