@@ -952,8 +952,40 @@ _AlignedPair = namedtuple('AlignedPair', 'query subject insertions')
 
 class HHpredHitAlignment(object):
     """
-    Represents a query-template alignment in a HHpred result.
+    Represents a query-template alignment in a HHpred result. Provides indexed
+    access to the columns in the query-centric alignment. 
+    
+    Each column in the alignment is represented in A3M style: without any query
+    gaps. If the alignment contains gaps in the query, they are represented
+    as insertions in the subject. The subject may contain gaps, however. The
+    total length of the alignment equals the length of the query segment in the
+    alignment, without the gaps in the query, that means: (qend - qstart + 1).
+    However, indexed access is also allowed outside of [qstart; qend]. If the
+    requested column is in the [1; qlength] range, then a space is returned for
+    the query and for the subject since the sequence of the query is not known 
+    outside of the aligned region, but such a sequence definitely exists in 
+    principle. 
+    
+    For example consider the following alignment::
+    
+        3   ABC--F   6
+        1   A-CDEF   4
 
+    then the behaviour of the indexer will be:
+     
+        >>> ali[0]
+        IndexError
+        >>> ali[1]
+        AlignedPair: query: ' ', subject: ' ', subject_insertions: []
+        >>> ali[3]
+        query: 'A', subject: 'A', subject_insertions: []
+        >>> ali[4]
+        query: 'B', subject: '-', subject_insertions: []
+        >>> ali[6]
+        query: 'F', subject: 'F', subject_insertions: []
+        >>> ali[5]
+        query: 'C', subject: 'C', subject_insertions: ['d', 'e']
+                
     @param query: the query sequence in the alignment region, with gaps
     @type query: str
     @param subject: the subject sequence in the alignment region, with gaps
@@ -963,6 +995,8 @@ class HHpredHitAlignment(object):
                        they contain invalid characters
     """
 
+    GAP = '-'
+    
     def __init__(self, hit, query, subject):
 
         try:
@@ -988,10 +1022,10 @@ class HHpredHitAlignment(object):
             q, s = str(q), str(s)
 
             for i in (q, s):
-                if not (i.isalpha() or i == '-'):
+                if not (i.isalpha() or i == HHpredHitAlignment.GAP):
                     raise ValueError('Invalid residue: {0}'.format(i))
 
-            if q != '-':
+            if q != HHpredHitAlignment.GAP:
                 self._query.append([q])
                 self._subject.append([s])
             else:
@@ -1028,7 +1062,49 @@ class HHpredHitAlignment(object):
     @property
     def subject(self):
         return ''.join([''.join(pos) for pos in self._subject])
+    
+    @property
+    def segments(self):
+        """
+        Find all ungapped query-subject segments in the alignment.
+        
+        @return: a generator over all ungapped alignment segments, represented
+                 by L{HHpredHit} objects
+        @rtype: generator
+        """
+        
+        in_segment = False
+        qs = self._hit.qstart - 1
+        ss = self._hit.start - 1 
+        qi, si = qs, ss
+        qe, se = qs, ss
+        
+        for q, s in izip(self.query, self.subject):
 
+            if q != HHpredHitAlignment.GAP:
+                qi += 1
+            if s != HHpredHitAlignment.GAP:
+                si += 1
+                
+            if HHpredHitAlignment.GAP in (q, s):
+                if in_segment:
+                    yield HHpredHit(self._hit.rank, self._hit.id, ss, se, 
+                                    qs, qe, self._hit.probability, 
+                                    self._hit.qlength)
+                    in_segment = False
+                    qs, ss = 0, 0
+                    qe, se = 0, 0
+            else: 
+                if not in_segment:
+                    in_segment = True
+                    qs, ss = qi, si
+            
+            qe, se = qi, si                        
+        
+        if in_segment:
+            yield HHpredHit(self._hit.rank, self._hit.id, ss, se, qs, qe,
+                            self._hit.probability, self._hit.qlength)
+                    
     def to_a3m(self):
         """
         Format the sequences in the alignment as A3M strings.
@@ -1045,7 +1121,7 @@ class HHpredHitAlignment(object):
 
             pos = self[i]
 
-            if pos.query != '-':
+            if pos.query != HHpredHitAlignment.GAP:
                 query.append(pos.query.upper().replace(' ', '-'))
 
             subject.append(pos.subject.upper().replace(' ', '-'))
