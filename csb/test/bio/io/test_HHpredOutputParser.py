@@ -14,7 +14,7 @@ class TestHHpredOutputParser(unittest.TestCase):
         
         filename = 'data/test_HHpredOutputParser.hhr'
         content = open(filename).read()
-        tmp = HHpredOutputParser()
+        tmp = HHpredOutputParser(True)
         
         self.hitlist = tmp.parse_file(filename)
         self.hitlist2 = tmp.parse_string(content)
@@ -29,7 +29,15 @@ class TestHHpredOutputParser(unittest.TestCase):
         self.assertEqual(self.hitlist.neff, float('5.2'))
         self.assertEqual(self.hitlist.searched_hmms, 2936)   
         self.assertRaises(IndexError, self.hitlist.__getitem__, 20)
-
+        
+        segments = list(self.hitlist[9].alignment.segments)
+        self.assertEqual(len(segments), 3)
+        
+        for s, l in zip(segments, [(9, 21), (22, 35), (37, 52)]):
+            self.assertEqual(s.start, l[0])
+            self.assertEqual(s.end, l[1])
+            self.assertEqual(s.end - s.start, l[1] - l[0])
+            
     def testParseString(self):
         """
         Test HHpredOutputParser.parse_string()
