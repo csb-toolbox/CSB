@@ -389,18 +389,34 @@ class HHpredProfileParser(object):
 
             first_match = hmm.layers[hmm.layers.start_index]
 
-            assert start_probs[0] is not None                                            # Start -> M[1]
+            assert start_probs[0] is not None          # Start -> M[1]
             start_tran = Transition(hmm.start, first_match[States.Match],
                                     start_probs[0])
             hmm.start.transitions.append(start_tran)
 
-            if start_probs[2] is None and start_probs[6] is not None:
-                suspects = tran_lines[first_match.rank].split()
-                if suspects[5] != '*' or suspects[6] != '*':
-                    self._issue(hmm, 'M->D is corrupt (*) at the Start layer, using D->D instead ({0}).'.format(start_probs[6]))
-                    start_probs[2] = start_probs[6]
+            if start_probs[1] is not None and start_probs[3] is not None:  # Start -> I[0]
+                start_ins = State(States.Insertion,
+                                  emit = csb.pyutils.Enum.members(sequence.SequenceAlphabets.Protein))
+                start_ins.rank = 0
+                start_ins.background.set(background)
+                start_ins.emission = start_ins.background
 
-            if start_probs[2] is not None:                                               # Start -> D[1]
+                hmm.start_insertion = start_ins
+                # Start -> I[0]
+                hmm.start.transitions.append( Transition( hmm.start,
+                                                          hmm.start_insertion,
+                                                          start_probs[1]))
+                # I[0] -> M[1]
+                hmm.start_insertion.transitions.append( Transition(hmm.start_insertion,
+                                                                   first_match[States.Match],
+                                                                   start_probs[3]))
+                if start_probs[4]:
+                    hmm.start_insertion.transitions.append( Transition(hmm.start_insertion,
+                                                                       hmm.start_insertion,
+                                                                       start_probs[4]))
+                    
+            
+            if start_probs[2] is not None:  # Start -> D[1]
                 start_del = State(States.Deletion)
                 start_del.rank = 1
                 hmm.layers[1].append(start_del)
@@ -498,9 +514,19 @@ class HHpredProfileParser(object):
                         nextdeletion = hmm.layers[rank + 1][States.Deletion]
                         assert match.transitions[States.Deletion].successor \
                                == nextdeletion
+                    except csb.pyutils.CollectionIndexError as cie:
+                        if rank == hmm.layers.last_index:
+                            issue = 'Transition D -> D at the last layer ' \
+                                    + '{0} ({1}-based) references a non-existent D state.'.format(rank,
+                                                                                              hmm.layers.start_index)
+                            self._issue(hmm,issue)
+                        else:
+                            raise cie
                     transition = Transition(deletion, nextdeletion,
                                             probability)
                     deletion.transitions.append(transition)
+            
+                                   
                 elif tran == 'Neff':
                     hmm.layers[rank].effective_matches = int(fields[col])
                 elif tran == 'Neff_I':
