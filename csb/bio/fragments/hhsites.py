@@ -1,3 +1,4 @@
+import csb.bio.fragments
 import csb.bio.structure as structure
 import csb.bio.fragments.isites as isites
 
@@ -113,3 +114,6 @@ class HMMLibraryWrapper(isites.Library):
     @clusters.setter
     def clusters(self, clusters):
         self.fragments = clusters    
+        
+class HMMFragmentMatch(csb.bio.fragments.FragmentMatch):
+    pass        

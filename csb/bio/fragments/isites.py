@@ -6,6 +6,7 @@ import math
 
 import csb.pyutils
 import csb.bio.io.pdb
+import csb.bio.fragments
 import csb.bio.structure as structure
 import csb.bio.sequence
 import csb.bio.hmm as hmm
@@ -154,6 +155,9 @@ class ProteinProfile(object):
     @property
     def max_score(self):
         return self._maxscore
+
+class ISitesFragmentMatch(csb.bio.fragments.FragmentMatch):
+    pass
     
 class ProfileMatch(object):
     """
