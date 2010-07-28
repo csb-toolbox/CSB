@@ -416,6 +416,10 @@ class HHpredProfileParser(object):
                                                                        start_probs[4]))
                     
             
+            if start_probs[2] is None and start_probs[6] is not None:
+                self._issue(hmm, 'M->D is corrupt (*) at the Start layer, using D->D instead ({0}).'.format(start_probs[6]))
+                start_probs[2] = start_probs[6]        
+                        
             if start_probs[2] is not None:  # Start -> D[1]
                 start_del = State(States.Deletion)
                 start_del.rank = 1
