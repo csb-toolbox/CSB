@@ -656,7 +656,7 @@ class HHpredOutputParser(object):
 
         self.alignments = alignments
 
-    def parse_file(self, hhr_file):
+    def parse_file(self, hhr_file, header_only=False):
         """
         Parse all hits from this HHpred result file.
         
@@ -670,9 +670,9 @@ class HHpredOutputParser(object):
         """
 
         with open(os.path.expanduser(hhr_file)) as stream:
-            return self._parse(stream)
+            return self._parse(stream, header_only)
     
-    def parse_string(self, output):
+    def parse_string(self, output, header_only=False):
         """
         Get all hits from an C{output} string.
         
@@ -690,9 +690,9 @@ class HHpredOutputParser(object):
         stream.write(output)
         stream.seek(0)
         
-        return self._parse(stream)
+        return self._parse(stream, header_only)
     
-    def _parse(self, stream):
+    def _parse(self, stream, header_only):
         
         qlen = None
         in_hits = False
@@ -729,7 +729,7 @@ class HHpredOutputParser(object):
                         if identifier == 'Match_columns':
                             qlen = data
 
-            if in_hits:
+            if in_hits and not header_only:
                 if not line.strip(): ## suboptimal way to handle block switch
                     in_hits = False
                     in_alis = True
@@ -765,7 +765,7 @@ class HHpredOutputParser(object):
                 hits[hit.rank] = hit
                 alis[hit.rank] = {'q': [], 's': []}
 
-            elif in_alis:
+            elif in_alis and not header_only:
                 if line.startswith('Done'):
                     in_alis = False
                     break
@@ -775,7 +775,7 @@ class HHpredOutputParser(object):
                         raise InvalidHHpredOutputError(
                             'Alignment {0}. refers to a non-existing hit'.format(c_rank))
                 elif line.startswith('>'):
-                    hits[c_rank].name = line[1:]
+                    hits[c_rank].name = line[1:].strip()
                 elif line.startswith('Probab='):
                     for pair in line.split():
                         key, value = pair.split('=')
