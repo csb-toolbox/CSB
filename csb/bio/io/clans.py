@@ -32,6 +32,12 @@ class ClansParser:
         lines = file(os.path.expanduser(filename)).read()
         data_blocks = lines.split('\n', 1)[1] ## remove sequence=COUNT line
 
+        ## init variables in case the block does not exist
+        seq = None
+        seqgroups = None
+        pos = None
+        hsp = None
+
         data_block_dict = self._get_block_dict(data_blocks)
 
         for tag, block in data_block_dict.items():
@@ -59,8 +65,9 @@ class ClansParser:
                       ' File corrupt or further implementations needed!'
 
         ## add entries
-        c.entries = [ClansEntry(seq[i][0], seq[i][1], pos[i], parent=c)
-                     for i in pos]
+        if seq is not None and pos is not None:
+            c.entries = [ClansEntry(seq[i][0], seq[i][1], pos[i], parent=c)
+                         for i in pos]
 
         ## add groups
         c.seqgroups = []
@@ -80,8 +87,9 @@ class ClansParser:
                 c.add_group(group, members)
 
         ## add hsp values
-        [c.entries[a].add_hsp(c.entries[b], value)
-         for ((a, b), value) in hsp.items()]
+        if hsp is not None:
+            [c.entries[a].add_hsp(c.entries[b], value)
+             for ((a, b), value) in hsp.items()]
 
         c._update_index()
 
@@ -208,9 +216,10 @@ class ClansWriter:
 
         if rotmtx.shape != (3, 3):
             raise ValueError('rotmtx must be a 3x3 array')
+        
         self.output_string += '<rotmtx>\n'
         self.output_string += '\n'.join(
-            ['%s;%s;%s;' % tuple([repr(rotmtx[i]) for i in range(3)])])
+            ['%s;%s;%s;' % tuple(rotmtx[i]) for i in range(3)])
         self.output_string += '\n</rotmtx>\n'
 
     def clans_seq_block(self):
@@ -788,14 +797,17 @@ if __name__ == '__main__':
         print 'to determine duplicates and remove them.'
 
     else:
+
+        cp = ClansParser()
+        
         print 'reading source...'
         source_fn = sys.argv[1]
-        source = Clans(source_fn)
+        source = cp.parse_file(source_fn)
         print 'source is', source
 
         print 'reading target...'
         target_fn = sys.argv[2]
-        target = Clans(target_fn)
+        target = cp.parse_file(target_fn)
         print 'target is', target
 
         print 'transferring groups...'
