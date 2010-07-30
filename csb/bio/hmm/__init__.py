@@ -171,10 +171,10 @@ PCT   {0.pseudocounts}'''.format(hmm))
         stream.writeline('SEQ')
         if hmm.dssp:
             stream.writeline('>ss_dssp')
-            stream.writeline(hmm.dssp.tostring())
+            stream.writeline(hmm.dssp.to_string())
         if hmm.psipred:
             stream.writeline('>ss_pred')
-            stream.writeline(hmm.psipred.tostring())
+            stream.writeline(hmm.psipred.to_string())
             stream.writeline('>ss_conf')
             confidence = [''.join(map(str, m.score)) for m in hmm.psipred]
             stream.writeline(''.join(confidence))
