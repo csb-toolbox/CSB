@@ -23,7 +23,7 @@ class ClansParser:
     def __repr__(self):
         return 'ClansParser instance'
 
-    def parse_file(self, filename, verbose=False):
+    def parse_file(self, filename):
         '''Parses a CLANS file.
 
         @param filename: filename of the CLANS file.
@@ -101,10 +101,8 @@ class ClansParser:
         a dict with dict[tag] = DATA.
 
         @param data_blocks: all data from a clans file starting with the first
-        <tag>.
+                            <tag>.
         @type data_blocks: string
-
-        @return:
         '''
         # read file and remove the first line, i.e. sequence=SEQUENCE_COUNT
         data_blocks = file(os.path.expanduser(
@@ -255,6 +253,9 @@ class ClansParser:
 
         @param block: a list of lines in the CLANS <hsp> block format
         @type block: list
+
+        @return: a dict using 2-tuples of the two integers as keys and the
+                 float as values
         '''
         if 'hsp' not in self.data_block_dict:
             print 'WARNING: CLANS file contains no <hsp> block. This is OK,'
@@ -359,28 +360,19 @@ class ClansWriter:
         '''Adds a <hsp>data</hsp> CLANS file block to self.output_string'''
         self.file.write('<hsp>\n')
 
-##         output_tmp = ''
-##         for entry1 in self.clans_instance.entries:
-##             entry1_id = entry1.get_id()
-
-##             entry1_hsps = array(
-##                 sorted([(entry2.get_id() pvalue)
-##                         for (entry2, pvalue) in entry1.hsp.items()]))
-##             take_mask = [0 ** (entry1_id >= entry2)
-##                          for (entry2_id, p_values) in entry1_hsps]
-
-##             output_tmp += ''.join(
-##                 ['%i %i:%s\n' % (entry1_id, entry2_id, repr(pvalue))
-##                  for (entry2_id, pvalue) in entry1_hsps.take(take_mask)])
-
-##             if entry_1
-
         ## sorting is not necessary, but makes a nicer looking clans file
-        self.file.write(''.join(
-            ['%i %i:%s\n' % (entry1.get_id(), entry2.get_id(), repr(pvalue))
-             for entry1 in self.clans_instance.entries
-             for (entry2, pvalue) in sorted(entry1.hsp.items())
-             if entry1.get_id() < entry2.get_id()]))
+        for entry1 in self.clans_instance.entries:
+            entry1_id = entry1.get_id()
+
+            for (entry2, pvalue) in sorted(entry1.hsp.items()):
+                entry2_id = entry2.get_id()
+
+                if entry1_id >= entry2_id:
+                    continue
+
+                self.file.write('%i %i:%s\n' %
+                                (entry1_id, entry2_id, repr(pvalue)))
+
         self.file.write('</hsp>\n')
 
 
@@ -595,6 +587,7 @@ class Clans(object):
         self._has_good_index = True
 
     def set_default_params(self):
+        '''Sets the parameters to CLANS\' default values.'''
         self.params = {
             'maxmove': .1,
             'pval': 1.,
@@ -631,53 +624,62 @@ class Clans(object):
             }
 
     def set_default_rotmtx(self):
+        '''Resets the rotation matrix (rotmtx) to no rotation.'''
         self.rotmtx = eye(3)
 
     def add_group(self, group, members=None):
+        '''Adds a new group.
+
+        @param group: the new group
+        @type group: a ClansSeqgroup instance
+
+        @param members: an iterable of members that are added to the new group
+        @type members: list of ClansEntry instances
+        '''
+        if not isinstance(group, ClansSeqgroup):
+            raise ValueError('groups need to be ClansSeqgroup instances')
+
         self.seqgroups.append(group)
         if members is not None:
             [group.add(member) for member in members]
 
     def remove_group(self, group):
+        '''Removes a group.
+
+        @param group: the new group
+        @type group: a ClansSeqgroup instance
+        '''
+        if not isinstance(group, ClansSeqgroup):
+            raise ValueError('groups need to be ClansSeqgroup instances')
+
         self.seqgroups.remove(group)
         [group.remove(member) for member in group.members]
 
     def add_entry(self, entry):
+        '''Adds an new entry.
+
+        @param entry: the new entry
+        @type entry: a ClansEntry instance
+        '''
+        if not isinstance(entry, ClansEntry):
+            raise ValueError('entries need to be ClansEntry instances')
+
         self.entries.append(entry)
         entry.parent = self
 
         self._has_good_index = False
 
-    def get_entry(self, name):
-        '''Checks if a ClansEntry instance with <name> exists and returns it.
-        If multiple ones exists, the first hit is returned. If None exist a
-        ValueError is thrown.
-
-        @param name: name of the sought ClansEntry
-        @type name: string
-
-        @throws ValueError: in case no entry with this name is found
-        '''
-
-        hits = [e for e in self.entries if e.name == name]
-
-        if len(hits) >= 1:
-            hits = hits[0]
-
-        elif len(hits) == 0:
-            raise ValueError('ClansEntry %s does not exist.' % name)
-
-        return hits
-
     def remove_entry(self, entry):
-        if isinstance(entry, basestring):
-            entry = [x for x in self.entries if x.name == entry]
-            if len(entry) > 1:
-                raise ValueError('too many found')
-            if len(entry) == 0:
-                return
+        '''Removes an entry.
 
-            entry = entry[0]
+        @param group: the new group
+        @type group: a ClansSeqgroup instance
+
+        @throws: ValueError if entry is neither a string nor a ClansEntry
+                 instance
+        '''
+        if isinstance(entry, basestring):
+            entry = self.get_entry(entry, True)
 
         if not isinstance(entry, ClansEntry):
             raise ValueError('only string and ClansEntry are supported values')
@@ -693,6 +695,38 @@ class Clans(object):
 
         self.entries.remove(entry)
         self._has_good_index = False
+
+    def get_entry(self, name, pedantic=True):
+        '''Checks if an entry with name <name> exists and returns it. If
+        multiple ones exists, one is returned.
+
+        @param name: name of the sought entry
+        @type name: string
+
+        @param pedantic: If True, a ValueError is raised if multiple entries
+                         with name <name> are found. If False, returns the list
+                         containing all matching entries.
+        @type pedantic: bool
+
+        @return: entry with name <name>
+
+        @throws ValueError: if no entry with name <name> is found
+        @throws ValueError: if multiple entries with name <name> are found and
+                            pedantic==True
+        '''
+
+        hits = [e for e in self.entries if e.name == name]
+
+        if len(hits) >= 1:
+            if pedantic:
+                raise ValueError('multiple entries have name \'{}\''.format(
+                    name)
+            return hits
+
+        elif len(hits) == 0:
+            raise ValueError('ClansEntry %s does not exist.' % name)
+
+        return hits
 
     def remove_duplicates(self, return_removed=False, cmp_function=None):
         '''Removes entries with identical unique_ids (see
@@ -960,4 +994,4 @@ if __name__ == '__main__':
 
         fn = '/tmp/cl/2be1_psiblast.clans'
         cp = ClansParser()
-        c = cp.parse_file(fn, verbose=True)
+        c = cp.parse_file(fn)
