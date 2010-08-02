@@ -7,95 +7,95 @@
 ##         All rights reserved.
 ##         No warranty implied or expressed.
 ##
+import os
+import re
+import sys
+from numpy import array, float64, eye, random
 
 
 class ClansParser:
     '''Class for parsing CLANS files to Clans instances.'''
 
     def __init__(self):
-        pass
+        self.clans_instance = None
+        self.data_block_dict = {}
 
     def __repr__(self):
         return 'ClansParser instance'
 
-    def parse_file(self, filename):
+    def parse_file(self, filename, verbose=False):
         '''Parses a CLANS file.
 
         @param filename: filename of the CLANS file.
         @type filename: string
         '''
-        import os
+        self.clans_instance = Clans()
+        self.clans_instance.filename = filename
 
-        c = Clans()
-        c.filename = filename
-
-        lines = file(os.path.expanduser(filename)).read()
-        data_blocks = lines.split('\n', 1)[1] ## remove sequence=COUNT line
-
-        ## init variables in case the block does not exist
+        ## init variables in case a block does not exist
         seq = None
         seqgroups = None
         pos = None
         hsp = None
 
-        data_block_dict = self._get_block_dict(data_blocks)
+        self._read_block_dict()  # read and preprocess the CLANS file
 
-        for tag, block in data_block_dict.items():
-            block = block.strip().split('\n')
-            if tag == 'param':
-                self._parse_params(block, c)
+        self._parse_param()
+        self._parse_rotmtx()
+        seq = self._parse_seq()
+        seqgroups = self._parse_seqgroups()
+        pos = self._parse_pos()
+        hsp = self._parse_hsp()
 
-            elif tag == 'rotmtx':
-                self._parse_rotmtx(block, c)
+        ## print unknown blocks in case further implementations are needed
+        known_block_tags = set(('param', 'rotmtx', 'seq', 'seqgroups', 'pos',
+                                'hsp'))
+        unprocessed_block_tags = set(self.data_block_dict.keys()).difference(
+            known_block_tags)
 
-            elif tag == 'seq':
-                seq = self._parse_seq(block)
+        for unprocessed_tag in unprocessed_block_tags:
+            print '[ClansParser.parse_file:WARNING] tag "%s" unknown.' \
+                  % unprocessed_tag \
+                  + '    File corrupt or further implementations needed!'
 
-            elif tag == 'seqgroups':
-                seqgroups = self._parse_seqgroups(block)
+        ## if no entries exist, we cannot add pos, seqgroup and hsp data
+        if len(seq) > 0:
 
-            elif tag == 'pos':
-                pos = self._parse_pos(block)
+            ## add Entries
+            if len(pos) > 0:
+                self.clans_instance.entries = [
+                    ClansEntry(seq[i][0], seq[i][1],
+                               pos[i], parent=self.clans_instance)
+                    for i in pos]
 
-            elif tag == 'hsp':
-                hsp = self._parse_hsp(block)
+            ## add groups
+            self.clans_instance.seqgroups = []
+            if len(seqgroups) > 0:
+                for group_raw_data in seqgroups:
 
-            else:
-                print '[parse_clans_file:WARNING] tag "%s" unknown.' % tag + \
-                      ' File corrupt or further implementations needed!'
+                    group = ClansSeqgroup(name=group_raw_data['name'],
+                                          type=group_raw_data['type'],
+                                          size=group_raw_data['size'],
+                                          hide=group_raw_data['hide'],
+                                          color=group_raw_data['color'])
 
-        ## add entries
-        if seq is not None and pos is not None:
-            c.entries = [ClansEntry(seq[i][0], seq[i][1], pos[i], parent=c)
-                         for i in pos]
+                    ## get members corresponding to the IDs in this group
+                    members = [self.clans_instance.entries[number]
+                               for number in group_raw_data['numbers']]
 
-        ## add groups
-        c.seqgroups = []
-        if seqgroups is not None:
-            for group_raw_data in seqgroups:
+                    self.clans_instance.add_group(group, members)
 
-                group = ClansSeqgroup(name=group_raw_data['name'],
-                                      type=group_raw_data['type'],
-                                      size=group_raw_data['size'],
-                                      hide=group_raw_data['hide'],
-                                      color=group_raw_data['color'])
+            ## add hsp values
+            if len(hsp) > 0:
+                [self.clans_instance.entries[a].add_hsp(
+                    self.clans_instance.entries[b], value)
+                 for ((a, b), value) in hsp.items()]
 
-                ## get members corresponding to the IDs in this group
-                members = [c.entries[number]
-                           for number in group_raw_data['numbers']]
+        self.clans_instance._update_index()
 
-                c.add_group(group, members)
+        return self.clans_instance
 
-        ## add hsp values
-        if hsp is not None:
-            [c.entries[a].add_hsp(c.entries[b], value)
-             for ((a, b), value) in hsp.items()]
-
-        c._update_index()
-
-        return c
-
-    def _get_block_dict(self, data_blocks):
+    def _read_block_dict(self):
         '''
         Extracts all <tag>DATA</tag> blocks from string data_blocks and returns
         a dict with dict[tag] = DATA.
@@ -103,14 +103,36 @@ class ClansParser:
         @param data_blocks: all data from a clans file starting with the first
         <tag>.
         @type data_blocks: string
+
+        @return:
         '''
-        import re
+        # read file and remove the first line, i.e. sequence=SEQUENCE_COUNT
+        data_blocks = file(os.path.expanduser(
+            self.clans_instance.filename)).read().split('\n', 1)[1]
+
         ## flag re.DOTALL is necessary to make . match newlines
         data = re.findall(r'(<(\w+)>(.+)</\2>)', data_blocks,
                           flags=re.DOTALL)
-        return dict([(tag, data) for tag_plus_data, tag, data in data])
+        self.data_block_dict = dict([(tag, data.strip().split('\n'))
+                                     for tag_plus_data, tag, data in data])
 
-    def _parse_params(self, block, clans_instance):
+    def _parse_param(self):
+        '''
+        This method parses a list of lines in the CLANS <param> format:
+
+            parameter1=data1
+            parameter2=data2
+            ...
+
+        @param block: a list of lines in the CLANS <param> block format
+        @type block: list
+        '''
+        if 'param' not in self.data_block_dict:
+            print 'WARNING: CLANS file contains no <param> block.'
+            return
+
+        block = self.data_block_dict['param']
+
         tmp_params = dict([block[i].split('=') for i in range(len(block))])
 
         ## create colors entry from colorcutoffs and colorarr
@@ -123,21 +145,73 @@ class ClansParser:
                                              for color in colors]]
 
         tmp_params['colors'] = dict(zip(colorcutoffs, colorarr))
-        clans_instance.params = tmp_params
+        self.clans_instance.params = tmp_params
 
-    def _parse_rotmtx(self, block, clans_instance):
-        from numpy import array, float64
+    def _parse_rotmtx(self):
+        '''
+        This method parses a list of lines in the CLANS <rotmtx> format (three
+        lines; each line contains 3 floats followed by a semicolon). The data
+        is stored in the clans_instance as a 3x3 numpy.array.
+
+        @param block: a list of lines in the CLANS <rotmtx> block format
+        @type block: list
+        '''
+        if 'rotmtx' not in self.data_block_dict:
+            print 'WARNING: CLANS file contains no <rotmtx> block.'
+            return
+
+        block = self.data_block_dict['rotmtx']
 
         if len(block) != 3:
-            raise ValueError('"rotmtx" blocks must comprise exactly 3 lines.')
-        clans_instance.rotmtx = array(
+            raise ValueError('CLANS <rotmtx> blocks comprise exactly 3 lines.')
+        self.clans_instance.rotmtx = array(
             [[float64(val) for val in line.split(';')[:3]] for line in block])
 
-    def _parse_seq(self, block):
+    def _parse_seq(self):
+        '''
+        This method parses a list of lines in the CLANS <seq> format, which
+        is the same as FASTA.
+
+        @param block: a list of lines in the CLANS <seq> block format
+        @type block: list
+
+        @return: dict with running numbers as key and 2-tuples (id, sequence)
+                 as values
+        '''
+        if 'seq' not in self.data_block_dict:
+            print 'WARNING: CLANS file contains no <seq> block. This is OK,'
+            print '         if the file does not contain any sequences.'
+            return {}
+
+        block = self.data_block_dict['seq']
+
         return dict([(i, (block[2 * i][1:], block[2 * i + 1].strip()))
                      for i in range(len(block) / 2)])
 
-    def _parse_seqgroups(self, block):
+    def _parse_seqgroups(self):
+        '''
+        This method parses a list of lines in the CLANS <seqgroup> format:
+
+            name=name of the group
+            type=0
+            size=12
+            hide=0
+            color=255;204;51
+            numbers=0;1;2;3;4;5;6;10;13
+            ...
+
+        @param block: a list of lines in the CLANS <seqgroups> block format
+        @type block: list
+
+        @return: list of dicts (one for each group) with the tags (name, type,
+                 size, hide, ...) as keys and their typecasted data as values
+                 (i.e. name will be a string, size will be an integer, etc)
+        '''
+        if 'seqgroups' not in self.data_block_dict:
+            return []
+
+        block = self.data_block_dict['seqgroups']
+
         groups = []
         for line in block:
             p, v = line.split('=')
@@ -149,15 +223,49 @@ class ClansParser:
                 groups[-1][p] = v
         return groups
 
-    def _parse_pos(self, block):
-        from numpy import array, float64
+    def _parse_pos(self):
+        '''
+        This method parses a list of lines in the CLANS <pos> format
+        \'INT FLOAT FLOAT FLOAT\'.
+
+        @param block: a list of lines in the CLANS <pos> block format
+        @type block: list
+
+        @return: a dict using the integers as keys and a (3,1)-array created
+                 from the three floats as values.
+        '''
+        if 'pos' not in self.data_block_dict:
+            print 'WARNING: CLANS file contains no <pos> block. This is OK,'
+            print '         if the file does not contain any sequences.'
+            return {}
+
+        block = self.data_block_dict['pos']
+
         return dict([(int(l.split()[0]),
                       array([float64(val) for val in l.split()[1:]]))
                      for l in block])
 
-    def _parse_hsp(self, block):
+    def _parse_hsp(self):
+        '''
+        This method parses a list of lines in the CLANS <hsp> format
+        \'INT INT: FLOAT\'.
+
+        NOTE: some CLANS <hsp> lines contain more than one float; we omit the
+              additional numbers
+
+        @param block: a list of lines in the CLANS <hsp> block format
+        @type block: list
+        '''
+        if 'hsp' not in self.data_block_dict:
+            print 'WARNING: CLANS file contains no <hsp> block. This is OK,'
+            print '         if the file does not contain any sequences or if'
+            print '         none of the contained sequences have connections.'
+            return {}
+
+        block = self.data_block_dict['hsp']
+
         return dict([(tuple([int(val) for val in line.split(':')[0].split()]),
-                            float(line.split(':')[1].split(' ')[0]))
+                      float(line.split(':')[1].split(' ')[0]))
                      for line in block])
 
 
@@ -165,11 +273,11 @@ class ClansWriter:
 
     def __init__(self, clans_instance, output_filename):
         '''Writes the content of a Clans instance to to CLANS readable file.'''
-        import os
-
         self.clans_instance = clans_instance
 
-        self.output_string = 'sequences=%i\n' % len(clans_instance.entries)
+        self.file = file(os.path.expanduser(output_filename), 'w')
+
+        self.file.write('sequences=%i\n' % len(clans_instance.entries))
 
         ## these methods append the CLANS file blocks to self.output_string
         self.clans_param_block()
@@ -179,8 +287,7 @@ class ClansWriter:
         self.clans_pos_block()
         self.clans_hsp_block()
 
-        file(os.path.expanduser(output_filename), 'w').write(
-            self.output_string)
+        self.file.close()
 
     ## methods for creating a CLANS files
     def clans_param_block(self):
@@ -200,11 +307,11 @@ class ClansWriter:
                  for cutoff in cutoffs])
             params_dict.pop('colors')
 
-        self.output_string += '<param>\n'
-        self.output_string += '\n'.join(
+        self.file.write('<param>\n')
+        self.file.write('\n'.join(
             ['%s=%s' % (param_name, params_dict[param_name])
-             for param_name in sorted(params_dict.keys())])
-        self.output_string += '\n</param>\n'
+             for param_name in sorted(params_dict.keys())]))
+        self.file.write('\n</param>\n')
 
     def clans_rotmtx_block(self):
         '''Adds a <rotmtx>data</rotmtx> CLANS file block to
@@ -216,18 +323,18 @@ class ClansWriter:
 
         if rotmtx.shape != (3, 3):
             raise ValueError('rotmtx must be a 3x3 array')
-        
-        self.output_string += '<rotmtx>\n'
-        self.output_string += '\n'.join(
-            ['%s;%s;%s;' % tuple(rotmtx[i]) for i in range(3)])
-        self.output_string += '\n</rotmtx>\n'
+
+        self.file.write('<rotmtx>\n')
+        self.file.write('\n'.join(
+            ['%s;%s;%s;' % tuple(rotmtx[i]) for i in range(3)]))
+        self.file.write('\n</rotmtx>\n')
 
     def clans_seq_block(self):
         '''Adds a <seq>data</seq> CLANS file block to self.output_string'''
-        self.output_string += '<seq>\n'
-        self.output_string += ''.join([e.output_string_seq()
-                                       for e in self.clans_instance.entries])
-        self.output_string += '</seq>\n'
+        self.file.write('<seq>\n')
+        self.file.write(''.join([e.output_string_seq()
+                                 for e in self.clans_instance.entries]))
+        self.file.write('</seq>\n')
 
     def clans_seqgroups_block(self):
         '''Adds a <seqgroupsparam>data</seqgroups> CLANS file block
@@ -237,25 +344,44 @@ class ClansWriter:
         if seqgroups is None or len(seqgroups) == 0:
             return
 
-        self.output_string += '<seqgroups>\n'
-        self.output_string += '\n'.join([s.output_string() for s in seqgroups])
-        self.output_string += '\n</seqgroups>\n'
+        self.file.write('<seqgroups>\n')
+        self.file.write('\n'.join([s.output_string() for s in seqgroups]))
+        self.file.write('\n</seqgroups>\n')
 
     def clans_pos_block(self):
         '''Adds a <pos>data</pos> CLANS file block to self.output_string'''
-        self.output_string += '<pos>\n'
-        self.output_string += '\n'.join([e.output_string_pos()
-                                         for e in self.clans_instance.entries])
-        self.output_string += '\n</pos>\n'
+        self.file.write('<pos>\n')
+        self.file.write('\n'.join([e.output_string_pos()
+                                   for e in self.clans_instance.entries]))
+        self.file.write('\n</pos>\n')
 
     def clans_hsp_block(self):
         '''Adds a <hsp>data</hsp> CLANS file block to self.output_string'''
-        self.output_string += '<hsp>\n'
-        self.output_string += ''.join(
+        self.file.write('<hsp>\n')
+
+##         output_tmp = ''
+##         for entry1 in self.clans_instance.entries:
+##             entry1_id = entry1.get_id()
+
+##             entry1_hsps = array(
+##                 sorted([(entry2.get_id() pvalue)
+##                         for (entry2, pvalue) in entry1.hsp.items()]))
+##             take_mask = [0 ** (entry1_id >= entry2)
+##                          for (entry2_id, p_values) in entry1_hsps]
+
+##             output_tmp += ''.join(
+##                 ['%i %i:%s\n' % (entry1_id, entry2_id, repr(pvalue))
+##                  for (entry2_id, pvalue) in entry1_hsps.take(take_mask)])
+
+##             if entry_1
+
+        ## sorting is not necessary, but makes a nicer looking clans file
+        self.file.write(''.join(
             ['%i %i:%s\n' % (entry1.get_id(), entry2.get_id(), repr(pvalue))
              for entry1 in self.clans_instance.entries
-             for (entry2, pvalue) in entry1.hsp.items()])
-        self.output_string += '</hsp>\n'
+             for (entry2, pvalue) in sorted(entry1.hsp.items())
+             if entry1.get_id() < entry2.get_id()]))
+        self.file.write('</hsp>\n')
 
 
 def parse_gi_and_residues(name):
@@ -271,19 +397,30 @@ def parse_gi_and_residues(name):
     gi_number = name.split('|', 1)[0]
 
     next_gi_start = name[real_start:].find('gi|')
-    residues_start = name.find('(')
-    if next_gi_start != -1 and residues_start > next_gi_start:
+
+    if next_gi_start != -1:
+        name = name[:next_gi_start]
+
+    initial_residue_number = name.find('(')
+    if initial_residue_number == -1:
         return gi_number
 
-    residues_end = name[residues_start + 1:].find(':')
-    if residues_end == -1:
-        ## some entries do not have format (x-y:z)
-        residues_end = name[residues_start + 1:].find(')')
-        if residues_end == -1:
-            raise ValueError('no end residue found')
+    start = name[initial_residue_number + 1:].split('-')
+    ## if start isn't an integer, we assume the '(' is not the start of a range
+    try:
+        start = int(start[0])
+    except ValueError:
+        return gi_number
 
-    residues_end += residues_start + 1 ## shift to real position in name
-    potential_start_and_end = name[residues_start + 1:residues_end].split('-')
+    residues_end = name.find(':')
+    if residues_end == -1:
+        ## some entries are not (x-y:z), but only (x-y)
+        residues_end = name.find(')')
+        if residues_end == -1:
+            raise ValueError('no end residue found in name\n\t%s' % name)
+
+    potential_start_and_end = name[:residues_end].split('-')
+
     if len(potential_start_and_end) != 2:
         return gi_number
     try:
@@ -297,7 +434,7 @@ def parse_gi_and_residues(name):
 class gi_comparator(object):
 
     def __init__(self):
-        self.mapping = {} ## mapping cache for faster access
+        self.mapping = {}  # mapping cache for faster access
 
     def __call__(self, entry1, entry2):
         if entry1.name in self.mapping:
@@ -319,7 +456,7 @@ class gi_comparator(object):
             A = dict(zip(('gi', 'start', 'end'), entry1_parsed))
             B = dict(zip(('gi', 'start', 'end'), entry2_parsed))
 
-            if A['gi'] != B['gi']: ## different gi numbers
+            if A['gi'] != B['gi']:  # different gi numbers
                 return -1
 
             ## switch so that A is the one that starts earlier
@@ -329,10 +466,10 @@ class gi_comparator(object):
 
             common_residues = A['end'] - B['start']
             if common_residues < 0:
-                return -1 ## B starts after A ends
+                return -1  # B starts after A ends
 
             if B['end'] < A['end']:
-                return 0 ## as A starts before B and ends after it, B is in A
+                return 0  # as A starts before B and ends after it, B is in A
 
             ## > 75% of length of the shorter one are shared => identical
             if common_residues > 0.75 * min(A['end'] - A['start'],
@@ -494,7 +631,6 @@ class Clans(object):
             }
 
     def set_default_rotmtx(self):
-        from numpy import eye
         self.rotmtx = eye(3)
 
     def add_group(self, group, members=None):
@@ -581,11 +717,11 @@ class Clans(object):
 
     def restrict_to_max_pvalue(self, cutoff, return_removed=False):
         ## loop to hit entries that have no HSPs left after the previous round
-        removed_entries = [] ## all removed entries go here
+        removed_entries = []  # all removed entries go here
         remove_us = ['first_loop_round_starter']
         while len(remove_us) > 0:
 
-            remove_us = [] ## entries removed this round
+            remove_us = []  # entries removed this round
             for entry in self.entries:
                 hsp_values = entry.hsp.values()
                 if len(hsp_values) == 0 or min(hsp_values) >= cutoff:
@@ -612,12 +748,11 @@ class ClansEntry(object):
 
     def __init__(self, name=None, seq='', coords=None, hsp=None, groups=None,
                  parent=None):
-        from numpy.random import random
         self.name = name
         self.seq = seq
 
         if coords is None:
-            coords = random(3) * 2 - 1 ## each CLANS coord is -1.<x<1.
+            coords = random.random(3) * 2 - 1  # each CLANS coord is -1.<x<1.
         self.coords = coords
 
         if groups is None:
@@ -772,7 +907,6 @@ def transfer_groups(origin, target):
                                   hide=group.hide,
                                   color=group.color)
 
-
         for member in group.members:
             try:
                 new_member = target.get_entry(member.name)
@@ -787,7 +921,6 @@ def transfer_groups(origin, target):
             target.add_group(new_group)
 
 if __name__ == '__main__':
-    import sys
     if len(sys.argv) not in [4, 5]:
         print 'transfer of group definitions from source to target CLANS map.'
         print 'usage: python clans.py source-file target-file output-file ' + \
@@ -799,7 +932,7 @@ if __name__ == '__main__':
     else:
 
         cp = ClansParser()
-        
+
         print 'reading source...'
         source_fn = sys.argv[1]
         source = cp.parse_file(source_fn)
@@ -825,7 +958,6 @@ if __name__ == '__main__':
 
     if False:
 
-        fn = 'test_data/clans.clans'
-        fn = '/tmp/x'
+        fn = '/tmp/cl/2be1_psiblast.clans'
         cp = ClansParser()
-        c = cp.parse_file(fn)
+        c = cp.parse_file(fn, verbose=True)
