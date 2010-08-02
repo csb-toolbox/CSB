@@ -1,12 +1,11 @@
-## class for parsing/writing/manipulating CLANS (by Tancred Frickey) files
-##
-## Author: Klaus Kopec
-##         MPI fuer Entwicklungsbiologie, Tuebingen
-##
-##         Copyright (C) 2010 Klaus Kopec
-##         All rights reserved.
-##         No warranty implied or expressed.
-##
+'''class for parsing/writing/manipulating CLANS (by Tancred Frickey) files
+
+Author: Klaus Kopec
+        MPI fuer Entwicklungsbiologie, Tuebingen
+        Copyright (C) 2010 Klaus Kopec
+        All rights reserved.
+        No warranty implied or expressed.
+'''
 import os
 import re
 import sys
@@ -14,7 +13,7 @@ from numpy import array, float64, eye, random
 
 
 class ClansParser:
-    '''Class for parsing CLANS files to Clans instances.'''
+    '''Class for parsing CLANS files.'''
 
     def __init__(self):
         self.clans_instance = None
@@ -24,9 +23,9 @@ class ClansParser:
         return 'ClansParser instance'
 
     def parse_file(self, filename):
-        '''Parses a CLANS file.
+        '''Parse a CLANS file.
 
-        @param filename: filename of the CLANS file.
+        @param filename: name of the CLANS file.
         @type filename: string
         '''
         self.clans_instance = Clans()
@@ -96,8 +95,8 @@ class ClansParser:
         return self.clans_instance
 
     def _read_block_dict(self):
-        '''Reads self.clans_instance.filename and extracts all <tag>DATA</tag>
-        blocks from it.
+        '''Extracts all <tag>DATA</tag> blocks from file
+        self.clans_instance.filename.
 
         @return: a dict with dict[tag] = DATA.
         '''
@@ -113,7 +112,7 @@ class ClansParser:
 
     def _parse_param(self):
         '''
-        This method parses a list of lines in the CLANS <param> format:
+        Parse a list of lines in the CLANS <param> format:
 
         parameter1=data1
         parameter2=data2
@@ -141,9 +140,10 @@ class ClansParser:
 
     def _parse_rotmtx(self):
         '''
-        This method parses a list of lines in the CLANS <rotmtx> format (three
-        lines; each line contains 3 floats followed by a semicolon). The data
-        is stored in the clans_instance as a 3x3 numpy.array.
+        Parse a list of lines in the CLANS <rotmtx> format. The data is stored
+        in the clans_instance as a 3x3 numpy.array.
+
+        @raise ValueError: if the rotmtx block does not contain exactly 3 lines
         '''
         if 'rotmtx' not in self.data_block_dict:
             print 'WARNING: CLANS file contains no <rotmtx> block.'
@@ -158,8 +158,8 @@ class ClansParser:
 
     def _parse_seq(self):
         '''
-        This method parses a list of lines in the CLANS <seq> format, which
-        is the same as FASTA.
+        Parse a list of lines in the CLANS <seq> format, which are in FASTA
+        format.
 
         @return: dict with running numbers as key and 2-tuples (id, sequence)
                  as values
@@ -176,7 +176,7 @@ class ClansParser:
 
     def _parse_seqgroups(self):
         '''
-        This method parses a list of lines in the CLANS <seqgroup> format:
+        Parse a list of lines in the CLANS <seqgroup> format:
 
         name=name of the group
         type=0
@@ -208,8 +208,8 @@ class ClansParser:
 
     def _parse_pos(self):
         '''
-        This method parses a list of lines in the CLANS <pos> format
-        \'INT FLOAT FLOAT FLOAT\'.
+        Parse a list of lines in the CLANS <pos> format \'INT FLOAT FLOAT
+        FLOAT\'.
 
         @return: a dict using the integers as keys and a (3,1)-array created
                  from the three floats as values.
@@ -227,8 +227,7 @@ class ClansParser:
 
     def _parse_hsp(self):
         '''
-        This method parses a list of lines in the CLANS <hsp> format
-        \'INT INT: FLOAT\'.
+        Parse a list of lines in the CLANS <hsp> format \'INT INT: FLOAT\'.
 
         NOTE: some CLANS <hsp> lines contain more than one float; we omit the
         additional numbers
@@ -295,7 +294,10 @@ class ClansWriter:
 
     def clans_rotmtx_block(self):
         '''Adds a <rotmtx>data</rotmtx> CLANS file block to
-        self.output_string'''
+        self.output_string
+
+        @raise ValueError: if self.clans_instance.rotmtx is no 3x3 numpy.array
+        '''
         rotmtx = self.clans_instance.rotmtx
 
         if rotmtx is None:
@@ -358,6 +360,7 @@ class ClansWriter:
 def parse_gi_and_residues(name):
     '''
 
+    @raise ValueError: if a residue range is found that contains no end residue
     '''
     start = name.find('gi|')
     if start == -1:
@@ -484,8 +487,6 @@ class RGB_color(dict):
     def set_color(self, colorname, color):
         '''Sets one or all colors to a new value.
 
-        @raises ValueError: if any value in color is outside of range(256)
-
         @param colorname: the color that will be changed. Can be \'rgb\' or any
         single letter of the three.
         @type colorname: string
@@ -493,8 +494,9 @@ class RGB_color(dict):
         @param color: the color that is assigned to <colorname>
         @type color: a dict with keys [\'r\', \'g\', \'b\'], a semicolon
         separated string of 3 values (e.g. \'33;66;123\'), or a single value
-        '''
 
+        @raises ValueError: if any value in color is outside of range(256)
+        '''
         if colorname == 'rgb':
             if isinstance(color, basestring) and color.count(';') == 2:
                 color = dict(zip(['r', 'g', 'b'],
@@ -614,6 +616,8 @@ class Clans(object):
 
         @param members: an iterable of members that are added to the new group
         @type members: list of ClansEntry instances
+
+        @raise ValueError: if <group> is no ClansSeqgroup instance
         '''
         if not isinstance(group, ClansSeqgroup):
             raise ValueError('groups need to be ClansSeqgroup instances')
@@ -627,6 +631,8 @@ class Clans(object):
 
         @param group: the new group
         @type group: a ClansSeqgroup instance
+
+        @raise ValueError: if <group> is no ClansSeqgroup instance
         '''
         if not isinstance(group, ClansSeqgroup):
             raise ValueError('groups need to be ClansSeqgroup instances')
@@ -639,6 +645,8 @@ class Clans(object):
 
         @param entry: the new entry
         @type entry: a ClansEntry instance
+
+        @raise ValueError: if <entry> is no ClansEntry instance
         '''
         if not isinstance(entry, ClansEntry):
             raise ValueError('entries need to be ClansEntry instances')
@@ -866,26 +874,45 @@ class ClansSeqgroup(object):
         return len(self.members) == 0
 
     def add(self, new_member):
-        '''Adds ClansEntry \'new_member\' to this group.
+        '''Adds entry <new_member> to this group.
+
+        @param new_member: the member that shall be added to this group
+        @type new_member: a ClansEntry instance
+
+        @raise ValueError: if <new_member> is no ClansEntry instance
         '''
         if not isinstance(new_member, ClansEntry):
             raise ValueError('only ClansEntry instances can be added as ' +
                              'group members')
 
         if self.members.count(new_member) == 1:
-            raise ValueError('a ClansEntry can only be contained once in a ' +
-                             'group')
+            return
 
         self.members.append(new_member)
         new_member.groups.append(self)
 
     def set_color(self, colorname, color):
+        '''Set the color of this group to a new value.
+
+        @param colorname: identifier of the color that will be changed
+        @type colorname: a valid color identifier in terms of the RGB_color
+        class
+
+        @param color: the new color value
+        @type color: a valid color in terms of the RGB_color class
+        '''
         self.color.set_color(colorname, color)
 
     def remove(self, member):
         '''Removes ClansEntry \'member\' from this group. Does nothing if
         \'member\' is not contained in group self.
+
+        @param member: the member to be removed
+        @type member: a ClansEntry instance
         '''
+        if not isinstance(member, ClansEntry):
+            raise ValueError('argument must be a ClansEntry instance')
+
         if self.members.count(member) == 0:
             return
 
@@ -893,6 +920,7 @@ class ClansSeqgroup(object):
         member.groups.remove(self)
 
     def output_string(self):
+        '''Returns a string that suits the CLANS file format for Seqgroups.'''
         sorted_members = [m.get_id() for m in self.members]
         sorted_members.sort()
         return 'name=%s\ntype=%s\nsize=%s\nhide=%s\ncolor=%s\nnumbers=%s' % \
