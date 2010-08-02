@@ -96,13 +96,10 @@ class ClansParser:
         return self.clans_instance
 
     def _read_block_dict(self):
-        '''
-        Extracts all <tag>DATA</tag> blocks from string data_blocks and returns
-        a dict with dict[tag] = DATA.
+        '''Reads self.clans_instance.filename and extracts all <tag>DATA</tag>
+        blocks from it.
 
-        @param data_blocks: all data from a clans file starting with the first
-                            <tag>.
-        @type data_blocks: string
+        @return: a dict with dict[tag] = DATA.
         '''
         # read file and remove the first line, i.e. sequence=SEQUENCE_COUNT
         data_blocks = file(os.path.expanduser(
@@ -118,12 +115,9 @@ class ClansParser:
         '''
         This method parses a list of lines in the CLANS <param> format:
 
-            parameter1=data1
-            parameter2=data2
-            ...
-
-        @param block: a list of lines in the CLANS <param> block format
-        @type block: list
+        parameter1=data1
+        parameter2=data2
+        ...
         '''
         if 'param' not in self.data_block_dict:
             print 'WARNING: CLANS file contains no <param> block.'
@@ -150,9 +144,6 @@ class ClansParser:
         This method parses a list of lines in the CLANS <rotmtx> format (three
         lines; each line contains 3 floats followed by a semicolon). The data
         is stored in the clans_instance as a 3x3 numpy.array.
-
-        @param block: a list of lines in the CLANS <rotmtx> block format
-        @type block: list
         '''
         if 'rotmtx' not in self.data_block_dict:
             print 'WARNING: CLANS file contains no <rotmtx> block.'
@@ -169,9 +160,6 @@ class ClansParser:
         '''
         This method parses a list of lines in the CLANS <seq> format, which
         is the same as FASTA.
-
-        @param block: a list of lines in the CLANS <seq> block format
-        @type block: list
 
         @return: dict with running numbers as key and 2-tuples (id, sequence)
                  as values
@@ -190,16 +178,13 @@ class ClansParser:
         '''
         This method parses a list of lines in the CLANS <seqgroup> format:
 
-            name=name of the group
-            type=0
-            size=12
-            hide=0
-            color=255;204;51
-            numbers=0;1;2;3;4;5;6;10;13
-            ...
-
-        @param block: a list of lines in the CLANS <seqgroups> block format
-        @type block: list
+        name=name of the group
+        type=0
+        size=12
+        hide=0
+        color=255;204;51
+        numbers=0;1;2;3;4;5;6;10;13
+        ...
 
         @return: list of dicts (one for each group) with the tags (name, type,
                  size, hide, ...) as keys and their typecasted data as values
@@ -226,9 +211,6 @@ class ClansParser:
         This method parses a list of lines in the CLANS <pos> format
         \'INT FLOAT FLOAT FLOAT\'.
 
-        @param block: a list of lines in the CLANS <pos> block format
-        @type block: list
-
         @return: a dict using the integers as keys and a (3,1)-array created
                  from the three floats as values.
         '''
@@ -249,10 +231,7 @@ class ClansParser:
         \'INT INT: FLOAT\'.
 
         NOTE: some CLANS <hsp> lines contain more than one float; we omit the
-              additional numbers
-
-        @param block: a list of lines in the CLANS <hsp> block format
-        @type block: list
+        additional numbers
 
         @return: a dict using 2-tuples of the two integers as keys and the
                  float as values
@@ -672,11 +651,10 @@ class Clans(object):
     def remove_entry(self, entry):
         '''Removes an entry.
 
-        @param group: the new group
-        @type group: a ClansSeqgroup instance
+        @param entry: the entry that shall be removed
+        @type entry: string or ClansEntry instance
 
-        @throws: ValueError if entry is neither a string nor a ClansEntry
-                 instance
+        @raise ValueError: if entry is neither string nor ClansEntry instance
         '''
         if isinstance(entry, basestring):
             entry = self.get_entry(entry, True)
@@ -710,8 +688,8 @@ class Clans(object):
 
         @return: entry with name <name>
 
-        @throws ValueError: if no entry with name <name> is found
-        @throws ValueError: if multiple entries with name <name> are found and
+        @raise ValueError: if no entry with name <name> is found
+        @raise ValueError: if multiple entries with name <name> are found and
                             pedantic==True
         '''
 
@@ -720,7 +698,7 @@ class Clans(object):
         if len(hits) >= 1:
             if pedantic:
                 raise ValueError('multiple entries have name \'{}\''.format(
-                    name)
+                    name))
             return hits
 
         elif len(hits) == 0:
