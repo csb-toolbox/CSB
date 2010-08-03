@@ -1,10 +1,10 @@
 '''class for parsing/writing/manipulating CLANS (by Tancred Frickey) files
 
 Author: Klaus Kopec
-        MPI fuer Entwicklungsbiologie, Tuebingen
-        Copyright (C) 2010 Klaus Kopec
-        All rights reserved.
-        No warranty implied or expressed.
+MPI fuer Entwicklungsbiologie, Tuebingen
+Copyright (C) 2010 Klaus Kopec
+All rights reserved.
+No warranty implied or expressed.
 '''
 import os
 import re
@@ -27,6 +27,8 @@ class ClansParser:
 
         @param filename: name of the CLANS file.
         @type filename: string
+
+        @return: a Clans instance containing the parsed data
         '''
         self.clans_instance = Clans()
         self.clans_instance.filename = filename
@@ -249,6 +251,7 @@ class ClansParser:
 
 
 class ClansWriter:
+    '''Class for writing Clans instances to files int the CLANS format.'''
 
     def __init__(self, clans_instance, output_filename):
         '''Writes the content of a Clans instance to to CLANS readable file.'''
@@ -453,6 +456,7 @@ class gi_comparator(object):
 
 
 class RGB_color(dict):
+    '''Class for holding and manipulating one RGB color value'''
 
     def __init__(self, r=0, g=0, b=0):
         dict.__init__(self)
@@ -694,11 +698,11 @@ class Clans(object):
                          containing all matching entries.
         @type pedantic: bool
 
-        @return: entry with name <name>
-
         @raise ValueError: if no entry with name <name> is found
         @raise ValueError: if multiple entries with name <name> are found and
-                            pedantic==True
+                           pedantic==True
+
+        @return: entry with name <name>
         '''
 
         hits = [e for e in self.entries if e.name == name]
@@ -763,8 +767,7 @@ class Clans(object):
 
 
 class ClansEntry(object):
-    '''
-    '''
+    '''Class holding the data of one CLANS sequence entry.'''
 
     def __init__(self, name=None, seq='', coords=None, hsp=None, groups=None,
                  parent=None):
@@ -803,6 +806,11 @@ class ClansEntry(object):
                (self.name, '; '.join((seq, coords_string, groups)))
 
     def get_id(self):
+        '''Returns the id of the current entry.
+
+        @return: The entrys\' id is returned unless it has no parent in which
+        case -1 is returned
+        '''
         if self.parent is None:
             return -1
 
@@ -812,15 +820,23 @@ class ClansEntry(object):
         return self.parent.entries.index(self)
 
     def _get_unique_id(self):
-        '''Returns a more unique ID than get_id. This ID determines which
-        entries are deemed duplets by remove_duplicates of class Clans.'''
+        '''Returns a >>more<< unique ID (however this is not guaranteed to be
+        really unique) than get_id. This ID determines which entries are deemed
+        duplets by remove_duplicates of class Clans.
+
+        @return: a more or less unique id as string
+        '''
         return self.name + '<###>' + self.seq
 
     def add_hsp(self, other, value):
+        '''Creates an HSP from self to other with the given value.'''
         self.hsp[other] = value
         other.hsp[self] = value
 
     def remove_hsp(self, other):
+        '''Removes the HSP between self and other; if none exists, does
+        nothing.
+        '''
         if other in self.hsp:
             self.hsp.pop(other)
 
@@ -828,30 +844,44 @@ class ClansEntry(object):
             other.hsp.pop(self)
 
     def add_group(self, group):
+        '''Adds the group to the list of groups the entry belongs to.'''
         if self.groups.count(group) == 0:
             self.groups.append(group)
 
     def remove_group(self, group):
+        '''Removes the group from the list of groups the entry belongs to.'''
         if self.groups.count(group) == 0:
             return
 
         self.groups.remove(group)
 
     def output_string_seq(self):
+        '''Creates the CLANS <seq> block format representation of the entry.
+
+        @return: the string representing the entry in CLANS <seq> block format
+        '''
+
         return '>%s\n%s\n' % (self.name, self.seq)
 
     def output_string_pos(self):
+        '''Create the CLANS <pos> block format representation of the entry.
+
+        @return: the string representing the entry in CLANS <pos> block format
+        '''
         return '%i %.8f %.8f %.8f' % tuple([self.get_id()] + list(self.coords))
 
     def output_string_hsp(self):
+        '''Creates the CLANS <hsp> block format representation of the entry.
+
+        @return: the string representing the entry in CLANS <hsp> block format
+        '''
         return '\n'.join(['%i %i:%.8f' %
                           (self.get_id(), other.get_id(), value)
                           for (other, value) in self.hsp.items()])
 
 
 class ClansSeqgroup(object):
-    '''
-    '''
+    '''Class holding the data of one CLANS group (seqgroup).'''
 
     def __init__(self, name, **kwargs):
         self.name = name
@@ -871,6 +901,11 @@ class ClansSeqgroup(object):
                (self.hide, self.color.rgb, len(self.members))
 
     def is_empty(self):
+        '''Checks if the group contains entries.
+
+        @return: True if the group contains no entries, False otherwise.
+        '''
+
         return len(self.members) == 0
 
     def add(self, new_member):
@@ -909,6 +944,8 @@ class ClansSeqgroup(object):
 
         @param member: the member to be removed
         @type member: a ClansEntry instance
+
+        @raise ValueError: if member is no ClansEntry instance
         '''
         if not isinstance(member, ClansEntry):
             raise ValueError('argument must be a ClansEntry instance')
@@ -920,9 +957,13 @@ class ClansSeqgroup(object):
         member.groups.remove(self)
 
     def output_string(self):
-        '''Returns a string that suits the CLANS file format for Seqgroups.'''
-        sorted_members = [m.get_id() for m in self.members]
-        sorted_members.sort()
+        '''Creates the CLANS <seqgroup> block format representation of the
+        group.
+
+        @return: the string representing the entry in CLANS <seqgroup> block
+        format
+        '''
+        sorted_members = sorted([m.get_id() for m in self.members])
         return 'name=%s\ntype=%s\nsize=%s\nhide=%s\ncolor=%s\nnumbers=%s' % \
                (self.name, self.type, self.size, self.hide, self.color.rgb,
                 ';'.join([str(val) for val in sorted_members]) + ';')
