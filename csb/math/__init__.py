@@ -130,3 +130,110 @@ def euler(a, b, c):
                   [     sb*ca,            sb*sa,        cb ]])
 
 
+def norm(x):
+    """
+    Calculates the Eucledian norm of a d-dimensional vector.
+
+    @param x: vector (i.e. rank one array)
+    @return: length of vector
+    """
+    return (x**2).sum()**0.5
+
+
+def polar(x):
+    """
+    Polar coordinate representation of a d-dimensional vector.
+
+    @param x: vector (i.e. rank one array)
+    @return: polar coordinates (radius and polar angles)
+    """
+    from numpy import zeros, arctan2, pi, cos, array
+
+    (d,) = x.shape
+    phi = zeros(d)
+    for i in range(1,d)[::-1]:
+        phi[i-1] = arctan2(x[i]/cos(phi[i]),x[i-1])
+        
+    return array([norm(x)] + phi[:-1].tolist())
+
+def from_polar(x):
+    """
+    Reconstruct d-dimensional vector from polar coordinates
+
+    @param x: vector (i.e. rank one array)
+    @return: position in d-dimensional space
+    """
+    from numpy import cos, sin, zeros
+    
+    (d,) = x.shape
+
+    c = cos(x[1:])
+    s = sin(x[1:])
+    r = x[0]
+
+    x = zeros(d)
+    x[0] = r
+    
+    for i in range(d-1):
+
+        x[i+1] = x[i] * s[i]
+        x[i] *= c[i]
+
+    return x
+
+def polar3d(x):
+    """
+    Polar coordinate representation of a three-dimensional vector.
+
+    @param x: vector (i.e. rank one array)
+    @return: polar coordinates (radius and polar angles)
+    """
+
+    assert x.shape == (3,)
+
+    from numpy import arccos, arctan2, array
+    
+    r = norm(x)
+    theta = arccos(x[2]/r)
+    phi = arctan2(x[1], x[0])
+
+    return array([r, theta, phi])
+
+def from_polar3d(x):
+    """
+    Reconstruct 3-dimensional vector from polar coordinates
+
+    @param x: vector (i.e. rank one array)
+    @return: position in 3-dimensional space
+    """
+    assert x.shape == (3,)
+
+    from numpy import arccos, arctan2, array
+
+    r, theta, phi = x[:]
+    s = sin(theta)
+    c = cos(theta)
+    S = sin(phi)
+    C = cos(phi)
+    
+    return r * array([s*C, s*S, c])
+
+if __name__ == '__main__':
+
+    from numpy.random import random
+    import numpy as np
+    
+    d = 3
+
+    print polar(x)
+    print polar3d(x)
+
+    tol = 1e-10
+
+    while 1:
+
+        x = random(d)
+        
+        if np.fabs(x-from_polar3d(polar3d(x))).sum() > tol: break
+        if np.fabs(x-from_polar(polar(x))).sum() > tol: break
+    
