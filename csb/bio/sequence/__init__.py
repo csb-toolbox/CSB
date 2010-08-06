@@ -66,15 +66,49 @@ class Sequence(object):
     
     def __str__(self):
         return self.to_fasta()
-    
+
+    def __len__(self):
+        return len(self.sequence)
+
+ 
+    def __repr__(self):
+        return '>{0.header}\n{0.sequence}'.format(self)
+
     def to_fasta(self):
         """
         Return a FASTA formatted sequence
         
         @rtype: str
         """
-        return '{0.header}\n{0.sequence}'.format(self)
-            
+        return '>{0.header}\n{0.sequence}'.format(self)
+
+    def expand(self, gap_characters = ('-','.')):
+        """
+        Returns the positions in this sequence, which are not gaps
+        """
+        s = []
+        for i,char in enumerate(self.sequence):
+            if not char in gap_characters:
+                s.append(i)
+        return s
+        
+    def is_gap(self, index, gap_characters  = ('-','.')):
+        """
+        Returns wether the symbol at index represents a gap
+        """
+        return self.sequence[index] in gap_characters
+
+    def sequence_index(self, column_index, gap_characters  = ('-','.')):
+        """
+        Returns the postion of the colum column_index
+        """
+        s = self.sequence[:column_index]
+        n = [s.count(c) for c in gap_characters]
+        n = reduce(lambda x, y: x+y, n,0)
+        return column_index - n
+    
+    
+    
     @staticmethod
     def from_string(fasta_string):
         """
@@ -413,3 +447,183 @@ class A3MAlignment(object):
             raise StopTraversal()
         
         return column       
+
+
+
+
+def insert_breaks(seq, length=60):
+    s = [seq[i*length:(i+1)*length] for i in range(len(seq)/length+1)]
+    return '\n'.join(s)
+
+
+def get_accession_number(fasta_record):
+    import re
+    
+    name = fasta_record.title.split()[0].split('|')[0]
+    return re.sub('[^a-zA-Z0-9_\-]', '', name)
+
+
+from csb.pyutils import ordered_dict
+
+class Alignment(ordered_dict):
+
+    formats = ('.fasta', '.fsa', '.fas')
+    gap_characters = ('-', '.')
+
+    def read(self, filename, numbers_as_keys = False):
+
+        from Bio import Fasta
+        from csb.bio.sequence import Sequence
+        
+        import os
+
+        Sequence.gap_characters = Alignment.gap_characters
+        
+        format = os.path.splitext(filename)[1]
+
+        if format not in self.formats:
+            message = 'Format of file "%s" is "%s"; supported formats: %s'
+            raise IOError, message % (filename, format,
+                                      ' / '.join(self.formats))
+
+        parser = Fasta.RecordParser()
+        file = open(os.path.expanduser(filename))
+        iterator = Fasta.Iterator(file, parser)
+
+        record = iterator.next()
+
+        counter = 1
+
+        while record:
+
+            id = record.title
+            seq = record.sequence
+
+            if numbers_as_keys:
+                id = counter
+                counter += 1
+
+            if self.has_key(id):
+                raise ValueError, 'Multiple entries found for %s.' % id
+
+            self[id] = Sequence(id = id,header=record.title, sequence=seq)
+
+            record = iterator.next()
+
+    def write(self, filename):
+        import os
+        file = open(os.path.expanduser(filename), 'w')
+        for id, seq in self.items():
+            file.write('>%s\n%s\n' %(id, insert_breaks(seq.sequence)))
+        file.close()
+
+    def __str__(self):
+        s = ['>%s\n%s' %(id, insert_breaks(seq)) for id, seq in self.items()]
+        return '\n'.join(s)
+    
+    def make_equal_length(self):
+        max_length = max(map(len, self.values()))
+        for id in self.keys():
+            new = self[id].sequence
+            new = new + (max_length - len(new)) * '-'
+            self[id] = Sequence(id = id, header = self[id].header,
+                                sequence =new)
+
+    def column(self, index):
+        from numpy import array, sum
+        
+        columns = array([list(v.sequence) for v in self.values()])
+
+        return columns[index].tolist()
+
+
+    def columns(self, indices = None):
+        from numpy import array, take, sum
+
+        columns = array([list(v.sequence) for v in self.values()])
+
+        if indices is not None:
+            indices = list(indices)
+            indices.sort()
+            columns = take(columns, indices, 1)
+
+        return (columns.transpose()).tolist()
+
+
+    def sequence(self, member, keep_gaps = False):
+
+        if not member in self:
+            raise KeyError('sequence "%s" not in alignment' % str(member))
+        
+        
+        return self[member]
+        
+
+    def matches(self, member1 = None, member2 = None, exact_matches = 0):
+
+        a = 0
+        b = 0
+
+        if member1 is None: member1 = self.keys()[0]
+        if member2 is None: member2 = self.keys()[1]
+
+        x = self[member1].sequence
+        y = self[member2].sequence
+
+        matches = []
+        
+        for i in range(len(x)):
+
+            x_gap = 0
+            y_gap = 0
+
+            if x[i] in self.gap_characters:
+                x_gap = 1
+            if y[i] in self.gap_characters:
+                y_gap = 1
+
+            if x_gap == 0 and y_gap == 0:
+                if not exact_matches or x[i] == y[i]:
+                    matches.append((a,b))
+
+            if not x_gap: a += 1
+            if not y_gap: b += 1
+
+        return matches
+
+    def consensus(self, no_gap = False):
+        from numpy import argmax
+        cons = ''
+        for col in self.columns():
+            if no_gap and '-' in col:
+                cons += '-'
+            else:
+                counts = [col.count(x) for x in col]
+                cons += col[argmax(counts)]
+        return cons
+                
+    def identities(self):
+
+        from numpy import argmax
+
+        cons = ''
+
+        for col in self.columns():
+
+            counts = [col.count(x) for x in col]
+            if max(counts) <> len(col):
+                cons += '-'
+            else:
+                cons += col[argmax(counts)]
+
+        return cons
+
+    def rename(self, key1, key2):
+
+        if key2 in self.keys():
+            raise KeyError('"%s" already in alignment' % key2)
+
+        self._ordered_dict__keys[self.keys().index(key1)] = key2
+        self[key2] = self[key1]
+        dict.__delitem__(self, key1)
+
