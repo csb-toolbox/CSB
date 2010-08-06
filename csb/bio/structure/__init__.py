@@ -251,6 +251,17 @@ class StructureChainsTable(csb.pyutils.DictionaryContainer):
             return "<StructureChains: {0}>".format(', '.join(self.keys()))
         else:
             return "<StructureChains: empty>"
+
+    def remove(self, chain):
+        """
+        Removes a chain from the structure
+
+        @param chain: the new chain to be appended
+        @type chain: L{Chain}
+
+        """
+        self._chains._items.__delitem__(chain)
+        
     
     def append(self, chain):
         """

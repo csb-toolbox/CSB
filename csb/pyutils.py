@@ -507,3 +507,38 @@ class CollectionContainer(CollectionContainerBase):
         @type new_items: list
         """
         self._update(new_items)
+
+
+
+class ordered_dict(dict):
+
+    def __init__(self, *args, **keywords):
+
+        dict.__init__(self, *args, **keywords)
+        self.__keys = dict.keys(self)
+
+    def __setitem__(self, key, value):
+
+        dict.__setitem__(self, key, value)
+
+        if key not in self.__keys: self.__keys.append(key)
+
+    def keys(self):
+        return list(self.__keys)
+
+    def values(self):
+        return [self[key] for key in self.keys()]
+
+    def items(self):
+        return [(key, self[key]) for key in self.keys()]
+
+    def sort_keys(self, sort_function = None):
+        if sort_function is not None:
+            self.__keys.sort(sort_function)
+        else:
+            self.__keys.sort()
+    
+    def __delitem__(self, key):
+
+        dict.__delitem__(self, key)
+        self.__keys.remove(key)

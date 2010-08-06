@@ -178,6 +178,18 @@ class StructureParser(object):
             else:
                 return repr(SequenceAlphabets.Unknown.UNK)
 
+    def parse(self, filename, model=None):
+        if filename <> self._file:
+            self._file = structure_file
+            try:
+                self._stream.close()
+            except:
+                pass
+            self._stream = open(structure_file, 'r')
+
+        return self.parse_structure(model)
+
+
     def parse_structure(self, model=None):
         """
         Parse and return the L{Structure} with the specified model identifier.
