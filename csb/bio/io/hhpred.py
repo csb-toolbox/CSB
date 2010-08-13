@@ -3,7 +3,7 @@ import re
 
 import csb.io
 import csb.pyutils
-import csb.bio.io.pdb_format
+import csb.bio.io
 import csb.bio.structure as structure
 import csb.bio.sequence as sequence
 
@@ -79,7 +79,7 @@ class HHpredProfileParser(object):
         """
 
         hmm = self.parse()
-        s = csb.bio.io.pdb_format.StructureParser(input_pdb).parse_structure()
+        s = csb.bio.io.StructureParser(input_pdb).parse_structure()
         chain = s.chains[chain_id]
 
         if hmm.layers.length != chain.length:

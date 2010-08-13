@@ -5,7 +5,7 @@ import cPickle
 import math 
 
 import csb.pyutils
-import csb.bio.io.pdb_format
+import csb.bio.io
 import csb.bio.fragments
 import csb.bio.structure as structure
 import csb.bio.sequence
@@ -536,7 +536,7 @@ class Cluster(object):
         """
         
         rep = self.representative
-        s = csb.bio.io.pdb_format.StructureParser(pdb_file).parse_structure()
+        s = csb.bio.io.StructureParser(pdb_file).parse_structure()
         
         if not rep.chain:
             if s.chains.length > 1:

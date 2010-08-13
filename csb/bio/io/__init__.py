@@ -1,6 +1,7 @@
-from hhpred import HHpredOutputParser
+from hhpred import HHpredOutputParser, HHpredProfileParser
 from clans import ClansParser
-from pdb_format import StructureParser, AsyncStructureParser
+from wwpdb import StructureParser, AsyncStructureParser
+from isites import ISitesParser
 
-__all__ = ['HHpredOutputParser', 'ClansParser', 'StructureParser',
-           'AsyncStructureParser']
+__all__ = ['HHpredOutputParser', 'HHpredProfileParser', 'ClansParser', 
+           'StructureParser', 'AsyncStructureParser', 'ISitesParser']
