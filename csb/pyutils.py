@@ -272,6 +272,13 @@ class DictionaryContainerBase(object):
     """ 
     Base class which defines the behavior of a read only key-value collection 
     container. 
+    
+    @note: Methods for editing an existing dictionary are also defined in the 
+           base class, but left internal on purpose. Subclasses which are
+           supposed to be write-enabled containers must provide their own 
+           public methods for editing which might do some custom work and then
+           finally call any of the internal methods in the base class to do the
+           real data editing.
 
     @param items: an initialization dictionary
     @param restrict: a list of keys allowed for this dictionary
@@ -332,6 +339,12 @@ class DictionaryContainerBase(object):
 
         self._items.update(new_items)
         self._items.update(named_items)
+        
+    def _remove(self, key):
+        
+        if key not in self._items:
+            raise ItemNotFoundError(key)
+        del self._items[key]
 
 class DictionaryContainer(DictionaryContainerBase):
     """ 
@@ -382,7 +395,14 @@ class CollectionIndexError(IndexError):
 class CollectionContainerBase(object):
     """ 
     Base class which defines the behavior of a read-only collection container.
-    
+
+    @note: Methods for editing an existing collection are also defined in the 
+           base class, but left internal on purpose. Subclasses which are
+           supposed to be write-enabled containers must provide their own 
+           public methods for editing which might do some custom work and then
+           finally call any of the internal methods in the base class to do the
+           real data editing.
+               
     @param items: initialization list
     @type items: list
     @param type: if defined, makes the container type-safe
