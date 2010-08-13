@@ -250,18 +250,7 @@ class StructureChainsTable(csb.pyutils.DictionaryContainer):
         if len(self) > 0:
             return "<StructureChains: {0}>".format(', '.join(self.keys()))
         else:
-            return "<StructureChains: empty>"
-
-    def remove(self, chain):
-        """
-        Removes a chain from the structure
-
-        @param chain: the new chain to be appended
-        @type chain: L{Chain}
-
-        """
-        self._chains._items.__delitem__(chain)
-        
+            return "<StructureChains: empty>"     
     
     def append(self, chain):
         """
@@ -284,15 +273,30 @@ class StructureChainsTable(csb.pyutils.DictionaryContainer):
         if self.__container:
             chain._accession = self.__container.accession
             chain._structure = self.__container
+
+    def remove(self, id):
+        """
+        Remove a chain from the structure.
+
+        @param id: ID of the chain to be detached
+        @type id: str
+        """
+        chain = self[id]
+        self._remove(id)
+        chain._structure = None   
     
     def _update_chain_id(self, chain, new_id):
+        
         if chain.id not in self or self[chain.id] is not chain:
             raise InvalidOperation(chain)
-        del self._items[chain.id]
+        
+        self._remove(chain.id)
+        
         if new_id in self:
             raise DuplicateChainIDError('Chain ID {0} is already defined'.format(id))
-        super(StructureChainsTable, self).append(new_id, chain)
         
+        super(StructureChainsTable, self).append(new_id, chain)
+                
     def update(self):
         raise NotImplementedError()
     def set(self):
