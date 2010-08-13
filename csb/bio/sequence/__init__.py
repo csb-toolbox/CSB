@@ -67,12 +67,11 @@ class Sequence(object):
     def __str__(self):
         return self.to_fasta()
 
+    def __repr__(self):
+        return self.to_fasta()
+    
     def __len__(self):
         return len(self.sequence)
-
- 
-    def __repr__(self):
-        return '>{0.header}\n{0.sequence}'.format(self)
 
     def to_fasta(self):
         """
@@ -80,7 +79,10 @@ class Sequence(object):
         
         @rtype: str
         """
-        return '>{0.header}\n{0.sequence}'.format(self)
+        marker = '>'
+        if self.header and self.header.startswith(marker):
+            marker = ''
+        return '{0}{1.header}\n{1.sequence}'.format(marker, self)
 
     def expand(self, gap_characters = ('-','.')):
         """
@@ -92,23 +94,21 @@ class Sequence(object):
                 s.append(i)
         return s
         
-    def is_gap(self, index, gap_characters  = ('-','.')):
+    def is_gap(self, index, gap_characters=('-','.')):
         """
-        Returns wether the symbol at index represents a gap
+        Returns whether the symbol at index represents a gap
         """
         return self.sequence[index] in gap_characters
 
-    def sequence_index(self, column_index, gap_characters  = ('-','.')):
+    def sequence_index(self, column_index, gap_characters=('-','.')):
         """
         Returns the postion of the colum column_index
         """
         s = self.sequence[:column_index]
         n = [s.count(c) for c in gap_characters]
-        n = reduce(lambda x, y: x+y, n,0)
+        n = reduce(lambda x, y: x+y, n, 0)
         return column_index - n
-    
-    
-    
+
     @staticmethod
     def from_string(fasta_string):
         """
