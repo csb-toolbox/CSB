@@ -5,7 +5,6 @@ import cPickle
 import math 
 
 import csb.pyutils
-import csb.bio.io
 import csb.bio.fragments
 import csb.bio.structure as structure
 import csb.bio.sequence
@@ -534,9 +533,9 @@ class Cluster(object):
         @raise InvalidParadigmError: when the torsion angles in the cluster do not
                                      match the angles computed from the PDB file
         """
-        
+        from csb.bio.io import StructureParser
         rep = self.representative
-        s = csb.bio.io.StructureParser(pdb_file).parse_structure()
+        s = StructureParser(pdb_file).parse_structure()
         
         if not rep.chain:
             if s.chains.length > 1:
