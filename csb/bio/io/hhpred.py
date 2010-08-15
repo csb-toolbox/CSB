@@ -532,11 +532,11 @@ class HHpredProfileParser(object):
             
                                    
                 elif tran == 'Neff':
-                    hmm.layers[rank].effective_matches = float(fields[col]/-hmm.scale)
+                    hmm.layers[rank].effective_matches = float(fields[col]) / abs(hmm.scale)
                 elif tran == 'Neff_I':
-                    hmm.layers[rank].effective_insertions = float(fields[col]/-hmm.scale)
+                    hmm.layers[rank].effective_insertions = float(fields[col]) / abs(hmm.scale)
                 elif tran == 'Neff_D':
-                    hmm.layers[rank].effective_deletions = float(fields[col]/-hmm.scale)
+                    hmm.layers[rank].effective_deletions = float(fields[col]) / abs(hmm.scale)
                 else:
                     raise NotImplementedError(
                         'Unknown transition "{0}"'.format(tran))
