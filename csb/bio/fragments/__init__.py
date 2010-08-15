@@ -1,4 +1,3 @@
-
 class FragmentMatch(object):
     
     def __init__(self, id, qstart, qend, probability, rmsd, qlength):
