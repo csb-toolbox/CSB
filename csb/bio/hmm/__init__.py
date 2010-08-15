@@ -264,7 +264,7 @@ PCT   {0.pseudocounts}'''.format(hmm))
                 if data is None:
                     data = '*'
                 else:
-                    data = int(data)
+                    data = int(data * abs(hmm.scale))
                 stream.write("{0:<7}\t".format(data))
 
             stream.writeline("\n")
@@ -302,7 +302,7 @@ PCT   {0.pseudocounts}'''.format(hmm))
         @param tau: admission weight, i.e how much of the final score is dertermined by the background probabilities. 0.0 no pseudocounts 
         @type tau: float
         """
-        from numpy import array, dot, zeros, exp, dot, transpose, clip
+        from numpy import array, zeros, exp, dot, transpose, clip
         import operator
 
         if self.pseudocounts or self.emission_pseudocounts:
@@ -717,13 +717,8 @@ PCT   {0.pseudocounts}'''.format(hmm))
                 for tran_kind in state.transitions:
                     transition = state.transitions[tran_kind]
                     transition.probability = convert(units, transition.probability, self.scale, self.logbase)
-            # These are interger numbers and should not be transformed 
-            ## if layer.effective_matches is not None:
-            ##     layer.effective_matches = convert(units, layer.effective_matches, self.scale, self.logbase)
-            ## if layer.effective_insertions is not None:
-            ##     layer.effective_insertions = convert(units, layer.effective_insertions, self.scale, self.logbase)
-            ## if layer.effective_deletions is not None:
-            ##     layer.effective_deletions = convert(units, layer.effective_deletions, self.scale, self.logbase)
+            # The Neff-s are interger numbers and should not be transformed
+            # (except when writing the profile to a hhm file)
 
         if self.start_insertion:
             for t_it in self.start_insertion.transitions:
@@ -733,8 +728,8 @@ PCT   {0.pseudocounts}'''.format(hmm))
             for residue in self.start_insertion.emission:
                 state = self.start_insertion
                 if state.emission[residue] is not None:
-                   state.emission.update(residue, convert(units, state.emission[residue],self.scale, self.logbase))
-                   state.background.update(residue, convert(units, state.background[residue],self.scale, self.logbase))
+                    state.emission.update(residue, convert(units, state.emission[residue],self.scale, self.logbase))
+                    state.background.update(residue, convert(units, state.background[residue],self.scale, self.logbase))
 
         for tran_kind in self.start.transitions:
             transition = self.start.transitions[tran_kind]
