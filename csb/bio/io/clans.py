@@ -1,4 +1,5 @@
-'''class for parsing/writing/manipulating CLANS (by Tancred Frickey) files
+'''
+Classes for parsing/manipulating/writing CLANS (by Tancred Frickey) files
 
 Author: Klaus Kopec
 MPI fuer Entwicklungsbiologie, Tuebingen
@@ -6,14 +7,14 @@ Copyright (C) 2010 Klaus Kopec
 All rights reserved.
 No warranty implied or expressed.
 '''
-import os
-import re
-import sys
+import os, re, sys
 from numpy import array, float64, eye, random
 
 
 class ClansParser:
-    '''Class for parsing CLANS files.'''
+    '''
+    Class for parsing CLANS files.
+    '''
 
     def __init__(self):
         self.clans_instance = None
@@ -28,6 +29,7 @@ class ClansParser:
         @param filename: name of the CLANS file.
         @type filename: string
 
+        @rtype: Clans instance
         @return: a Clans instance containing the parsed data
         '''
         self.clans_instance = Clans()
@@ -100,7 +102,8 @@ class ClansParser:
         '''Extracts all <tag>DATA</tag> blocks from file
         self.clans_instance.filename.
 
-        @return: a dict with dict[tag] = DATA.
+        @rtype: dict
+        @return: data in the form: dict[tag] = DATA.
         '''
         # read file and remove the first line, i.e. sequence=SEQUENCE_COUNT
         data_blocks = file(os.path.expanduser(
@@ -163,6 +166,7 @@ class ClansParser:
         Parse a list of lines in the CLANS <seq> format, which are in FASTA
         format.
 
+        @rtype: dict
         @return: dict with running numbers as key and 2-tuples (id, sequence)
                  as values
         '''
@@ -188,6 +192,7 @@ class ClansParser:
         numbers=0;1;2;3;4;5;6;10;13
         ...
 
+        @rtype: list
         @return: list of dicts (one for each group) with the tags (name, type,
                  size, hide, ...) as keys and their typecasted data as values
                  (i.e. name will be a string, size will be an integer, etc)
@@ -213,6 +218,7 @@ class ClansParser:
         Parse a list of lines in the CLANS <pos> format \'INT FLOAT FLOAT
         FLOAT\'.
 
+        @rtype: dict
         @return: a dict using the integers as keys and a (3,1)-array created
                  from the three floats as values.
         '''
@@ -234,6 +240,7 @@ class ClansParser:
         NOTE: some CLANS <hsp> lines contain more than one float; we omit the
         additional numbers
 
+        @rtype: dict
         @return: a dict using 2-tuples of the two integers as keys and the
                  float as values
         '''
@@ -251,7 +258,9 @@ class ClansParser:
 
 
 class ClansWriter:
-    '''Class for writing Clans instances to files int the CLANS format.'''
+    '''
+    Class for writing Clans instances to files in the CLANS format.
+    '''
 
     def __init__(self, clans_instance, output_filename):
         '''Writes the content of a Clans instance to to CLANS readable file.'''
@@ -456,7 +465,9 @@ class gi_comparator(object):
 
 
 class RGB_color(dict):
-    '''Class for holding and manipulating one RGB color value'''
+    '''
+    Class for holding and manipulating one RGB color value.
+    '''
 
     def __init__(self, r=0, g=0, b=0):
         dict.__init__(self)
@@ -525,7 +536,7 @@ class RGB_color(dict):
 
 class Clans(object):
     '''
-    Class for parsing and writing CLANS files.
+    Class for holding and manipulating data from one CLANS file.
     '''
 
     def __init__(self):
@@ -702,6 +713,7 @@ class Clans(object):
         @raise ValueError: if multiple entries with name <name> are found and
                            pedantic==True
 
+        @rtype: ClansEntry
         @return: entry with name <name>
         '''
 
@@ -767,7 +779,9 @@ class Clans(object):
 
 
 class ClansEntry(object):
-    '''Class holding the data of one CLANS sequence entry.'''
+    '''
+    Class holding the data of one CLANS sequence entry.
+    '''
 
     def __init__(self, name=None, seq='', coords=None, hsp=None, groups=None,
                  parent=None):
@@ -808,7 +822,8 @@ class ClansEntry(object):
     def get_id(self):
         '''Returns the id of the current entry.
 
-        @return: The entrys\' id is returned unless it has no parent in which
+        @rtype: str
+        @return: the entrys\' id is returned unless it has no parent in which
         case -1 is returned
         '''
         if self.parent is None:
@@ -824,7 +839,8 @@ class ClansEntry(object):
         really unique) than get_id. This ID determines which entries are deemed
         duplets by remove_duplicates of class Clans.
 
-        @return: a more or less unique id as string
+        @rtype: str
+        @return: a more or less unique id
         '''
         return self.name + '<###>' + self.seq
 
@@ -858,7 +874,8 @@ class ClansEntry(object):
     def output_string_seq(self):
         '''Creates the CLANS <seq> block format representation of the entry.
 
-        @return: the string representing the entry in CLANS <seq> block format
+        @rtype: str
+        @return: entrys\' representation in CLANS <seq> block format
         '''
 
         return '>%s\n%s\n' % (self.name, self.seq)
@@ -866,14 +883,17 @@ class ClansEntry(object):
     def output_string_pos(self):
         '''Create the CLANS <pos> block format representation of the entry.
 
-        @return: the string representing the entry in CLANS <pos> block format
+        @rtype: str
+        @return: entrys\' representation in CLANS <pos> block format
         '''
         return '%i %.8f %.8f %.8f' % tuple([self.get_id()] + list(self.coords))
 
     def output_string_hsp(self):
         '''Creates the CLANS <hsp> block format representation of the entry.
 
-        @return: the string representing the entry in CLANS <hsp> block format
+
+        @rtype: str
+        @return: entrys\' representation in CLANS <hsp> block format
         '''
         return '\n'.join(['%i %i:%.8f' %
                           (self.get_id(), other.get_id(), value)
@@ -881,7 +901,9 @@ class ClansEntry(object):
 
 
 class ClansSeqgroup(object):
-    '''Class holding the data of one CLANS group (seqgroup).'''
+    '''
+    Class holding the data of one CLANS group (seqgroup).
+    '''
 
     def __init__(self, name, **kwargs):
         self.name = name
@@ -903,9 +925,9 @@ class ClansSeqgroup(object):
     def is_empty(self):
         '''Checks if the group contains entries.
 
-        @return: True if the group contains no entries, False otherwise.
+        @rtype: bool
+        @return: True if the group contains no entries, False else.
         '''
-
         return len(self.members) == 0
 
     def add(self, new_member):
@@ -960,8 +982,8 @@ class ClansSeqgroup(object):
         '''Creates the CLANS <seqgroup> block format representation of the
         group.
 
-        @return: the string representing the entry in CLANS <seqgroup> block
-        format
+        @rtype: str
+        @return: entrys\' representation in CLANS <seqgroup> block format
         '''
         sorted_members = sorted([m.get_id() for m in self.members])
         return 'name=%s\ntype=%s\nsize=%s\nhide=%s\ncolor=%s\nnumbers=%s' % \
