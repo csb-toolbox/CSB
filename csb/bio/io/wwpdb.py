@@ -1,4 +1,3 @@
-import os
 import re
 import multiprocessing
 import csb.bio.structure
@@ -71,19 +70,36 @@ class StructureParser(object):
         }
 
     def __init__(self, structure_file):
-
-        if not os.path.exists(structure_file):
-            raise IOError('File not found: {0}'.format(structure_file))
-
-        self._file = structure_file
-        self._stream = open(structure_file, 'r')
+        
+        self._file = None
+        self._stream = None
+        
+        self.filename = structure_file
 
     def __del__(self):
         try:
             self._stream.close()
         except:
             pass
+        
+    @property
+    def filename(self):
+        return self._file
+    @filename.setter
+    def filename(self, name):
+        try:
+            stream = open(name)
+        except IOError:
+            raise IOError('File not found: {0}'.format(name))            
 
+        if self._stream:
+            try:
+                self._stream.close()
+            except:
+                pass
+        self._stream = stream
+        self._file = name
+        
     def models(self):
         """
         Find a list of available model identifiers in the structure.
@@ -179,16 +195,9 @@ class StructureParser(object):
                 return repr(SequenceAlphabets.Unknown.UNK)
 
     def parse(self, filename, model=None):
-        if filename <> self._file:
-            self._file = structure_file
-            try:
-                self._stream.close()
-            except:
-                pass
-            self._stream = open(structure_file, 'r')
-
+        
+        self.filename = filename
         return self.parse_structure(model)
-
 
     def parse_structure(self, model=None):
         """
