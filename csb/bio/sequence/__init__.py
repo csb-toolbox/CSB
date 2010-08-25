@@ -2,7 +2,7 @@ import re
 import csb.pyutils
 import csb.io
 
-AlignmentFormats = csb.pyutils.enum( A3M='a3m', FASTA='fa' )
+AlignmentFormats = csb.pyutils.enum( A3M='a3m', FASTA='fa', PIR='pir' )
 """
 @var AlignmentFormats: multiple sequence alignment formats
 """
@@ -216,7 +216,7 @@ class _A3MFormatter(object):
             
     def __call__(self, format):
         
-        if format == AlignmentFormats.FASTA:
+        if format in(AlignmentFormats.FASTA, AlignmentFormats.PIR):
             return _A3MFormatter.format_fasta
         elif format == AlignmentFormats.A3M:
             return _A3MFormatter.format_a3m
@@ -379,7 +379,7 @@ class A3MAlignment(object):
 
     def to_fasta(self, headers=True):
         """
-        Dump the alignment in m_fasta format.
+        Dump the alignment in mFASTA format.
         
         @param headers: if set to False, headers are be omitted
         @type headers: bool
@@ -389,7 +389,20 @@ class A3MAlignment(object):
         """
         alignment = self._dump(AlignmentFormats.FASTA, headers=headers)
         return '\n'.join(alignment) 
-    
+
+    def to_pir(self, target=1):
+        """
+        Dump the alignment in a Modeller-friendly PIR-like format.
+        
+        @param target: rank of the modelling target (usually 1)
+        @type target: int
+        
+        @return: a PIR-formatted alignment
+        @rtype: str 
+        """
+        alignment = self._dump(AlignmentFormats.PIR, flags=target)
+        return '\n'.join(alignment)
+        
     def to_string(self, headers=True):
         """
         Dump the alignment in its native A3M format.
@@ -406,15 +419,26 @@ class A3MAlignment(object):
     def _format(self, items, format):
         return map(self._formatter(format), items)
     
-    def _dump(self, format, headers=True):
+    def _dump(self, format, headers=True, flags=None):
         
         alignment = [ ]        
         
         for seq_id in sorted(self._sequences):
             sequence = self._sequences[seq_id]
             if headers:
-                alignment.append(sequence.header)
+                if format == AlignmentFormats.PIR:
+                    type = 'structure'
+                    if seq_id == flags:
+                        type = 'sequence'
+                    id = '{0:5}'.format(sequence.id)
+                    header = '>P1;{0}\n{2}:{0}:.:{1}:.:{1}:::: '.format(id[:4], id[4], type)
+                    alignment.append(header) 
+                else:
+                    alignment.append(sequence.header)
             row = self._format(self._msa[seq_id], format)
+            if format == AlignmentFormats.PIR:
+                row += '*'
+                
             alignment.append(''.join(row))
         
         return alignment             
