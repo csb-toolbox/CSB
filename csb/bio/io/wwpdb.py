@@ -62,18 +62,18 @@ class StructureParser(object):
 
     _pdb_nucleotides = {
         'DA': 'Adenine', 'DG': 'Guanine', 'DC': 'Cytosine', 'DT': 'Thymine',
-         'A': 'Adenine',  'G': 'Guanine',  'C': 'Cytosine',  'T': 'Thymine',
-         'U': 'Uracil', 'DOC': 'Cytosine', 'R': 'Purine',    'Y': 'Pyrimidine',
-         'K': 'Ketone', '  M': 'Amino',    'S': 'Strong',    'W': 'Weak',
-         'B': 'NotA',   'D'  : 'NotC',     'H': 'NotG',      'V': 'NotT',
-         'N': 'Any',    'X'  : 'Masked'
+         'A': 'Adenine', 'G': 'Guanine', 'C': 'Cytosine', 'T': 'Thymine',
+         'U': 'Uracil', 'DOC': 'Cytosine', 'R': 'Purine', 'Y': 'Pyrimidine',
+         'K': 'Ketone', '  M': 'Amino', 'S': 'Strong', 'W': 'Weak',
+         'B': 'NotA', 'D'  : 'NotC', 'H': 'NotG', 'V': 'NotT',
+         'N': 'Any', 'X'  : 'Masked'
         }
 
     def __init__(self, structure_file):
-        
+
         self._file = None
         self._stream = None
-        
+
         self.filename = structure_file
 
     def __del__(self):
@@ -81,7 +81,7 @@ class StructureParser(object):
             self._stream.close()
         except:
             pass
-        
+
     @property
     def filename(self):
         return self._file
@@ -90,7 +90,7 @@ class StructureParser(object):
         try:
             stream = open(name)
         except IOError:
-            raise IOError('File not found: {0}'.format(name))            
+            raise IOError('File not found: {0}'.format(name))
 
         if self._stream:
             try:
@@ -99,7 +99,7 @@ class StructureParser(object):
                 pass
         self._stream = stream
         self._file = name
-        
+
     def models(self):
         """
         Find a list of available model identifiers in the structure.
@@ -194,7 +194,7 @@ class StructureParser(object):
             else:
                 return repr(SequenceAlphabets.Unknown.UNK)
 
-    def parse(self, filename = None, model=None):
+    def parse(self, filename=None, model=None):
 
         if filename:
             self.filename = filename
@@ -220,7 +220,7 @@ class StructureParser(object):
         header = self._stream.next()
         if not header.startswith('HEADER'):
             raise ValueError('Does not look like a PDB file.')
-        
+
         structure = csb.bio.structure.Structure(header.split()[-1])
         structure.model_id = None
         if model is not None:
@@ -279,7 +279,7 @@ class StructureParser(object):
                 # Correct handling of empty chain id
                 seq_fields = [line[8:10], line[11], line[13:17] ]
                 seq_fields.extend(line[18:].split())
-                
+
                 rank_base = int(seq_fields[0])
                 chain_id = seq_fields[1]
 
@@ -406,7 +406,7 @@ class StructureParser(object):
                     i += 1
                     lookup[a._residue_id] = [a._sequence_number, a._insertion_code]
                     seq_numbers.append(a._residue_id)
-                    if i == 0 or a._sequence_number - lookup[seq_numbers[i-1]][0] not in (0, 1, -1):
+                    if i == 0 or a._sequence_number - lookup[seq_numbers[i - 1]][0] not in (0, 1, -1):
                         # if residues [i, i-1] are not consecutive or 'overlapping', initiate a new fragment:
                         fragments.append([a._residue_name.value])
                     else:
@@ -465,8 +465,10 @@ def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
     from tempfile import NamedTemporaryFile
 
     pdb = NamedTemporaryFile()
+
     browser = urllib2.urlopen(prefix + accession.lower() + '.ent')
     pdb.write(browser.read())
+    pdb.flush()
 
     return StructureParser(pdb.name).parse_structure(model)
 
@@ -512,3 +514,4 @@ class AsyncStructureParser(object):
             raise ex
 
         return async_result.get(timeout=timeout)
+

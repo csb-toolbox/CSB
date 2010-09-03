@@ -370,7 +370,7 @@ class HHpredProfileParser(object):
                 assert new_layer == rank, '{0} vs {1}'.format(rank, new_layer)
 
                 match = State(States.Match, emit=csb.pyutils.Enum.members(
-                    sequence.SequenceAlphabets.Protein))                
+                    sequence.SequenceAlphabets.Protein))
 
                 match.rank = rank
                 match.background.set(background)
@@ -396,30 +396,30 @@ class HHpredProfileParser(object):
 
             if start_probs[1] is not None and start_probs[3] is not None:  # Start -> I[0]
                 start_ins = State(States.Insertion,
-                                  emit = csb.pyutils.Enum.members(sequence.SequenceAlphabets.Protein))
+                                  emit=csb.pyutils.Enum.members(sequence.SequenceAlphabets.Protein))
                 start_ins.rank = 0
                 start_ins.background.set(background)
                 start_ins.emission = start_ins.background
 
                 hmm.start_insertion = start_ins
                 # Start -> I[0]
-                hmm.start.transitions.append( Transition( hmm.start,
+                hmm.start.transitions.append(Transition(hmm.start,
                                                           hmm.start_insertion,
                                                           start_probs[1]))
                 # I[0] -> M[1]
-                hmm.start_insertion.transitions.append( Transition(hmm.start_insertion,
+                hmm.start_insertion.transitions.append(Transition(hmm.start_insertion,
                                                                    first_match[States.Match],
                                                                    start_probs[3]))
                 if start_probs[4]:
-                    hmm.start_insertion.transitions.append( Transition(hmm.start_insertion,
+                    hmm.start_insertion.transitions.append(Transition(hmm.start_insertion,
                                                                        hmm.start_insertion,
                                                                        start_probs[4]))
-                    
-            
+
+
             if start_probs[2] is None and start_probs[6] is not None:
                 self._issue(hmm, 'M->D is corrupt (*) at the Start layer, using D->D instead ({0}).'.format(start_probs[6]))
-                start_probs[2] = start_probs[6]        
-                        
+                start_probs[2] = start_probs[6]
+
             if start_probs[2] is not None:  # Start -> D[1]
                 start_del = State(States.Deletion)
                 start_del.rank = 1
@@ -523,14 +523,14 @@ class HHpredProfileParser(object):
                             issue = 'Transition D -> D at the last layer ' \
                                     + '{0} ({1}-based) references a non-existent D state.'.format(rank,
                                                                                               hmm.layers.start_index)
-                            self._issue(hmm,issue)
+                            self._issue(hmm, issue)
                         else:
                             raise cie
                     transition = Transition(deletion, nextdeletion,
                                             probability)
                     deletion.transitions.append(transition)
-            
-                                   
+
+
                 elif tran == 'Neff':
                     hmm.layers[rank].effective_matches = float(fields[col]) / abs(hmm.scale)
                 elif tran == 'Neff_I':
@@ -574,8 +574,8 @@ class HHpredProfileParser(object):
                     else:
                         fam = line.split()[-1]
                     if fam.strip().lower() != hmm.id.lower():
-                        raise ValueError('This coordinate file refers to domain {0}, while the HMM refers to {1}.'.format(fam, hmm.id))                    
-                
+                        raise ValueError('This coordinate file refers to domain {0}, while the HMM refers to {1}.'.format(fam, hmm.id))
+
                 elif line.startswith('ATOM'):
 
                     rank = int(line[22:26])
@@ -675,7 +675,7 @@ class HHpredOutputParser(object):
 
         with open(os.path.expanduser(hhr_file)) as stream:
             return self._parse(stream, header_only)
-    
+
     def parse_string(self, output, header_only=False):
         """
         Get all hits from an C{output} string.
@@ -687,17 +687,17 @@ class HHpredOutputParser(object):
         @rtype: HHpredHitList
         
         @raise InvalidHHpredOutputError: if the output is corrupt         
-        """        
+        """
         import StringIO
-        
+
         stream = StringIO.StringIO()
         stream.write(output)
         stream.seek(0)
-        
+
         return self._parse(stream, header_only)
-    
+
     def _parse(self, stream, header_only):
-        
+
         qlen = None
         in_hits = False
         in_alis = False
@@ -706,9 +706,9 @@ class HHpredOutputParser(object):
         header = {}
         hits = {}
         alis = {}
-        
+
         for line in stream:
-            
+
             if not in_hits and not in_alis:
 
                 if line.replace(' ', '').startswith('NoHitProbE-value'):
@@ -719,7 +719,7 @@ class HHpredOutputParser(object):
                 else: ## parse header data (stuff above the hits table)
                     columns = line.strip().split(None, 1)
                     if len(columns) == 2:
-                        
+
                         identifier, data = columns
                         if identifier in ('Query', 'Command'):
                             data = data.strip()
@@ -727,9 +727,9 @@ class HHpredOutputParser(object):
                             data = float(data)
                         elif identifier in ('Searched_HMMs', 'Match_columns'):
                             data = int(data)
-                    
+
                         header[identifier] = data
-    
+
                         if identifier == 'Match_columns':
                             qlen = data
 
