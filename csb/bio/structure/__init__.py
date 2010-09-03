@@ -65,7 +65,13 @@ class Structure(object):
 
     def __repr__(self):
         return "<Structure: {0.accession}, {1} chains>".format(self, self.chains.length)
-        
+
+    def __getitem__(self,key):
+        return self._chains[key]
+
+    def __iter__(self):
+        return iter(self._chains)
+    
     @property
     def chains(self):
         return self._chains
@@ -337,6 +343,15 @@ class Chain(object):
 
     def __repr__(self):
         return "<Chain {0.id}: {0.type!r}>".format(self)        
+
+    def __len__(self):
+        return self._residues.length
+
+    def __getitem__(self,key):
+        return self._residues[key]
+
+    def __iter__(self):
+        return iter(self._residues)
 
     @property
     def id(self):
@@ -779,7 +794,14 @@ class Residue(object):
         
     def __repr__(self):
         return '<{1} [{0.rank}]: {0.type!r} {0.id}>'.format(self, self.__class__.__name__)
+
+    def __getitem__(self, key):
+        return self._structure[key]
     
+    def __iter__(self):
+        return iter(self._structure)
+
+        
     @property
     def type(self):
         return self._type

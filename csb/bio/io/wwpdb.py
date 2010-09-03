@@ -194,9 +194,10 @@ class StructureParser(object):
             else:
                 return repr(SequenceAlphabets.Unknown.UNK)
 
-    def parse(self, filename, model=None):
-        
-        self.filename = filename
+    def parse(self, filename = None, model=None):
+
+        if filename:
+            self.filename = filename
         return self.parse_structure(model)
 
     def parse_structure(self, model=None):
@@ -219,7 +220,7 @@ class StructureParser(object):
         header = self._stream.next()
         if not header.startswith('HEADER'):
             raise ValueError('Does not look like a PDB file.')
-
+        
         structure = csb.bio.structure.Structure(header.split()[-1])
         structure.model_id = None
         if model is not None:
@@ -275,8 +276,10 @@ class StructureParser(object):
                         atoms[chain] = []
 
             elif line.startswith('SEQRES'):
-
-                seq_fields = line[6:].split()
+                # Correct handling of empty chain id
+                seq_fields = [line[8:10], line[11], line[13:17] ]
+                seq_fields.extend(line[18:].split())
+                
                 rank_base = int(seq_fields[0])
                 chain_id = seq_fields[1]
 

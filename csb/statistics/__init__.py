@@ -3,6 +3,41 @@
 
 """
 
+class Cumulative:
+
+    total_mem = 1e8
+
+    def __init__(self, data):
+
+        self.data = data
+
+    def __call__(self, x, nchunks=None):
+
+        from numpy import greater, reshape, concatenate
+        
+        c = []
+        x = reshape(x,(-1,))
+
+        if nchunks is None:
+
+            total_size = len(x) * len(self.data)
+            nchunks = total_size / self.total_mem + int(total_size % self.total_mem != 0)
+            
+        size = len(x) / nchunks + int(len(x) % nchunks != 0)
+        
+        while len(x):
+
+            y = x[:size]
+            x = x[size:]
+
+            c = concatenate((c,greater.outer(y, self.data).sum(1) / float(len(self.data))))
+
+        return c
+    
+    def cumulative_desity(self, x, nchunks=None):
+        return 1 - self.__call__(x,nchunks)
+
+
 def geometric_mean(x, axis=None):
     """
     @param x:
@@ -260,6 +295,7 @@ def density(x, nbins, normalize=True):
         hy /= (hx[1]-hx[0]) * hy.sum()
 
     return hx, hy
+
 
 if __name__ == '__main__':
 
