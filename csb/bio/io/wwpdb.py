@@ -277,7 +277,7 @@ class StructureParser(object):
 
             elif line.startswith('SEQRES'):
                 # Correct handling of empty chain id
-                seq_fields = [line[8:10], line[11], line[13:17] ]
+                seq_fields = [line[7:10], line[11], line[13:17] ]
                 seq_fields.extend(line[18:].split())
 
                 rank_base = int(seq_fields[0])
