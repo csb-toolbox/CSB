@@ -431,7 +431,11 @@ class A3MAlignment(object):
                     if seq_id == flags:
                         type = 'sequence'
                     id = '{0:5}'.format(sequence.id)
-                    header = '>P1;{0}\n{2}:{0}:.:{1}:.:{1}:::: '.format(id[:4], id[4], type)
+                    start = end = '.'
+                    if hasattr(sequence, 'start') and hasattr(sequence, 'end'):
+                        start = sequence.start
+                        end = sequence.end
+                    header = '>P1;{0}\n{2}:{0}:{3}:{1}:{4}:{1}:::: '.format(id[:4], id[4], type, start, end)
                     alignment.append(header) 
                 else:
                     alignment.append(sequence.header)
