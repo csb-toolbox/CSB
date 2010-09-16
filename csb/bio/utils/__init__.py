@@ -207,7 +207,31 @@ def rmsd(X, Y):
 
     return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300) / len(X))
 
-def tm_score(x, y, fit_method=None):
+def tm_d0(Lmin):
+    
+    if Lmin > 15:
+        d0 = 1.24 * power(Lmin - 15.0, 1.0 / 3.0) - 1.8
+    else:
+        d0 = 0.5
+
+    return d0
+
+def tm_score(x, y):
+    """
+    Evaluate the TM-score of two conformations as they are (no fitting is done)
+    
+    @param x: 3 x n input array
+    @param x: 3 x n input array
+    @rtype: float
+    """
+    from numpy import sum
+
+    d = sum((x - y) ** 2, 1) ** 0.5
+    d0= tm_d0(len(x))
+    
+    return sum(1 / (1 + (d / d0) ** 2))
+
+def tm_superimpose(x, y, fit_method=fit):
     """
     Compute the TM-score of two protein coordinate vector sets. 
     Reference:  hang.bioinformatics.ku.edu/TM-score
@@ -223,49 +247,32 @@ def tm_score(x, y, fit_method=None):
     @return: computed TM-Score between the vectors
     @rtype: float
     """
-    from numpy import array, sum, dot, compress, power
-
-    if fit_method is None:
-        fit_method = fit
+    from numpy import array, sum, dot, compress, power, ones, argmax
 
     x = array(x)
     y = array(y)
 
-    Lmin = len(x)
-    if Lmin > 15:
-        d0 = 1.24 * power(Lmin - 15.0, 1.0 / 3.0) - 1.8
-    else:
-        d0 = 0.5
+    mask = ones(len(x)).astype('i')
 
-    R, t = fit_method(x, y)
+    scores = []
+    transformations = []
 
-    d = sum((x - dot(y, R.T) - t) ** 2, 1) ** 0.5
-    a = sum(1 / (1 + (d / d0) ** 2))
+    for i in range(3):
 
-    # first iteration
-    cutoff = min(max(4.5, d0), 8.0)
+        R, t = fit_method(compress(mask, x, 0), compress(mask, y, 0))
 
-    while True:
-        mask = (d < cutoff).astype('i')
-        if sum(mask) > 3:
-            break
-        cutoff += 0.5
+        scores.append(tm_score(x, dot(y, R.T) + t))
+        transformations.append((R,t))
 
-    R, t = fit_method(compress(mask, x, 0), compress(mask, y, 0))
-    d = sum((x - dot(y, R.T) - t) ** 2, 1) ** 0.5
-    b = sum(1 / (1 + (d / d0) ** 2))
+        cutoff = min(max(4.5, tm_d0(len(x))), 8.0) + i
+        d = sum((x - dot(y, R.T) - t) ** 2, 1) ** 0.5
 
-    # second iteration
-    cutoff = min(max(4.5, d0), 8.0) + 1
+        while True:
+            
+            mask = (d < cutoff).astype('i')
+            if sum(mask) > 3: break
+            cutoff += 0.5
 
-    while True:
-        mask = (d < cutoff).astype('i')
-        if sum(mask) > 3:
-            break
-        cutoff += 0.5
+    return max(scores), transformations[argmax(scores)]
+            
 
-    R, t = fit_method(compress(mask, x, 0), compress(mask, y, 0))
-    d = sum((x - dot(y, R.T) - t) ** 2, 1) ** 0.5
-    c = sum(1 / (1 + (d / d0) ** 2))
-
-    return max([a, b, c]) / len(x)
