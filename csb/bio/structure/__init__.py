@@ -165,20 +165,12 @@ class Structure(object):
         
         stream.writeline('HEADER    {0:40}{1:%d-%b-%y}   {2:4}'.format('.', datetime.now(), self.accession.upper()))
         
-        chain_ord = { }
-        for cn in self.chains:
-            for r in self.chains[cn].residues:
-                if r.has_structure:
-                    an = r.structure.keys()[0]
-                    chain_ord[r.structure[an].serial_number] = cn
-                    break
-        chains_sorted = [ chain_ord[sn] for sn in sorted(chain_ord) ]
-        
         molecules = { }
-        for chain in chains_sorted:
-            if self.chains[chain].molecule_id not in molecules:
-                molecules[self.chains[chain].molecule_id] = [ ]
-            molecules[self.chains[chain].molecule_id].append(chain)
+        for chain_id in self.chains:
+            chain = self.chains[chain_id]
+            if chain.molecule_id not in molecules:
+                molecules[chain.molecule_id] = [ ]
+            molecules[chain.molecule_id].append(chain_id)
         
         k = 0
         for mol_id in sorted(molecules):
@@ -191,7 +183,7 @@ class Structure(object):
             stream.writeline('COMPND {0:3} CHAIN: {1};'.format(k + 3, ', '.join(chains)))
             k += 3
             
-        for chain_id in chains_sorted:
+        for chain_id in self.chains:
             
             chain = self.chains[chain_id]
             res = [ chain.format_residue(r) for r in chain.residues ]
@@ -203,7 +195,7 @@ class Structure(object):
                 stream.writeline('SEQRES {0:>3} {1} {2:>4}  {3}'.format(
                                             rn, chain.id, chain.length, ' '.join(residues) ))
         
-        for chain_id in chains_sorted:
+        for chain_id in self.chains:
         
             chain = self.chains[chain_id]
             for residue in chain.residues:
