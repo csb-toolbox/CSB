@@ -1,4 +1,9 @@
+def trapezoidal(x, y):
 
+    from numpy import dot
+
+    return 0.5 * dot(x[1:]-x[:-1],y[1:]+y[:-1])
+    
 def trapezoidal_2d(f):
     """
     Approximate the integral of f from a to b in two dimensions, using trepezoidal approximation

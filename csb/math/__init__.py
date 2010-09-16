@@ -208,7 +208,7 @@ def from_polar3d(x):
     """
     assert x.shape == (3,)
 
-    from numpy import arccos, arctan2, array
+    from numpy import sin, cos, array
 
     r, theta, phi = x[:]
     s = sin(theta)
