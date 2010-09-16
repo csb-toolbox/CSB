@@ -187,11 +187,11 @@ def rmsd(X, Y):
 
     @param X: 3 x n input vector
     @type X: numpy array
-
     @param Y: 3 x n  input vector
     @type Y: numpy array
 
     @return: rmsd value between the input vectors
+    @rtype: float
     """
 
     from numpy import sum, dot, transpose, sqrt, clip, average
@@ -207,8 +207,10 @@ def rmsd(X, Y):
 
     return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300) / len(X))
 
-def tm_d0(Lmin):
+def _tm_d0(Lmin):
     
+    from numpy import power
+     
     if Lmin > 15:
         d0 = 1.24 * power(Lmin - 15.0, 1.0 / 3.0) - 1.8
     else:
@@ -222,14 +224,16 @@ def tm_score(x, y):
     
     @param x: 3 x n input array
     @param x: 3 x n input array
+    
+    @return: computed TM-score
     @rtype: float
     """
     from numpy import sum
 
     d = sum((x - y) ** 2, 1) ** 0.5
-    d0= tm_d0(len(x))
+    d0 = _tm_d0(len(x))
     
-    return sum(1 / (1 + (d / d0) ** 2))
+    return sum(1 / (1 + (d / d0) ** 2)) / len(x)
 
 def tm_superimpose(x, y, fit_method=fit):
     """
@@ -244,16 +248,14 @@ def tm_superimpose(x, y, fit_method=fit):
                        or fit_wellordered    
     @type fit_method: function
     
-    @return: computed TM-Score between the vectors
-    @rtype: float
+    @return: rotation matrix, translation vector, TM-score
+    @rtype: tuple
     """
     from numpy import array, sum, dot, compress, power, ones, argmax
 
-    x = array(x)
-    y = array(y)
-
     mask = ones(len(x)).astype('i')
-
+    d0 = _tm_d0(len(x))
+    
     scores = []
     transformations = []
 
@@ -262,9 +264,9 @@ def tm_superimpose(x, y, fit_method=fit):
         R, t = fit_method(compress(mask, x, 0), compress(mask, y, 0))
 
         scores.append(tm_score(x, dot(y, R.T) + t))
-        transformations.append((R,t))
+        transformations.append((R, t))
 
-        cutoff = min(max(4.5, tm_d0(len(x))), 8.0) + i
+        cutoff = min(max(4.5, d0), 8.0) + i
         d = sum((x - dot(y, R.T) - t) ** 2, 1) ** 0.5
 
         while True:
@@ -273,6 +275,7 @@ def tm_superimpose(x, y, fit_method=fit):
             if sum(mask) > 3: break
             cutoff += 0.5
 
-    return max(scores), transformations[argmax(scores)]
-            
-
+    R, t = transformations[argmax(scores)]
+    score = max(scores)
+    
+    return R, t, score

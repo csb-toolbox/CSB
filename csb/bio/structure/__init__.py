@@ -2,6 +2,7 @@ import os
 import re
 import copy
 import math
+import numpy
 import csb.pyutils
 import csb.bio.utils
 
@@ -588,12 +589,12 @@ class Chain(object):
             except csb.pyutils.ItemNotFoundError:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the structure'.format(atom_kind))
             
-        return coords
+        return numpy.array(coords)
     
-    def align(self, other, what=['CA'], how=AlignmentTypes.Global):
+    def superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):
         """
-        Align an_c{other} chain over C{self}. Return L{SuperimposeInfo} (RotationMatrix,
-        translation Vector and rmsd), such that:
+        Find the optimal fit between C{self} and C{other}. Return L{SuperimposeInfo}
+        (RotationMatrix, translation Vector and RMSD), such that:
         
             >>> other.apply_transformation(rotation_matrix, translation_vector)
             
@@ -603,7 +604,7 @@ class Chain(object):
         @type other: L{Chain}
         @param what: a list of atom kinds, e.g. ['CA']
         @type what: list
-        @param how: alignment method (global or local) - a member of the L{AlignmentTypes} enum
+        @param how: fitting method (global or local) - a member of the L{AlignmentTypes} enum
         @type how: L{csb.pyutils.EnumItem}
         
         @return: superimposition info object, containing rotation matrix, translation 
@@ -628,30 +629,29 @@ class Chain(object):
         
         r = [ Vector(*row) for row in r ]
         
-        return SuperimposeInfo(RotationMatrix(*r), Vector(*t), rmsd)
+        return SuperimposeInfo(RotationMatrix(*r), Vector(*t), rmsd=rmsd)
                               
-    
-    def superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):
+    def align(self, other, what=['CA'], how=AlignmentTypes.Global):
         """
         Align C{other}'s alpha carbons over self in space and return L{SuperimposeInfo}. 
         Coordinates of C{other} are overwritten in place using the rotation matrix
         and translation vector in L{SuperimposeInfo}. Alias for::
         
-            R, t = self.align(other, what=['CA'])
+            R, t = self.superimpose(other, what=['CA'])
             other.apply_transformation(R, t)
             
         @param other: the subject (movable) chain
         @type other: L{Chain}
         @param what: a list of atom kinds, e.g. ['CA']
         @type what: list
-        @param how: alignment method (global or local) - a member of the L{AlignmentTypes} enum
+        @param how: fitting method (global or local) - a member of the L{AlignmentTypes} enum
         @type how: L{csb.pyutils.EnumItem}
         
         @return: superimposition info object, containing rotation matrix, translation 
                  vector and computed RMSD
         @rtype: L{SuperimposeInfo}        
         """
-        result = self.align(other, what=what, how=how)
+        result = self.superimpose(other, what=what, how=how)
         other.apply_transformation(result.rotation, result.translation)
         
         return result
@@ -680,26 +680,60 @@ class Chain(object):
 
         return csb.bio.utils.rmsd(x, y) 
     
-    def tm_score(self, other, what=['CA']):
+    def tm_superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):
         """
-        Compute the C-alpha TM-Score against another chain (assuming equal length).
+        Find the optimal fit between C{self} and C{other}. Return L{SuperimposeInfo}
+        (RotationMatrix, translation Vector and TM-score), such that:
         
-        Chains are superimposed by two different methods:
-        
-            - SVD
-            - By iterative removal of outliers
+            >>> other.apply_transformation(rotation_matrix, translation_vector)
             
-        Return the TM-score calculated in these two alternative cases.
+        will result in C{other}'s coordinates superimposed over C{self}.
         
         @param other: the subject (movable) chain
         @type other: L{Chain}
         @param what: a list of atom kinds, e.g. ['CA']
         @type what: list
+        @param how: fitting method (global or local) - a member of the L{AlignmentTypes} enum
+        @type how: L{csb.pyutils.EnumItem}
         
-        @return: a tuple of computed TM-scores over the specified atom kinds.
-                 The first TM-score is the one computed with local alignment,
-                 the second one - with global
-        @rtype: tuple        
+        @return: superimposition info object, containing rotation matrix, translation 
+                 vector and computed TM-score
+        @rtype: L{SuperimposeInfo}
+        
+        @raise AlignmentArgumentLengthError: when the lengths of the argument chains differ         
+        """
+        
+        if self.length != other.length or self.length < 1:
+            raise ValueError('Both chains must be of the same and positive length')
+        
+        x = self.list_coordinates(what)
+        y = other.list_coordinates(what)
+        assert len(x) == len(y)
+        
+        if how == AlignmentTypes.Global:
+            fit = csb.bio.utils.fit
+        else:
+            fit = csb.bio.utils.fit_wellordered
+            
+        r, t, tm = csb.bio.utils.tm_superimpose(x, y, fit)
+        r = [ Vector(*row) for row in r ]
+        
+        return SuperimposeInfo(RotationMatrix(*r), Vector(*t), tm_score=tm)         
+    
+    def tm_score(self, other, what=['CA']):
+        """
+        Compute the C-alpha TM-Score against another chain (assuming equal chain length
+        and optimal configuration - no fitting is done).        
+        
+        @param other: the subject (movable) chain
+        @type other: L{Chain}
+        @param what: a list of atom kinds, e.g. ['CA']
+        @type what: list
+        @param how: fitting method (global or local) - a member of the L{AlignmentTypes} enum
+        @type how: L{csb.pyutils.EnumItem}
+                
+        @return: computed TM-Score over the specified atom kinds
+        @rtype: float        
         """
 
         if self.length != other.length or self.length < 1:
@@ -709,8 +743,7 @@ class Chain(object):
         y = other.list_coordinates(what)
         assert len(x) == len(y)
 
-        return  csb.bio.utils.tm_score(x, y, csb.bio.utils.fit), \
-                csb.bio.utils.tm_score(x, y, csb.bio.utils.fit_wellordered)             
+        return csb.bio.utils.tm_score(x, y)             
 
 class ChainResiduesCollection(csb.pyutils.CollectionContainer):
     
@@ -1494,11 +1527,12 @@ class SuperimposeInfo(object):
     @type translation: L{Vector}
     @type rmsd: float
     """
-    def __init__(self, rotation, translation, rmsd):
+    def __init__(self, rotation, translation, rmsd=None, tm_score=None):
         
         self.rotation = rotation
         self.translation = translation
         self.rmsd = rmsd
+        self.tm_score = tm_score
             
 class SecondaryStructureElement(object):
     """ 
