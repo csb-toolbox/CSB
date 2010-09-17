@@ -239,9 +239,9 @@ def dihedral_angle(a,b,c,d):
     angle = math.degrees(math.atan2(s, c))        
 
     if angle > 0:
-        return fmod(angles + 180, 360) - 180)
+        return fmod(angles + 180, 360) - 180
     else:
-        return fmod(angles - 180, 360) + 180)
+        return fmod(angles - 180, 360) + 180
 
     
     
