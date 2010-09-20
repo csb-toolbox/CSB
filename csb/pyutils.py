@@ -7,8 +7,6 @@
        version 2.7+ 
 """
 
-import UserDict
-
 class EnumValueError(ValueError):
     pass
 class EnumMemberError(AttributeError):
@@ -543,6 +541,8 @@ class CollectionContainer(CollectionContainerBase):
 try:        
     from collections import OrderedDict
 except ImportError:
+    import UserDict
+    
     class OrderedDict(dict, UserDict.DictMixin):
     
         def __init__(self, *args, **kwds):
