@@ -1,7 +1,9 @@
 import re
 import multiprocessing
 import csb.bio.structure
+import csb.pyutils
 
+from abc import ABCMeta, abstractmethod
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets
 from csb.bio.structure import ChemElements
 
@@ -14,15 +16,19 @@ class UnknownPDBResidueError(PDBParseError):
     pass
 
 
-class StructureParser(object):
+class AbstractStructureParser(object):
     """
-    A PDB structure format-aware parser.
+    A base PDB structure format-aware parser. Subclasses must implement the
+    internal abstract method C{_parse_header} in order to complete the 
+    implementation.
 
     @param structure_file: the input PD file to parse
     @type structure_file: str
 
     @raise IOError: when the input file cannot be found
     """
+
+    __metaclass__ = ABCMeta
 
     _pdb_aminoacids = {
         'PAQ': 'TYR', 'AGM': 'ARG', 'ILE': 'ILE', 'PR3': 'CYS', 'GLN': 'GLN',
@@ -68,6 +74,34 @@ class StructureParser(object):
          'B': 'NotA', 'D'  : 'NotC', 'H': 'NotG', 'V': 'NotT',
          'N': 'Any', 'X'  : 'Masked'
         }
+
+    @staticmethod
+    def create_parser(structure_file):
+        """
+        A StructureParser factory, which instantiates and returns the proper parser
+        object based on the contents of the PDB file.
+        
+        @param structure_file: the PDB file to parse. If the file contains a SEQRES
+                               section, L{RegularStructureParser} is returned,
+                               otherwise L{LegacyStructureParser} is instantiated. 
+                               In the latter case LegacyStructureParser will read 
+                               the sequence data directly from the ATOMs
+        @type structure_file: str
+        
+        @return: a proper parser instance
+        @rtype: L{AbstractStructureParser} subclass
+        """
+        has_seqres = False
+        
+        for line in open(structure_file):
+            if line.startswith('SEQRES'):
+                has_seqres = True
+                break
+        
+        if has_seqres:
+            return RegularStructureParser(structure_file)
+        else:
+            return LegacyStructureParser(structure_file)        
 
     def __init__(self, structure_file):
 
@@ -133,9 +167,9 @@ class StructureParser(object):
         @raise UnknownPDBResidueError: when there is no such PDB residue name
                                        into the catalog tables
         """
-        if residue_name in StructureParser._pdb_aminoacids:
+        if residue_name in AbstractStructureParser._pdb_aminoacids:
             return SequenceTypes.Protein
-        elif residue_name in StructureParser._pdb_nucleotides:
+        elif residue_name in AbstractStructureParser._pdb_nucleotides:
             return SequenceTypes.NucleicAcid
         else:
             raise UnknownPDBResidueError(residue_name)
@@ -163,9 +197,9 @@ class StructureParser(object):
 
         try:
             if as_type == SequenceTypes.Protein:
-                return StructureParser._pdb_aminoacids[residue_name]
+                return AbstractStructureParser._pdb_aminoacids[residue_name]
             elif as_type == SequenceTypes.NucleicAcid:
-                return StructureParser._pdb_nucleotides[residue_name]
+                return AbstractStructureParser._pdb_nucleotides[residue_name]
             else:
                 raise UnknownPDBResidueError(residue_name)
         except KeyError:
@@ -199,7 +233,7 @@ class StructureParser(object):
         if filename:
             self.filename = filename
         return self.parse_structure(model)
-
+    
     def parse_structure(self, model=None):
         """
         Parse and return the L{Structure} with the specified model identifier.
@@ -215,21 +249,56 @@ class StructureParser(object):
         @raise ValueError: when an invalid model ID is specified
         @raise Broken3DStructureError: on parse error (corrput file)
         """
-        self._stream.seek(0)
-
-        header = self._stream.next()
-        if not header.startswith('HEADER'):
-            raise ValueError('Does not look like a PDB file.')
-
-        structure = csb.bio.structure.Structure(header.split()[-1])
-        structure.model_id = None
         if model is not None:
             model = str(model)
+                    
+        structure = self._parse_header(model)
+        self._parse_atoms(structure, model)
 
-        atoms = {}
-        sequence = {}
+        return structure    
+
+    @abstractmethod
+    def _parse_header(self, model):
+        """
+        An abstract method, which subclasses must use to customize the way the
+        PDB header (or the absence of a such) is handled. The implementation
+        must rely on reading character data from the current internal 
+        self._stream and must return a new L{csb.bio.structure.Structure} 
+        instance with properly initialized header data: accession, model, 
+        molecule identifiers, chains and residues. This structure object is
+        then automatically passed to C{_parse_atoms}, which parses and attaches
+        the atom data to the residues in the structure.
+        """
+        pass
+
+    def _scroll_model(self, model, stream):
+        """
+        Scroll the C{stream} to the specified C{model}.
+        """
+        
+        while True:
+            try:
+                line = stream.next()
+            except StopIteration:
+                raise ValueError('No such model {0} in the structure.'.format(model))
+            
+            if line.startswith('MODEL'):
+                model_id = line[10:14].strip()
+                if model == model_id:
+                    return model_id      
+        
+    def _parse_atoms(self, structure, model):
+        """
+        Parse the ATOMs from the specified C{model} and attach them to the
+        C{structure}.
+        """
+        
+        structure.model_id = None
+
+        atoms = dict( (chain, []) for chain in structure.chains )        
         in_atom = False
 
+        self._stream.seek(0)
         while True:
 
             try:
@@ -237,81 +306,10 @@ class StructureParser(object):
             except StopIteration:
                 break
 
-            if line.startswith('COMPND'):
-                if line[10:].lstrip().startswith('MOL_ID:'):
-                    mol_id = int(line[18:].replace(';', '').strip())
-                    chain_name = ''
-                    chains = ''
-                    while line.startswith('COMPND'):
-                        line = self._stream.next()
-                        if line.split()[2].startswith('MOLECULE:'):
-                            chain_name += line[20:].strip()
-                            while not chain_name.endswith(';'):
-                                line = self._stream.next()
-                                if not line.startswith('COMPND'):
-                                        break
-                                chain_name += ' ' + line[11:].strip()
-                        else:
-                            while not line.split()[2].startswith('CHAIN:'):
-                                line = self._stream.next()
-                                if not line.startswith('COMPND'):
-                                    raise csb.bio.structure.Broken3DStructureError('COMPND section is not parsable: missing chain identifier.')
-                            chains = line[17:].strip()
-                            while not chains.endswith(';'):
-                                line = self._stream.next()
-                                if not line.startswith('COMPND'):
-                                    break
-                                chains += ', ' + line[11:].strip()
-                            break
-
-                    chain_name = chain_name.strip()[:-1]
-                    for chain in chains.replace(';', ' ').replace(',', ' ').split():
-                        new_chain = csb.bio.structure.Chain(chain, type=SequenceTypes.Unknown, name=chain_name, accession=structure.accession)
-                        new_chain.molecule_id = mol_id
-                        try:
-                            structure.chains.append(new_chain)
-                        except csb.pyutils.DuplicateKeyError:
-                            raise csb.bio.structure.Broken3DStructureError('Chain {0} is already defined.'.format(new_chain.id))
-                        sequence[chain] = []
-                        atoms[chain] = []
-
-            elif line.startswith('SEQRES'):
-                # Correct handling of empty chain id
-                seq_fields = [line[7:10], line[11], line[13:17] ]
-                seq_fields.extend(line[18:].split())
-
-                rank_base = int(seq_fields[0])
-                chain_id = seq_fields[1]
-
-                if structure.chains[chain_id].type == SequenceTypes.Unknown:
-                    inner_residuerank = int(len(seq_fields[3:]) / 2) + 3
-                    for i in [inner_residuerank, 3, -1]:
-                        try:
-                            structure.chains[chain_id].type = self.guess_sequence_type(seq_fields[i])
-                            break
-                        except UnknownPDBResidueError:
-                            pass
-
-                for i, residue_name in enumerate(seq_fields[3:]):
-                    rank = rank_base * 13 - (13 - (i + 1))
-                    residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[chain_id].type)
-                    residue = csb.bio.structure.Residue.create(structure.chains[chain_id].type, rank=rank, type=residue_name)
-                    structure.chains[chain_id].residues.append(residue)
-                    assert structure.chains[chain_id].residues.last_index == rank
-                    sequence[chain_id].append(str(residue.type))
-
-            elif line.startswith('MODEL'):
+            if line.startswith('MODEL'):
                 if model and model != line[10:14].strip():
-                    while True:
-                        try:
-                            line = self._stream.next()
-                        except StopIteration:
-                            raise ValueError('No such model {0} in the structure.'.format(model))
-
-                        if line.startswith('MODEL') \
-                               and model == line[10:14].strip():
-                            structure.model_id = model
-                            break
+                    self._scroll_model(model, self._stream)
+                    structure.model_id = model
                 else:
                     model = line[10:14].strip()
                     structure.model_id = model
@@ -326,13 +324,16 @@ class StructureParser(object):
                     x, y, z = line[30:38], line[38:46], line[46:54]
                     vector = csb.bio.structure.Vector(float(x), float(y), float(z))
                     element = line[76:78].strip()
-                    try:
-                        element = csb.pyutils.Enum.parsename(ChemElements, element)
-                    except csb.pyutils.EnumMemberError as ee:
-                        if element in ('D', 'X'):
-                            element = ChemElements.x
-                        else:
-                            raise ee
+                    if element:
+                        try:
+                            element = csb.pyutils.Enum.parsename(ChemElements, element)
+                        except csb.pyutils.EnumMemberError as ee:
+                            if element in ('D', 'X'):
+                                element = ChemElements.x
+                            else:
+                                raise ee
+                    else:
+                        element = None
 
                     atom = csb.bio.structure.Atom(serial_number, name, element,
                                                   vector)
@@ -383,17 +384,15 @@ class StructureParser(object):
         if structure.model_id != model:
             raise ValueError('No such model {0} in the structure.'.format(model))
 
-        self._map_residues(structure, sequence, atoms)
+        self._map_residues(structure, atoms)        
 
-        return structure
+    def _map_residues(self, structure, atoms):
 
-    def _map_residues(self, structure, sequence, atoms):
+        assert set(structure.chains) == set(atoms.keys())
 
-        assert set(sequence.keys()) == set(atoms.keys())
+        for chain in structure.chains:
 
-        for chain in sequence:
-
-            subject = ''.join(sequence[chain])
+            subject = structure.chains[chain].sequence
             query = ''
             fragments = []
 
@@ -445,6 +444,219 @@ class StructureParser(object):
                     del atom._residue_name
             else:
                 raise csb.bio.structure.Broken3DStructureError('Could not map structure to sequence.')
+
+
+class RegularStructureParser(AbstractStructureParser):
+    """
+    This is the de facto PDB parser, which is designed to read SEQRES and ATOM
+    sections separately, and them map them. Intentionally fails to parse
+    malformed PDB files, e.g. a PDB file without a HEADER section.
+    """
+    
+    def _parse_header(self, model):
+        """
+        Parse the HEADER section of a regular PDB file.
+        
+        @return: a L{csb.bio.structure.Structure} instance with properly 
+                 initialized residues from the SEQRES.
+        @rtype: L{csb.bio.structure.Structure}
+        
+        @raise ValueError: if the stream has no HEADER at byte 0
+        """
+        
+        self._stream.seek(0)
+
+        header = self._stream.next()
+        if not header.startswith('HEADER'):
+            raise ValueError('Does not look like a regular PDB file.')
+
+        structure = csb.bio.structure.Structure(header.split()[-1])
+
+        while True:
+
+            try:
+                line = self._stream.next()
+            except StopIteration:
+                break
+
+            if line.startswith('COMPND'):
+                if line[10:].lstrip().startswith('MOL_ID:'):
+                    mol_id = int(line[18:].replace(';', '').strip())
+                    chain_name = ''
+                    chains = ''
+                    while line.startswith('COMPND'):
+                        line = self._stream.next()
+                        if line.split()[2].startswith('MOLECULE:'):
+                            chain_name += line[20:].strip()
+                            while not chain_name.endswith(';'):
+                                line = self._stream.next()
+                                if not line.startswith('COMPND'):
+                                        break
+                                chain_name += ' ' + line[11:].strip()
+                        else:
+                            while not line.split()[2].startswith('CHAIN:'):
+                                line = self._stream.next()
+                                if not line.startswith('COMPND'):
+                                    raise csb.bio.structure.Broken3DStructureError('COMPND section is not parsable: missing chain identifier.')
+                            chains = line[17:].strip()
+                            while not chains.endswith(';'):
+                                line = self._stream.next()
+                                if not line.startswith('COMPND'):
+                                    break
+                                chains += ', ' + line[11:].strip()
+                            break
+
+                    chain_name = chain_name.strip()[:-1]
+                    for chain in chains.replace(';', ' ').replace(',', ' ').split():
+                        new_chain = csb.bio.structure.Chain(chain, type=SequenceTypes.Unknown, name=chain_name, accession=structure.accession)
+                        new_chain.molecule_id = mol_id
+                        try:
+                            structure.chains.append(new_chain)
+                        except csb.pyutils.DuplicateKeyError:
+                            raise csb.bio.structure.Broken3DStructureError('Chain {0} is already defined.'.format(new_chain.id))
+                        
+            elif line.startswith('SEQRES'):
+                # Correct handling of empty chain id
+                seq_fields = [line[7:10], line[11], line[13:17] ]
+                seq_fields.extend(line[18:].split())
+
+                rank_base = int(seq_fields[0])
+                chain_id = seq_fields[1]
+
+                if structure.chains[chain_id].type == SequenceTypes.Unknown:
+                    inner_residuerank = int(len(seq_fields[3:]) / 2) + 3
+                    for i in [inner_residuerank, 3, -1]:
+                        try:
+                            structure.chains[chain_id].type = self.guess_sequence_type(seq_fields[i])
+                            break
+                        except UnknownPDBResidueError:
+                            pass
+
+                for i, residue_name in enumerate(seq_fields[3:]):
+                    rank = rank_base * 13 - (13 - (i + 1))
+                    residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[chain_id].type)
+                    residue = csb.bio.structure.Residue.create(structure.chains[chain_id].type, rank=rank, type=residue_name)
+                    structure.chains[chain_id].residues.append(residue)
+                    assert structure.chains[chain_id].residues.last_index == rank        
+
+            elif line.startswith('MODEL') or line.startswith('ATOM'):
+                break
+                        
+        return structure   
+
+
+class LegacyStructureParser(AbstractStructureParser):
+    """
+    This is a customized PDB parser, which is designed to read both sequence and
+    atom data from the ATOM section. This is especially useful when parsing PDB
+    files without a HEADER section.
+    """
+    
+    def _parse_header(self, model):
+        """
+        Initialize a structure with residues from the ATOM section.
+        
+        @param model: model identifier (e.g. if multiple models exist)
+        @type model: str 
+        
+        @return: a L{csb.bio.structure.Structure} instance with properly 
+                 initialized residues from ATOMs under the specified C{model}.
+        @rtype: L{csb.bio.structure.Structure}
+        """
+                
+        self._stream.seek(0)
+        in_atom = False
+        chains = csb.pyutils.OrderedDict()
+
+        header = self._stream.next()
+        if header.startswith('HEADER'):
+            structure = csb.bio.structure.Structure(header.split()[-1])
+        else:
+            self._stream.seek(0)
+            structure = csb.bio.structure.Structure('NONE')
+
+        structure.model_id = None
+        
+        while True:
+
+            try:
+                line = self._stream.next()
+            except StopIteration:
+                break
+
+            if line.startswith('MODEL'):
+                if model and model != line[10:14].strip():
+                    self._scroll_model(model, self._stream)
+                    structure.model_id = model
+                else:
+                    model = line[10:14].strip()
+                    structure.model_id = model
+
+            elif line.startswith('ATOM') \
+                     or (in_atom and line.startswith('HETATM')):
+                    in_atom = True
+                    
+                    residue_id = line[22:27].strip()
+                    residue_name = line[17:20].strip()
+                    chain_id = line[21].strip()
+                    
+                    if chain_id not in chains:
+                        chains[chain_id] = csb.pyutils.OrderedDict()
+                        
+                        new_chain = csb.bio.structure.Chain(
+                                            chain_id, 
+                                            type=SequenceTypes.Unknown, 
+                                            accession=structure.accession)
+                        new_chain.molecule_id = '1'
+                        structure.chains.append(new_chain)                        
+                        
+                    if residue_id not in chains[chain_id]:
+                        chains[chain_id][residue_id] = residue_name
+                        
+                        if structure.chains[chain_id].type == SequenceTypes.Unknown:
+                            try:
+                                structure.chains[chain_id].type = self.guess_sequence_type(residue_name)
+                            except UnknownPDBResidueError:
+                                pass
+
+            elif in_atom and line.startswith('TER'):
+                in_atom = False
+
+            elif line.startswith('ENDMDL'):
+                break
+
+            elif line.startswith('END'):
+                break                            
+        
+        for chain_id in structure.chains:
+            for residue_id in chains[chain_id]:
+                residue_name = chains[chain_id][residue_id]
+                rank = (structure.chains[chain_id].residues.last_index or 0) + 1
+                
+                residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[chain_id].type)
+                residue = csb.bio.structure.Residue.create(structure.chains[chain_id].type, rank=rank, type=residue_name)
+                structure.chains[chain_id].residues.append(residue)                                  
+                        
+        return structure    
+
+    
+def StructureParser(structure_file):
+    """
+    A StructureParser factory, which instantiates and returns the proper parser
+    object based on the contents of the PDB file.
+    
+    @param structure_file: the PDB file to parse. If the file contains a SEQRES
+                           section, L{RegularStructureParser} is returned,
+                           otherwise L{LegacyStructureParser} is instantiated. 
+                           In the latter case LegacyStructureParser will read 
+                           the sequence data directly from the ATOMs
+    @type structure_file: str
+    
+    @return: a proper parser instance
+    @rtype: L{AbstractStructureParser} subclass
+    """
+    
+    return AbstractStructureParser.create_parser(structure_file)
 
 
 def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
