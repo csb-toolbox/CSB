@@ -216,13 +216,17 @@ class Structure(object):
                         alt = 'A'
                     elif alt is False:
                         alt = ' '
-                        
-                    stream.writeline('ATOM  {0:>5} {1:>4}{2}{3:3} {4}{5:>4}{6}   {7:>8.3f}{8:>8.3f}{9:>8.3f}{10:>6.2f}{11:>6.2f}{12!r:>12}{13:2}'.format(
+                    
+                    if atom.element:
+                        element = repr(atom.element)
+                    else:
+                        element = ' '
+                    stream.writeline('ATOM  {0:>5} {1:>4}{2}{3:3} {4}{5:>4}{6}   {7:>8.3f}{8:>8.3f}{9:>8.3f}{10:>6.2f}{11:>6.2f}{12:>12}{13:2}'.format(
                                         atom.serial_number, atom._full_name, isnull(alt, ' '), 
                                         chain.format_residue(residue), chain.id, 
                                         isnull(residue.sequence_number, residue.rank), isnull(residue.insertion_code, ' '), 
                                         atom.vector.x, atom.vector.y, atom.vector.z, isnull(atom.occupancy, 0.0), isnull(atom.temperature, 0.0), 
-                                        atom.element, isnull(atom.charge, ' ') ))
+                                        element, isnull(atom.charge, ' ') ))
             stream.writeline('TER')
         stream.writeline('END')
         
@@ -1168,6 +1172,8 @@ class Atom(object):
             
         if isinstance(element, basestring):
             element = csb.pyutils.Enum.parsename(ChemElements, element)
+        elif element is None:
+            pass
         elif not csb.pyutils.Enum.ismember(element, ChemElements):
             raise TypeError(element)
         self._element = element
