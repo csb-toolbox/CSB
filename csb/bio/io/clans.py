@@ -29,17 +29,11 @@ class ClansParser:
         @param filename: name of the CLANS file.
         @type filename: string
 
-        @rtype: Clans instance
+        @rtype: L{Clans} instance
         @return: a Clans instance containing the parsed data
         '''
         self.clans_instance = Clans()
         self.clans_instance.filename = filename
-
-        ## init variables in case a block does not exist
-        seq = None
-        seqgroups = None
-        pos = None
-        hsp = None
 
         self._read_block_dict()  # read and preprocess the CLANS file
 
@@ -48,11 +42,17 @@ class ClansParser:
         seq = self._parse_seq()
         seqgroups = self._parse_seqgroups()
         pos = self._parse_pos()
-        hsp = self._parse_hsp()
+
+        if 'hsp' in self.data_block_dict:
+            hsp = self._parse_hsp()
+        elif 'mtx' in self.data_block_dict:
+            hsp = self._parse_mtx()
+        elif 'att' in self.data_block_dict:
+            hsp = self._parse_att()
 
         ## print unknown blocks in case further implementations are needed
         known_block_tags = set(('param', 'rotmtx', 'seq', 'seqgroups', 'pos',
-                                'hsp'))
+                                'hsp', 'mtx', 'att'))
         unprocessed_block_tags = set(self.data_block_dict.keys()).difference(
             known_block_tags)
 
@@ -112,15 +112,15 @@ class ClansParser:
         ## flag re.DOTALL is necessary to make . match newlines
         data = re.findall(r'(<(\w+)>(.+)</\2>)', data_blocks,
                           flags=re.DOTALL)
-        self.data_block_dict = dict([(tag, data.strip().split('\n'))
-                                     for tag_plus_data, tag, data in data])
+        self.data_block_dict = dict([(tag, datum.strip().split('\n'))
+                                     for _tag_plus_data, tag, datum in data])
 
     def _parse_param(self):
         '''
         Parse a list of lines in the CLANS <param> format:
 
-        parameter1=data1
-        parameter2=data2
+        parameter1=data1\n
+        parameter2=data2\n
         ...
         '''
         if 'param' not in self.data_block_dict:
@@ -184,12 +184,12 @@ class ClansParser:
         '''
         Parse a list of lines in the CLANS <seqgroup> format:
 
-        name=name of the group
-        type=0
-        size=12
-        hide=0
-        color=255;204;51
-        numbers=0;1;2;3;4;5;6;10;13
+        name=name of the group\n
+        type=0\n
+        size=12\n
+        hide=0\n
+        color=255;204;51\n
+        numbers=0;1;2;3;4;5;6;10;13\n
         ...
 
         @rtype: list
@@ -255,6 +255,27 @@ class ClansParser:
         return dict([(tuple([int(val) for val in line.split(':')[0].split()]),
                       float(line.split(':')[1].split(' ')[0]))
                      for line in block])
+
+    def _parse_mtx(self):
+        '''
+        Parse a list of lines in the CLANS <mtx> format.
+
+        @rtype: dict
+        @return: a dict using 2-tuples of the two integers as keys and the
+                 float as values
+        '''
+        if 'mtx' not in self.data_block_dict:
+            print 'WARNING: CLANS file contains no <mtx> block. This is OK,'
+            print '         if the file does not contain any sequences or if'
+            print '         none of the contained sequences have connections.'
+            return {}
+
+        block = self.data_block_dict['mtx']
+
+        return dict([((i, j), float(entry))
+                     for i, line in enumerate(block)
+                     for j, entry in enumerate(line.split(';')[:-1])
+                     if i != j if float(entry) != 0])
 
 
 class ClansWriter:
@@ -713,7 +734,7 @@ class Clans(object):
         @raise ValueError: if multiple entries with name <name> are found and
                            pedantic==True
 
-        @rtype: ClansEntry
+        @rtype: L{ClansEntry}
         @return: entry with name <name>
         '''
 
@@ -1062,5 +1083,6 @@ if __name__ == '__main__':
     if False:
 
         fn = '/tmp/cl/2be1_psiblast.clans'
+        fn =  '~/tmp/20000.clans'
         cp = ClansParser()
         c = cp.parse_file(fn)
