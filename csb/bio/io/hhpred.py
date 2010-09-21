@@ -660,16 +660,21 @@ class HHpredOutputParser(object):
 
         self.alignments = alignments
 
+    def __repr__(self):
+        return "HHsearch Result Parser"
+
+    __str__ = __repr__
+
     def parse_file(self, hhr_file, header_only=False):
         """
         Parse all hits from this HHpred result file.
-        
+
         @param hhr_file: input HHR file name
         @type hhr_file: str
-        
+
         @return: parsed hits
         @rtype: HHpredHitList
-        
+
         @raise InvalidHHpredOutputError: if the output is corrupt
         """
 
@@ -679,14 +684,14 @@ class HHpredOutputParser(object):
     def parse_string(self, output, header_only=False):
         """
         Get all hits from an C{output} string.
-        
+
         @param output: HHpred standard output
         @type output: str
-        
+
         @return: parsed hits
         @rtype: HHpredHitList
-        
-        @raise InvalidHHpredOutputError: if the output is corrupt         
+
+        @raise InvalidHHpredOutputError: if the output is corrupt
         """
         import StringIO
 
@@ -716,7 +721,7 @@ class HHpredOutputParser(object):
                     continue
                 elif line.strip() == '':
                     continue
-                else: ## parse header data (stuff above the hits table)
+                else:  # parse header data (stuff above the hits table)
                     columns = line.strip().split(None, 1)
                     if len(columns) == 2:
 
@@ -734,7 +739,7 @@ class HHpredOutputParser(object):
                             qlen = data
 
             if in_hits and not header_only:
-                if not line.strip(): ## suboptimal way to handle block switch
+                if not line.strip():  # suboptimal way to handle block switch
                     in_hits = False
                     in_alis = True
                     if self.alignments:
