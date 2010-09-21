@@ -8,6 +8,8 @@ import csb.bio.utils
 
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentTypes
 from itertools import izip
+from numpy import dot,transpose
+from csb.math import dihedral_angle
 
 AngleUnits = csb.pyutils.enum( Degrees='deg', Radians='rad' )
 """
@@ -119,8 +121,8 @@ class Structure(object):
         """
         Apply in place RotationMatrix and translation Vector to all atoms in the structure.
         
-        @type rotation: L{RotationMatrix}
-        @type translation: L{Vector} 
+        @type rotation: numpy array
+        @type translation: numpy array 
         """
         for chain_id in self.chains:
             self.chains[chain_id].apply_transformation(rotation, translation)
@@ -225,7 +227,7 @@ class Structure(object):
                                         atom.serial_number, atom._full_name, isnull(alt, ' '), 
                                         chain.format_residue(residue), chain.id, 
                                         isnull(residue.sequence_number, residue.rank), isnull(residue.insertion_code, ' '), 
-                                        atom.vector.x, atom.vector.y, atom.vector.z, isnull(atom.occupancy, 0.0), isnull(atom.temperature, 0.0), 
+                                        atom.vector[0], atom.vector[1], atom.vector[2], isnull(atom.occupancy, 0.0), isnull(atom.temperature, 0.0), 
                                         element, isnull(atom.charge, ' ') ))
             stream.writeline('TER')
         stream.writeline('END')
@@ -347,8 +349,8 @@ class Chain(object):
     def __getitem__(self,key):
         return self._residues[key]
 
-    def __iter__(self):
-        return iter(self._residues)
+    ## def __iter__(self):
+    ##     return iter(self._residues)
 
     @property
     def id(self):
@@ -553,12 +555,14 @@ class Chain(object):
         """
         Apply in place RotationMatrix and translation Vector to all atoms in the chain.
         
-        @type rotation: L{RotationMatrix}
-        @type translation: L{Vector}         
+        @type rotation: numpy array
+        @type translation: numpy array         
         """
         for residue in self.residues:
             for atom_name in residue.structure:
-                residue.structure[atom_name]._transform_vector(rotation, translation)
+                residue.structure[atom_name].vector = dot(residue.structure[atom_name].vector,
+                                                          transpose(rotation))\
+                                                          + translation
                 
     def list_coordinates(self, what):
         """
@@ -581,7 +585,7 @@ class Chain(object):
                 raise Missing3DStructureError('Discontinuous structure at residue {0}'.format(residue))
             try:
                 for atom_kind in what:
-                    coords.append(residue.structure[atom_kind].vector.row())
+                    coords.append(residue.structure[atom_kind].vector)
             except csb.pyutils.ItemNotFoundError:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the structure'.format(atom_kind))
             
@@ -623,9 +627,7 @@ class Chain(object):
             
         rmsd = csb.bio.utils.rmsd(x, y) 
         
-        r = [ Vector(*row) for row in r ]
-        
-        return SuperimposeInfo(RotationMatrix(*r), Vector(*t), rmsd=rmsd)
+        return SuperimposeInfo(r, t, rmsd=rmsd)
                               
     def align(self, other, what=['CA'], how=AlignmentTypes.Global):
         """
@@ -712,9 +714,8 @@ class Chain(object):
             fit = csb.bio.utils.fit_wellordered
             
         r, t, tm = csb.bio.utils.tm_superimpose(x, y, fit)
-        r = [ Vector(*row) for row in r ]
         
-        return SuperimposeInfo(RotationMatrix(*r), Vector(*t), tm_score=tm)         
+        return SuperimposeInfo(r,t, tm_score=tm)         
     
     def tm_score(self, other, what=['CA']):
         """
@@ -1008,16 +1009,16 @@ class ProteinResidue(Residue):
         try:
             if prev_residue is not None and prev_residue.has_structure:
                 prev_c = prev_residue._structure['C'].vector
-                angles.phi = Vector.dihedral(prev_c, n, ca, c)
+                angles.phi = dihedral_angle(prev_c, n, ca, c)
         except csb.pyutils.ItemNotFoundError as missing_prevatom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the i-1 residue {1!r}.'.format(missing_prevatom, prev_residue))    
         try:
             if next_residue is not None and next_residue.has_structure:    
                 next_n = next_residue._structure['N'].vector
-                angles.psi = Vector.dihedral(n, ca, c, next_n)
+                angles.psi = dihedral_angle(n, ca, c, next_n)
                 next_ca = next_residue._structure['CA'].vector
-                angles.omega = Vector.dihedral(ca, c, next_n, next_ca)
+                angles.omega = dihedral_angle(ca, c, next_n, next_ca)
         except csb.pyutils.ItemNotFoundError as missing_nextatom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the i+1 residue {1!r}.'.format(missing_nextatom, next_residue))              
@@ -1145,7 +1146,7 @@ class Atom(object):
     @param element: corresponding L{ChemElements}
     @type element: L{csb.pyutils.EnumItem}
     @param vector: atom's coordinates
-    @type vector: L{Vector}
+    @type vector: numpy array
     @param alternate: if True, means that this is a wobbling atom with multiple alternative 
                       locations
     @type alternate: bool
@@ -1189,7 +1190,7 @@ class Atom(object):
         return cmp(self.serial_number, other.serial_number)
     
     def _transform_vector(self, rotation, translation):
-        self.vector = self.vector.transform(rotation, translation)
+        self.vector = dot(self.vector, transpose(rotation)) + translation
         
     @property
     def serial_number(self):
@@ -1222,10 +1223,9 @@ class Atom(object):
     @property
     def vector(self):
         return self._vector
+
     @vector.setter
     def vector(self, vector):
-        if not isinstance(vector, Vector):
-            raise TypeError(vector)
         self._vector = vector
         
 class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
@@ -1284,244 +1284,12 @@ class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
     def __repr__(self):
         return "<DisorderedAtom: {0.length} alternative locations>".format(self)
         
-class Vector(object):
-    """
-    Simple 3D vector. Provides basic vector calculations: cross, dot, +, -, angle.
-    
-    @param x: x coordinate
-    @type x: float
-    @param y: y coordinate
-    @type y: float
-    @param z: z coordinate
-    @type z: float        
-    """  
-    def __init__(self, x, y, z):
-        
-        self.x = float(x)
-        self.y = float(y)
-        self.z = float(z)  
-        
-    def __repr__(self):
-        return '<Vector: x={0.x}, y={0.y}, z={0.z}>'.format(self)
-        
-    def __getitem__(self, i):
-        return (self.x, self.y, self.z)[i]
-        
-    def __neg__(self):
-        return Vector(-self.x, -self.y, -self.z)
-                
-    def __add__(self, other):   
-        return Vector(self.x + other.x, 
-                      self.y + other.y, 
-                      self.z + other.z)
-
-    def __sub__(self, other):
-        return Vector(self.x - other.x, 
-                      self.y - other.y, 
-                      self.z - other.z)       
-        
-    def row(self):
-        """
-        @return: a list representation of the vector: [x, y, z]
-        @rtype: list
-        """
-        return [self.x, self.y, self.z] 
-    
-    def clone(self):
-        """
-        @return: deep copy of the vector
-        @rtype: L{Vector}
-        """
-        return Vector(self.x, self.y, self.z)
-    
-    def transform(self, rotation, translation=None):
-        """
-        Apply L{RotationMatrix} and translation L{Vector}.
-        
-        @type rotation: L{RotationMatrix}
-        @type translation: L{Vector}
-        
-        @return: transformed copy of the vector
-        @rtype: L{Vector}
-        """
-        if translation is None:
-            translation = Vector(0, 0, 0)
-            
-        v = Vector(0, 0, 0)    
-        v.x = self.dot(rotation.x) + translation.x
-        v.y = self.dot(rotation.y) + translation.y
-        v.z = self.dot(rotation.z) + translation.z
-        
-        return v
-    
-    def normalized(self):
-        """
-        @return: normalized copy of the vector
-        @rtype: L{Vector}
-        """
-        n = self.norm
-        return Vector(self.x/n, self.y/n, self.z/n)
-        
-    def dot(self, other):
-        """
-        @param other: right-hand-side term
-        @type other: L{Vector}
-                
-        @return: dot product of C{self} and C{other}
-        @rtype: float
-        """
-        return self.x * other.x + self.y * other.y + self.z * other.z 
-    
-    def cross(self, other):
-        """
-        @param other: right-hand-side term
-        @type other: L{Vector}
-        
-        @return: cross product of C{self} and C{other}
-        @rtype: L{Vector}
-        """
-        return Vector(self.y * other.z - self.z * other.y,
-                      self.z * other.x - self.x * other.z, 
-                      self.x * other.y - self.y * other.x)
-    
-    def angle(self, other, units=AngleUnits.Degrees):
-        """
-        @param other: right-hand-side term
-        @type other: L{Vector}
-        @param units: target L{AngleUnits}
-        @type units: L{csb.pyutils.EnumItem}
-                
-        @return: angle between C{self} and C{other} in C{units}
-        @rtype: float
-        
-        @raise ValueError: if any of the vectors is a null vector
-        @raise ValueError: when the target units are not valid 
-        """
-        
-        if self.is_null or other.is_null:
-            raise ValueError('Zero (Null) vector is not a valid argument.')
-        
-        cos_angle = self.dot(other) / float(self.norm * other.norm)
-        
-        if cos_angle < -1.0:
-            cos_angle = -1.0
-        if cos_angle > 1.0:
-            cos_angle = 1.0
-            
-        angle =  math.acos(cos_angle)
-                
-        if units == AngleUnits.Degrees:
-            return math.degrees(angle)
-        elif units == AngleUnits.Radians:
-            return angle 
-        else:
-            raise ValueError('Unknown angle units {0}'.format(units))
-        
-    @property
-    def norm(self):
-        return self.dot(self) ** 0.5
-    
-    @property
-    def length(self):
-        return self.norm
-    
-    @property
-    def is_null(self):
-        return self.x == self.y == self.z == 0
-    
-    @staticmethod
-    def dihedral(a, b, c, d):
-        """
-        Compute the dihedral angle from a set of 4 connected atoms (a-b-c-d)
-        around the b-c bond. 
-        
-        @param a: first vector
-        @type a: L{Vector}
-        @param b: second vector
-        @type b: L{Vector}
-        @param c: third vector
-        @type c: L{Vector}
-        @param d: fourth vector
-        @type d: L{Vector}
-                                
-        @return: the computed angle in degrees: [-180, 180]
-        @rtype: float
-        """                  
-        v = b - c
-        m = (a - b).cross(v).normalized()
-        n = (d - c).cross(v).normalized()
-        
-        cos = m.dot(n)
-        sin = n.cross(m).dot(v) / v.norm
-        angle = math.degrees(math.atan2(sin, cos))        
-            
-        while angle > 180:
-            angle -= 360
-        while angle < -180:
-            angle += 360 
-        
-        return angle                    
-
-    @staticmethod
-    def dihedral2(a, b, c, d):
-        """
-        Alternative implementation of Vector.dihedral().
-        
-        @deprecated: use Vector.dihedral(), although the results should be identical
-        """           
-        abc_normal = (a - b).cross(c - b)
-        bcd_normal = (b - c).cross(d - c)
-         
-        angle = abc_normal.angle(bcd_normal, units=AngleUnits.Degrees)
-         
-        if abc_normal.dot(d - c) >= 0:
-            angle = -angle      
-            
-        while angle > 180:
-            angle -= 360
-        while angle < -180:
-            angle += 360
-        
-        return angle 
-
-class RotationMatrix(object):
-    """
-    Represents a 3D vector rotation matrix. x, y, z  are the rows of the matrix, 
-    each row holds one L{Vector}, such that for some vector::
-    
-        i' = vector.dot(matrix.i)        (i=x,y,z)
-        
-    gives the rotated components of the vector.
-    
-    @type x: L{Vector}
-    @type y: L{Vector}
-    @type z: L{Vector}        
-    """    
-    
-    def __init__(self, x, y, z):
-        
-        for i in [x, y, z]:
-            if type(i) is not Vector:
-                raise TypeError(i)
-        
-        self.x = x
-        self.y = y
-        self.z = z 
-        
-    def matrix(self):
-        """
-        @return: a list (3x3 'matrix') representation of the matrix
-        @rtype: list
-        """
-        return [ self.x.row(), 
-                 self.y.row(), 
-                 self.z.row() ]
         
 class SuperimposeInfo(object):
     """
     Describes a structural alignment result.
     
-    @type rotation: L{RotationMatrix}
+    @type rotation: Numpy Array
     @type translation: L{Vector}
     @type rmsd: float
     """

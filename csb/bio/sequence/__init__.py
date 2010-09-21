@@ -501,7 +501,6 @@ class Alignment(ordered_dict):
     def read(self, filename, numbers_as_keys = False):
 
         from Bio import Fasta
-        from csb.bio.sequence import Sequence
         
         import os
 

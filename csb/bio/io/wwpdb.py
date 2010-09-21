@@ -6,7 +6,7 @@ import csb.pyutils
 from abc import ABCMeta, abstractmethod
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets
 from csb.bio.structure import ChemElements
-
+from numpy import array
 
 class PDBParseError(ValueError):
     pass
@@ -322,7 +322,7 @@ class AbstractStructureParser(object):
                     serial_number = int(line[6:11])
                     name = line[12:16]
                     x, y, z = line[30:38], line[38:46], line[46:54]
-                    vector = csb.bio.structure.Vector(float(x), float(y), float(z))
+                    vector = array([float(x), float(y), float(z)])
                     element = line[76:78].strip()
                     if element:
                         try:
