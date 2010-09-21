@@ -23,6 +23,8 @@ class ClansParser:
     def __repr__(self):
         return 'ClansParser instance'
 
+    __str__ = __repr__
+
     def parse_file(self, filename):
         '''Parse a CLANS file.
 
@@ -43,12 +45,14 @@ class ClansParser:
         seqgroups = self._parse_seqgroups()
         pos = self._parse_pos()
 
+        hsp_att_mode = "hsp"
         if 'hsp' in self.data_block_dict:
-            hsp = self._parse_hsp()
+            hsp = self._parse_hsp_att('hsp')
         elif 'mtx' in self.data_block_dict:
             hsp = self._parse_mtx()
         elif 'att' in self.data_block_dict:
-            hsp = self._parse_att()
+            hsp_att_mode = "att"
+            hsp = self._parse_hsp_att('att')
 
         ## print unknown blocks in case further implementations are needed
         known_block_tags = set(('param', 'rotmtx', 'seq', 'seqgroups', 'pos',
@@ -95,6 +99,7 @@ class ClansParser:
                  for ((a, b), value) in hsp.items()]
 
         self.clans_instance._update_index()
+        self.clans_instance.hsp_att_mode = hsp_att_mode
 
         return self.clans_instance
 
@@ -176,6 +181,8 @@ class ClansParser:
             return {}
 
         block = self.data_block_dict['seq']
+        if len(block) % 2 == 1:
+            block += ['']
 
         return dict([(i, (block[2 * i][1:], block[2 * i + 1].strip()))
                      for i in range(len(block) / 2)])
@@ -233,28 +240,43 @@ class ClansParser:
                       array([float64(val) for val in l.split()[1:]]))
                      for l in block])
 
-    def _parse_hsp(self):
+    def _parse_hsp_att(self, mode):
         '''
         Parse a list of lines in the CLANS <hsp> format \'INT INT: FLOAT\'.
 
         NOTE: some CLANS <hsp> lines contain more than one float; we omit the
         additional numbers
 
+        @param mode: either "hsp" or "att" depending on the type of tag to be
+        parsed
+        @type mode: str
+
         @rtype: dict
         @return: a dict using 2-tuples of the two integers as keys and the
                  float as values
         '''
-        if 'hsp' not in self.data_block_dict:
-            print 'WARNING: CLANS file contains no <hsp> block. This is OK,'
+        if mode not in ("hsp", "att"):
+            raise ValueError('mode must be either "hsp" or "att"')
+
+        if mode not in self.data_block_dict:
+            print 'WARNING: CLANS file contains no <%s> block. This is OK,' \
+                  % mode
             print '         if the file does not contain any sequences or if'
             print '         none of the contained sequences have connections.'
             return {}
 
-        block = self.data_block_dict['hsp']
+        block = self.data_block_dict[mode]
 
-        return dict([(tuple([int(val) for val in line.split(':')[0].split()]),
-                      float(line.split(':')[1].split(' ')[0]))
-                     for line in block])
+        if mode == "hsp":
+            return dict([(tuple([int(val)
+                                 for val in line.split(':')[0].split()]),
+                          float(line.split(':')[1].split(' ')[0]))
+                         for line in block])
+
+        else:
+            return dict([(tuple([int(val) for val in line.split(' ')[:2]]),
+                          float(line.split(' ')[2]))
+                         for line in block])
 
     def _parse_mtx(self):
         '''
@@ -275,7 +297,7 @@ class ClansParser:
         return dict([((i, j), float(entry))
                      for i, line in enumerate(block)
                      for j, entry in enumerate(line.split(';')[:-1])
-                     if i != j if float(entry) != 0])
+                     if float(entry) != 0])
 
 
 class ClansWriter:
@@ -300,6 +322,11 @@ class ClansWriter:
         self.clans_hsp_block()
 
         self.file.close()
+
+    def __repr__(self):
+        return "ClansWriter for " + repr(self.clans_instance)
+
+    __str__ = __repr__
 
     ## methods for creating a CLANS files
     def clans_param_block(self):
@@ -371,8 +398,12 @@ class ClansWriter:
         self.file.write('\n</pos>\n')
 
     def clans_hsp_block(self):
-        '''Adds a <hsp>data</hsp> CLANS file block to self.output_string'''
-        self.file.write('<hsp>\n')
+        '''Adds a <hsp>data</hsp> CLANS file block to self.output_string.
+        If the CLANS instance has hsp_att_mode=="att" we add a <att>data<att>
+        block which has the same format.
+        '''
+
+        self.file.write('<%s>\n' % self.clans_instance.hsp_att_mode)
 
         ## sorting is not necessary, but makes a nicer looking clans file
         for entry1 in self.clans_instance.entries:
@@ -384,10 +415,14 @@ class ClansWriter:
                 if entry1_id >= entry2_id:
                     continue
 
-                self.file.write('%i %i:%s\n' %
+                line_format = '%i %i:%s\n'
+                if self.clans_instance.hsp_att_mode == "att":
+                    line_format = '%i %i %s\n'
+
+                self.file.write(line_format %
                                 (entry1_id, entry2_id, repr(pvalue)))
 
-        self.file.write('</hsp>\n')
+        self.file.write('</%s>\n' % self.clans_instance.hsp_att_mode)
 
 
 def parse_gi_and_residues(name):
@@ -500,6 +535,8 @@ class RGB_color(dict):
         return '%s: r%i;g%i;b%i' % (self.__class__.__name__,
                                     self.r, self.g, self.b)
 
+    __str__ = __repr__
+
     def __setitem__(self, item, value):
         if item not in ['r', 'g', 'b']:
             raise ValueError('only \'r\' \'g\', and \'b\' can be stored')
@@ -573,9 +610,13 @@ class Clans(object):
         self.seqgroups = []
         self._has_good_index = False
 
+        self.hsp_att_mode = "hsp"
+
     def __repr__(self):
         return 'Clans object: %i sequences; %i seqgroups' % \
                (len(self), len(self.seqgroups))
+
+    __str__ = __repr__
 
     def __len__(self):
         return len(self.entries)
@@ -740,16 +781,17 @@ class Clans(object):
 
         hits = [e for e in self.entries if e.name == name]
 
-        if len(hits) >= 1:
+        if len(hits) == 1:
+            return hits[0]
+
+        elif len(hits) > 1:
             if pedantic:
                 raise ValueError('multiple entries have name \'{}\''.format(
                     name))
             return hits
 
-        elif len(hits) == 0:
+        else:
             raise ValueError('ClansEntry %s does not exist.' % name)
-
-        return hits
 
     def remove_duplicates(self, return_removed=False, cmp_function=None):
         '''Removes entries with identical unique_ids (see
@@ -1083,6 +1125,6 @@ if __name__ == '__main__':
     if False:
 
         fn = '/tmp/cl/2be1_psiblast.clans'
-        fn =  '~/tmp/20000.clans'
+        fn =  '~/tmp/20000_K.clans'
         cp = ClansParser()
         c = cp.parse_file(fn)
