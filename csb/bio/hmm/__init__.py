@@ -1755,6 +1755,11 @@ class HHpredHitList(object):
         self.date = date
         self.command = command
 
+    def __repr__(self):
+        return "HHpredHitList\n\tquery={0.query_name}\n\tmatch_columns={0.match_columns}\n\tno_of_seqs={0.no_of_seqs}\n\tneff={0.neff}\n\tsearched_hmms={0.searched_hmms}\n\tdate={0.date}\n\tcommand={0.command}".format(self)
+
+    __str__ = __repr__
+
     def __getitem__(self, index):
         return self._hits[index]
 
