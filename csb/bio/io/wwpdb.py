@@ -167,9 +167,11 @@ class AbstractStructureParser(object):
         @raise UnknownPDBResidueError: when there is no such PDB residue name
                                        into the catalog tables
         """
-        if residue_name in AbstractStructureParser._pdb_aminoacids:
+        lookup = self.__class__
+         
+        if residue_name in lookup._pdb_aminoacids:
             return SequenceTypes.Protein
-        elif residue_name in AbstractStructureParser._pdb_nucleotides:
+        elif residue_name in lookup._pdb_nucleotides:
             return SequenceTypes.NucleicAcid
         else:
             raise UnknownPDBResidueError(residue_name)
@@ -195,11 +197,13 @@ class AbstractStructureParser(object):
         if as_type is None:
             as_type = self.guess_sequence_type(residue_name)
 
+        lookup = self.__class__            
+
         try:
             if as_type == SequenceTypes.Protein:
-                return AbstractStructureParser._pdb_aminoacids[residue_name]
+                return lookup._pdb_aminoacids[residue_name]
             elif as_type == SequenceTypes.NucleicAcid:
-                return AbstractStructureParser._pdb_nucleotides[residue_name]
+                return lookup._pdb_nucleotides[residue_name]
             else:
                 raise UnknownPDBResidueError(residue_name)
         except KeyError:
