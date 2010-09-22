@@ -34,6 +34,7 @@ def map_to_isd(angles):
     """
     from csb.math import degree2radian
     from numpy import array, pi, fmod
+
     angles = fmod(array(angles), 180.)
 
     return 2 * pi - array(degree2radian(angles))
@@ -45,6 +46,7 @@ def torsion_to_radian(phi, psi, radian=0):
     Comverts a torsian angle to radian
     """
     from csb.math import degree2radian
+
     if radian == 1:
         phi = degree2radian(phi)
         psi = degree2radian(psi)
@@ -343,15 +345,12 @@ class Posterior:
 
 
 if __name__ == '__main__':
-    from csb.statistics.maxent import Posterior, MaxentModel
-    from csb.statistics.maxent import load_data
     from scipy.optimize import fmin_powell
     from numpy import linspace, pi 
 
-    aa, ss = 'ALA', 'H'
+    aa, ss = 'ALA', 'all'
     k = 2
-
-    data = load_data(aa, ss)
+    data = load_data(aa, ss)[:10000]
     n = len(data)
     # Setup model
     model = MaxentModel(k)
@@ -364,4 +363,4 @@ if __name__ == '__main__':
     x = fmin_powell(target, x0)
     posterior.model.set(x)
     posterior.model.normalize(True)
-    z = posterior.model.energy(linspace(0,2 * pi))
+
