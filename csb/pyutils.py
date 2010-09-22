@@ -1,4 +1,6 @@
 """
+Common high-level Python code utilities.
+ 
 @warning: This module will try to use an OrderedDict from Python 2.7+'s 
           collections module. If such class is missing, the importer will
           silently fallback to ActiveState's OrderedDict implementation.

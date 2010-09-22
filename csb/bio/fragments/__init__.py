@@ -29,4 +29,4 @@ class Prediction(object):
     def __init__(self, alignment, coordinates):
         
         self.alignment = alignment
-        self.coordinates = coordinates     
+        self.coordinates = coordinates

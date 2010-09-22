@@ -1,3 +1,7 @@
+"""
+Biological file format parser classes. 
+"""
+
 from hhpred import HHpredOutputParser, HHpredProfileParser
 from clans import ClansParser
 from wwpdb import StructureParser, AsyncStructureParser

@@ -1,3 +1,7 @@
+"""
+FASTA format parsers.
+"""
+
 import csb.io
 
 from abc import abstractmethod, ABCMeta
@@ -48,7 +52,7 @@ class BaseSequenceParser(object):
         Read FASTA sequences from a (m)FASTA file
 
         @param fasta_file: input FASTA file name or opened stream
-        @type file: str, file
+        @type fasta_file: str, file
 
         @return: a list of L{Sequence}s
         @rtype: list

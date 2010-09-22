@@ -1,3 +1,7 @@
+"""
+HMM fragments derived from HHpred HMM profiles. 
+"""
+
 import csb.bio.fragments
 import csb.bio.structure as structure
 import csb.bio.fragments.isites as isites
@@ -116,4 +120,4 @@ class HMMLibraryWrapper(isites.Library):
         self.fragments = clusters    
         
 class HMMFragmentMatch(csb.bio.fragments.FragmentMatch):
-    pass        
+    pass

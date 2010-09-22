@@ -1,3 +1,7 @@
+"""
+Common IO-related utility functions and classes. 
+"""
+
 class UnbufferedStreamWrapper(object):
     """
     Wrapper around a buffered stream which automatically calls flush()

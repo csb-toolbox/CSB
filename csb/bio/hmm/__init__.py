@@ -1,3 +1,7 @@
+"""
+Objects for working with Hidden Markov Models. 
+"""
+
 import os
 import sys
 import math
@@ -27,12 +31,12 @@ class EmissionExistsError(KeyError):
 States = csb.pyutils.enum(Match='M', Insertion='I', Deletion='D',
                           Start='S', End='E')
 """
-@var States: HMM state types
+Enumeration of HMM state types
 """
 
 ScoreUnits = csb.pyutils.enum(LogScales='LogScales', Probability='Probability')
 """
-@var ScoreUnits: HMM emission and transition score units
+Enumeration of HMM emission and transition score units
 """
 
 
@@ -1416,9 +1420,9 @@ class HHpredHitAlignment(object):
     def segments(self):
         """
         Find all ungapped query-subject segments in the alignment.
+        Return a generator over all ungapped alignment segments, represented
+        by L{HHpredHit} objects
         
-        @return: a generator over all ungapped alignment segments, represented
-                 by L{HHpredHit} objects
         @rtype: generator
         """
         

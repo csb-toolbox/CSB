@@ -1,3 +1,7 @@
+"""
+Object representation of the I-Sites fragment library. 
+"""
+
 import sys
 import collections
 import operator
@@ -13,7 +17,7 @@ import csb.bio.hmm as hmm
     
 FragmentMatching = csb.pyutils.enum('Sequence', 'Bystroff', 'CrossEntropy', 'Soeding', 'Baker')
 """
-@var FragmentMatching: Fragment assignment methods
+Enumeration of fragment assignment methods
 """
 
 class InternalISitesError(ValueError):

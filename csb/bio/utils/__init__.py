@@ -1,3 +1,7 @@
+"""
+Computational utility functions. 
+"""
+
 def fit(X, Y):
     """
     returns the translation vector and the rotation matrix
