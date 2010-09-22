@@ -506,6 +506,9 @@ class CollectionContainerBase(object):
                 if not isinstance(a, self._type):
                     raise TypeError("Item {0} is not of the required {1} type.".format(a, self._type.__name__))
         self._items = list(new_items)
+        
+    def _sort(self):
+        self._items.sort()
 
 class CollectionContainer(CollectionContainerBase):
     """ 

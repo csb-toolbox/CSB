@@ -9,8 +9,9 @@ import csb.pyutils
 
 from abc import ABCMeta, abstractmethod
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets
-from csb.bio.structure import ChemElements
+from csb.bio.structure import ChemElements, SecStructures
 from numpy import array
+
 
 class PDBParseError(ValueError):
     pass
@@ -262,6 +263,7 @@ class AbstractStructureParser(object):
                     
         structure = self._parse_header(model)
         self._parse_atoms(structure, model)
+        self._parse_ss(structure)
 
         return structure    
 
@@ -453,6 +455,65 @@ class AbstractStructureParser(object):
             else:
                 raise csb.bio.structure.Broken3DStructureError('Could not map structure to sequence.')
 
+    def _parse_ss(self, structure):
+        """
+        Parse and attach secondary structure data.
+        
+        @bug: Currently the PDB helix types are ignored. Each HELIX line is treated
+              as a regular SecStructures.Helix. This is due to incompatibility 
+              between DSSP and PDB helix types.
+        @todo: Implement a proper workaround for the previous bug (e.g. skip all
+               helices types not included in the DSSP enum)
+        
+        @warning: In this implementation only the start/end positions of the SS 
+                  elements are parsed. Additional data like H-bonding is ignored.
+                  
+        @bug: Currently structure.to_pdb() is not writing any SS data. 
+        """        
+        elements = {}
+        self._stream.seek(0)
+        
+        while True:
+            try:
+                line = self._stream.next()
+            except StopIteration:
+                break
+
+            if line.startswith('HELIX'):
+                
+                chain = structure.chains[line[19].strip()]
+                if chain.id not in elements:
+                    elements[chain.id] = []
+                if chain.id != line[31].strip():
+                    raise csb.bio.structure.Broken3DStructureError('Helix {0} spans multiple chains'.format(line[7:10]))
+
+                startres = chain.find(line[21:25].strip(), line[25].strip())                
+                endres = chain.find(line[33:37].strip(), line[37].strip())
+                helix = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Helix)
+                elements[chain.id].append(helix)
+            
+            if line.startswith('SHEET'):
+                
+                chain = structure.chains[line[21].strip()]
+                if chain.id not in elements:
+                    elements[chain.id] = []                
+                if chain.id != line[32].strip():
+                    raise csb.bio.structure.Broken3DStructureError('Sheet {0} spans multiple chains'.format(line[7:10]))
+
+                startres = chain.find(line[22:26].strip(), line[26].strip())                
+                endres = chain.find(line[33:37].strip(), line[37].strip())
+                strand = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Strand)
+                elements[chain.id].append(strand)         
+            
+            elif line.startswith('MODEL') or line.startswith('ATOM'):
+                break        
+            
+        for chain_id in elements:
+            ss = csb.bio.structure.SecondaryStructure()
+            for e in elements[chain_id]:
+                ss.append(e)
+            structure.chains[chain_id].secondary_structure = ss
+        
 
 class RegularStructureParser(AbstractStructureParser):
     """
@@ -648,23 +709,7 @@ class LegacyStructureParser(AbstractStructureParser):
         return structure    
 
     
-def StructureParser(structure_file):
-    """
-    A StructureParser factory, which instantiates and returns the proper parser
-    object based on the contents of the PDB file.
-    
-    @param structure_file: the PDB file to parse. If the file contains a SEQRES
-                           section, L{RegularStructureParser} is returned,
-                           otherwise L{LegacyStructureParser} is instantiated. 
-                           In the latter case LegacyStructureParser will read 
-                           the sequence data directly from the ATOMs
-    @type structure_file: str
-    
-    @return: a proper parser instance
-    @rtype: L{AbstractStructureParser} subclass
-    """
-    
-    return AbstractStructureParser.create_parser(structure_file)
+StructureParser = AbstractStructureParser.create_parser
 
 
 def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):

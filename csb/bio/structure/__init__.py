@@ -54,6 +54,8 @@ class DuplicateAtomIDError(csb.pyutils.DuplicateKeyError):
     pass
 class AlignmentArgumentLengthError(ValueError):
     pass
+class DuplicateSecStructureError(ValueError):
+    pass
 
 class Structure(object):
     """
@@ -440,6 +442,18 @@ class Chain(object):
             return SequenceAlphabets.Nucleic            
         else:
             raise NotImplementedError()
+        
+    @property
+    def secondary_structure(self):
+        return self._secondary_structure
+    @secondary_structure.setter
+    def secondary_structure(self, ss):
+        if not isinstance(ss, SecondaryStructure):
+            raise TypeError(ss)
+        if len(ss) > 0:
+            if (ss[ss.last_index].end > self._residues.last_index):
+                raise ValueError('The secondary structure is out of range')
+        self._secondary_structure = ss        
         
     def clone(self):
         """
@@ -1377,6 +1391,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
     """
     def __init__(self, string=None, conf_string=None):
 
+        self._slots = set([])
         super(SecondaryStructure, self).__init__(type=SecondaryStructureElement, start_index=1)
                        
         if string is not None:
@@ -1385,7 +1400,26 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
                 
     def __str__(self):
         return self.to_string()
+    
+    def append(self, element):
+        """
+        Add a new SecondaryStructureElement to a vacant position.
+        Then sort all added elements by their start position.
+                
+        @raise DuplicateSecStructureError: on attempt to append a new element
+                                           at position that is already occupied
+        """
+        newslots = []
+        
+        for pos in range(element.start, element.end + 1):
+            if pos in self._slots:
+                raise DuplicateSecStructureError('At rank {0}'.format(pos))
+            newslots.append(pos)
             
+        super(SecondaryStructure, self).append(element)
+        self._slots.update(newslots)
+        super(SecondaryStructure, self)._sort()
+                        
     @staticmethod  
     def parse(string, conf_string=None):
         """ 
@@ -1439,9 +1473,19 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         
         @return: a string of secondary structure elements
         @rtype: str
-        """
-        return ''.join([ str(m) for m in self ])   
+        """  
+        ss = []
+        max = 0
+        gap = str(SecStructures.Gap)
         
+        for e in self:
+            if e.start > max:
+                ss.append(gap * (e.start - max - 1))
+            max = e.end
+            ss.append(str(e))
+                
+        return ''.join(ss)
+    
     def scan(self, start, end, filter=None, loose=True, cut=True):
         """
         Get all secondary structure elements within the specified start..end region.
