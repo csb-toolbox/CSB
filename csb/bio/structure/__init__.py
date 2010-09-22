@@ -8,12 +8,12 @@ import copy
 import math
 import numpy
 import csb.pyutils
+import csb.math
 import csb.bio.utils
 
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentTypes
 from itertools import izip
-from numpy import dot,transpose
-from csb.math import dihedral_angle
+
 
 AngleUnits = csb.pyutils.enum( Degrees='deg', Radians='rad' )
 """
@@ -353,8 +353,8 @@ class Chain(object):
     def __getitem__(self,key):
         return self._residues[key]
 
-    ## def __iter__(self):
-    ##     return iter(self._residues)
+    def __iter__(self):
+        return iter(self._residues)
 
     @property
     def id(self):
@@ -562,11 +562,12 @@ class Chain(object):
         @type rotation: numpy array
         @type translation: numpy array         
         """
+        rot_t = numpy.transpose(rotation)
         for residue in self.residues:
             for atom_name in residue.structure:
-                residue.structure[atom_name].vector = dot(residue.structure[atom_name].vector,
-                                                          transpose(rotation))\
-                                                          + translation
+                residue.structure[atom_name].vector = numpy.dot(residue.structure[atom_name].vector,
+                                                                rot_t)\
+                                                                + translation
                 
     def list_coordinates(self, what):
         """
@@ -1011,16 +1012,16 @@ class ProteinResidue(Residue):
         try:
             if prev_residue is not None and prev_residue.has_structure:
                 prev_c = prev_residue._structure['C'].vector
-                angles.phi = dihedral_angle(prev_c, n, ca, c)
+                angles.phi = csb.math.dihedral_angle(prev_c, n, ca, c)
         except csb.pyutils.ItemNotFoundError as missing_prevatom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the i-1 residue {1!r}.'.format(missing_prevatom, prev_residue))    
         try:
             if next_residue is not None and next_residue.has_structure:    
                 next_n = next_residue._structure['N'].vector
-                angles.psi = dihedral_angle(n, ca, c, next_n)
+                angles.psi = csb.math.dihedral_angle(n, ca, c, next_n)
                 next_ca = next_residue._structure['CA'].vector
-                angles.omega = dihedral_angle(ca, c, next_n, next_ca)
+                angles.omega = csb.math.dihedral_angle(ca, c, next_n, next_ca)
         except csb.pyutils.ItemNotFoundError as missing_nextatom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the i+1 residue {1!r}.'.format(missing_nextatom, next_residue))              
@@ -1192,7 +1193,7 @@ class Atom(object):
         return cmp(self.serial_number, other.serial_number)
     
     def _transform_vector(self, rotation, translation):
-        self.vector = dot(self.vector, transpose(rotation)) + translation
+        self.vector = numpy.dot(self.vector, numpy.transpose(rotation)) + translation
         
     @property
     def serial_number(self):
@@ -1228,6 +1229,8 @@ class Atom(object):
 
     @vector.setter
     def vector(self, vector):
+        if numpy.shape(vector) <> (3,):
+            raise ValueError("Please use three dimensional vectors")
         self._vector = vector
         
 class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):

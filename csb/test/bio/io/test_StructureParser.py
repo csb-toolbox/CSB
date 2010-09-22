@@ -1,7 +1,6 @@
 import unittest
 from csb.bio.io.wwpdb import StructureParser, RegularStructureParser,\
                              LegacyStructureParser, get
-from csb.pyutils import CollectionIndexError
 from csb.bio.sequence import SequenceAlphabets
 from csb.bio.structure import ChemElements
 
@@ -21,7 +20,7 @@ class TestStrutureParser(unittest.TestCase):
         self.assertTrue(isinstance(self.lp, LegacyStructureParser))
 
     def testParseFile(self):
-        from numpy import array
+
         structure = self.rp.parse(model=2)
 
         self.assertEqual(structure.accession, '1d3z')

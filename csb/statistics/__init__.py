@@ -141,7 +141,7 @@ def principal_coordinates(D, nd = None):
     See: Gower, J (1966)
     """
     from numpy import clip, sqrt, take, argsort, sort
-    from mulch.math import reverse
+    from csb.math import reverse
     from scipy.linalg import eigh
     
     ## calculate centered similarity matrix

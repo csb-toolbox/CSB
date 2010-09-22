@@ -1,3 +1,5 @@
+# TODO test sampling non-visually
+
 def probability_transform(shape, inv_cum, cum_min=0., cum_max=1.):
     """
     Generic sampler based on the probability transform.
@@ -142,7 +144,7 @@ def sample_from_histogram(p):
 def test_truncated_gamma(alpha = 2., beta  = 1., x_min = 0.1, x_max = 5.):
 
     from numpy import histogram, linspace
-    from gnuplot import plot
+
     from csb.math import exp, log_sum_exp, log
     
     x = truncated_gamma(10000, alpha, beta, x_min, x_max)
@@ -157,12 +159,12 @@ def test_truncated_gamma(alpha = 2., beta  = 1., x_min = 0.1, x_max = 5.):
     p -= log_sum_exp(p)
     p = exp(p) / (x[1]-x[0])
     
-    plot(zip(hx,hy),zip(x,p))
+
 
 def test_truncated_normal(mu = 2., sigma  = 1., x_min = 0.1, x_max = 5.):
 
     from numpy import histogram, linspace
-    from gnuplot import plot
+
     from csb.math import exp, log_sum_exp
     
     x = truncated_normal(10000, mu, sigma, x_min, x_max)
@@ -177,7 +179,6 @@ def test_truncated_normal(mu = 2., sigma  = 1., x_min = 0.1, x_max = 5.):
     p -= log_sum_exp(p)
     p = exp(p) / (x[1]-x[0])
     
-    plot(zip(hx,hy),zip(x,p))
 
 
 
@@ -225,7 +226,7 @@ def random_rotation(A, n_iter=10, initial_values = None):
     else:
         alpha, beta, gamma = initial_values
 
-    for i in range(n_iter):
+    for _i in range(n_iter):
 
         ## sample alpha and gamma
         phi = vonmisesvariate(0.,clip(cos(beta/2)**2 * (L[0]+L[1]),1e-308,1e10))

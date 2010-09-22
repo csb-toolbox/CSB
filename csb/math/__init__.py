@@ -1,11 +1,10 @@
 EXP_MIN = -1e308
-EXP_MAX = +709
+EXP_MAX = +308
 LOG_MIN = 1e-300
 LOG_MAX = 1e+300
 
-from numpy import array, log, clip, exp, pi, putmask, cos, sin, arccos, arctan2, cross, linalg
-
-
+import numpy 
+import math
 
 def log(x, x_min=LOG_MIN, x_max=LOG_MAX):
     """
@@ -24,7 +23,7 @@ def log(x, x_min=LOG_MIN, x_max=LOG_MAX):
     x_min = max(x_min, LOG_MIN)
     x_max = min(x_max, LOG_MAX)
 
-    return log(clip(x, x_min, x_max))
+    return numpy.log(numpy.clip(x, x_min, x_max))
 
 def exp(x, x_min=EXP_MIN, x_max=EXP_MAX):
     """
@@ -43,13 +42,14 @@ def exp(x, x_min=EXP_MIN, x_max=EXP_MAX):
     x_min = max(x_min, EXP_MIN)
     x_max = min(x_max, EXP_MAX)
 
-    return exp(clip(x, x_min, x_max))
+    return numpy.exp(numpy.clip(x, x_min, x_max))
 
 def sign(x):
     """
     Return the sign of the input.
     """
-    return 2 * int(x >= 0.) - 1
+    return numpy.sign(x)
+
 
 def isreal(x, tol=1e-14):
     """
@@ -80,9 +80,10 @@ def radian2degree(x):
     @param x: radian angle
     @return: torsion angle of x
     """
-
+    from numpy import pi
+    
     x = x % (2 * pi)
-    putmask(x, x > pi, x - 2 * pi)
+    numpy.putmask(x, x > pi, x - 2 * pi)
     return x * 180. / pi
 
 def degree2radian(x):
@@ -92,8 +93,9 @@ def degree2radian(x):
     @param x: torsion angle
     @return: radian angle of x
     """
-
-    putmask(x, x < 0., x + 360.)
+    from numpy import pi
+    
+    numpy.putmask(x, x < 0., x + 360.)
     return x * pi / 180.
 
 
@@ -103,10 +105,11 @@ def euler_angles(r):
 
     @param r: 3x3 Rotation matrix, 
     """
-
-    a = arctan2(r[2,1],r[2,0]) % (2*pi)
-    b = arctan2((r[2,0]+r[2,1]) / (cos(a) + sin(a)), r[2,2]) % (2*pi)
-    c = arctan2(r[1,2],-r[0,2]) % (2*pi)
+    from numpy import pi
+    
+    a = numpy.arctan2(r[2,1],r[2,0]) % (2*pi)
+    b = numpy.arctan2((r[2,0]+r[2,1]) / (cos(a) + sin(a)), r[2,2]) % (2*pi)
+    c = numpy.arctan2(r[1,2],-r[0,2]) % (2*pi)
 
     return a, b, c
 
@@ -136,7 +139,16 @@ def norm(x):
     @param x: vector (i.e. rank one array)
     @return: length of vector
     """
-    return (x**2).sum()**0.5
+    return numpy.linalg.norm(x)
+
+
+def reverse(array, axis = 0):
+    """
+    reverses the order of elements in an array
+    """
+    from numpy import take, arange
+
+    return take(array, arange(array.shape[axis]-1,-1,-1), axis)
 
 
 def polar(x):
@@ -146,14 +158,13 @@ def polar(x):
     @param x: vector (i.e. rank one array)
     @return: polar coordinates (radius and polar angles)
     """
-    from numpy import zeros, arctan2, pi, cos, array
 
     (d,) = x.shape
-    phi = zeros(d)
+    phi = numpy.zeros(d)
     for i in range(1,d)[::-1]:
-        phi[i-1] = arctan2(x[i]/cos(phi[i]),x[i-1])
+        phi[i-1] = numpy.arctan2(x[i]/numpy.cos(phi[i]),x[i-1])
         
-    return array([norm(x)] + phi[:-1].tolist())
+    return numpy.array([norm(x)] + phi[:-1].tolist())
 
 def from_polar(x):
     """
@@ -192,10 +203,10 @@ def polar3d(x):
 
     
     r = norm(x)
-    theta = arccos(x[2]/r)
-    phi = arctan2(x[1], x[0])
+    theta = numpy.arccos(x[2]/r)
+    phi = numpy.arctan2(x[1], x[0])
 
-    return array([r, theta, phi])
+    return numpy.array([r, theta, phi])
 
 def from_polar3d(x):
     """
@@ -213,7 +224,7 @@ def from_polar3d(x):
     S = sin(phi)
     C = cos(phi)
     
-    return r * array([s*C, s*S, c])
+    return r * numpy.array([s*C, s*S, c])
 
 def dihedral_angle(a, b, c, d):
     """
@@ -228,42 +239,20 @@ def dihedral_angle(a, b, c, d):
     from numpy import fmod
     
     v = b - c
-    m = cross((a - b),v)
-    m /=  linalg.norm(m)
-    n = cross((d - c),v)
-    n /=  linalg.norm(m)
+    m = numpy.cross((a - b),v)
+    m /=  norm(m)
+    n = numpy.cross((d - c),v)
+    n /=  norm(m)
 
-    c = dot(m,n)
-    s = dot(cross(n,m),v) / linalg.norm(v)
+    c = numpy.dot(m,n)
+    s = numpy.dot(numpy.cross(n,m),v) / norm(v)
     
     angle = math.degrees(math.atan2(s, c))        
 
     if angle > 0:
-        return fmod(angles + 180, 360) - 180
+        return fmod(angle + 180, 360) - 180
     else:
-        return fmod(angles - 180, 360) + 180
+        return fmod(angle - 180, 360) + 180
 
     
-    
-    
-if __name__ == '__main__':
-
-    from numpy.random import random
-    import numpy as np
-    
-    d = 3
-
-    x = random(d)
-
-    print polar(x)
-    print polar3d(x)
-
-    tol = 1e-10
-
-    while 1:
-
-        x = random(d)
-        
-        if np.fabs(x-from_polar3d(polar3d(x))).sum() > tol: break
-        if np.fabs(x-from_polar(polar(x))).sum() > tol: break
     
