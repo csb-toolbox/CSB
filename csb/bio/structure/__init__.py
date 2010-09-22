@@ -1,3 +1,7 @@
+"""
+Object representations of 3D and secondary structures. 
+"""
+
 import os
 import re
 import copy
@@ -13,13 +17,13 @@ from csb.math import dihedral_angle
 
 AngleUnits = csb.pyutils.enum( Degrees='deg', Radians='rad' )
 """
-@var AngleUnits: Torsion angle unit types
+Torsion angle unit types
 """
 
 SecStructures = csb.pyutils.enum( Helix='H', Strand='E', Coil='C', Turn='T',
                                   Bend='S', Helix3='G', PiHelix='I', BetaBridge='B', Gap='-' )
 """
-@var SecStructures: Secondary structure types
+Secondary structure types
 """
 
 ChemElements = csb.pyutils.enum( H=1, He=2, Li=3, Be=4, B=5, C=6, N=7, O=8, F=9, Ne=10, Na=11, Mg=12, Al=13, Si=14, P=15, 
@@ -33,7 +37,7 @@ ChemElements = csb.pyutils.enum( H=1, He=2, Li=3, Be=4, B=5, C=6, N=7, O=8, F=9,
                                  Bk=97, Cf=98, Es=99, Fm=100, Md=101, No=102, Lr=103,
                                  x=-1 ) 
 """
-@var ChemElements: Periodic table elements
+Periodic table elements
 """
 
 class Broken3DStructureError(ValueError):
@@ -726,8 +730,6 @@ class Chain(object):
         @type other: L{Chain}
         @param what: a list of atom kinds, e.g. ['CA']
         @type what: list
-        @param how: fitting method (global or local) - a member of the L{AlignmentTypes} enum
-        @type how: L{csb.pyutils.EnumItem}
                 
         @return: computed TM-Score over the specified atom kinds
         @rtype: float        

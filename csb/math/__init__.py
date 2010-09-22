@@ -3,7 +3,7 @@ EXP_MAX = +709
 LOG_MIN = 1e-300
 LOG_MAX = 1e+300
 
-from numpy import array, log, clip, exp, pi, putmask, cos, sin, pi, arccos, arctan2, cross, linalg
+from numpy import array, log, clip, exp, pi, putmask, cos, sin, arccos, arctan2, cross, linalg
 
 
 
@@ -215,13 +215,13 @@ def from_polar3d(x):
     
     return r * array([s*C, s*S, c])
 
-def dihedral_angle(a,b,c,d):
+def dihedral_angle(a, b, c, d):
     """
     Calculate the dihedral angle between 4 vectors
     representing 4 connected points. The angle is in  ]-180, 180].
 
-    @param a, b, c, d: the four points that define the dihedral angle
-    @type a, b, c, d: Numpy Array
+    @param a: the four points that define the dihedral angle
+    @type a: Numpy Array
 
     @return: angle in  ]-180, 180]
     """

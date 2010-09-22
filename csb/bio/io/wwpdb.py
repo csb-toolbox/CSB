@@ -1,3 +1,7 @@
+"""
+PDB structure parsers.
+"""
+
 import re
 import multiprocessing
 import csb.bio.structure

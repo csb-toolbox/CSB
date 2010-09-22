@@ -1,20 +1,24 @@
+"""
+Sequence (FASTA) and alignment classes. 
+"""
+
 import re
 import csb.pyutils
 import csb.io
 
 AlignmentFormats = csb.pyutils.enum( A3M='a3m', FASTA='fa', PIR='pir' )
 """
-@var AlignmentFormats: multiple sequence alignment formats
+Enumeration of multiple sequence alignment formats
 """
 
 SequenceTypes = csb.pyutils.enum( NucleicAcid='NA', DNA='DNA', RNA='RNA', Protein='Protein', Unknown='Unknown' )
 """
-@var SequenceTypes: Sequence types
+Enumeration of sequence types
 """
 
 AlignmentTypes = csb.pyutils.enum( Global='global', Local='local' )
 """
-@var AlignmentTypes: Alignment strategies
+Enumeration of alignment strategies
 """
 
 class SequenceAlphabets(object):
@@ -25,19 +29,19 @@ class SequenceAlphabets(object):
     Nucleic = csb.pyutils.enum( Adenine='A', Cytosine='C', Guanine='G', Thymine='T', Uracil='U', Purine='R', Pyrimidine='Y', Ketone='K', Amino='M', 
                                 Strong='S', Weak='W', NotA='B', NotC='D', NotG='H', NotT='V', Any='N', Masked='X', Gap='-' )
     """
-    @cvar Nucleic: Nucleic sequence alphabet
+    @cvar: Nucleic sequence alphabet
     """
     
     Protein = csb.pyutils.enum( ALA='A', ASX='B', CYS='C', ASP='D', GLU='E', PHE='F', GLY='G', HIS='H', ILE='I', LYS='K', LEU='L', MET='M', ASN='N', 
                                 PYL='O', PRO='P', GLN='Q', ARG='R', SER='S', THR='T', SEC='U', VAL='V', TRP='W', TYR='Y', GLX='Z', UNK='X', GAP='-', 
                                 STOP='*' )
     """
-    @cvar Protein: Protein sequence alphabet
+    @cvar: Protein sequence alphabet
     """                       
        
     Unknown = csb.pyutils.enum( UNK='X' )
     """
-    @cvar Unknown: Unknown sequence alphabet
+    @cvar: Unknown sequence alphabet
     """   
     
 class StopTraversal(StopIteration):

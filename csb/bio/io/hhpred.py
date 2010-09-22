@@ -1,3 +1,7 @@
+"""
+HHpred-related format parsers.
+"""
+
 import os
 import re
 

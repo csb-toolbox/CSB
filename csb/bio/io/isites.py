@@ -1,3 +1,7 @@
+"""
+I-Sites fragment library format parser.
+"""
+
 import os
 import re
 import csb.io
