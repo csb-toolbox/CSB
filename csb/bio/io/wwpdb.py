@@ -515,7 +515,7 @@ class RegularStructureParser(AbstractStructureParser):
                             break
 
                     chain_name = chain_name.strip()[:-1]
-                    for chain in chains.replace(';', ' ').replace(',', ' ').split():
+                    for chain in chains.replace(';', ' ').replace(',', ' ').split() or ['']:  # the second part deals with an empty chain id
                         new_chain = csb.bio.structure.Chain(chain, type=SequenceTypes.Unknown, name=chain_name, accession=structure.accession)
                         new_chain.molecule_id = mol_id
                         try:
@@ -529,7 +529,7 @@ class RegularStructureParser(AbstractStructureParser):
                 seq_fields.extend(line[18:].split())
 
                 rank_base = int(seq_fields[0])
-                chain_id = seq_fields[1]
+                chain_id = seq_fields[1].strip()
 
                 if structure.chains[chain_id].type == SequenceTypes.Unknown:
                     inner_residuerank = int(len(seq_fields[3:]) / 2) + 3
