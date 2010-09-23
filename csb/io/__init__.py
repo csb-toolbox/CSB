@@ -2,6 +2,8 @@
 Common IO-related utility functions and classes. 
 """
 
+NEWLINE = '\n'
+    
 class UnbufferedStreamWrapper(object):
     """
     Wrapper around a buffered stream which automatically calls flush()
@@ -84,6 +86,89 @@ class EntryReader(object):
         @rtype: list
         """
         return list(self.entries())
+
+class EntryWriter(object):
+    """
+    A simple stream writer. The best way to use it is::
+    
+        with EntryWriter(output_file, close=True) as out:
+            out.write(object)
+    
+    In this way the stream is automatically closed at the end of the block.
+    
+    @param destination: output file name or opened stream
+    @type destination: str or stream
+    @param newline: new line string (the default is L{csb.io.NEWLINE})
+    @type newline: str
+    @param close: if True (the default), the stream is automatically
+                  closed when the object is destroyed
+    @type close: bool  
+    """
+    
+    def __init__(self, destination, close=True, newline=NEWLINE):
+        
+        self._stream = None
+        self.newline = newline
+        self.autoclose = close
+        
+        if isinstance(destination, file) or hasattr(destination, 'write'):
+            self._stream = destination
+        elif isinstance(destination, basestring):
+            self._stream = open(destination, 'w')
+            
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.autoclose:
+            self.close()
+    
+    def __del__(self):
+        if self.autoclose:
+            self.close()
+    
+    @property
+    def stream(self):
+        return self._stream
+    
+    def close(self):
+        """
+        Close the destination stream.
+        """
+        try:
+            self._stream.close()
+        except:
+            pass        
+            
+    def write(self, data):
+        """
+        Write a chunk of sting data to the destination stream. 
+        """
+        self._stream.write(data)
+    
+    def writeline(self, data):
+        """
+        Same as C{write}, but appends a newline character at the end.
+        """        
+        self._stream.write(data)
+        self._stream.write(self.newline)
+        
+    def writeall(self, entries, delimiter=NEWLINE):
+        """
+        Write all C{entries} to the destination stream, separating them with
+        C{delimiter}
+        
+        @param entries: a collection of objects
+        @type entries: iterable
+        @param delimiter: append this string after each entry (the default is a 
+                          C{self.newline} character)
+        @type delimiter: str 
+        """        
+        if delimiter == NEWLINE:
+            delimiter = self.newline
+        for entry in entries:
+            self.write(entry)
+            self.write(delimiter)
 
 def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
     """

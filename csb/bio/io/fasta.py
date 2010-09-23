@@ -5,7 +5,7 @@ FASTA format parsers.
 import csb.io
 
 from abc import abstractmethod, ABCMeta
-from csb.bio.sequence import Sequence, PDBSequence
+from csb.bio.sequence import Sequence, PDBSequence, SequenceCollection
 
 
 class BaseSequenceParser(object):
@@ -62,7 +62,7 @@ class BaseSequenceParser(object):
         else:
             stream = fasta_file
 
-        seqs = []
+        seqs = SequenceCollection()
 
         reader = csb.io.EntryReader(stream, '>', None)
         factory = self._factory()

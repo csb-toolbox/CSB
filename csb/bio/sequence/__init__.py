@@ -47,6 +47,33 @@ class SequenceAlphabets(object):
 class StopTraversal(StopIteration):
     pass
 
+class SequenceCollection(csb.pyutils.CollectionContainer):
+    """
+    Represents a list of L{Sequence}s.
+    """
+    
+    def __init__(self, sequences=None):    
+        super(SequenceCollection, self).__init__(items=sequences, type=Sequence)
+    
+    def to_fasta(self, output_file=None):
+        """
+        Dump the whole collection in mFASTA format.
+        
+        @param output_file: write the output to this file or stream. If None, return 
+                            the mFASTA dump as a string
+        @type output_file: str or stream
+         
+        @return: mFASTA formatted sequences, if no output stream is specified
+        @rtype: str or None         
+        """
+        
+        seqs = [s.to_fasta() for s in self]
+        if output_file:
+            with csb.io.EntryWriter(output_file) as out:
+                out.writeall(seqs)
+        else:
+            return '\n'.join(seqs)
+    
 class Sequence(object):
     """ 
     Simple FASTA sequence entry.
@@ -77,16 +104,27 @@ class Sequence(object):
     def __len__(self):
         return len(self.sequence)
 
-    def to_fasta(self):
+    def to_fasta(self, output_file=None):
         """
-        Return a FASTA formatted sequence
+        Dump the FASTA formatted sequence.
         
-        @rtype: str
+        @param output_file: write the output to this file or stream. If None, 
+                            return the FASTA string instead
+        @type output_file: str or stream        
+
+        @return: a FASTA formatted sequence, if no output stream is specified
+        @rtype: str or None
         """
         marker = '>'
         if self.header and self.header.startswith(marker):
             marker = ''
-        return '{0}{1.header}\n{1.sequence}'.format(marker, self)
+        fasta = '{0}{1.header}\n{1.sequence}'.format(marker, self)
+        
+        if output_file:
+            with csb.io.EntryWriter(output_file) as out:
+                out.write(fasta)
+        else:
+            return fasta
 
     def expand(self, gap_characters = ('-','.')):
         """
