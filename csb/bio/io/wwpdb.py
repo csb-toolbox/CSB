@@ -147,17 +147,23 @@ class AbstractStructureParser(object):
         @rtype: list
         """
         models = []
-        check = {}
+        check = set()
 
         with open(self._file, 'r') as f:
             for line in f:
                 if line.startswith('MODEL'):
-                    model_id = str(line[10:14]).strip()
-                    assert model_id not in check
+                    model_id = int(line[10:14])
+                    if model_id in check:
+                        raise csb.bio.structure.Broken3DStructureError('Duplicate model identifier: {0}'.format(model_id))
                     models.append(model_id)
-                    check[model_id] = True
+                    check.add(model_id)
 
-        return models
+        if len(models) > 0:
+            if not(min(check) == 1 and max(check) == len(models)):
+                raise csb.bio.structure.Broken3DStructureError('Non-consecutive model identifier(s) encountered')                
+            return models
+        else:
+            return [None]
 
     def guess_sequence_type(self, residue_name):
         """
@@ -259,13 +265,37 @@ class AbstractStructureParser(object):
         @raise Broken3DStructureError: on parse error (corrput file)
         """
         if model is not None:
-            model = str(model)
+            model = int(model)
                     
         structure = self._parse_header(model)
         self._parse_atoms(structure, model)
         self._parse_ss(structure)
 
         return structure    
+    
+    def parse_models(self, models=()):
+        """
+        Parse the specified models in the file and build an L{Ensemble}.
+        
+        @param models: an iterable object providing model identifiers.
+                       If not specified, all models will be parsed.
+        @type models: tuple
+        
+        @return: an ensemble with all parsed models
+        @rtype: L{Ensemble}
+        """
+        
+        if not models:
+            models = self.models()
+        else:
+            models = map(int, models)
+        
+        ensemble = csb.bio.structure.Ensemble()
+        for model_id in models:
+            model = self.parse_structure(model_id)
+            ensemble.models.append(model)
+        
+        return ensemble
 
     @abstractmethod
     def _parse_header(self, model):
@@ -293,7 +323,7 @@ class AbstractStructureParser(object):
                 raise ValueError('No such model {0} in the structure.'.format(model))
             
             if line.startswith('MODEL'):
-                model_id = line[10:14].strip()
+                model_id = int(line[10:14])
                 if model == model_id:
                     return model_id      
         
@@ -317,11 +347,11 @@ class AbstractStructureParser(object):
                 break
 
             if line.startswith('MODEL'):
-                if model and model != line[10:14].strip():
+                if model and model != int(line[10:14]):
                     self._scroll_model(model, self._stream)
                     structure.model_id = model
                 else:
-                    model = line[10:14].strip()
+                    model = int(line[10:14])
                     structure.model_id = model
 
             elif line.startswith('ATOM') \
@@ -443,7 +473,7 @@ class AbstractStructureParser(object):
                     if residue is not fixed_residue:
                         residue.id = atom._sequence_number, atom._insertion_code
                         fixed_residue = residue
-                    residue.structure.append(atom)
+                    residue.atoms.append(atom)
                     #assert atom.residue == residue.type
 
                     del atom._rank
@@ -654,11 +684,11 @@ class LegacyStructureParser(AbstractStructureParser):
                 break
 
             if line.startswith('MODEL'):
-                if model and model != line[10:14].strip():
+                if model and model != int(line[10:14]):
                     self._scroll_model(model, self._stream)
                     structure.model_id = model
                 else:
-                    model = line[10:14].strip()
+                    model = int(line[10:14])
                     structure.model_id = model
 
             elif line.startswith('ATOM') \

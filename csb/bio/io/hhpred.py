@@ -626,7 +626,7 @@ class HHpredProfileParser(object):
                     assert repr(hmm.layers[atom.rank].residue.type) \
                            == line[17:20].strip(), atom.rank
                     #atom.residue = hmm.layers[atom.rank].residue
-                    hmm.layers[atom.rank].residue.structure.append(atom)
+                    hmm.layers[atom.rank].residue.atoms.append(atom)
 
                 elif line[:6].strip() in ('AUTHOR', 'REMARK', 'COMPND',
                                           'SEQRES', 'TER', 'END'):

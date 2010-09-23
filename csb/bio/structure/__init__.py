@@ -57,9 +57,53 @@ class AlignmentArgumentLengthError(ValueError):
 class DuplicateSecStructureError(ValueError):
     pass
 
-class Structure(object):
+class Ensemble(csb.pyutils.AbstractNIContainer):
     """
-    Represents a PDB 3-Dimensional molecular structure.
+    Represents an ensemble of multiple L{Structure} models.
+    Provides a list-like access to these models::
+    
+        >>> ensemble[0]
+        <Structure Model 1: accn, x chains>
+        >>> ensemble.models[1]
+        <Structure Model 1: accn, x chains>
+    """
+    
+    def __init__(self):
+        self._models = EnsembleModelsCollection()
+        
+    def __repr__(self):
+        return "<Ensemble: {0} models>".format(self.models.length)        
+        
+    @property
+    def _children(self):
+        return self._models
+    
+    @property
+    def models(self):
+        return self._models
+        
+    @property
+    def first_model(self):
+        if len(self._models) > 0:
+            return self[0]
+        return None
+        
+class EnsembleModelsCollection(csb.pyutils.CollectionContainer):
+    
+    def __init__(self):
+        super(EnsembleModelsCollection, self).__init__(type=Structure, start_index=1)
+
+class Structure(csb.pyutils.AbstractNIContainer):
+    """
+    Represents a single model of a PDB 3-Dimensional molecular structure.
+    Provides access to the L{Chain} objects, contained in the model::
+    
+        >>> structure['A']
+        <Chain A: Protein>
+        >>> structure.chains['A']
+        <Chain A: Protein>
+        >>> structure.items[0]
+        <Chain A: Protein> #(given a chain order A, B...)    
     
     @param accession: accession number of the structure
     @type accession: str
@@ -68,28 +112,30 @@ class Structure(object):
                         
         self._accession = None
         self._chains = StructureChainsTable(self)
+        self._chainslist = StructureChainsCollection(self)
         self.model_id = None
         
         self.accession = accession
 
     def __repr__(self):
-        return "<Structure: {0.accession}, {1} chains>".format(self, self.chains.length)
+        return "<Structure Model {0.model_id}: {0.accession}, {1} chains>".format(self, self.chains.length)
 
-    def __getitem__(self,key):
-        return self._chains[key]
-
-    def __iter__(self):
-        return iter(self._chains)
+    @property
+    def _children(self):
+        return self._chains
     
     @property
     def chains(self):
         return self._chains
     
     @property
+    def items(self):
+        return self._chainslist
+    
+    @property
     def first_chain(self):
-        chains = self.chains.keys()
-        if len(chains) > 0:
-            return self.chains[chains[0]]
+        if len(self._chains) > 0:
+            return self._chainslist[0]
         return None
         
     @property
@@ -209,8 +255,8 @@ class Structure(object):
             for residue in chain.residues:
         
                 atoms = [ ]
-                for an in residue.structure:
-                    atom = residue.structure[an]
+                for an in residue.atoms:
+                    atom = residue.atoms[an]
                     if type(atom) is DisorderedAtom:
                         for dis_atom in atom: atoms.append(dis_atom)
                     else:
@@ -246,6 +292,15 @@ class Structure(object):
         else:
             with open(output_file, 'w') as out:
                 out.write(data)                
+
+class StructureChainsCollection(csb.pyutils.AbstractContainer):
+    
+    def __init__(self, container):
+        self.__container = container
+        
+    @property
+    def _children(self):
+        return [self.__container[c] for c in self.__container]
 
 class StructureChainsTable(csb.pyutils.DictionaryContainer):
     
@@ -313,9 +368,20 @@ class StructureChainsTable(csb.pyutils.DictionaryContainer):
     def set(self):
         raise NotImplementedError()
         
-class Chain(object):
+class Chain(csb.pyutils.AbstractNIContainer):
     """
-    Represents a polymeric chain. Provides indexed access to the residues in the chain.
+    Represents a polymeric chain. Provides list-like and rank-based access to
+    the residues in the chain::
+    
+        >>> chain[0]
+        <ProteinResidue [1]: SER None>
+        >>> chain.residues[1]
+        <ProteinResidue [1]: SER None>
+    
+    You can also access residues by their PDB sequence number:
+    
+        >>> chain.find(sequence_number=5, insertion_code='A')
+        <ProteinResidue [1]: SER 5A>
     
     @param chain_id: ID of the new chain
     @type chain_id: str
@@ -345,18 +411,16 @@ class Chain(object):
         self.type = type
         if accession is not None:
             self.accession = accession
+            
+    @property
+    def _children(self):
+        return self._residues
 
     def __repr__(self):
         return "<Chain {0.id}: {0.type!r}>".format(self)        
 
     def __len__(self):
         return self._residues.length
-
-    def __getitem__(self,key):
-        return self._residues[key]
-
-    def __iter__(self):
-        return iter(self._residues)
 
     @property
     def id(self):
@@ -579,10 +643,9 @@ class Chain(object):
         """
         rot_t = numpy.transpose(rotation)
         for residue in self.residues:
-            for atom_name in residue.structure:
-                residue.structure[atom_name].vector = numpy.dot(residue.structure[atom_name].vector,
-                                                                rot_t)\
-                                                                + translation
+            for atom_name in residue.atoms:
+                atom = residue.atoms[atom_name]
+                atom.vector = numpy.dot(atom.vector, rot_t) + translation
                 
     def list_coordinates(self, what):
         """
@@ -605,7 +668,7 @@ class Chain(object):
                 raise Missing3DStructureError('Discontinuous structure at residue {0}'.format(residue))
             try:
                 for atom_kind in what:
-                    coords.append(residue.structure[atom_kind].vector)
+                    coords.append(residue.atoms[atom_kind].vector)
             except csb.pyutils.ItemNotFoundError:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the structure'.format(atom_kind))
             
@@ -813,9 +876,17 @@ class ChainResiduesCollection(csb.pyutils.CollectionContainer):
         except KeyError:
             raise csb.pyutils.ItemNotFoundError(id)
         
-class Residue(object):
+class Residue(csb.pyutils.AbstractNIContainer):
     """
-    Base class representing a single residue.
+    Base class representing a single residue. Provides a dictionary-like
+    access to the atoms contained in the residue::
+    
+        >>> residue['CA']
+        <Atom [3048]: CA>
+        >>> residue.atoms['CA']
+        <Atom [3048]: CA>
+        >>> residue.items[1]
+        <Atom [3047]: CA>
     
     @param rank: rank of the residue with respect to the chain
     @type rank: int
@@ -830,7 +901,8 @@ class Residue(object):
         
         self._type = None    
         self._rank = int(rank)
-        self._structure = ResidueAtomsTable(self)    
+        self._atoms = ResidueAtomsTable(self)   
+        self._atomslist = ResidueAtomsCollection(self) 
         self._secondary_structure = None
         self._torsion = None
         self._sequence_number = None
@@ -840,15 +912,12 @@ class Residue(object):
         self.type = type
         self.id = sequence_number, insertion_code
         
+    @property
+    def _children(self):
+        return self._atoms
+        
     def __repr__(self):
         return '<{1} [{0.rank}]: {0.type!r} {0.id}>'.format(self, self.__class__.__name__)
-
-    def __getitem__(self, key):
-        return self._structure[key]
-    
-    def __iter__(self):
-        return iter(self._structure)
-
         
     @property
     def type(self):
@@ -882,8 +951,12 @@ class Residue(object):
         self._torsion = torsion
     
     @property
-    def structure(self):
-        return self._structure
+    def atoms(self):
+        return self._atoms
+    
+    @property
+    def items(self):
+        return self._atomslist    
 
     @property
     def sequence_number(self):
@@ -925,8 +998,8 @@ class Residue(object):
     
     @property
     def has_structure(self):
-        if hasattr(self, 'structure') and self.structure is not None:
-            return len(self.structure) > 0
+        if hasattr(self, 'atoms') and self.atoms is not None:
+            return len(self.atoms) > 0
         else:
             return False
         
@@ -1015,9 +1088,9 @@ class ProteinResidue(Residue):
                     return angles
         
         try:
-            n = self._structure['N'].vector
-            ca = self._structure['CA'].vector
-            c = self._structure['C'].vector
+            n = self._atoms['N'].vector
+            ca = self._atoms['CA'].vector
+            c = self._atoms['C'].vector
         except csb.pyutils.ItemNotFoundError as missing_atom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the current residue {1!r}.'.format(missing_atom, self))
@@ -1026,16 +1099,16 @@ class ProteinResidue(Residue):
         
         try:
             if prev_residue is not None and prev_residue.has_structure:
-                prev_c = prev_residue._structure['C'].vector
+                prev_c = prev_residue._atoms['C'].vector
                 angles.phi = csb.math.dihedral_angle(prev_c, n, ca, c)
         except csb.pyutils.ItemNotFoundError as missing_prevatom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the i-1 residue {1!r}.'.format(missing_prevatom, prev_residue))    
         try:
             if next_residue is not None and next_residue.has_structure:    
-                next_n = next_residue._structure['N'].vector
+                next_n = next_residue._atoms['N'].vector
                 angles.psi = csb.math.dihedral_angle(n, ca, c, next_n)
-                next_ca = next_residue._structure['CA'].vector
+                next_ca = next_residue._atoms['CA'].vector
                 angles.omega = csb.math.dihedral_angle(ca, c, next_n, next_ca)
         except csb.pyutils.ItemNotFoundError as missing_nextatom:
             if strict:
@@ -1073,9 +1146,19 @@ class NucleicResidue(Residue):
         super(NucleicResidue, self).__init__(rank, type, sequence_number, insertion_code)  
 
 class UnknownResidue(Residue):
+    
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
         super(UnknownResidue, self).__init__(rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)        
+
+class ResidueAtomsCollection(csb.pyutils.AbstractContainer):
+    
+    def __init__(self, container):
+        self.__container = container
         
+    @property
+    def _children(self):
+        return [self.__container[an] for an in self.__container]
+            
 class ResidueAtomsTable(csb.pyutils.DictionaryContainer):
     """ 
     Represents a collection of atoms. Provides dictionary-like access,

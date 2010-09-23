@@ -585,7 +585,7 @@ class Cluster(object):
                 
         backbone = set(['N', 'CA', 'C'])
         for residue in rep.structure.residues:
-            if not (residue.has_structure and set(residue.structure).issuperset(backbone)):
+            if not (residue.has_structure and set(residue.atoms).issuperset(backbone)):
                 rep.structure = None
                 raise InternalISitesError('Fragment {0} is built on discontinuous structure: {1}  {4} at {2}-{3}'.format(
                                                                                 self.id, rep.accession, start, stop, residue))
