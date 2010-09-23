@@ -505,6 +505,7 @@ class Chain(object):
         
         chain = Chain(self.id, accession=self.accession, name=self.name, 
                       type=self.type, residues=residues, molecule_id=self.molecule_id)
+        chain.secondary_structure = self.secondary_structure.subregion(start, end)
         chain._torsion_computed = self._torsion_computed
         
         return chain        
