@@ -1,5 +1,5 @@
 from numpy import vstack, arange, array, reshape
-from mulch.math import log_sum_exp, log
+from csb.math import log_sum_exp, log
 
 def log_trapezoidal(log_y, x = None):
     """
