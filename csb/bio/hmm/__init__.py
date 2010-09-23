@@ -878,8 +878,8 @@ class ProfileHMMSegment(ProfileHMM):
 
         for rank, layer in enumerate(source_layers, start=1):
             
-            for atom_kind in layer.residue.structure:
-                layer.residue.structure[atom_kind].rank = rank
+            for atom_kind in layer.residue.atoms:
+                layer.residue.atoms[atom_kind].rank = rank
             layer.residue._rank = rank
             layer.rank = rank                
             

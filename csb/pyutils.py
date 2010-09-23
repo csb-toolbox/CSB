@@ -9,6 +9,9 @@ Common high-level Python code utilities.
        version 2.7+ 
 """
 
+import re
+from abc import ABCMeta, abstractproperty, abstractmethod
+
 class EnumValueError(ValueError):
     pass
 class EnumMemberError(AttributeError):
@@ -82,8 +85,6 @@ class enum(object):
             raise ValueError('Empty enum.')
 
     def __check(self, i, v):
-
-            import re
 
             if not (isinstance(i, basestring) and re.match('^[a-zA-Z_]', i)):
                 raise AttributeError('Enum items must be valid Python identifiers.')
@@ -279,7 +280,21 @@ class InvalidKeyError(KeyError):
 class DuplicateKeyError(InvalidKeyError):
     pass
 
-class DictionaryContainerBase(object):
+class AbstractIndexer(object):
+    
+    @abstractmethod
+    def __getitem__(self, i):
+        pass
+    
+    @abstractmethod
+    def _getinternal(self, i):
+        """
+        Implementing classes are expected to provide direct access to the
+        requested element in the internal data structure via this method.
+        """
+        pass   
+
+class DictionaryContainerBase(AbstractIndexer):
     """ 
     Base class which defines the behavior of a read only key-value collection 
     container. 
@@ -304,12 +319,15 @@ class DictionaryContainerBase(object):
             self._set(items)
         if restrict:
             self._keys = frozenset(restrict)
-
+    
     def __getitem__(self, key):
         try:
             return self._items[key]
         except KeyError:
             raise ItemNotFoundError(key)
+
+    def _getinternal(self, key):
+        return self._items[key]
 
     def __contains__(self, item):
         return item in self._items
@@ -319,7 +337,7 @@ class DictionaryContainerBase(object):
 
     def __nonzero__(self):
         return len(self) > 0
-
+    
     @property
     def length(self):
         return len(self)
@@ -403,7 +421,7 @@ class DictionaryContainer(DictionaryContainerBase):
 class CollectionIndexError(IndexError):
     pass
 
-class CollectionContainerBase(object):
+class CollectionContainerBase(AbstractIndexer):
     """ 
     Base class which defines the behavior of a read-only collection container.
 
@@ -458,6 +476,9 @@ class CollectionContainerBase(object):
                 raise CollectionIndexError('List index {0} out of range: {1}..{2}'.format(i, self.start_index, self.last_index))
             else:
                 raise CollectionIndexError('List index out of range. The collection is empty.')
+    
+    def _getinternal(self, i):
+        return self._items[i]
 
     def __contains__(self, item):
         return item in self._items
@@ -542,7 +563,43 @@ class CollectionContainer(CollectionContainerBase):
         """
         self._update(new_items)
 
-
+class AbstractContainer(object):
+    """
+    Defines the behavior of a high-level object, which can hold an array of
+    elements. Implementing classes automatically provide iterable and index/key
+    based access to those objects in a read-only encapsulated manner.
+    
+    This is an abstract class with an abstract property C{_items}. Subclasses
+    must override this property. The overridden implementation is usually 
+    extremely simple - you just need to return a reference to an iterable and
+    subscriptable object, containing the elements.
+    """
+    
+    __metaclass__ = ABCMeta
+    
+    def __getitem__(self, i):
+        return self._children[i]
+    
+    def __iter__(self):
+        for i in self._children:
+            yield i
+    
+    @abstractproperty
+    def _children(self):
+        pass
+    
+class AbstractNIContainer(AbstractContainer):
+    """
+    Same as the L{AbstractContainer}, but provides access to the child elements
+    through C{AbstractNativeIndexer._getinternal} instead of the standard 
+    __getitem__.
+    
+    Therefore, the C{self._children} property must return an object which 
+    implements L{AbstractIndexer}. 
+    """
+    def __getitem__(self, i):
+        return self._children._getinternal(i)
+                
 try:        
     from collections import OrderedDict
 except ImportError:
