@@ -54,7 +54,7 @@ class DuplicateAtomIDError(csb.pyutils.DuplicateKeyError):
     pass
 class AlignmentArgumentLengthError(ValueError):
     pass
-class ConflictingSecStructureError(ValueError):
+class BrokenSecStructureError(ValueError):
     pass
 
 class Ensemble(csb.pyutils.AbstractNIContainer):
