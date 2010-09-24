@@ -29,6 +29,9 @@ class AbstractStructureParser(object):
 
     @param structure_file: the input PD file to parse
     @type structure_file: str
+    @param check_ss: if True, secondary structure errors will result in 
+                     a L{PDBParseError} exception
+    @type check_ss: bool    
 
     @raise IOError: when the input file cannot be found
     """
@@ -108,10 +111,11 @@ class AbstractStructureParser(object):
         else:
             return LegacyStructureParser(structure_file)        
 
-    def __init__(self, structure_file):
+    def __init__(self, structure_file, check_ss=True):
 
         self._file = None
         self._stream = None
+        self._check_ss = check_ss
 
         self.filename = structure_file
 
@@ -335,7 +339,9 @@ class AbstractStructureParser(object):
         
         structure.model_id = None
 
-        atoms = dict( (chain, []) for chain in structure.chains )        
+        atoms = dict( (chain, []) for chain in structure.chains )
+        chains = set()
+        in_ligands = False                
         in_atom = False
 
         self._stream.seek(0)
@@ -355,7 +361,7 @@ class AbstractStructureParser(object):
                     structure.model_id = model
 
             elif line.startswith('ATOM') \
-                     or (in_atom and line.startswith('HETATM')):
+                     or (line.startswith('HETATM') and not in_ligands):
                     in_atom = True
 
                     rank = int(line[22:26])
@@ -392,6 +398,7 @@ class AbstractStructureParser(object):
                         atom.alternate = None
 
                     atom._chain = line[21].strip()
+                    chains.add(atom._chain)
                     residue_name = line[17:20].strip()
                     residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[atom._chain].type)
                     if structure.chains[atom._chain].type == SequenceTypes.NucleicAcid:
@@ -414,6 +421,8 @@ class AbstractStructureParser(object):
 
             elif in_atom and line.startswith('TER'):
                 in_atom = False
+                if len(chains) == len(structure.chains):
+                    in_ligands = True
 
             elif line.startswith('ENDMDL'):
                 break
@@ -515,10 +524,18 @@ class AbstractStructureParser(object):
                 if chain.id not in elements:
                     elements[chain.id] = []
                 if chain.id != line[31].strip():
-                    raise csb.bio.structure.Broken3DStructureError('Helix {0} spans multiple chains'.format(line[7:10]))
-
-                startres = chain.find(line[21:25].strip(), line[25].strip())                
-                endres = chain.find(line[33:37].strip(), line[37].strip())
+                    if self._check_ss:
+                        raise PDBParseError('Helix {0} spans multiple chains'.format(line[7:10]))
+                    else:
+                        continue                
+                try:
+                    startres = chain.find(line[21:25].strip(), line[25].strip())                
+                    endres = chain.find(line[33:37].strip(), line[37].strip())
+                except csb.pyutils.ItemNotFoundError as ex:
+                    if self._check_ss:
+                        raise PDBParseError('Helix {0} refers to an undefined residue ID: {1}'.format(line[7:10], str(ex)))
+                    else:
+                        continue
                 helix = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Helix)
                 elements[chain.id].append(helix)
             
@@ -528,10 +545,18 @@ class AbstractStructureParser(object):
                 if chain.id not in elements:
                     elements[chain.id] = []                
                 if chain.id != line[32].strip():
-                    raise csb.bio.structure.Broken3DStructureError('Sheet {0} spans multiple chains'.format(line[7:10]))
-
-                startres = chain.find(line[22:26].strip(), line[26].strip())                
-                endres = chain.find(line[33:37].strip(), line[37].strip())
+                    if self._check_ss:                    
+                        raise PDBParseError('Sheet {0} spans multiple chains'.format(line[7:10]))
+                    else:
+                        continue
+                try:
+                    startres = chain.find(line[22:26].strip(), line[26].strip())                
+                    endres = chain.find(line[33:37].strip(), line[37].strip())
+                except csb.pyutils.ItemNotFoundError as ex:
+                    if self._check_ss:                    
+                        raise PDBParseError('Sheet {0} refers to an undefined residue ID: {1}'.format(line[7:10], str(ex)))
+                    else:
+                        continue                
                 strand = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Strand)
                 elements[chain.id].append(strand)         
             
