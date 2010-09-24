@@ -362,11 +362,6 @@ class StructureChainsTable(csb.pyutils.DictionaryContainer):
             raise DuplicateChainIDError('Chain ID {0} is already defined'.format(id))
         
         super(StructureChainsTable, self).append(new_id, chain)
-                
-    def update(self):
-        raise NotImplementedError()
-    def set(self):
-        raise NotImplementedError()
         
 class Chain(csb.pyutils.AbstractNIContainer):
     """
@@ -856,9 +851,6 @@ class ChainResiduesCollection(csb.pyutils.CollectionContainer):
         self.__container._torsion_computed = False
         self._add(residue)        
         return index
-    
-    def update(self):
-        raise NotImplementedError()
         
     def _contains(self, id):
         return id in self.__lookup
@@ -1234,7 +1226,7 @@ class ResidueAtomsTable(csb.pyutils.DictionaryContainer):
         if atom.residue is not self.__residue:
             atom._residue = self.__residue
         
-        super(ResidueAtomsTable, self).update({atom_name: atom})  
+        super(ResidueAtomsTable, self)._update({atom_name: atom})  
     
 class Atom(object):
     """
@@ -1360,9 +1352,6 @@ class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
         super(DisorderedAtom, self).append(atom)
         atom._proxy = self
     
-    def update(self, new_items):
-        raise NotImplementedError()
-    
     def _transform_vector(self, rotation, translation):
         for atom in self:
             atom._transform_vector(rotation, translation)
@@ -1453,7 +1442,40 @@ class SecondaryStructureElement(object):
         if not len(scores) == self.length:
             raise ValueError('There must be a score entry for each residue in the element.')        
         self._score = csb.pyutils.CollectionContainer(items=list(scores), type=int, start_index=self.start)
+    
+    def overlaps(self, other):
+        """
+        Return True if C{self} overlaps with C{other}.
         
+        @type other: L{SecondaryStructureElement}
+        @rtype: bool
+        """
+        this = set(range(self.start, self.end + 1))
+        that = set(range(other.start, other.end + 1))
+        return not this.isdisjoint(that)     
+    
+    def merge(self, other):
+        """
+        Merge C{self} and C{other}.
+
+        @type other: L{SecondaryStructureElement}
+                
+        @return: a new secondary structure element
+        @rtype: L{SecondaryStructureElement}
+        
+        @bug: confidence scores are lost
+        """
+        if not self.overlaps(other):
+            raise ValueError("Can't merge non-overlapping secondary structures")
+        elif self.type != other.type:
+            raise ValueError("Can't merge secondary structures of different type")            
+        
+        start = min(self.start, other.start)
+        end = max(self.end, other.end)
+        assert self.type == other.type
+        
+        return SecondaryStructureElement(start, end, self.type)    
+    
     def to_string(self):
         """
         Dump the element as a string.

@@ -47,7 +47,7 @@ class SequenceAlphabets(object):
 class StopTraversal(StopIteration):
     pass
 
-class SequenceCollection(csb.pyutils.CollectionContainer):
+class SequenceCollection(csb.pyutils.ReadOnlyCollectionContainer):
     """
     Represents a list of L{Sequence}s.
     """

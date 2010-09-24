@@ -62,7 +62,7 @@ class BaseSequenceParser(object):
         else:
             stream = fasta_file
 
-        seqs = SequenceCollection()
+        seqs = []
 
         reader = csb.io.EntryReader(stream, '>', None)
         factory = self._factory()
@@ -70,7 +70,7 @@ class BaseSequenceParser(object):
         for entry in reader.entries():
             seqs.append(factory.from_string(entry))
 
-        return seqs
+        return SequenceCollection(seqs)
 
 
 class SequenceParser(BaseSequenceParser):
