@@ -294,7 +294,7 @@ class AbstractIndexer(object):
         """
         pass   
 
-class DictionaryContainerBase(AbstractIndexer):
+class BaseDictionaryContainer(AbstractIndexer):
     """ 
     Base class which defines the behavior of a read only key-value collection 
     container. 
@@ -315,10 +315,10 @@ class DictionaryContainerBase(AbstractIndexer):
         self._keys = None
         self._items = OrderedDict({})
 
-        if items is not None:
-            self._set(items)
         if restrict:
             self._keys = frozenset(restrict)
+        if items is not None:
+            self._set_items(items)
     
     def __getitem__(self, key):
         try:
@@ -351,7 +351,7 @@ class DictionaryContainerBase(AbstractIndexer):
     def __repr__(self):
         return repr(self._items)
 
-    def _set(self, new_items):
+    def _set_items(self, new_items):
         new_items = OrderedDict(new_items)
 
         if self._keys and not self._keys.issuperset(new_items):
@@ -359,7 +359,7 @@ class DictionaryContainerBase(AbstractIndexer):
 
         self._items = new_items
 
-    def _update(self, new_items={ }, **named_items):
+    def _update_items(self, new_items={ }, **named_items):
         new_items = OrderedDict(new_items)
 
         if self._keys:
@@ -369,15 +369,24 @@ class DictionaryContainerBase(AbstractIndexer):
         self._items.update(new_items)
         self._items.update(named_items)
         
-    def _remove(self, key):
+    def _remove_item(self, key):
         
         if key not in self._items:
             raise ItemNotFoundError(key)
         del self._items[key]
 
-class DictionaryContainer(DictionaryContainerBase):
+class ReadOnlyDictionaryContainer(BaseDictionaryContainer):
+    """
+    This is a write-once container, which is filled with items only at object
+    construction.
+    """
+    pass
+
+class DictionaryContainer(BaseDictionaryContainer):
     """ 
-    Write-enabled Dictionary Container.
+    Write-enabled Dictionary Container. New items can be added using a public
+    C{append} method. Subclasses may also override the internal C{_update}
+    and C{_set} to expose them to the clients.
     """
     def __init__(self, items=None, restrict=None):
 
@@ -399,16 +408,16 @@ class DictionaryContainer(DictionaryContainerBase):
             raise DuplicateKeyError("Key {0} already exists in the collection.".format(key))
         self._items[key] = item
 
-    def set(self, new_items):
+    def _set(self, new_items):
         """ 
         Set the collection to the dictionary provided in the new_items parameter.
         
         @param new_items: the new value of the dictionary container
         @type new_items: dict
         """
-        self._set(new_items)
+        self._set_items(new_items)
 
-    def update(self, new_items={ }, **named_items):
+    def _update(self, new_items={ }, **named_items):
         """ 
         Update the collection with the dictionary provided in the C{new_items} parameter.
         Update also specific items with the values provided as keyword arguments.
@@ -416,12 +425,20 @@ class DictionaryContainer(DictionaryContainerBase):
         @param new_items: a dictionary that provides new values for certain keys
         @type new_items: dict
         """
-        self._update(new_items, **named_items)
+        self._update_items(new_items, **named_items)
+        
+    def _remove(self, item):
+        """ 
+        Delete C{item}.
+        
+        @param item: key to remove
+        """
+        self._remove_item(item)        
 
 class CollectionIndexError(IndexError):
     pass
 
-class CollectionContainerBase(AbstractIndexer):
+class BaseCollectionContainer(AbstractIndexer):
     """ 
     Base class which defines the behavior of a read-only collection container.
 
@@ -451,7 +468,7 @@ class CollectionContainerBase(AbstractIndexer):
         self._start = start_index
 
         if items is not None:
-            self._update(items)
+            self._update_items(items)
 
     def __fix(self, i):
         if i >= 0:
@@ -511,7 +528,7 @@ class CollectionContainerBase(AbstractIndexer):
     def __repr__(self):
         return repr(self._items)
 
-    def _append(self, item):
+    def _append_item(self, item):
 
         if self._type:
             if not isinstance(item, self._type):
@@ -520,7 +537,7 @@ class CollectionContainerBase(AbstractIndexer):
 
         return len(self) + self._start - 1
 
-    def _update(self, new_items):
+    def _update_items(self, new_items):
 
         if self._type:
             for a in new_items:
@@ -531,9 +548,18 @@ class CollectionContainerBase(AbstractIndexer):
     def _sort(self):
         self._items.sort()
 
-class CollectionContainer(CollectionContainerBase):
+class ReadOnlyCollectionContainer(BaseCollectionContainer):
+    """
+    This is a write-once container, which is filled with items only at object
+    construction.
+    """
+    pass
+
+class CollectionContainer(BaseCollectionContainer):
     """ 
-    Write-enabled Collection Container.
+    Write-enabled Collection Container. New items can be added using a public
+    C{append} method. Subclasses may also override the internal C{_update}
+    to expose it to the clients. 
     """
 
     def __init__(self, items=None, type=None, start_index=0):
@@ -552,16 +578,16 @@ class CollectionContainer(CollectionContainerBase):
         @raise TypeError: when the container is type-safe and item has an 
                           incorrect type
         """
-        return self._append(item)
+        return self._append_item(item)
 
-    def update(self, new_items):
+    def _update(self, new_items):
         """ 
         Set the collection to the list provided in the new_items parameter.
         
         @param new_items: a list providing the new items for the container
         @type new_items: list
         """
-        self._update(new_items)
+        self._update_items(new_items)
 
 class AbstractContainer(object):
     """

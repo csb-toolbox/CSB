@@ -1008,7 +1008,7 @@ class EmissionTable(csb.pyutils.DictionaryContainer):
         @param table: the new emission table
         @type table: dict
         """          
-        super(EmissionTable, self).set(table)
+        super(EmissionTable, self)._set(table)
         
     def update(self, residue, probability):
         """ 
@@ -1019,7 +1019,7 @@ class EmissionTable(csb.pyutils.DictionaryContainer):
         @param probability: new emission score
         @type probability: float
         """                
-        super(EmissionTable, self).update({residue: probability})
+        super(EmissionTable, self)._update({residue: probability})
         
 class TransitionTable(csb.pyutils.DictionaryContainer):        
     """ 
@@ -1068,7 +1068,7 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
         @param table: the new transition table
         @type table: dict
         """          
-        super(TransitionTable, self).set(table)
+        super(TransitionTable, self)._set(table)
         
     def update(self, target_statekind, transition):
         """ 
@@ -1085,7 +1085,7 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
         if transition.successor.type != target_statekind:
             raise ValueError('Transition successor\'type differs from the specified target_statekind.')
                 
-        super(TransitionTable, self).update({target_statekind: transition})  
+        super(TransitionTable, self)._update({target_statekind: transition})  
         
 class HMMLayersCollection(csb.pyutils.CollectionContainer):
     """
@@ -1156,7 +1156,7 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
         if state.type != state_kind:
             raise ValueError('State\'type differs from the specified state_kind.')
                 
-        super(HMMLayer, self).update({state_kind: state})        
+        super(HMMLayer, self)._update({state_kind: state})        
         
 class State(object):
     """ 
