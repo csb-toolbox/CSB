@@ -1506,7 +1506,6 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
     """
     def __init__(self, string=None, conf_string=None):
 
-        self._slots = set([])
         super(SecondaryStructure, self).__init__(type=SecondaryStructureElement, start_index=1)
                        
         if string is not None:
@@ -1520,23 +1519,8 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         """
         Add a new SecondaryStructureElement. Then sort all added elements by
         their start position.
-                
-        @raise ConflictingSecStructureError: on attempt to append a new element
-                                           at position that is already occupied
-                                           by an element of a different type
-        """
-        newslots = []
-        
-        for pos in range(element.start, element.end + 1):
-            if pos in self._slots:
-                for occupied in self.at(pos):
-                    if element.type != occupied.type:
-                        raise ConflictingSecStructureError("{0!r} conflicts with {1!r} at rank {2}".format(
-                                                                                element.type, occupied.type, pos))
-            newslots.append(pos)
-            
+        """ 
         super(SecondaryStructure, self).append(element)
-        self._slots.update(newslots)
         super(SecondaryStructure, self)._sort()
                         
     @staticmethod  
@@ -1592,17 +1576,25 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         
         @return: a string of secondary structure elements
         @rtype: str
+        
+        @bug: [CSB 0000003] If conflicting elements are found at a given rank,
+              this position is represented as a coil.
         """  
+        gap = str(SecStructures.Gap)
+        coil = str(SecStructures.Coil)
+        
         if chain_length is None:
             chain_length = max(e.end for e in self)
-        gap = str(SecStructures.Gap)
+
         ss = []
         
         for pos in range(1, chain_length + 1):
             elements = self.at(pos)
             if len(elements) > 0:
-                assert len(set(e.type for e in elements)) == 1, 'conflicting elements'
-                ss.append(elements[0].to_string())
+                if len(set(e.type for e in elements)) > 1:
+                    ss.append(coil)                         # [CSB 0000003]                     
+                else:    
+                    ss.append(elements[0].to_string()) 
             else:
                 ss.append(gap)        
 
