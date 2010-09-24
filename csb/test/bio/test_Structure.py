@@ -6,7 +6,6 @@ class TestStructure(unittest.TestCase):
 
     def setUp(self):
         from csb.bio.io.wwpdb import StructureParser
-        from csb.bio.structure import ChemElements
         
         regular_file = 'io/data/test_pdb.pdb'
         self.rp = StructureParser(regular_file)
@@ -29,7 +28,6 @@ class TestStructure(unittest.TestCase):
         self.assertEqual(position_after[2], position_before[2])
 
     def test_Chain_compute_torsion(self):
-        from numpy import eye, zeros
         
         c = self.structure['A']
         c.compute_torsion()

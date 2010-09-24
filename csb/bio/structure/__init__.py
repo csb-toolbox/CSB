@@ -54,7 +54,7 @@ class DuplicateAtomIDError(csb.pyutils.DuplicateKeyError):
     pass
 class AlignmentArgumentLengthError(ValueError):
     pass
-class DuplicateSecStructureError(ValueError):
+class ConflictingSecStructureError(ValueError):
     pass
 
 class Ensemble(csb.pyutils.AbstractNIContainer):
@@ -397,6 +397,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         self._accession = None
         self._type = None
         self._residues = ChainResiduesCollection(self, residues)
+        self._secondary_structure = None
         self.molecule_id = molecule_id
         self._torsion_computed = False
         self.name = str(name).strip()
@@ -1427,8 +1428,16 @@ class SecondaryStructureElement(object):
     def __cmp__(self, other):
         return cmp(self.start, other.start)
     
+    def __eq__(self, other):
+        return (self.type == other.type 
+                and self.start == other.start 
+                and self.end == other.end) 
+    
     def __str__(self):
         return self.to_string()
+    
+    def __repr__(self):
+        return "<{0.type!r}: {0.start}-{0.end}>".format(self)
             
     @property
     def length(self):
@@ -1509,17 +1518,21 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
     
     def append(self, element):
         """
-        Add a new SecondaryStructureElement to a vacant position.
-        Then sort all added elements by their start position.
+        Add a new SecondaryStructureElement. Then sort all added elements by
+        their start position.
                 
-        @raise DuplicateSecStructureError: on attempt to append a new element
+        @raise ConflictingSecStructureError: on attempt to append a new element
                                            at position that is already occupied
+                                           by an element of a different type
         """
         newslots = []
         
         for pos in range(element.start, element.end + 1):
             if pos in self._slots:
-                raise DuplicateSecStructureError('At rank {0}'.format(pos))
+                for occupied in self.at(pos):
+                    if element.type != occupied.type:
+                        raise ConflictingSecStructureError("{0} conflicts with {1} at rank {2} ".format(
+                                                                                element.type, occupied.type, pos))
             newslots.append(pos)
             
         super(SecondaryStructure, self).append(element)
@@ -1573,24 +1586,30 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
 
         return motifs   
     
-    def to_string(self):
+    def to_string(self, chain_length=None):
         """
         Get back the string representation of the secondary structure.
         
         @return: a string of secondary structure elements
         @rtype: str
         """  
-        ss = []
-        max = 0
+        if chain_length is None:
+            chain_length = max(e.end for e in self)
         gap = str(SecStructures.Gap)
+        ss = []
         
-        for e in self:
-            if e.start > max:
-                ss.append(gap * (e.start - max - 1))
-            max = e.end
-            ss.append(str(e))
-                
+        for pos in range(1, chain_length + 1):
+            elements = self.at(pos)
+            if len(elements) > 0:
+                assert len(set(e.type for e in elements)) == 1, 'conflicting elements'
+                ss.append(elements[0].to_string())
+            else:
+                ss.append(gap)        
+
         return ''.join(ss)
+    
+    def at(self, rank, type=None):
+        return self.scan(start=rank, end=rank, filter=type, loose=True, cut=True)
     
     def scan(self, start, end, filter=None, loose=True, cut=True):
         """

@@ -254,7 +254,7 @@ def load(filename, gzip=False, lock=None, lock_path='~/'):
     if gzip:
         import gzip
         try:
-            f_handle = gzip.GzipFile(filename)
+            f_handle = gzip.GzipFile(filename)                          #@UnusedVariable
         except:
             return
 

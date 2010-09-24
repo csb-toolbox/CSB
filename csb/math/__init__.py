@@ -108,7 +108,7 @@ def euler_angles(r):
     from numpy import pi
     
     a = numpy.arctan2(r[2,1],r[2,0]) % (2*pi)
-    b = numpy.arctan2((r[2,0]+r[2,1]) / (cos(a) + sin(a)), r[2,2]) % (2*pi)
+    b = numpy.arctan2((r[2,0]+r[2,1]) / (numpy.cos(a) + numpy.sin(a)), r[2,2]) % (2*pi)
     c = numpy.arctan2(r[1,2],-r[0,2]) % (2*pi)
 
     return a, b, c
@@ -217,12 +217,11 @@ def from_polar3d(x):
     """
     assert x.shape == (3,)
 
-
     r, theta, phi = x[:]
-    s = sin(theta)
-    c = cos(theta)
-    S = sin(phi)
-    C = cos(phi)
+    s = numpy.sin(theta)
+    c = numpy.cos(theta)
+    S = numpy.sin(phi)
+    C = numpy.cos(phi)
     
     return r * numpy.array([s*C, s*S, c])
 
