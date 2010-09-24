@@ -527,7 +527,6 @@ def insert_breaks(seq, length=60):
 
 
 def get_accession_number(fasta_record):
-    import re
     
     name = fasta_record.title.split()[0].split('|')[0]
     return re.sub('[^a-zA-Z0-9_\-]', '', name)

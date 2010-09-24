@@ -192,7 +192,7 @@ class MaxentModel:
 
         k = self.periodicities()
         k = add.outer(k ** 2, k ** 2)
-        self.set([standard_normal(k.shape) / sqrt(k) for i in range(4)])
+        self.set([standard_normal(k.shape) / sqrt(k) for i in range(4)])    #@UnusedVariable
         self.normalize(True)
 
     def prob(self, x, y):
@@ -346,7 +346,6 @@ class Posterior:
 
 if __name__ == '__main__':
     from scipy.optimize import fmin_powell
-    from numpy import linspace, pi 
 
     aa, ss = 'ALA', 'all'
     k = 2

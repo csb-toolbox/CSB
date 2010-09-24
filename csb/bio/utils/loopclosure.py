@@ -85,7 +85,7 @@ def make_random_chain(n=12):
 
     v = zeros(3)
     l = [v]
-    for i in range(0, n - 1):
+    for i in range(0, n - 1):               #@UnusedVariable
         nv = random(3)
         nv /= norm(nv)
         nv = v + nv ** 3.8
