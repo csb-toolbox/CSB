@@ -1531,7 +1531,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
             if pos in self._slots:
                 for occupied in self.at(pos):
                     if element.type != occupied.type:
-                        raise ConflictingSecStructureError("{0} conflicts with {1} at rank {2} ".format(
+                        raise ConflictingSecStructureError("{0!r} conflicts with {1!r} at rank {2}".format(
                                                                                 element.type, occupied.type, pos))
             newslots.append(pos)
             
