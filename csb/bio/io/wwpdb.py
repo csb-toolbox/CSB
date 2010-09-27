@@ -384,6 +384,7 @@ class AbstractStructureParser(object):
                     atom = csb.bio.structure.Atom(serial_number, name, element,
                                                   vector)
 
+                    atom._het = line.startswith('HETATM')
                     atom._rank = rank
                     atom._sequence_number = int(line[22:26].strip())
                     atom._residue_id = str(atom._sequence_number)
@@ -454,13 +455,17 @@ class AbstractStructureParser(object):
                     i += 1
                     lookup[a._residue_id] = [a._sequence_number, a._insertion_code]
                     seq_numbers.append(a._residue_id)
+                    res_name = a._residue_name.value
+                    if a._het:
+                        # if it is a HET atom, initiate an optional fragment
+                        fragments.append([res_name, '?'])                        
                     if i == 0 or a._sequence_number - lookup[seq_numbers[i - 1]][0] not in (0, 1, -1):
                         # if residues [i, i-1] are not consecutive or 'overlapping', initiate a new fragment:
-                        fragments.append([a._residue_name.value])
+                        fragments.append([res_name])
                     else:
                         # else (they are consecutive) append the new residue to the end of the last fragment
-                        fragments[-1].append(a._residue_name.value)
-
+                        fragments[-1].append(res_name)
+            
             for i, frag in enumerate(fragments):
                 fragments[i] = ''.join(frag)
             query = '^.*({0}).*$'.format(').*('.join(fragments))
@@ -476,15 +481,17 @@ class AbstractStructureParser(object):
 
                 fixed_residue = None
                 for atom in atoms[chain]:
-
+                    if not isinstance(lookup[atom._residue_id], int):
+                        continue                                    # this atom was not mapped (e.g. HET)
                     atom._rank = lookup[atom._residue_id]
                     residue = structure.chains[chain].residues[atom._rank]
                     if residue is not fixed_residue:
                         residue.id = atom._sequence_number, atom._insertion_code
                         fixed_residue = residue
-                    residue.atoms.append(atom)
-                    #assert atom.residue == residue.type
 
+                    assert str(residue.type) == subject[atom._rank - 1]
+                    residue.atoms.append(atom)
+                    
                     del atom._rank
                     del atom._insertion_code
                     del atom._sequence_number
@@ -536,6 +543,11 @@ class AbstractStructureParser(object):
                         raise PDBParseError('Helix {0} refers to an undefined residue ID: {1}'.format(line[7:10], str(ex)))
                     else:
                         continue
+                if not startres.rank <= endres.rank:
+                    if self._check_ss:
+                        raise PDBParseError('Helix {0} is out of range'.format(line[7:10]))
+                    else:
+                        continue                    
                 helix = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Helix)
                 elements[chain.id].append(helix)
             
@@ -556,7 +568,12 @@ class AbstractStructureParser(object):
                     if self._check_ss:                    
                         raise PDBParseError('Sheet {0} refers to an undefined residue ID: {1}'.format(line[7:10], str(ex)))
                     else:
-                        continue                
+                        continue
+                if not startres.rank <= endres.rank:
+                    if self._check_ss:
+                        raise PDBParseError('Sheet {0} is out of range'.format(line[7:10]))
+                    else:
+                        continue
                 strand = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Strand)
                 elements[chain.id].append(strand)         
             
@@ -818,7 +835,7 @@ class AsyncStructureParser(object):
         self._worker = multiprocessing.Pool(processes=1)
 
     def parse_structure(self, structure_file, timeout, model=None,
-                        parser=StructureParser):
+                        parser=RegularStructureParser):
         """
         Call StructureParser.parse_structure() in a separate process and return
         the output. Raise TimeoutError if the parser does not respond within
