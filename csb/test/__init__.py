@@ -85,42 +85,42 @@ decorators you need in order to write tests for CSB.
            if __name__ == '__main__':
                csb.test.Console()
     
-     4. Test Execution
-        
-        The test execution is handled by C{test builders} and a test runner
-        C{app}. Test builders are subclasses of L{AbstractTestBuilder}. 
-        We have one test builder specialized to load a specific test type: 
-        unit, functional, custom. L{AnyTestBuilder} will scan for either unit
-        or functional tests.
-        
-        The test runner app is C{csb/test/app.py} which is simply an instance
-        of L{csb.test.Console}. The app has to major arguments: 
-            
-            - test type, which controls which TestBuilder will handle the test
-              module scan (e.g.: "any" triggers L{AnyTestBuilder}, "unit" - 
-              L{UnitTestBuilder} and so on) 
-            - test namespaces - a list of "dotted" test cases, e.g.::
-                 
-                 csb.test.cases.bio.io.*   # io and sub-packages
-                 csb.test.cases.bio.utils  # only utils
-                 __main__                  # current module
-                  
-            Run the app with '-h' for full documentation.
-        
-        In addition to running the app from the command line, you can run it
-        also programmatically by instantiating L{csb.test.Console}. You can
-        construct a test console object by supplying target test namespace(s)
-        and a test builder class in the constructor.
-        
-        Test builder classes inherit the following test discovery methods:
-        
-            - C{loadTests} - load tests from a test namespace. Wildcard
-              namespaces are handled by C{loadAllTests}
-            - C{loadAllTests} - load tests from the given namespace, and
-              from all sub-packages (recursive)
-            - C{loadFromFile} - load tests from an absolute file name
-            - C{loadMultipleTests} - calls C{loadTests} for a list of 
-              namespaces and combines all loaded tests in a single suite
+    4. Test Execution
+    
+       The test execution is handled by C{test builders} and a test runner
+       C{app}. Test builders are subclasses of L{AbstractTestBuilder}. 
+       We have one test builder specialized to load a specific test type: 
+       unit, functional, custom. L{AnyTestBuilder} will scan for either unit
+       or functional tests.
+    
+       The test runner app is C{csb/test/app.py} which is simply an instance
+       of L{csb.test.Console}. The app has to major arguments: 
+    
+           - test type, which controls which TestBuilder will handle the test
+             module scan (e.g.: "any" triggers L{AnyTestBuilder}, "unit" - 
+             L{UnitTestBuilder} and so on) 
+           - test namespaces - a list of "dotted" test cases, e.g.::
+    
+                csb.test.cases.bio.io.*   # io and sub-packages
+                csb.test.cases.bio.utils  # only utils
+                __main__                  # current module
+    
+           Run the app with '-h' for full documentation.
+    
+       In addition to running the app from the command line, you can run it
+       also programmatically by instantiating L{csb.test.Console}. You can
+       construct a test console object by supplying target test namespace(s)
+       and a test builder class in the constructor.
+    
+       Test builder classes inherit the following test discovery methods:
+    
+           - C{loadTests} - load tests from a test namespace. Wildcard
+             namespaces are handled by C{loadAllTests}
+           - C{loadAllTests} - load tests from the given namespace, and
+             from all sub-packages (recursive)
+           - C{loadFromFile} - load tests from an absolute file name
+           - C{loadMultipleTests} - calls C{loadTests} for a list of 
+             namespaces and combines all loaded tests in a single suite
 """
 
 import os
@@ -128,6 +128,7 @@ import sys
 import imp
 import types
 import collections
+import hashlib
 import tempfile
 import unittest
 
@@ -243,8 +244,8 @@ class AbstractTestBuilder(object):
         @return: a C{unittest.TestSuite} ready for the test runner
         @rtype: C{unittest.TestSuite}         
         """         
-        mod = imp.load_source('mod', file)
-        suite = unittest.TestLoader().loadTestsFromModule(mod)
+        mod = imp.load_source('mod' + self._moduleHash(file), file)
+        suite = unittest.TestLoader().loadTestsFromModule(mod)        
         return unittest.TestSuite(self._filter(suite)) 
                 
     def loadTests(self, namespace):
@@ -317,6 +318,16 @@ class AbstractTestBuilder(object):
                 
         return unittest.TestSuite(suites) 
     
+    def _moduleHash(self, path):
+        """
+        Build a GUI used when importing a module with imp.
+        
+        @bug: If you don't use a unique name each time you import a module,
+              python gets really confused. The results are unpredictable, but
+              also silent - no exception, just corrupt program!
+        """
+        return hashlib.sha1(path).hexdigest()
+    
     def _recurse(self, obj):
         """
         Extract test cases recursively from a test C{obj} container. 
@@ -387,7 +398,7 @@ class CustomTestBuilder(AbstractTestBuilder):
     
     def loadFromFile(self, file):
             
-        mod = imp.load_source('mod', file)
+        mod = imp.load_source('mod' + self._moduleHash(file), file)
         suites = self._inspect(mod)
         
         return unittest.TestSuite(suites) 
@@ -401,7 +412,7 @@ class CustomTestBuilder(AbstractTestBuilder):
             return self.loadFromFile(main.__file__)
         else:
             try:
-                mod = __import__(namespace)
+                mod = __import__(namespace, fromlist=[''])
             except ImportError:
                 raise InvalidNamespaceError('Namespace {0} is not importable'.format(namespace))
             suites = self._inspect(mod)                  
@@ -491,7 +502,7 @@ class Console(object):
     USAGE = r"""
 CSB Test Runner Console. Usage:
  
-     python {0.program} -t type [-v verbosity] namespace(s) 
+     python {0.program} [-t type] [-v verbosity] namespace(s) 
  
 Options:
           namespace(s)   A list of CSB test dotted namespaces, from which to
@@ -516,7 +527,7 @@ Options:
         if not argv:
             argv = sys.argv
         
-        if hasattr(namespace, '__iter__'):
+        if isinstance(namespace, collections.Iterator):
             self.namespace = list(namespace)
         else:
             self.namespace = [namespace]            
