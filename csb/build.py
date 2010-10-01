@@ -102,11 +102,13 @@ Options:
         self.log('\n# Build started.\n')
         self._init()        
         
+        self._revision()    
+                
         self.log('\n# Configuring Module Environment...')
         syspath = sys.path
         self._environment(ROOT, [self._temp] + syspath, self._temp)
         
-        self._revision()        
+    
         self._test()     
         self._doc()
         self._package()
