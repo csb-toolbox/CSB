@@ -10,8 +10,46 @@ Common high-level Python code utilities.
 """
 
 import re
+import shlex
+import subprocess
 from abc import ABCMeta, abstractproperty, abstractmethod
 
+class Shell(object):
+
+    @staticmethod        
+    def run(cmd):
+        """
+        Run a shell command and return the output.
+        
+        @param cmd: shell command with its arguments
+        @param cmd: tuple or str
+        
+        @rtype: L{ShellInfo}         
+        """
+        
+        if isinstance(cmd, basestring):
+            cmd = shlex.split(cmd)
+            
+        cmd = tuple(cmd)    
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        stdout, stderr = process.communicate()                
+        code = process.returncode
+                
+        return ShellInfo(code, stdout or '', stderr or '', cmd or 0)
+
+class ShellInfo(object):
+    """
+    Shell command execution info
+    """
+    
+    def __init__(self, code, stdout, stderr, cmd):
+        
+        self.code = code
+        self.stdout = stdout
+        self.stderr = stderr
+        self.cmd = cmd
+        
 class EnumValueError(ValueError):
     pass
 class EnumMemberError(AttributeError):

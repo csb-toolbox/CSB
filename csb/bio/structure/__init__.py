@@ -1026,7 +1026,8 @@ class ProteinResidue(Residue):
     
     @param rank: rank of the residue with respect to the chain
     @type rank: int
-    @param type: residue type - a member of L{SequenceAlphabets.Protein}
+    @param type: residue type - a member of 
+                 L{csb.bio.sequence.SequenceAlphabets.Protein}
     @type type: L{csb.pyutils.EnumItem}
     @param sequence_number: PDB sequence number of the residue
     @type sequence_number: str
@@ -1115,7 +1116,8 @@ class NucleicResidue(Residue):
     
     @param rank: rank of the residue with respect to the chain
     @type rank: int
-    @param type: residue type - a member of L{SequenceAlphabets.Nucleic}
+    @param type: residue type - a member of 
+                 L{csb.bio.sequence.SequenceAlphabets.Nucleic}
     @type type: L{csb.pyutils.EnumItem}
     @param sequence_number: PDB sequence number of the residue
     @type sequence_number: str

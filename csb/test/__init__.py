@@ -94,7 +94,7 @@ decorators you need in order to write tests for CSB.
        or functional tests.
     
        The test runner app is C{csb/test/app.py} which is simply an instance
-       of L{csb.test.Console}. The app has to major arguments: 
+       of L{csb.test.Console}. The app has two major arguments: 
     
            - test type, which controls which TestBuilder will handle the test
              module scan (e.g.: "any" triggers L{AnyTestBuilder}, "unit" - 
@@ -127,7 +127,6 @@ import os
 import sys
 import imp
 import types
-import collections
 import hashlib
 import tempfile
 import unittest
@@ -261,7 +260,7 @@ class AbstractTestBuilder(object):
         @return: a C{unittest.TestSuite} ready for the test runner
         @rtype: C{unittest.TestSuite} 
         """
-        
+
         if namespace.endswith('.*'):
             return self.loadAllTests(namespace[:-2])
         elif namespace in ('__main__', '.'):
@@ -285,6 +284,9 @@ class AbstractTestBuilder(object):
         @return: a C{unittest.TestSuite} ready for the test runner
         @rtype: C{unittest.TestSuite} 
         """
+        if not hasattr(namespaces, '__iter__'):
+            raise TypeError(namespaces)
+        
         return unittest.TestSuite(self.loadTests(n) for n in namespaces)
     
     def loadAllTests(self, namespace, extension='.py'):
@@ -527,7 +529,7 @@ Options:
         if not argv:
             argv = sys.argv
         
-        if isinstance(namespace, collections.Iterator):
+        if hasattr(namespace, '__iter__'):
             self.namespace = list(namespace)
         else:
             self.namespace = [namespace]            
@@ -566,23 +568,23 @@ Options:
             
             for option, value in options:
                 if option in('-h', '--help'):
-                    self.exit(message=None, code=1)
+                    self.exit(message=None, code=0)
                 if option in('-t', '--type'):
                     try:
                         self.builder = Console.BUILDERS[value]
                     except KeyError:
-                        self.exit(message='E: Invalid test type "{0}".'.format(value), code=3)                  
+                        self.exit(message='E: Invalid test type "{0}".'.format(value), code=2)                  
                 if option in('-v', '--verbosity'):
                     try:
                         self.verbosity = int(value)
                     except ValueError:
-                        self.exit(message='E: Verbosity must be an integer.', code=4)
+                        self.exit(message='E: Verbosity must be an integer.', code=3)
             
             if len(args) > 0:
                 self.namespace = list(args)
                       
         except getopt.GetoptError as oe:
-            self.exit(message='E: ' + str(oe), code=2)
+            self.exit(message='E: ' + str(oe), code=1)
 
 
 if __name__ == '__main__':
