@@ -119,7 +119,7 @@ class HHpredProfileParser(object):
         Parse the HMM profile.
 
         @param units: also convert the profile score units to the specified
-                      L{ScoreUnits} kind
+                      L{csb.bio.hmm.ScoreUnits} kind
         @type units: L{csb.pyutils.EnumItem}
 
         @return: a L{ProfileHMM} instance
