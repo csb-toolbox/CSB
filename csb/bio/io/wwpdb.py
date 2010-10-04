@@ -810,6 +810,17 @@ def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
     return StructureParser(pdb.name).parse_structure(model)
 
 
+class AsyncParseResult(object):
+    
+    def __init__(self, result, exception):
+        
+        self.result = result
+        self.exception = exception
+    
+    def __repr__(self):
+        return '<AsyncParseResult: result={0.result}, error={0.exception.__class__.__name__}>'.format(self)
+
+
 def _parse_async(parser, file, model):
     p = parser(file)
     return p.parse_structure(model)
@@ -821,34 +832,102 @@ class AsyncStructureParser(object):
     started by Python internally (as opposed to only starting a new thread),
     this makes the parser slower, but provides a way to set a parse timeout
     limit.
+    
+    If initialized with more than one worker, supports parallel parsing
+    through the C{self.parse_async} method. 
+    
+    @param workers: number of worker threads (1 by default)
+    @type workers: int
     """
 
-    def __init__(self):
+    def __init__(self, workers=1):
 
-        self._worker = None
-        self._recycle_worker()
+        self._pool = None
+        self._workers = 1
+        
+        if int(workers) > 0:
+            self._workers = int(workers)
+        else:
+            raise ValueError(workers)
+        
+        self._recycle()
+        
+    def _recycle(self):
 
-    def _recycle_worker(self):
-
-        if self._worker:
-            self._worker.terminate()
-        self._worker = multiprocessing.Pool(processes=1)
+        if self._pool:
+            self._pool.terminate()         
+               
+        self._pool = multiprocessing.Pool(processes=self._workers)
 
     def parse_structure(self, structure_file, timeout, model=None,
                         parser=RegularStructureParser):
         """
         Call StructureParser.parse_structure() in a separate process and return
         the output. Raise TimeoutError if the parser does not respond within
-        timeout seconds.
+        C{timeout} seconds.
+        
+        @param structure_file: structure file to parse
+        @type structure_files: str
+        @param timeout: raise multiprocessing.TimeoutError if C{timeout} seconds
+                        elapse before the parser completes its job
+        @type timeout: int
+        @param parser: any implementing L{AbstractStructureParser} class
+        @type parser: type  
+        
+        @return: parsed structure
+        @rtype: L{csb.structure.Structure}    
         """
 
-        worker = multiprocessing.Pool(processes=1)
-        try:
-            async_result = worker.apply_async(_parse_async, [parser, structure_file, model])
-        except multiprocessing.TimeoutError as ex:
-            self._recycle_worker()
-            ex.args = (timeout,)
-            raise ex
+        r = self.parse_async([structure_file], timeout, model, parser)
+        if len(r) > 0:
+            if r[0].exception is not None:
+                raise r[0].exception
+            else:
+                return r[0].result
+        return None
+    
+    def parse_async(self, structure_files, timeout, model=None,
+                        parser=RegularStructureParser):
+        """
+        Call C{self.parse_structure} for a list of structure files
+        simultaneously. The actual degree of parallelism will depend on the
+        number of workers specified while constructing the parser object.
+        
+        @param structure_files: a list of structure files
+        @type structure_files: tuple of str
+        @param timeout: raise multiprocessing.TimeoutError if C{timeout} seconds
+                        elapse before the parser completes its job
+        @type timeout: int
+        @param parser: either any implementing L{AbstractStructureParser} class
+        @type parser: type
+        
+        @return: a list of L{AsyncParseResult} objects
+        @rtype: list     
+        """
 
-        return async_result.get(timeout=timeout)
-
+        pool =  self._pool
+        workers = []
+        results = []
+        
+        for file in list(structure_files):
+            result = pool.apply_async(_parse_async, [parser, file, model])
+            workers.append(result)
+        
+        hanging = False
+        for w in workers:
+            result = AsyncParseResult(None, None)
+            try:
+                result.result = w.get(timeout=timeout)
+            except KeyboardInterrupt as ki:
+                pool.terminate()
+                raise ki
+            except Exception as ex:
+                result.exception = ex
+                if isinstance(ex, multiprocessing.TimeoutError):
+                    hanging = True                    
+            results.append(result)
+        
+        if hanging:
+            self._recycle()
+            
+        return results
