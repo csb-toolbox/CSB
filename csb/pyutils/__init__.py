@@ -633,7 +633,7 @@ class AbstractContainer(object):
     elements. Implementing classes automatically provide iterable and index/key
     based access to those objects in a read-only encapsulated manner.
     
-    This is an abstract class with an abstract property C{_items}. Subclasses
+    This is an abstract class with an abstract property C{_children}. Subclasses
     must override this property. The overridden implementation is usually 
     extremely simple - you just need to return a reference to an iterable and
     subscriptable object, containing the elements.
