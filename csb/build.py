@@ -111,12 +111,12 @@ Options:
     
         self._test()     
         self._doc()
-        self._package()
+        version = self._package()
 
         self.log('\n# Restoring the Normal Module Environment...', level=2)
         self._environment(ROOT, syspath)       
         
-        self.log('\n# Done.\n')             
+        self.log('\n# Done ({0} {1}).\n'.format(ROOT, version))             
 
     def log(self, message, level=1, ending='\n'):
 
@@ -209,9 +209,9 @@ Options:
         runner = unittest.TextTestRunner(verbosity=self.verbosity)
         result = runner.run(suite)
         if result.wasSuccessful():
-            self.log('\n     PASSED all tests :-)')            
+            self.log('\n     PASSED all unit tests')
         else:
-            self.log('\n     FAIL! This build seems to be broken :-(')        
+            self.log('\n     DID NOT PASS. The build might be broken :-(')                             
         
     def _doc(self):
         """
@@ -219,19 +219,27 @@ Options:
         """
         self.log('\n# Emulating ARGV for the Doc Builder...', level=2)        
         argv = sys.argv    
-        sys.argv = ['epydoc', '--html', '-o', self._apidocs, '--name', ROOT.upper(), self._root]
+        sys.argv = ['epydoc', '--html', '-o', self._apidocs, '--name', ROOT.upper(), 
+                    '--fail-on-error', '--fail-on-warning', '--fail-on-docstring-warning',
+                    self._root]
         
         if self._verbosity > 0:                
             sys.argv.append('-v')
             
         import epydoc.cli
 
-        self.log('\n# Running the Epydoc Console...')
+        self.log('\n# Running the Doc Console...')
         try:
             epydoc.cli.cli()
+            raise sys.exit(0)
         except SystemExit as ex:
-            if ex.code is not 0:
-                self.log('\n     FAIL! Epydoc returned "#{0.code}: {0}"'.format(ex))           
+            if ex.code is 0:
+                self.log('\n     PASSED all doc tests')
+            else:
+                if ex.code == 2:
+                    self.log('\n     DID NOT PASS. The docs might be broken :-(')                    
+                else:
+                    self.log('\n     FAIL! Epydoc returned "#{0.code}: {0}"'.format(ex))
 
         self.log('\n# Restoring the the previous ARGV...', level=2)    
         sys.argv = argv    
@@ -253,15 +261,17 @@ Options:
             
         self.log('\n# Building Source Distribution...')
         try:       
-            dummy = imp.load_source('setupcsb', 'setup.py')
-            dummy.build()
+            setup = imp.load_source('setupcsb', 'setup.py')
+            setup.build()
         except SystemExit as ex:
             if ex.code is not 0:
                 self.log('\n     FAIL! Setup returned: \n\n{0}\n'.format(ex))
             
         self.log('\n# Restoring the previous CWD and ARGV...', level=2)
         os.chdir(cwd)
-        sys.argv = argv    
+        sys.argv = argv   
+        
+        return setup.VERSION 
         
     @staticmethod
     def exit(message=None, code=0, usage=True):
