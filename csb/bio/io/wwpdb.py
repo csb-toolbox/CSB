@@ -38,6 +38,12 @@ class AbstractStructureParser(object):
 
     __metaclass__ = ABCMeta
 
+    BLACKLIST = set(['1qd7', '3m9s', '3m9c', '3kgv', '3irj',
+                     '1fka', '3irk', '2odr', '3irl', '1w5c'])
+    """
+    List of PDB structures which are known to cause parser hanging.
+    """
+
     _pdb_aminoacids = {
         'PAQ': 'TYR', 'AGM': 'ARG', 'ILE': 'ILE', 'PR3': 'CYS', 'GLN': 'GLN',
         'DVA': 'VAL', 'CCS': 'CYS', 'ACL': 'ARG', 'GLX': 'GLX', 'GLY': 'GLY',
@@ -111,11 +117,12 @@ class AbstractStructureParser(object):
         else:
             return LegacyStructureParser(structure_file)        
 
-    def __init__(self, structure_file, check_ss=True):
+    def __init__(self, structure_file, check_ss=True, blacklist=True):
 
         self._file = None
         self._stream = None
-        self._check_ss = check_ss
+        self._check_ss = bool(check_ss)
+        self._blacklist = bool(blacklist)        
 
         self.filename = structure_file
 
@@ -134,7 +141,7 @@ class AbstractStructureParser(object):
             stream = open(name)
         except IOError:
             raise IOError('File not found: {0}'.format(name))
-
+        
         if self._stream:
             try:
                 self._stream.close()
@@ -399,6 +406,8 @@ class AbstractStructureParser(object):
                         atom.alternate = None
 
                     atom._chain = line[21].strip()
+                    if atom._chain not in structure.chains:
+                        raise csb.bio.structure.Broken3DStructureError('No such chain: {0}'.format(atom._chain))
                     chains.add(atom._chain)
                     residue_name = line[17:20].strip()
                     residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[atom._chain].type)
@@ -612,6 +621,8 @@ class RegularStructureParser(AbstractStructureParser):
             raise ValueError('Does not look like a regular PDB file.')
 
         structure = csb.bio.structure.Structure(header.split()[-1])
+        if self._blacklist and structure.accession in self.__class__.BLACKLIST:
+            raise PDBParseError('Structure {0} is blacklisted'.format(structure.accession))
 
         while True:
 
@@ -867,7 +878,7 @@ class AsyncStructureParser(object):
         C{timeout} seconds.
         
         @param structure_file: structure file to parse
-        @type structure_files: str
+        @type structure_file: str
         @param timeout: raise multiprocessing.TimeoutError if C{timeout} seconds
                         elapse before the parser completes its job
         @type timeout: int
@@ -893,12 +904,22 @@ class AsyncStructureParser(object):
         simultaneously. The actual degree of parallelism will depend on the
         number of workers specified while constructing the parser object.
         
+        @note: Don't be tempted to pass a large list of structures to this 
+               method. Every time a C{TimeoutError} is encountered, the 
+               corresponding worker process in the pool will hang until the
+               process terminates on its own. During that time, this worker is
+               unusable. If a sufficiently high number of timeouts occur, the 
+               whole pool of workers will be unsable. At the end of the method
+               however a pool cleanup is performed and any unusable workers
+               are 'reactivated'. However, that only happens at B{the end} of
+               C{parse_async}.
+        
         @param structure_files: a list of structure files
         @type structure_files: tuple of str
         @param timeout: raise multiprocessing.TimeoutError if C{timeout} seconds
                         elapse before the parser completes its job
         @type timeout: int
-        @param parser: either any implementing L{AbstractStructureParser} class
+        @param parser: any implementing L{AbstractStructureParser} class
         @type parser: type
         
         @return: a list of L{AsyncParseResult} objects
