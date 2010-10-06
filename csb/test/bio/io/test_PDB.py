@@ -3,19 +3,20 @@ import sys
 import glob
 import unittest
 
-from csb.bio.io import AsyncStructureParser
+from csb.bio.io import StructureParser
 
 
 class PDBEntryTestCase(unittest.TestCase):
     
     def runTest(self):
-        parser = AsyncStructureParser()
+        parser = StructureParser(self.file, check_ss=False)
         try:
-            parser.parse_structure(self.file, 10)
+            parser.parse_structure()
         except:
             ex = sys.exc_info()
             ex[1].args = list(ex[1].args) + [self.file]
             print '\n{0}    {1}'.format(ex[0].__name__, ex[1].args)
+            sys.stdout.flush()
             raise ex[0], ex[1], ex[2]
 
 
@@ -70,5 +71,6 @@ if __name__ == '__main__':
     suite = buildSuite(path, top)
 
     print '{0} tests loaded.\n'.format(suite.countTestCases())
+    sys.stdout.flush()
     
     unittest.TextTestRunner().run(suite)

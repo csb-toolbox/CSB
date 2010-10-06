@@ -469,12 +469,18 @@ class AbstractStructureParser(object):
                     if a._het:
                         # if it is a HET atom, initiate an optional fragment
                         fragments.append([res_name, '??'])                        
-                    if i == 0 or a._sequence_number - lookup[seq_numbers[i - 1]][0] not in (0, 1, -1):
+                    elif i == 0 or a._sequence_number - lookup[seq_numbers[i - 1]][0] not in (0, 1, -1):
                         # if residues [i, i-1] are not consecutive or 'overlapping', initiate a new fragment:
                         fragments.append([res_name])
                     else:
-                        # else (they are consecutive) append the new residue to the end of the last fragment
-                        fragments[-1].append(res_name)
+                        # then they are consecutive
+                        if fragments[-1][-1] == '??':
+                            # but the prev was optional (maybe HET), all optionals *MUST* reside in 
+                            # singleton fragments, so start a new fragment
+                            fragments.append([res_name])
+                        else:
+                            # append the new residue to the end of the last fragment                            
+                            fragments[-1].append(res_name)
             
             for i, frag in enumerate(fragments):
                 fragments[i] = ''.join(frag)
@@ -488,10 +494,18 @@ class AbstractStructureParser(object):
             if matches:
                 seq_numitem = -1
                 for frag_number, frag in enumerate(matches.groups(), start=1):
-                    for i, dummy in enumerate(frag, start=1):
-                        seq_numitem += 1
-                        # lookup[res_id] is finally set to give the final rank of residue under id res_id:
-                        lookup[ seq_numbers[seq_numitem] ] = matches.start(frag_number) + i
+                    if frag is '':
+                        # optional fragment, which did not match (NOTE: all optionals must occupy 
+                        # their own fragments of length 1 residue)
+                        seq_numitem += 1    # this 1 implies that all optional fragments are 1 residue long
+                    else:
+                        for i, dummy in enumerate(frag, start=1):
+                            seq_numitem += 1
+                            # lookup[res_id] is finally set to give the final rank of residue under id res_id:
+                            try:
+                                lookup[ seq_numbers[seq_numitem] ] = matches.start(frag_number) + i
+                            except:
+                                raise 
 
                 fixed_residue = None
                 for atom in atoms[chain]:
