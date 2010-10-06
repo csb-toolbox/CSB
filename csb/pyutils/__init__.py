@@ -12,6 +12,7 @@ Common high-level Python code utilities.
 import re
 import shlex
 import subprocess
+import threading
 from abc import ABCMeta, abstractproperty, abstractmethod
 
 class Shell(object):
@@ -48,8 +49,62 @@ class ShellInfo(object):
         self.code = code
         self.stdout = stdout
         self.stderr = stderr
-        self.cmd = cmd
+        self.cmd = cmd    
+
+class InterruptableThread(threading.Thread):
+    
+    def __init__(self, target, name=None, args=[], kwargs={}):
         
+        super(InterruptableThread, self).__init__(target=target, name=name, args=args, kwargs=kwargs)
+        self.setDaemon(True)
+        self.__result = None
+        self.__target = target
+        self.__name = name
+        self.__args = args
+        self.__kwargs = kwargs
+        
+    @property
+    def result(self):
+        return self.__result
+    
+    def run(self):
+        try:
+            self.__result = self.__target(*self.__args, **self.__kwargs)
+        except Exception as ex:
+            print ex
+            self.__result = None
+        
+class REMatchProxy(object):
+    
+    def __init__(self, match):
+
+        self._start = [match.start()]
+        self._end = [match.end()]
+        self._groups = match.groups()        
+                
+        for i, dummy in enumerate(self._groups, start=1):
+            self._start.append(match.start(i))
+            self._end.append(match.end(i))            
+    
+    def start(self, group=0):
+        try:
+            if not group >= 0:
+                raise IndexError
+            return self._start[group]
+        except IndexError:
+            raise IndexError('no such group') 
+    
+    def end(self, group=0):
+        try:
+            if not group >= 0:
+                raise IndexError
+            return self._end[group]
+        except IndexError:
+            raise IndexError('no such group') 
+    
+    def groups(self):
+        return self._groups
+    
 class EnumValueError(ValueError):
     pass
 class EnumMemberError(AttributeError):

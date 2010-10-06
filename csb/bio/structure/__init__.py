@@ -275,7 +275,7 @@ class Structure(csb.pyutils.AbstractNIContainer):
                         element = repr(atom.element)
                     else:
                         element = ' '
-                    stream.writeline('ATOM  {0:>5} {1:>4}{2}{3:3} {4}{5:>4}{6}   {7:>8.3f}{8:>8.3f}{9:>8.3f}{10:>6.2f}{11:>6.2f}{12:>12}{13:2}'.format(
+                    stream.writeline('ATOM  {0:>5} {1:>4}{2}{3:>3} {4}{5:>4}{6}   {7:>8.3f}{8:>8.3f}{9:>8.3f}{10:>6.2f}{11:>6.2f}{12:>12}{13:2}'.format(
                                         atom.serial_number, atom._full_name, isnull(alt, ' '), 
                                         chain.format_residue(residue), chain.id, 
                                         isnull(residue.sequence_number, residue.rank), isnull(residue.insertion_code, ' '), 
@@ -1208,7 +1208,7 @@ class ResidueAtomsTable(csb.pyutils.DictionaryContainer):
                 self[atom.name].append(atom)          
         else:
             if atom.name in self:
-                raise DuplicateAtomIDError('Atom {0} is already defined for the current residue.'.format(atom.name))
+                raise DuplicateAtomIDError('Atom {0} is already defined for {1}'.format(atom.name, self.__residue))
             else:                   
                 super(ResidueAtomsTable, self).append(atom.name, atom)
                 atom._residue = self.__residue
