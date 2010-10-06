@@ -13,6 +13,59 @@ from csb.bio.structure import ChemElements, SecStructures
 from numpy import array
 
 
+PDB_AMINOACIDS = {
+    'PAQ': 'TYR', 'AGM': 'ARG', 'ILE': 'ILE', 'PR3': 'CYS', 'GLN': 'GLN',
+    'DVA': 'VAL', 'CCS': 'CYS', 'ACL': 'ARG', 'GLX': 'GLX', 'GLY': 'GLY',
+    'GLZ': 'GLY', 'DTH': 'THR', 'OAS': 'SER', 'C6C': 'CYS', 'NEM': 'HIS',
+    'DLY': 'LYS', 'MIS': 'SER', 'SMC': 'CYS', 'GLU': 'GLU', 'NEP': 'HIS',
+    'BCS': 'CYS', 'ASQ': 'ASP', 'ASP': 'ASP', 'SCY': 'CYS', 'SER': 'SER',
+    'LYS': 'LYS', 'SAC': 'SER', 'PRO': 'PRO', 'ASX': 'ASX', 'DGN': 'GLN',
+    'DGL': 'GLU', 'MHS': 'HIS', 'ASB': 'ASP', 'ASA': 'ASP', 'NLE': 'LEU',
+    'DCY': 'CYS', 'ASK': 'ASP', 'GGL': 'GLU', 'STY': 'TYR', 'SEL': 'SER',
+    'CGU': 'GLU', 'ASN': 'ASN', 'ASL': 'ASP', 'LTR': 'TRP', 'DAR': 'ARG',
+    'VAL': 'VAL', 'CHG': 'ALA', 'TPO': 'THR', 'CLE': 'LEU', 'GMA': 'GLU',
+    'HAC': 'ALA', 'AYA': 'ALA', 'THR': 'THR', 'TIH': 'ALA', 'SVA': 'SER',
+    'MVA': 'VAL', 'SAR': 'GLY', 'LYZ': 'LYS', 'BNN': 'ALA', '5HP': 'GLU',
+    'IIL': 'ILE', 'SHR': 'LYS', 'HAR': 'ARG', 'FME': 'MET', 'ALO': 'THR',
+    'PHI': 'PHE', 'ALM': 'ALA', 'PHL': 'PHE', 'MEN': 'ASN', 'TPQ': 'ALA',
+    'GSC': 'GLY', 'PHE': 'PHE', 'ALA': 'ALA', 'MAA': 'ALA', 'MET': 'MET',
+    'UNK': 'UNK', 'LEU': 'LEU', 'ALY': 'LYS', 'SET': 'SER', 'GL3': 'GLY',
+    'TRG': 'LYS', 'CXM': 'MET', 'TYR': 'TYR', 'SCS': 'CYS', 'DIL': 'ILE',
+    'TYQ': 'TYR', '3AH': 'HIS', 'DPR': 'PRO', 'PRR': 'ALA', 'CME': 'CYS',
+    'IYR': 'TYR', 'CY1': 'CYS', 'TYY': 'TYR', 'HYP': 'PRO', 'DTY': 'TYR',
+    '2AS': 'ASP', 'DTR': 'TRP', 'FLA': 'ALA', 'DPN': 'PHE', 'DIV': 'VAL',
+    'PCA': 'GLU', 'MSE': 'MET', 'MSA': 'GLY', 'AIB': 'ALA', 'CYS': 'CYS',
+    'NLP': 'LEU', 'CYQ': 'CYS', 'HIS': 'HIS', 'DLE': 'LEU', 'CEA': 'CYS',
+    'DAL': 'ALA', 'LLP': 'LYS', 'DAH': 'PHE', 'HMR': 'ARG', 'TRO': 'TRP',
+    'HIC': 'HIS', 'CYG': 'CYS', 'BMT': 'THR', 'DAS': 'ASP', 'TYB': 'TYR',
+    'BUC': 'CYS', 'PEC': 'CYS', 'BUG': 'LEU', 'CYM': 'CYS', 'NLN': 'LEU',
+    'CY3': 'CYS', 'HIP': 'HIS', 'CSO': 'CYS', 'TPL': 'TRP', 'LYM': 'LYS',
+    'DHI': 'HIS', 'MLE': 'LEU', 'CSD': 'ALA', 'HPQ': 'PHE', 'MPQ': 'GLY',
+    'LLY': 'LYS', 'DHA': 'ALA', 'DSN': 'SER', 'SOC': 'CYS', 'CSX': 'CYS',
+    'OMT': 'MET', 'DSP': 'ASP', 'PTR': 'TYR', 'TRP': 'TRP', 'CSW': 'CYS',
+    'EFC': 'CYS', 'CSP': 'CYS', 'CSS': 'CYS', 'SCH': 'CYS', 'OCS': 'CYS',
+    'NMC': 'GLY', 'SEP': 'SER', 'BHD': 'ASP', 'KCX': 'LYS', 'SHC': 'CYS',
+    'C5C': 'CYS', 'HTR': 'TRP', 'ARG': 'ARG', 'TYS': 'TYR', 'ARM': 'ARG',
+    'DNP': 'ALA'
+    }
+"""
+Dictionary of non-standard amino acids, which could be found in PDB.
+"""
+
+
+PDB_NUCLEOTIDES = {
+    'DA': 'Adenine', 'DG': 'Guanine', 'DC': 'Cytosine', 'DT': 'Thymine',
+     'A': 'Adenine', 'G': 'Guanine', 'C': 'Cytosine', 'T': 'Thymine',
+     'U': 'Uracil', 'DOC': 'Cytosine', 'R': 'Purine', 'Y': 'Pyrimidine',
+     'K': 'Ketone', '  M': 'Amino', 'S': 'Strong', 'W': 'Weak',
+     'B': 'NotA', 'D'  : 'NotC', 'H': 'NotG', 'V': 'NotT',
+     'N': 'Any', 'X'  : 'Masked'
+    }
+"""
+Dictionary of non-standard nucleotides, which could be found in PDB.
+"""
+
+
 class PDBParseError(ValueError):
     pass
 
@@ -38,59 +91,12 @@ class AbstractStructureParser(object):
 
     __metaclass__ = ABCMeta
 
-    BLACKLIST = set(['1qd7', '3m9s', '3m9c', '3kgv', '3irj',
-                     '1fka', '3irk', '2odr', '3irl', '1w5c'])
     """
     List of PDB structures which are known to cause parser hanging.
     """
 
-    _pdb_aminoacids = {
-        'PAQ': 'TYR', 'AGM': 'ARG', 'ILE': 'ILE', 'PR3': 'CYS', 'GLN': 'GLN',
-        'DVA': 'VAL', 'CCS': 'CYS', 'ACL': 'ARG', 'GLX': 'GLX', 'GLY': 'GLY',
-        'GLZ': 'GLY', 'DTH': 'THR', 'OAS': 'SER', 'C6C': 'CYS', 'NEM': 'HIS',
-        'DLY': 'LYS', 'MIS': 'SER', 'SMC': 'CYS', 'GLU': 'GLU', 'NEP': 'HIS',
-        'BCS': 'CYS', 'ASQ': 'ASP', 'ASP': 'ASP', 'SCY': 'CYS', 'SER': 'SER',
-        'LYS': 'LYS', 'SAC': 'SER', 'PRO': 'PRO', 'ASX': 'ASX', 'DGN': 'GLN',
-        'DGL': 'GLU', 'MHS': 'HIS', 'ASB': 'ASP', 'ASA': 'ASP', 'NLE': 'LEU',
-        'DCY': 'CYS', 'ASK': 'ASP', 'GGL': 'GLU', 'STY': 'TYR', 'SEL': 'SER',
-        'CGU': 'GLU', 'ASN': 'ASN', 'ASL': 'ASP', 'LTR': 'TRP', 'DAR': 'ARG',
-        'VAL': 'VAL', 'CHG': 'ALA', 'TPO': 'THR', 'CLE': 'LEU', 'GMA': 'GLU',
-        'HAC': 'ALA', 'AYA': 'ALA', 'THR': 'THR', 'TIH': 'ALA', 'SVA': 'SER',
-        'MVA': 'VAL', 'SAR': 'GLY', 'LYZ': 'LYS', 'BNN': 'ALA', '5HP': 'GLU',
-        'IIL': 'ILE', 'SHR': 'LYS', 'HAR': 'ARG', 'FME': 'MET', 'ALO': 'THR',
-        'PHI': 'PHE', 'ALM': 'ALA', 'PHL': 'PHE', 'MEN': 'ASN', 'TPQ': 'ALA',
-        'GSC': 'GLY', 'PHE': 'PHE', 'ALA': 'ALA', 'MAA': 'ALA', 'MET': 'MET',
-        'UNK': 'UNK', 'LEU': 'LEU', 'ALY': 'LYS', 'SET': 'SER', 'GL3': 'GLY',
-        'TRG': 'LYS', 'CXM': 'MET', 'TYR': 'TYR', 'SCS': 'CYS', 'DIL': 'ILE',
-        'TYQ': 'TYR', '3AH': 'HIS', 'DPR': 'PRO', 'PRR': 'ALA', 'CME': 'CYS',
-        'IYR': 'TYR', 'CY1': 'CYS', 'TYY': 'TYR', 'HYP': 'PRO', 'DTY': 'TYR',
-        '2AS': 'ASP', 'DTR': 'TRP', 'FLA': 'ALA', 'DPN': 'PHE', 'DIV': 'VAL',
-        'PCA': 'GLU', 'MSE': 'MET', 'MSA': 'GLY', 'AIB': 'ALA', 'CYS': 'CYS',
-        'NLP': 'LEU', 'CYQ': 'CYS', 'HIS': 'HIS', 'DLE': 'LEU', 'CEA': 'CYS',
-        'DAL': 'ALA', 'LLP': 'LYS', 'DAH': 'PHE', 'HMR': 'ARG', 'TRO': 'TRP',
-        'HIC': 'HIS', 'CYG': 'CYS', 'BMT': 'THR', 'DAS': 'ASP', 'TYB': 'TYR',
-        'BUC': 'CYS', 'PEC': 'CYS', 'BUG': 'LEU', 'CYM': 'CYS', 'NLN': 'LEU',
-        'CY3': 'CYS', 'HIP': 'HIS', 'CSO': 'CYS', 'TPL': 'TRP', 'LYM': 'LYS',
-        'DHI': 'HIS', 'MLE': 'LEU', 'CSD': 'ALA', 'HPQ': 'PHE', 'MPQ': 'GLY',
-        'LLY': 'LYS', 'DHA': 'ALA', 'DSN': 'SER', 'SOC': 'CYS', 'CSX': 'CYS',
-        'OMT': 'MET', 'DSP': 'ASP', 'PTR': 'TYR', 'TRP': 'TRP', 'CSW': 'CYS',
-        'EFC': 'CYS', 'CSP': 'CYS', 'CSS': 'CYS', 'SCH': 'CYS', 'OCS': 'CYS',
-        'NMC': 'GLY', 'SEP': 'SER', 'BHD': 'ASP', 'KCX': 'LYS', 'SHC': 'CYS',
-        'C5C': 'CYS', 'HTR': 'TRP', 'ARG': 'ARG', 'TYS': 'TYR', 'ARM': 'ARG',
-        'DNP': 'ALA'
-        }
-
-    _pdb_nucleotides = {
-        'DA': 'Adenine', 'DG': 'Guanine', 'DC': 'Cytosine', 'DT': 'Thymine',
-         'A': 'Adenine', 'G': 'Guanine', 'C': 'Cytosine', 'T': 'Thymine',
-         'U': 'Uracil', 'DOC': 'Cytosine', 'R': 'Purine', 'Y': 'Pyrimidine',
-         'K': 'Ketone', '  M': 'Amino', 'S': 'Strong', 'W': 'Weak',
-         'B': 'NotA', 'D'  : 'NotC', 'H': 'NotG', 'V': 'NotT',
-         'N': 'Any', 'X'  : 'Masked'
-        }
-
     @staticmethod
-    def create_parser(structure_file):
+    def create_parser(structure_file, check_ss=False):
         """
         A StructureParser factory, which instantiates and returns the proper parser
         object based on the contents of the PDB file.
@@ -117,12 +123,11 @@ class AbstractStructureParser(object):
         else:
             return LegacyStructureParser(structure_file)        
 
-    def __init__(self, structure_file, check_ss=True, blacklist=True):
+    def __init__(self, structure_file, check_ss=False):
 
         self._file = None
         self._stream = None
-        self._check_ss = bool(check_ss)
-        self._blacklist = bool(blacklist)        
+        self._check_ss = bool(check_ss)        
 
         self.filename = structure_file
 
@@ -189,11 +194,9 @@ class AbstractStructureParser(object):
         @raise UnknownPDBResidueError: when there is no such PDB residue name
                                        into the catalog tables
         """
-        lookup = self.__class__
-         
-        if residue_name in lookup._pdb_aminoacids:
+        if residue_name in PDB_AMINOACIDS:
             return SequenceTypes.Protein
-        elif residue_name in lookup._pdb_nucleotides:
+        elif residue_name in PDB_NUCLEOTIDES:
             return SequenceTypes.NucleicAcid
         else:
             raise UnknownPDBResidueError(residue_name)
@@ -217,15 +220,13 @@ class AbstractStructureParser(object):
                                        into the catalog table(s)
         """
         if as_type is None:
-            as_type = self.guess_sequence_type(residue_name)
-
-        lookup = self.__class__            
+            as_type = self.guess_sequence_type(residue_name)         
 
         try:
             if as_type == SequenceTypes.Protein:
-                return lookup._pdb_aminoacids[residue_name]
+                return PDB_AMINOACIDS[residue_name]
             elif as_type == SequenceTypes.NucleicAcid:
-                return lookup._pdb_nucleotides[residue_name]
+                return PDB_NUCLEOTIDES[residue_name]
             else:
                 raise UnknownPDBResidueError(residue_name)
         except KeyError:
@@ -467,7 +468,7 @@ class AbstractStructureParser(object):
                     res_name = a._residue_name.value
                     if a._het:
                         # if it is a HET atom, initiate an optional fragment
-                        fragments.append([res_name, '?'])                        
+                        fragments.append([res_name, '??'])                        
                     if i == 0 or a._sequence_number - lookup[seq_numbers[i - 1]][0] not in (0, 1, -1):
                         # if residues [i, i-1] are not consecutive or 'overlapping', initiate a new fragment:
                         fragments.append([res_name])
@@ -477,9 +478,13 @@ class AbstractStructureParser(object):
             
             for i, frag in enumerate(fragments):
                 fragments[i] = ''.join(frag)
-            query = '^.*({0}).*$'.format(').*('.join(fragments))
-
+            if len(fragments) > 100:
+                # Python's regex engine will crash with more than 100 groups
+                raise PDBParseError("Can't map structure with more than 100 fragments in ATOMS") 
+            query = '^.*?({0}).*?$'.format(').*?('.join(fragments))
+            
             matches = re.match(query, subject)
+            
             if matches:
                 seq_numitem = -1
                 for frag_number, frag in enumerate(matches.groups(), start=1):
@@ -621,8 +626,6 @@ class RegularStructureParser(AbstractStructureParser):
             raise ValueError('Does not look like a regular PDB file.')
 
         structure = csb.bio.structure.Structure(header.split()[-1])
-        if self._blacklist and structure.accession in self.__class__.BLACKLIST:
-            raise PDBParseError('Structure {0} is blacklisted'.format(structure.accession))
 
         while True:
 
