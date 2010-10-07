@@ -195,9 +195,9 @@ class AbstractStructureParser(object):
                                        into the catalog tables
         """
         if residue_name in PDB_AMINOACIDS:
-            return SequenceTypes.Protein
+            return SequenceTypes.Protein                                #@UndefinedVariable
         elif residue_name in PDB_NUCLEOTIDES:
-            return SequenceTypes.NucleicAcid
+            return SequenceTypes.NucleicAcid                            #@UndefinedVariable
         else:
             raise UnknownPDBResidueError(residue_name)
 
@@ -223,9 +223,9 @@ class AbstractStructureParser(object):
             as_type = self.guess_sequence_type(residue_name)         
 
         try:
-            if as_type == SequenceTypes.Protein:
+            if as_type == SequenceTypes.Protein:                            #@UndefinedVariable
                 return PDB_AMINOACIDS[residue_name]
-            elif as_type == SequenceTypes.NucleicAcid:
+            elif as_type == SequenceTypes.NucleicAcid:                      #@UndefinedVariable
                 return PDB_NUCLEOTIDES[residue_name]
             else:
                 raise UnknownPDBResidueError(residue_name)
@@ -248,12 +248,12 @@ class AbstractStructureParser(object):
         try:
             return self.parse_residue(residue_name, as_type)
         except UnknownPDBResidueError:
-            if as_type == SequenceTypes.Protein:
-                return repr(SequenceAlphabets.Protein.UNK)
-            elif as_type == SequenceTypes.NucleicAcid:
-                return repr(SequenceAlphabets.Nucleic.Any)
+            if as_type == SequenceTypes.Protein:                        #@UndefinedVariable
+                return repr(SequenceAlphabets.Protein.UNK)              #@UndefinedVariable
+            elif as_type == SequenceTypes.NucleicAcid:                  #@UndefinedVariable
+                return repr(SequenceAlphabets.Nucleic.Any)              #@UndefinedVariable
             else:
-                return repr(SequenceAlphabets.Unknown.UNK)
+                return repr(SequenceAlphabets.Unknown.UNK)              #@UndefinedVariable
 
     def parse(self, filename=None, model=None):
 
@@ -383,7 +383,7 @@ class AbstractStructureParser(object):
                             element = csb.pyutils.Enum.parsename(ChemElements, element)
                         except csb.pyutils.EnumMemberError as ee:
                             if element in ('D', 'X'):
-                                element = ChemElements.x
+                                element = ChemElements.x                            #@UndefinedVariable
                             else:
                                 raise ee
                     else:
@@ -412,7 +412,7 @@ class AbstractStructureParser(object):
                     chains.add(atom._chain)
                     residue_name = line[17:20].strip()
                     residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[atom._chain].type)
-                    if structure.chains[atom._chain].type == SequenceTypes.NucleicAcid:
+                    if structure.chains[atom._chain].type == SequenceTypes.NucleicAcid:                               #@UndefinedVariable
                         atom._residue_name = csb.pyutils.Enum.parsename(SequenceAlphabets.Nucleic, residue_name)
                     else:
                         atom._residue_name = csb.pyutils.Enum.parsename(SequenceAlphabets.Protein, residue_name)
@@ -576,7 +576,7 @@ class AbstractStructureParser(object):
                         raise PDBParseError('Helix {0} is out of range'.format(line[7:10]))
                     else:
                         continue                    
-                helix = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Helix)
+                helix = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Helix)        #@UndefinedVariable
                 elements[chain.id].append(helix)
             
             if line.startswith('SHEET'):
@@ -602,7 +602,7 @@ class AbstractStructureParser(object):
                         raise PDBParseError('Sheet {0} is out of range'.format(line[7:10]))
                     else:
                         continue
-                strand = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Strand)
+                strand = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Strand)      #@UndefinedVariable
                 elements[chain.id].append(strand)         
             
             elif line.startswith('MODEL') or line.startswith('ATOM'):

@@ -651,7 +651,7 @@ PCT   {0.pseudocounts}'''.format(hmm))
                 chain_id = self.id.rstrip()[-1]
             else:
                 chain_id = '_'
-        chain = structure.Chain(chain_id, type=sequence.SequenceTypes.Protein, residues=self.residues)
+        chain = structure.Chain(chain_id, type=sequence.SequenceTypes.Protein, residues=self.residues)      #@UndefinedVariable
 
         return chain
 
@@ -1721,28 +1721,6 @@ class HHpredHit(object):
             return self.end - self.start + 1
         except:
             return 0
-
-    def includes(self, other, tolerance=1):
-        """
-        Return True if other overlaps with self
-
-        @type other: HHpredHit
-        @param tolerance: allow partial overlaps for that number of residues
-                          at either end
-        @type tolerance: int
-
-        @rtype: bool
-        """
-        if self.id == other.id:
-            if other.start >= self.start:
-                if other.end <= self.end or \
-                       other.start <= (self.end - tolerance):
-                    return True
-            elif other.end <= self.end:
-                if other.end >= (self.start + tolerance):
-                    return True
-
-        return False
 
 
 class HHpredHitList(object):
