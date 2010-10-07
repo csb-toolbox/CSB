@@ -5,6 +5,7 @@ HHpred-related format parsers.
 import os
 import re
 
+import numpy
 import csb.io
 import csb.pyutils
 import csb.bio.io
@@ -605,11 +606,11 @@ class HHpredProfileParser(object):
                             structure.ChemElements, element)
                     except csb.pyutils.EnumMemberError as ee:
                         if element in ('D', 'X'):
-                            element = structure.ChemElements.x
+                            element = structure.ChemElements.x              #@UndefinedVariable
                         else:
                             raise ee
                     x, y, z = line[30:38], line[38:46], line[46:54]
-                    vector = structure.Vector(float(x), float(y), float(z))
+                    vector = numpy.array([float(x), float(y), float(z)])
 
                     atom = structure.Atom(serial_number, name, element, vector)
                     atom.rank = rank + offset_fix

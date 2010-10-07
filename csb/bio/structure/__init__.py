@@ -391,7 +391,8 @@ class Chain(csb.pyutils.AbstractNIContainer):
     @param molecule_id: MOL ID of the chain, if part of a polymer
     
     """
-    def __init__(self, chain_id, type=SequenceTypes.Protein, name='', residues=None, accession=None, molecule_id=None):
+    def __init__(self, chain_id, type=SequenceTypes.Protein, name='',           #@UndefinedVariable
+                 residues=None, accession=None, molecule_id=None):       
 
         self._id = str(chain_id).strip()
         self._accession = None
@@ -496,9 +497,9 @@ class Chain(csb.pyutils.AbstractNIContainer):
     
     @property
     def alphabet(self):
-        if self._type == SequenceTypes.Protein:
+        if self._type == SequenceTypes.Protein:                             #@UndefinedVariable
             return SequenceAlphabets.Protein
-        elif self._type == SequenceTypes.NucleicAcid:
+        elif self._type == SequenceTypes.NucleicAcid:                       #@UndefinedVariable
             return SequenceAlphabets.Nucleic            
         else:
             raise NotImplementedError()
@@ -580,7 +581,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         @return: PDB-friendly string representation of the residue type
         @rtype: str
         """
-        if self.type == SequenceTypes.NucleicAcid:
+        if self.type == SequenceTypes.NucleicAcid:                                  #@UndefinedVariable
             return str(residue.type)
         else:
             return repr(residue.type)        
@@ -614,7 +615,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         @raise Missing3DStructureError: when a 3D structure is absent
         @raise Broken3DStructureError: when a given atom cannot be retrieved from any residue
         """
-        if self.type != SequenceTypes.Protein:
+        if self.type != SequenceTypes.Protein:                          #@UndefinedVariable
             raise NotImplementedError()
                
         for i, residue in enumerate(self.residues, start=self.residues.start_index):
@@ -670,7 +671,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
             
         return numpy.array(coords)
     
-    def superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):
+    def superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):                       #@UndefinedVariable
         """
         Find the optimal fit between C{self} and C{other}. Return L{SuperimposeInfo}
         (RotationMatrix, translation Vector and RMSD), such that:
@@ -699,7 +700,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         y = other.list_coordinates(what) 
         assert len(x) == len(y)
 
-        if how == AlignmentTypes.Global:
+        if how == AlignmentTypes.Global:                                    #@UndefinedVariable
             r, t = csb.bio.utils.fit(x, y)
         else:
             r, t = csb.bio.utils.fit_wellordered(x, y)
@@ -708,7 +709,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         
         return SuperimposeInfo(r, t, rmsd=rmsd)
                               
-    def align(self, other, what=['CA'], how=AlignmentTypes.Global):
+    def align(self, other, what=['CA'], how=AlignmentTypes.Global):         #@UndefinedVariable
         """
         Align C{other}'s alpha carbons over self in space and return L{SuperimposeInfo}. 
         Coordinates of C{other} are overwritten in place using the rotation matrix
@@ -757,7 +758,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
 
         return csb.bio.utils.rmsd(x, y) 
     
-    def tm_superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):
+    def tm_superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):                    #@UndefinedVariable
         """
         Find the optimal fit between C{self} and C{other}. Return L{SuperimposeInfo}
         (RotationMatrix, translation Vector and TM-score), such that:
@@ -787,7 +788,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         y = other.list_coordinates(what)
         assert len(x) == len(y)
         
-        if how == AlignmentTypes.Global:
+        if how == AlignmentTypes.Global:                                            #@UndefinedVariable
             fit = csb.bio.utils.fit
         else:
             fit = csb.bio.utils.fit_wellordered
@@ -1011,9 +1012,9 @@ class Residue(csb.pyutils.AbstractNIContainer):
         
         @raise ValueError: if the sequence type is not known
         """        
-        if sequence_type == SequenceTypes.Protein:
+        if sequence_type == SequenceTypes.Protein:                                      #@UndefinedVariable
             return ProteinResidue(*arguments, **keyword_arguments)
-        elif sequence_type == SequenceTypes.NucleicAcid:
+        elif sequence_type == SequenceTypes.NucleicAcid:                                #@UndefinedVariable
             return NucleicResidue(*arguments, **keyword_arguments)
         elif sequence_type == SequenceTypes.Unknown:
             return UnknownResidue(*arguments, **keyword_arguments)
@@ -1143,7 +1144,7 @@ class NucleicResidue(Residue):
 class UnknownResidue(Residue):
     
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
-        super(UnknownResidue, self).__init__(rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)        
+        super(UnknownResidue, self).__init__(rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)          #@UndefinedVariable
 
 class ResidueAtomsCollection(csb.pyutils.AbstractContainer):
     

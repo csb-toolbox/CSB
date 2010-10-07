@@ -52,7 +52,7 @@ class TestStrutureParser(unittest.TestCase):
 
         # Residue level 
         self.assertEqual(len(structure['A'][1:10]), 9)
-        self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)
+        self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)                     #@UndefinedVariable
         
     def testLegacyParseStructure(self):
         
@@ -74,12 +74,12 @@ class TestStrutureParser(unittest.TestCase):
 
         # Residue level 
         self.assertEqual(len(structure['A'][1:10]), 9)
-        self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)     
+        self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)             #@UndefinedVariable
         
         # Atom level
         self.assertEqual(structure['A'][0].atoms['CA'].element, None)
         self.assertNotEqual(structure['A'][2].atoms['CA'].element, None)
-        self.assertEqual(structure['A'][2].atoms['CA'].element, ChemElements.C)      
+        self.assertEqual(structure['A'][2].atoms['CA'].element, ChemElements.C)             #@UndefinedVariable
 
     def testGet(self):
         structure = get('1d3z')
@@ -94,7 +94,7 @@ class TestStrutureParser(unittest.TestCase):
 
         # Residue level 
         self.assertEqual(len(structure['A'][1:10]), 9)
-        self.assertEqual(structure['A'][0].type,SequenceAlphabets.Protein.MET)
+        self.assertEqual(structure['A'][0].type,SequenceAlphabets.Protein.MET)              #@UndefinedVariable
 
 
 if __name__ == '__main__':

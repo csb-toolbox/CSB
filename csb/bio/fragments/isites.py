@@ -988,7 +988,7 @@ class Cluster(object):
         if rep_chain is None:
             rep_chain = source.id[5].upper()
 
-        chain = structure.Chain(rep_chain, structure.SequenceTypes.Protein,
+        chain = structure.Chain(rep_chain, structure.SequenceTypes.Protein,             #@UndefinedVariable
                                 None, residues, rep_accession)
         chain.compute_torsion()
 
