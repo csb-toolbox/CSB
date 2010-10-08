@@ -8,4 +8,4 @@ main = Console
 
 if __name__ == '__main__':
     
-    main()
+    main('csb.test.cases.*')

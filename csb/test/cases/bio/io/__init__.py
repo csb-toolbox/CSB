@@ -64,7 +64,7 @@ class TestSequenceParserMethods(test.Case):
         s = self.parser.parse_string(self.data)
         self.assertEquals(len(s), 1)
         self.assertTrue(isinstance(s[0], Sequence))
-        
+    
         
 if __name__ == '__main__':
     
