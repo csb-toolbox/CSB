@@ -243,7 +243,7 @@ class AbstractTestBuilder(object):
         @return: a C{unittest.TestSuite} ready for the test runner
         @rtype: C{unittest.TestSuite}         
         """         
-        mod = imp.load_source('mod' + self._moduleHash(file), file)
+        mod = imp.load_source(self._moduleHash(file), file)
         suite = unittest.TestLoader().loadTestsFromModule(mod)        
         return unittest.TestSuite(self._filter(suite)) 
                 
@@ -260,13 +260,14 @@ class AbstractTestBuilder(object):
         @return: a C{unittest.TestSuite} ready for the test runner
         @rtype: C{unittest.TestSuite} 
         """
-
+        if namespace.strip() == '.*':
+            namespace = '__main__.*'
+        elif namespace.strip() == '.':
+            namespace = '__main__'
+        
         if namespace.endswith('.*'):
             return self.loadAllTests(namespace[:-2])
-        elif namespace in ('__main__', '.'):
-            main = __import__('__main__')
-            return self.loadFromFile(main.__file__)
-        else:
+        else:            
             loader = unittest.TestLoader()
             tests = loader.loadTestsFromName(namespace)                   
             return unittest.TestSuite(self._filter(tests))
@@ -400,7 +401,7 @@ class CustomTestBuilder(AbstractTestBuilder):
     
     def loadFromFile(self, file):
             
-        mod = imp.load_source('mod' + self._moduleHash(file), file)
+        mod = imp.load_source(self._moduleHash(file), file)
         suites = self._inspect(mod)
         
         return unittest.TestSuite(suites) 

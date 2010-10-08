@@ -110,18 +110,26 @@ class EnumValueError(ValueError):
 class EnumMemberError(AttributeError):
     pass
 
-def deepcopy(obj):
+def deepcopy(obj, recursion=100000):
     """
     Perform a deep copy of obj using cPickle. Faster than copy.deepcopy()
     for large objects.
     
     @param obj: the object to copy
     @return: a deep copy of obj
+    @param recursion: maximum recursion limit
+    @type recursion: int
     """
     import cPickle, sys
-    sys.setrecursionlimit(100000)
+    
+    current = sys.getrecursionlimit()
+    sys.setrecursionlimit(recursion)
+    
     tmp = cPickle.dumps(obj, cPickle.HIGHEST_PROTOCOL)
-    return cPickle.loads(tmp)
+    copy = cPickle.loads(tmp)
+    
+    sys.setrecursionlimit(current)
+    return copy    
 
 class enum(object):
     """
@@ -300,7 +308,7 @@ class Enum(object):
         @raise EnumValueError: when value is not found in enum
         """
 
-        if ignore_case:
+        if isinstance(value, basestring) and ignore_case:
             values = enum._uq_valuesci
             value = value.lower()
         else:
@@ -329,7 +337,7 @@ class Enum(object):
         @raise EnumValueError: when name is not found in enum's members        
         """
 
-        if ignore_case:
+        if isinstance(name, basestring) and ignore_case:
             names = enum._uq_namesci
             name = name.lower()
         else:
