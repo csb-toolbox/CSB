@@ -268,8 +268,22 @@ class TestAbstractNIContainer(test.Case):
     
     def testIterator(self):
         self.assertEqual(list(self.items), list(self.test))
-            
+           
+@test.functional
+class TestOrderedDict(test.Case):
+    
+    def runTest(self):
+         
+        items = [('G', 4), ('A', 2), ('C', 8), ('B', 7)]
+        odict = utils.OrderedDict(items)
+        
+        self.assertEquals(odict.items(), items)
+        
+        for i, k in enumerate(odict):
+            self.assertEqual(k, items[i][0])            
+            self.assertEqual(odict[k], items[i][1])
+        
         
 if __name__ == '__main__':
     
-    test.Console()        
+    test.Console()
