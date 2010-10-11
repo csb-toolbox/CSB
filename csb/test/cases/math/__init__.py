@@ -1,13 +1,12 @@
-import unittest
+import csb.test as test
 import numpy as np
 
-class TestMath(unittest.TestCase):
+@test.unit
+class TestMath(test.Case):
 
-
-    def test_dihedral_angles(self):
+    def testDihedralAngles(self):
         from csb.math import dihedral_angle
 
-        
         a = np.array([1,0.,0.])
         b = np.array([0,0.,0.])
         c = np.array([0,1.,0.])
@@ -18,7 +17,7 @@ class TestMath(unittest.TestCase):
         self.assertEqual(dihedral_angle(a,b,c,a), 0.0)
         self.assertEqual(dihedral_angle(a,b,c,-d), -90.0)
 
-    def test_log(self):
+    def testLog(self):
         from csb.math import log, LOG_MAX, LOG_MIN
         from numpy import log as ref_log
 
@@ -29,7 +28,7 @@ class TestMath(unittest.TestCase):
         self.assertEqual(log(0.1 * LOG_MIN),log(LOG_MIN))
 
 
-    def test_exp(self):
+    def testExp(self):
         from csb.math import exp, EXP_MAX, EXP_MIN
         from numpy import exp as ref_exp
         
@@ -39,7 +38,7 @@ class TestMath(unittest.TestCase):
         self.assertEqual(exp(EXP_MAX + 10.),exp(EXP_MAX))
         self.assertEqual(exp(10. * EXP_MIN),exp(EXP_MIN))
 
-    def test_polar(self):
+    def testPolar(self):
         from csb.math import polar, from_polar
 
         rand = np.random.random(10000)
@@ -47,14 +46,14 @@ class TestMath(unittest.TestCase):
         self.assertTrue((np.abs(rand - from_polar(polar(rand))) < eps).all())
 
 
-    def test_from_polar(self):
+    def testFromPolar(self):
         from csb.math import polar, from_polar
 
         rand = np.random.random(10000)
         eps = 1e-8
         self.assertTrue((np.abs(rand - from_polar(polar(rand))) < eps).all())
 
-    def test_radian2degree(self):
+    def testRadian2Degree(self):
         from csb.math import degree2radian, radian2degree
 
         rand = np.random.random(10000) * 2 * np.pi
@@ -63,7 +62,7 @@ class TestMath(unittest.TestCase):
         self.assertTrue((np.abs(rand - degree2radian(radian2degree(rand))) < eps).all())
 
         
-    def test_degree2radian(self):
+    def testDegree2Radian(self):
         from csb.math import degree2radian, radian2degree
 
         rand = np.random.random(10000) * 2 * np.pi
@@ -75,4 +74,4 @@ class TestMath(unittest.TestCase):
         
         
 if __name__ == '__main__':
-    unittest.main()
+    test.Console()
