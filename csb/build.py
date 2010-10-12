@@ -294,7 +294,7 @@ Options:
         import getopt
         
         try:   
-            options, dummy = getopt.getopt(argv, 'h:i:o:v:', ['help', 'input', 'output', 'verbosity'])
+            options, dummy = getopt.getopt(argv, 'h:i:o:v:', ['help', 'input=', 'output=', 'verbosity='])
             
             for option, value in options:
                 if option in('-h', '--help'):

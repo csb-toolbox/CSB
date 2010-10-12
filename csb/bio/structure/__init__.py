@@ -7,6 +7,7 @@ import re
 import copy
 import math
 import numpy
+import csb.io
 import csb.pyutils
 import csb.math
 import csb.bio.utils
@@ -201,8 +202,8 @@ class Structure(csb.pyutils.AbstractNIContainer):
         """
         Dump the whole structure in PDB format.
         
-        @param output_file: output file name
-        @type output_file: str 
+        @param output_file: output file name or open stream
+        @type output_file: str or stream
         """
         from datetime import datetime
         import StringIO
@@ -290,7 +291,7 @@ class Structure(csb.pyutils.AbstractNIContainer):
         if not output_file:
             return data
         else:
-            with open(output_file, 'w') as out:
+            with csb.io.EntryWriter(output_file, close=False) as out:
                 out.write(data)                
 
 class StructureChainsCollection(csb.pyutils.AbstractContainer):
@@ -497,9 +498,9 @@ class Chain(csb.pyutils.AbstractNIContainer):
     
     @property
     def alphabet(self):
-        if self._type == SequenceTypes.Protein:                             #@UndefinedVariable
+        if self._type == SequenceTypes.Protein:                                                 #@UndefinedVariable
             return SequenceAlphabets.Protein
-        elif self._type == SequenceTypes.NucleicAcid:                       #@UndefinedVariable
+        elif self._type in (SequenceTypes.NucleicAcid, SequenceTypes.DNA, SequenceTypes.RNA):   #@UndefinedVariable
             return SequenceAlphabets.Nucleic            
         else:
             raise NotImplementedError()
@@ -980,7 +981,7 @@ class Residue(csb.pyutils.AbstractNIContainer):
             insertion_code = str(insertion_code).strip()
             id += insertion_code
             if sequence_number is None:
-                raise ValueError('sequence_number must be defined when an insertion_code is specified.')
+                raise InvalidOperation('sequence_number must be defined when an insertion_code is specified.')
         if old_id != id:
             if self._container:
                 if self._container._contains(id):
@@ -1280,6 +1281,7 @@ class Atom(object):
         # pass type- and value-checking control to setters
         self.serial_number = serial_number
         self.vector = vector
+        self.alternate = alternate
         
     def __repr__(self):
         return "<Atom [{0.serial_number}]: {0.name}>".format(self)
@@ -1321,12 +1323,11 @@ class Atom(object):
     @property
     def vector(self):
         return self._vector
-
     @vector.setter
     def vector(self, vector):
         if numpy.shape(vector) <> (3,):
             raise ValueError("Please use three dimensional vectors")
-        self._vector = vector
+        self._vector = numpy.array(vector)
         
 class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
     """
