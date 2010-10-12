@@ -127,6 +127,7 @@ import os
 import sys
 import imp
 import types
+import cPickle
 import hashlib
 import tempfile
 import unittest
@@ -176,6 +177,13 @@ class Config(object):
             raise IOError('Test file not found: {0}'.format(file))
         return file          
     
+    def getPickle(self, fileName, subDir=''):
+        """
+        Same as C{self.getTestFile}, but try to unpickle the data in the file.
+        """
+        file = self.getTestFile(fileName, subDir)
+        return cPickle.load(open(file))
+        
     def getTempStream(self):
         """
         Return a temporary file stream::
@@ -358,12 +366,14 @@ class AbstractTestBuilder(object):
                     
 class AnyTestBuilder(AbstractTestBuilder):
     """
-    Build a test suite of cases, marked as either unit or functional tests.
-    For detailed documentation see L{AbstractTestBuilder}.
+    Build a test suite of cases, marked as either unit, functional or regression
+    tests. For detailed documentation see L{AbstractTestBuilder}.
     """
     @property
     def labels(self):
-        labels = list(UnitTestBuilder().labels) + list(FunctionalTestBuilder().labels)
+        labels = list(UnitTestBuilder().labels) + \
+                 list(FunctionalTestBuilder().labels) + \
+                 list(RegressionTestBuilder().labels)                 
         return labels
 
 class UnitTestBuilder(AbstractTestBuilder):
@@ -383,6 +393,15 @@ class FunctionalTestBuilder(AbstractTestBuilder):
     @property
     def labels(self):
         return ['__csbfunctest__']    
+    
+class RegressionTestBuilder(AbstractTestBuilder):
+    """
+    Build a test suite of cases, marked as regression tests.
+    For detailed documentation see L{AbstractTestBuilder}.    
+    """ 
+    @property
+    def labels(self):
+        return ['__csbregrtest__']        
 
 class CustomTestBuilder(AbstractTestBuilder):
     """
@@ -466,7 +485,20 @@ def functional(klass):
     if not isinstance(klass, (type, types.ClassType)):
         raise TypeError("Can't apply class decorator on {0}".format(type(klass))) 
        
-    klass.__csbfunctest__ = True
+    klass.__csbfuncttest__ = True
+    return klass
+
+def regression(klass):
+    """
+    A class decorator, used to label regression test cases.
+    
+    @param klass: a C{unittest.TestCase} class type
+    @type klass: type
+    """
+    if not isinstance(klass, (type, types.ClassType)):
+        raise TypeError("Can't apply class decorator on {0}".format(type(klass))) 
+       
+    klass.__csbregrtest__ = True
     return klass
     
 def custom(function):
@@ -500,7 +532,8 @@ class Console(object):
     """
     
     BUILDERS = {'unit': UnitTestBuilder, 'functional': FunctionalTestBuilder, 
-                'custom': CustomTestBuilder, 'any': AnyTestBuilder}
+                'custom': CustomTestBuilder, 'any': AnyTestBuilder, 
+                'regression': RegressionTestBuilder}
     
     USAGE = r"""
 CSB Test Runner Console. Usage:
@@ -565,7 +598,7 @@ Options:
         
         try:
             
-            options, args = getopt.getopt(argv, 'h:t:v:', ['help', 'type', 'verbosity'])
+            options, args = getopt.getopt(argv, 'h:t:v:', ['help', 'type=', 'verbosity='])
             
             for option, value in options:
                 if option in('-h', '--help'):

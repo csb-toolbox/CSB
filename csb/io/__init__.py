@@ -115,6 +115,7 @@ class EntryWriter(object):
             self._stream = destination
         elif isinstance(destination, basestring):
             self._stream = open(destination, 'w')
+            self.autoclose = True
             
     def __enter__(self):
         return self
