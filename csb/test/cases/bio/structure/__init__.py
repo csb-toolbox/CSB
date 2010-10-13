@@ -301,7 +301,7 @@ class TestChain(test.Case):
         clone = self.chain.clone()
         si = self.chain.superimpose(clone)
         
-        self.assertEqual(si.rmsd, 0.0)
+        self.assertAlmostEqual(si.rmsd, 0.0, places = 6)
         for coord in si.translation:
             self.assertAlmostEqual(coord, 0.0)
             
@@ -330,7 +330,7 @@ class TestChain(test.Case):
         clone = self.chain.clone()
         si = self.chain.align(clone)
         
-        self.assertEqual(si.rmsd, 0.0)
+        self.assertAlmostEqual(si.rmsd, 0.0, places = 6)
         for coord in si.translation:
             self.assertAlmostEqual(coord, 0.0)
             
