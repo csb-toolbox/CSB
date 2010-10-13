@@ -163,6 +163,11 @@ class TestStructure(test.Case):
                         
             self.assertEqual(pdbraw, open(tmp.name).read())
             
+        # and to a file 
+        tmp = self.config.getTempStream().name   
+        self.structure.to_pdb(tmp)
+        self.assertEqual(pdbraw, open(tmp).read())            
+            
 @test.unit
 class TestChain(test.Case):
 
@@ -193,7 +198,7 @@ class TestChain(test.Case):
         self.assertEqual(chain.accession, 'xxxx')
 
     def testType(self):
-        self.assertEqual(self.chain.type, structure.SequenceTypes.Protein)
+        self.assertEqual(self.chain.type, structure.SequenceTypes.Protein)              #@UndefinedVariable
 
     def testEntryID(self):
         self.assertEqual(self.chain.entry_id, '1nz9A')
@@ -213,14 +218,14 @@ class TestChain(test.Case):
         self.assertEqual(self.chain.alphabet, structure.SequenceAlphabets.Protein)
 
         chain = self.chain.clone()
-        chain.type = structure.SequenceTypes.DNA
+        chain.type = structure.SequenceTypes.DNA                                                    #@UndefinedVariable
         self.assertEqual(chain.alphabet, structure.SequenceAlphabets.Nucleic)
         
     def testSecStructure(self):
         
         self.assertEqual(self.chain.secondary_structure.length, 6)
-        self.assertEqual(self.chain.secondary_structure[1].type, structure.SecStructures.Strand)
-        self.assertEqual(self.chain.secondary_structure[5].type, structure.SecStructures.Helix)     
+        self.assertEqual(self.chain.secondary_structure[1].type, structure.SecStructures.Strand)    #@UndefinedVariable
+        self.assertEqual(self.chain.secondary_structure[5].type, structure.SecStructures.Helix)     #@UndefinedVariable 
         self.assertEqual(self.chain.secondary_structure.to_string(), '---------EEEE--------EEEEEEEE----EEEEEEE----EEEEEE-HHHEEE')        
     
     def testClone(self):
@@ -254,7 +259,7 @@ class TestChain(test.Case):
     def testFormatResidue(self):
         
         alanine = self.chain[0]
-        adenosine = structure.NucleicResidue(1, type=structure.SequenceAlphabets.Nucleic.Adenine)
+        adenosine = structure.NucleicResidue(1, type=structure.SequenceAlphabets.Nucleic.Adenine)   #@UndefinedVariable
         
         self.assertEqual(self.chain.format_residue(alanine), 'ALA')  
         self.assertEqual(self.chain.format_residue(adenosine), 'Adenine')
@@ -310,7 +315,7 @@ class TestChain(test.Case):
         
         # not testable for now, but ensure at least no exception is raised
         si = self.chain.superimpose(clone, what=('C', 'CA',))
-        si = self.chain.superimpose(clone, how=structure.AlignmentTypes.Local)
+        si = self.chain.superimpose(clone, how=structure.AlignmentTypes.Local)          #@UndefinedVariable
         
         # make sure the subject is not moving (as it is the case in .align)
         #  - grab a different structure   
@@ -348,7 +353,7 @@ class TestChain(test.Case):
                 
         # not testable for now, but ensure at least no exception is raised
         si = self.chain.align(clone, what=('C', 'CA',))
-        si = self.chain.align(clone, how=structure.AlignmentTypes.Local)
+        si = self.chain.align(clone, how=structure.AlignmentTypes.Local)            #@UndefinedVariable
         
     def testRMSD(self):
         
@@ -372,7 +377,7 @@ class TestChain(test.Case):
         
         # not testable for now, but ensure at least no exception is raised
         si = self.chain.tm_superimpose(clone, what=('C', 'CA',))
-        si = self.chain.tm_superimpose(clone, how=structure.AlignmentTypes.Local)
+        si = self.chain.tm_superimpose(clone, how=structure.AlignmentTypes.Local)       #@UndefinedVariable
         
         # make sure the subject is not moving (as it is the case in .align)
         #  - grab a different structure   
@@ -403,7 +408,7 @@ class TestChain(test.Case):
         self.assertRaises(csb.pyutils.CollectionIndexError, lambda:self.chain.residues[59])
         self.assertRaises(IndexError, lambda:self.chain[58])
 
-        self.assertEqual(self.chain[0].type, structure.SequenceAlphabets.Protein.ALA)
+        self.assertEqual(self.chain[0].type, structure.SequenceAlphabets.Protein.ALA)       #@UndefinedVariable
         self.assertEqual(self.chain[0].rank, 1)                                   
         self.assertEqual(self.chain[0].sequence_number, 127)        
         self.assertEqual(self.chain[0].id, '127')
@@ -413,7 +418,7 @@ class TestChain(test.Case):
         chain = self.chain.clone()
         chain.compute_torsion()
         assert chain.torsion is not None
-        residue = structure.ProteinResidue(9999, structure.SequenceAlphabets.Protein.ALA, 9999, 'A')
+        residue = structure.ProteinResidue(9999, structure.SequenceAlphabets.Protein.ALA, 9999, 'A')        #@UndefinedVariable
         
         rank = chain.residues.append(residue)        
         self.assertTrue(chain.residues._contains('9999A'))
@@ -425,7 +430,7 @@ class TestChain(test.Case):
         
         self.assertRaises(structure.DuplicateResidueIDError, chain.residues.append, residue)     
         # assert NOT raises DuplicateResidueIDError if id is None:
-        residue = structure.ProteinResidue(99999, structure.SequenceAlphabets.Protein.ALA)        
+        residue = structure.ProteinResidue(99999, structure.SequenceAlphabets.Protein.ALA)          #@UndefinedVariable    
         chain.residues.append(residue)
         chain.residues.append(residue)           
         
@@ -452,7 +457,7 @@ class TestResidue(test.Case):
         self.assertEqual(self.residue['CA'], self.residue.atoms['CA'])
         self.assertEqual(self.residue['CA'], self.residue.items[1])        
         
-        self.assertEqual(self.residue['CA'].element, structure.ChemElements.C)
+        self.assertEqual(self.residue['CA'].element, structure.ChemElements.C)              #@UndefinedVariable
         self.assertEqual(self.residue['CA'].serial_number, 2)    
         
     def testItems(self):
@@ -491,7 +496,7 @@ class TestResidue(test.Case):
         self.assertEqual(self.residue.insertion_code, None)    
         
     def testType(self):
-        self.assertEqual(self.residue.type, structure.SequenceAlphabets.Protein.ALA)
+        self.assertEqual(self.residue.type, structure.SequenceAlphabets.Protein.ALA)        #@UndefinedVariable
 
     def testTorsion(self):
         self.assertEqual(self.residue.torsion.phi, None)
@@ -501,9 +506,9 @@ class TestResidue(test.Case):
         
         factory = structure.Residue.create
 
-        nucleotide = factory(structure.SequenceTypes.NucleicAcid, 1, structure.SequenceAlphabets.Nucleic.Adenine)
-        aminoacid = factory(structure.SequenceTypes.Protein, 1, structure.SequenceAlphabets.Protein.ALA)         
-        unknown = factory(structure.SequenceTypes.Unknown, 1, structure.SequenceAlphabets.Unknown.UNK)
+        nucleotide = factory(structure.SequenceTypes.NucleicAcid, 1, structure.SequenceAlphabets.Nucleic.Adenine)   #@UndefinedVariable
+        aminoacid = factory(structure.SequenceTypes.Protein, 1, structure.SequenceAlphabets.Protein.ALA)            #@UndefinedVariable      
+        unknown = factory(structure.SequenceTypes.Unknown, 1, structure.SequenceAlphabets.Unknown.UNK)              #@UndefinedVariable
         
         self.assertTrue(isinstance(nucleotide, structure.NucleicResidue))
         self.assertTrue(isinstance(aminoacid, structure.ProteinResidue))
@@ -516,18 +521,18 @@ class TestResidue(test.Case):
         # should not raise InvalidOperation (same residue)
         self.assertRaises(structure.DuplicateAtomIDError, self.residue.atoms.append, self.residue['CA'])
                 
-        atom = structure.Atom(9999999999, 'Cx', structure.ChemElements.C, numpy.array([1, 1, 1]))
+        atom = structure.Atom(9999999999, 'Cx', structure.ChemElements.C, numpy.array([1, 1, 1]))                   #@UndefinedVariable
         self.residue.atoms.append(atom)
         self.assertTrue(atom.name in self.residue)
         self.assertEqual(atom.residue, self.residue)
         
         # test alternate handling
-        atom2 = structure.Atom(9999999999, 'Cx', structure.ChemElements.C, numpy.array([2, 2, 2]), alternate=True)
+        atom2 = structure.Atom(9999999999, 'Cx', structure.ChemElements.C, numpy.array([2, 2, 2]), alternate=True)  #@UndefinedVariable
         self.residue.atoms.append(atom2)
         self.assertTrue(isinstance(self.residue['Cx'], structure.DisorderedAtom))
         self.assertEqual(self.residue['Cx'].length, 2)
 
-        atom3 = structure.Atom(9999999999, 'Cx', structure.ChemElements.C, numpy.array([3, 3, 3]))        
+        atom3 = structure.Atom(9999999999, 'Cx', structure.ChemElements.C, numpy.array([3, 3, 3]))          #@UndefinedVariable   
         self.residue.atoms.append(atom3)
         self.assertEqual(self.residue['Cx'].length, 3)  
 
@@ -558,7 +563,7 @@ class TestAtom(test.Case):
         self.assertRaises(TypeError, assign, -2)            
         
     def testElement(self):
-        self.assertEqual(self.atom.element, structure.ChemElements.C)
+        self.assertEqual(self.atom.element, structure.ChemElements.C)                   #@UndefinedVariable
         
     def testResidue(self):
         """
