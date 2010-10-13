@@ -45,6 +45,13 @@ class EntryReader(object):
 
         self.start_marker = start_marker
         self.end_marker = end_marker
+        
+    def __del__(self):
+        
+        try:
+            self._stream.close()
+        except:
+            pass
 
     def entries(self):
         """
@@ -54,6 +61,8 @@ class EntryReader(object):
         @rtype: generator
         """
 
+        self._stream.seek(0)
+        
         entry = ''
         in_entry = False
 
@@ -76,8 +85,6 @@ class EntryReader(object):
 
             if not line:
                 break
-
-        self._stream.close()
 
     def readall(self):
         """
@@ -223,7 +230,6 @@ def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
             os.remove(lockfile)
         except:
             raise IOError('missing lockfile %s' % lockfile)
-
 
 def load(filename, gzip=False, lock=None, lock_path='~/'):
     """

@@ -31,10 +31,10 @@ class TestNumeric(test.Case):
         X,Y = np.meshgrid(xx,yy)
         x = np.array(zip(np.ravel(X),np.ravel(Y)))        
 
-        mean = np.zeros((2,))
+        # mean = np.zeros((2,))
         cov = np.eye(2)
         mu = np.ones(2)
-        D = 2
+        # D = 2
         q = np.sqrt(np.clip(np.sum((x-mu)*np.dot(x-mu,np.linalg.inv(cov).T),-1),0.,1e308))
         f =  exp(- 0.5 * q**2) /((2*pi)* np.sqrt(np.abs(np.linalg.det(cov))))
         f = f.reshape((len(xx),len(yy)))
@@ -55,10 +55,10 @@ class TestNumeric(test.Case):
         X,Y = np.meshgrid(xx,yy)
         x = np.array(zip(np.ravel(X),np.ravel(Y)))        
 
-        mean = np.zeros((2,))
+        # mean = np.zeros((2,))
         cov = np.eye(2)
         mu = np.ones(2)
-        D = 2
+        # D = 2
         q = np.sqrt(np.clip(np.sum((x-mu)*np.dot(x-mu,np.linalg.inv(cov).T),-1),0.,1e308))
         f =  exp(- 0.5 * q**2) /((2*pi)* np.sqrt(np.abs(np.linalg.det(cov))))
         f = f.reshape((len(xx),len(yy)))
@@ -78,10 +78,10 @@ class TestNumeric(test.Case):
         X,Y = np.meshgrid(xx,yy)
         x = np.array(zip(np.ravel(X),np.ravel(Y)))        
 
-        mean = np.zeros((2,))
+        # mean = np.zeros((2,))
         cov = np.eye(2)
         mu = np.ones(2)
-        D = 2
+        # D = 2
         q = np.sqrt(np.clip(np.sum((x-mu)*np.dot(x-mu,np.linalg.inv(cov).T),-1),0.,1e308))
         f =  - 0.5 * q**2  - log((2*pi)* np.sqrt(np.abs(np.linalg.det(cov))))
         f = f.reshape((len(xx),len(yy)))
