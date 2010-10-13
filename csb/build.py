@@ -199,7 +199,7 @@ Options:
         folder is added at the B{beginning} of sys.path.
         """
         import csb.test
-        assert csb.test.__file__.startswith(self._temp), 'csb.test not loaded from the output!' 
+        assert csb.test.__file__.startswith(self._temp), 'csb.test not loaded from the output!'     #@UndefinedVariable
         
         self.log('\n# Running the Test Console...')
                 
