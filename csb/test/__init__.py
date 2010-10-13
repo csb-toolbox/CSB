@@ -485,7 +485,7 @@ def functional(klass):
     if not isinstance(klass, (type, types.ClassType)):
         raise TypeError("Can't apply class decorator on {0}".format(type(klass))) 
        
-    klass.__csbfuncttest__ = True
+    klass.__csbfunctest__ = True
     return klass
 
 def regression(klass):

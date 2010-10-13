@@ -1,0 +1,20 @@
+>Consensus
+eRLkxxxdFxxvxxxgxxxxxxxxxlxxxxxxxxxxRxGxxvsKKvgxAVxRNriKRxlRexxrxxxxxlxxxxdivvixrxxxxxxxxxxxxxxlxxxlxxlxkkixg
+>d1nz0a_ d.14.1.2 (A:) RNase P protein {Thermotoga maritima [TaxId: 2336]}
+ERLRLRRDFLLIFKEGKSLQNEYFVVLFRKNGMDYSRLGIVVKRKFGKATRRNKLKRWVREIFRRNKGVIPKGFDIVVIPRKKLSEEFERVDFWTVREKLLNLLKRIEG
+>gi|108802371|ref|YP_642568.1|(7-116:118) ribonuclease P [Mycobacterium sp. MCS]   gi|119866064|ref|YP_936016.1| ribonuclease P [Mycobacterium sp. KMS]   gi|126438351|ref|YP_001074042.1| ribonuclease P [Mycobacterium sp. JLS]   gi|123177783|sp|Q1B0S2.1|RNPA_MYCSS RecName: Full=Ribonuclease P protein component; Short=RNaseP protein; Short=RNase P protein; AltName: Full=Protein C5   gi|166226724|sp|A3Q8S4.1|RNPA_MYCSJ RecName: Full=Ribonuclease P protein component; Short=RNaseP protein; Short=RNase P protein; AltName: Full=Protein C5   gi|166226725|sp|A1U8R8.1|RNPA_MYCSK RecName: Full=Ribonuclease P protein component; Short=RNaseP protein; Short=RNase P protein; AltName: Full=Protein C5   gi|108772790|gb|ABG11512.1| ribonuclease P protein component [Mycobacterium sp. MCS]   gi|119692153|gb|ABL89226.1| ribonuclease P protein component [Mycobacterium sp. KMS]   gi|126238151|gb|ABO01552.1| ribonuclease P protein component [Mycobacterium sp. JLS]  E=3e-08 s/c=0.55 id=17% cov=100%
+-RMTRSTEFSTTVSKGVRSAQPDLVLHMANvlDDPSGPRVGLVVAKSVGNAVVRHRVSRRLRHSVHPMLDELQPGHRLVIRALPGAASATSARLHQELSAALRRARPRVEA
+>gi|227373914|ref|ZP_03857386.1|(6-99:111) ribonuclease P protein component [Thermobaculum terrenum ATCC BAA-798]   gi|227062537|gb|EEI01571.1| ribonuclease P protein component [Thermobaculum terrenum ATCC BAA-798]  E=3e-06 s/c=0.57 id=23% cov=87%
+-RLTSSKDWKEVRTRGRCSRSSFATICVLFEGESE-KFGFAAAKSIGSVAKRNRAKRRLREAFRQTYKFGSKPCLVIAIA----GPECLTMDFQELKSKL---------
+>gi|124010240|ref|ZP_01694895.1|(9-122:122) ribonuclease P protein component [Microscilla marina ATCC 23134]   gi|123983732|gb|EAY24164.1| ribonuclease P protein component [Microscilla marina ATCC 23134]  E=8e-05 s/c=0.43 id=24% cov=99%
+ERLKSKKIIQSLFPKGKDAFVYPIKvkyILHPTPSNTPPQVLFTVPKRtFKRAVDRNAIKRLLKEAYRLNKHLLhdeAGSYKIAYIAFVYIAK--EKLPFDTIERKTISVFERLKG
+>gi|139352214|gb|ECE59672.1|(37-150:150) hypothetical protein GOS_6065400 [marine metagenome]   gi|142774203|gb|EDA48250.1| hypothetical protein GOS_1993299 [marine metagenome]   gi|139024765|gb|ECC88500.1| hypothetical protein GOS_5642689 [marine metagenome]   gi|139647524|gb|ECG49761.1| hypothetical protein GOS_5517516 [marine metagenome]  E=0.0002 s/c=0.42 id=21% cov=96%
+ESLKKSSHFGTVLKN-RVINNDFYTIYRKKNfikkasNEKKLYISFVMKKKVGNAVKRNRIKRKLKgvvQKMLKINNSINLNYTYVIFGKEKIYSEHSNSLFKNMEKSFNKINK----
+>gi|137813163|gb|EBW14305.1|(5-114:118) hypothetical protein GOS_6793674 [marine metagenome]   gi|143750626|gb|EDG59861.1| hypothetical protein GOS_754256 [marine metagenome]  E=2e-12 s/c=0.68 id=24% cov=99%
+KRMTKRGDFLRAQQGNIKYITSSVVIQLIPNDIQgkfSTRVGFTASKKIGNAVKRNYAKRLMRSLVYRQSNELASSFDYVFIARQAILNKKFYLIESEIMRVLKHFNKNI--
+>gi|148654187|ref|YP_001281280.1|(10-116:130) ribonuclease P protein component [Psychrobacter sp. PRwf-1]   gi|229470482|sp|A5WI39.1|RNPA_PSYWF RecName: Full=Ribonuclease P protein component; Short=RNaseP protein; Short=RNase P protein; AltName: Full=Protein C5   gi|148573271|gb|ABQ95330.1| ribonuclease P protein component [Psychrobacter sp. PRwf-1]  E=1e-11 s/c=0.67 id=24% cov=97%
+KRLLKPAEFKPVFNQPlFKVHQTHFMAFAYDSDHLQARLGMAItKKKIPTAVARNTIKRIIREQFRHTHAQLPA-LDVVFILKKSTKALSNEQMRQEISDILSKVISK---
+>gi|142801636|gb|EDA68688.1|(13-118:120) hypothetical protein GOS_1956086 [marine metagenome]   E=4e-05 s/c=0.48 id=23% cov=95%
+--LKVNSSTIKILNNKPVYNSKILKLYTIPNSEDGPRLAIQITKRaIRLAVTRNLVRRKIKEDFRANYAEIAKHDCLLVISSKisSAKHEISDILMQEWKQSLKSLEK----
+>gi|143373151|gb|EDE62902.1|(90-193:197) hypothetical protein GOS_1097530 [marine metagenome]   E=0.0003 s/c=0.46 id=21% cov=95%
+-RLSRSHEFQRLRREGTRVRSGYLwCVMLQDPSLPGPAVAFAIGRPFGSAVRRNRLRRQLRSILSDRESAMGGG--MFLIGVNNPHRDLPMPSFAQLTHDIDEILNK---
