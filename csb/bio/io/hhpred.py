@@ -17,15 +17,15 @@ from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, \
      States
 
 
-class InvalidHHpredFormatError(ValueError):
+class InvalidHHFormatError(ValueError):
     pass
 
 
-class InvalidHHpredOutputError(InvalidHHpredFormatError):
+class InvalidHHOutputError(InvalidHHFormatError):
     pass
 
 
-class HHpredProfileParser(object):
+class HHProfileParser(object):
     """
     A class that is HHpred HMM format aware.
     Produces a L{ProfileHMM} object representation of a given HHpred profile
@@ -126,7 +126,7 @@ class HHpredProfileParser(object):
         @return: a L{ProfileHMM} instance
         @rtype: L{ProfileHMM}
 
-        @raise InvalidHHpredFormatError: when the hhm file is invalid/corrupt
+        @raise InvalidHHFormatError: when the hhm file is invalid/corrupt
         """
         assert self._chopped
 
@@ -134,17 +134,17 @@ class HHpredProfileParser(object):
         if self._profile:
             self._parse_profile(hmm, units)
         else:
-            raise InvalidHHpredFormatError('Missing HMM profile table.')
+            raise InvalidHHFormatError('Missing HMM profile table.')
 
         if self._properties:
             self._parse_properties(hmm)
         else:
-            raise InvalidHHpredFormatError('No profile properties found.')
+            raise InvalidHHFormatError('No profile properties found.')
 
         if self._sequences:
             self._parse_sequences(hmm)
         else:
-            raise InvalidHHpredFormatError('No profile MSA and secondary ' +
+            raise InvalidHHFormatError('No profile MSA and secondary ' +
                                            'structure found.')
 
         if hmm.dssp:
@@ -176,7 +176,7 @@ class HHpredProfileParser(object):
 
             self._chopped = True
         except IndexError:
-            raise InvalidHHpredFormatError('This file is either not in HHM ' +
+            raise InvalidHHFormatError('This file is either not in HHM ' +
                                            'format, or it is corrupt.')
 
     def _issue(self, hmm, issue):
@@ -449,7 +449,8 @@ class HHpredProfileParser(object):
                                       start=hmm.layers.start_index):
             assert hmm.layers[rank][States.Match].rank == rank
 
-            fields = map(parse_probability, fields.split())
+            ofields = fields.split()
+            fields = map(parse_probability, ofields)
 
             for col, tran in enumerate(tran_types):
 
@@ -537,11 +538,11 @@ class HHpredProfileParser(object):
 
 
                 elif tran == 'Neff':
-                    hmm.layers[rank].effective_matches = float(fields[col]) / abs(hmm.scale)
+                    hmm.layers[rank].effective_matches = float(ofields[col]) / abs(hmm.scale)
                 elif tran == 'Neff_I':
-                    hmm.layers[rank].effective_insertions = float(fields[col]) / abs(hmm.scale)
+                    hmm.layers[rank].effective_insertions = float(ofields[col]) / abs(hmm.scale)
                 elif tran == 'Neff_D':
-                    hmm.layers[rank].effective_deletions = float(fields[col]) / abs(hmm.scale)
+                    hmm.layers[rank].effective_deletions = float(ofields[col]) / abs(hmm.scale)
                 else:
                     raise NotImplementedError(
                         'Unknown transition "{0}"'.format(tran))
@@ -558,7 +559,7 @@ class HHpredProfileParser(object):
         @rtype: hmm
 
         @raise ValueError: if the structure file does not refer to the HMM
-        @raise InvalidHHpredFormatError: when any residue cannot be assigned
+        @raise InvalidHHFormatError: when any residue cannot be assigned
                                          to layer from the HMM
         @raise NotImplementedError: when an unknown data field is encountered
                                     in the PDB file
@@ -594,7 +595,7 @@ class HHpredProfileParser(object):
                             self._issue(hmm, issue)
                             offset_fix += 1
                     except csb.pyutils.CollectionIndexError:
-                        raise InvalidHHpredFormatError(
+                        raise InvalidHHFormatError(
                             'ProteinResidue {0} at fixed position {1} (former {2}) is out of range.'.format(
                                 line[17:20], rank + offset_fix, rank))
 
@@ -652,7 +653,10 @@ class HHpredProfileParser(object):
         return hmm
 
 
-class HHpredOutputParser(object):
+HHpredProfileParser = HHProfileParser
+
+
+class HHOutputParser(object):
     """
     A parser that is HHsearch's hhr ('HHsearch Result') format aware.
 
@@ -666,7 +670,7 @@ class HHpredOutputParser(object):
         self.alignments = alignments
 
     def __repr__(self):
-        return "HHsearch Result Parser"
+        return "<HHsearch Result Parser>"
 
     __str__ = __repr__
 
@@ -680,7 +684,7 @@ class HHpredOutputParser(object):
         @return: parsed hits
         @rtype: HHpredHitList
 
-        @raise InvalidHHpredOutputError: if the output is corrupt
+        @raise InvalidHHOutputError: if the output is corrupt
         """
 
         with open(os.path.expanduser(hhr_file)) as stream:
@@ -696,7 +700,7 @@ class HHpredOutputParser(object):
         @return: parsed hits
         @rtype: HHpredHitList
 
-        @raise InvalidHHpredOutputError: if the output is corrupt
+        @raise InvalidHHOutputError: if the output is corrupt
         """
         import StringIO
 
@@ -786,7 +790,7 @@ class HHpredOutputParser(object):
                 elif line.startswith('No '):
                     c_rank = int(line[3:])
                     if c_rank not in hits:
-                        raise InvalidHHpredOutputError(
+                        raise InvalidHHOutputError(
                             'Alignment {0}. refers to a non-existing hit'.format(c_rank))
                 elif line.startswith('>'):
                     hits[c_rank].name = line[1:].strip()
@@ -821,7 +825,7 @@ class HHpredOutputParser(object):
                 try:
                     hits[rank].add_alignment(alis[rank]['q'], alis[rank]['s'])
                 except (KeyError, ValueError) as er:
-                    raise InvalidHHpredOutputError(
+                    raise InvalidHHOutputError(
                         'Corrupt alignment at hit No {0}.\n {1}'.format(
                             rank, er))
 
@@ -849,3 +853,6 @@ class HHpredOutputParser(object):
                 hits.command = data
 
         return hits
+
+
+HHpredOutputParser = HHOutputParser

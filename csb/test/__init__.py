@@ -134,6 +134,13 @@ import unittest
 
 from abc import ABCMeta, abstractproperty
 
+class Attributes(object):
+    
+    UNIT       = '__CSBUnitTest__'
+    CUSTOM     = '__CSBCustomTest__'    
+    FUNCTIONAL = '__CSBFunctionalTest__'
+    REGRESSION = '__CSBRegressionTest__'    
+
 class Config(object):
     """
     General CSB Test Config. Config instances contain the following properties:
@@ -180,9 +187,29 @@ class Config(object):
     def getPickle(self, fileName, subDir=''):
         """
         Same as C{self.getTestFile}, but try to unpickle the data in the file.
+
+        @param fileName: the name of a test file to retrieve
+        @type fileName: str
+        @param subDir: scan a sub-directory of L{Config.DATA}
+        @type subDir: str           
         """
         file = self.getTestFile(fileName, subDir)
         return cPickle.load(open(file))
+    
+    def getContent(self, fileName, subDir=''):
+        """
+        Same as C{self.getTestFile}, but also read and return the contents of
+        the file.
+        
+        @param fileName: the name of a test file to retrieve
+        @type fileName: str
+        @param subDir: scan a sub-directory of L{Config.DATA}
+        @type subDir: str           
+        """
+        content = None
+        with open(self.getTestFile(fileName, subDir)) as f:
+            content = f.read()
+        return content
         
     def getTempStream(self):
         """
@@ -371,10 +398,7 @@ class AnyTestBuilder(AbstractTestBuilder):
     """
     @property
     def labels(self):
-        labels = list(UnitTestBuilder().labels) + \
-                 list(FunctionalTestBuilder().labels) + \
-                 list(RegressionTestBuilder().labels)                 
-        return labels
+        return [Attributes.UNIT, Attributes.FUNCTIONAL, Attributes.REGRESSION]             
 
 class UnitTestBuilder(AbstractTestBuilder):
     """
@@ -383,7 +407,7 @@ class UnitTestBuilder(AbstractTestBuilder):
     """   
     @property
     def labels(self):
-        return ['__csbunittest__']
+        return [Attributes.UNIT]
     
 class FunctionalTestBuilder(AbstractTestBuilder):
     """
@@ -392,7 +416,7 @@ class FunctionalTestBuilder(AbstractTestBuilder):
     """ 
     @property
     def labels(self):
-        return ['__csbfunctest__']    
+        return [Attributes.FUNCTIONAL]    
     
 class RegressionTestBuilder(AbstractTestBuilder):
     """
@@ -401,7 +425,7 @@ class RegressionTestBuilder(AbstractTestBuilder):
     """ 
     @property
     def labels(self):
-        return ['__csbregrtest__']        
+        return [Attributes.REGRESSION]        
 
 class CustomTestBuilder(AbstractTestBuilder):
     """
@@ -416,7 +440,7 @@ class CustomTestBuilder(AbstractTestBuilder):
     """
     @property
     def labels(self):
-        return ['__csbdatatest__']   
+        return [Attributes.CUSTOM]   
     
     def loadFromFile(self, file):
             
@@ -426,12 +450,14 @@ class CustomTestBuilder(AbstractTestBuilder):
         return unittest.TestSuite(suites) 
                 
     def loadTests(self, namespace):
-        
+
+        if namespace.strip() == '.*':
+            namespace = '__main__.*'
+        elif namespace.strip() == '.':
+            namespace = '__main__'
+                    
         if namespace.endswith('.*'):
             return self.loadAllTests(namespace[:-2])
-        elif namespace in ('__main__', '.'):
-            main = __import__('__main__')
-            return self.loadFromFile(main.__file__)
         else:
             try:
                 mod = __import__(namespace, fromlist=[''])
@@ -472,7 +498,7 @@ def unit(klass):
     if not isinstance(klass, (type, types.ClassType)):
         raise TypeError("Can't apply class decorator on {0}".format(type(klass)))
     
-    klass.__csbunittest__ = True
+    setattr(klass, Attributes.UNIT, True)
     return klass
 
 def functional(klass):
@@ -485,7 +511,7 @@ def functional(klass):
     if not isinstance(klass, (type, types.ClassType)):
         raise TypeError("Can't apply class decorator on {0}".format(type(klass))) 
        
-    klass.__csbfunctest__ = True
+    setattr(klass, Attributes.FUNCTIONAL, True)
     return klass
 
 def regression(klass):
@@ -498,7 +524,7 @@ def regression(klass):
     if not isinstance(klass, (type, types.ClassType)):
         raise TypeError("Can't apply class decorator on {0}".format(type(klass))) 
        
-    klass.__csbregrtest__ = True
+    setattr(klass, Attributes.REGRESSION, True)
     return klass
     
 def custom(function):
@@ -515,7 +541,7 @@ def custom(function):
     elif not hasattr(function, '__call__'):
         raise TypeError("Can't apply function decorator on non-callable {0}".format(type(function))) 
        
-    function.__csbdatatest__ = True
+    setattr(function, Attributes.CUSTOM, True)
     return function
 
 class Console(object):

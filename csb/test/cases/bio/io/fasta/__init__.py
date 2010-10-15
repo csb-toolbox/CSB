@@ -2,26 +2,14 @@ import csb.test as test
 
 from csb.bio.io import SequenceParser
 from csb.bio.sequence import Sequence
-
-
-@test.functional
-class TestSequenceParser(test.Case):
-    
-    def runTest(self):
-        
-        parser = SequenceParser()
-        file = self.config.getTestFile('test.fa')
-        
-        s = parser.parse_file(file)
-        self.assertEquals(len(s), 1)        
         
         
 @test.unit
-class TestSequenceParserMethods(test.Case):
+class TestSequenceParser(test.Case):
     
     def setUp(self):
         
-        super(TestSequenceParserMethods, self).setUp()
+        super(TestSequenceParser, self).setUp()
         
         self.parser = SequenceParser()
         self.file = self.config.getTestFile('test.fa')        
@@ -30,15 +18,25 @@ class TestSequenceParserMethods(test.Case):
     def testParseFile(self):
         
         s = self.parser.parse_file(self.file)
-        self.assertEquals(len(s), 1)
+
+        self.assertEquals(len(s), 3)
+
         self.assertTrue(isinstance(s[0], Sequence))
-    
+        self.assertTrue(s[0].id, 'gi|148654187')
+        self.assertTrue(s[0].sequence, 'RLSRSHEFQRLRREGTRVRSGYLwCVMLQDPSLPGPAVAFAIGRPFGSAVRRNRLRRQLRSILSDRESAMGGGMFLIGVNNPHRDLPMPSFAQLTHDIDEILNK')        
+        self.assertTrue(s[0].header, '>gi|142801636|gb|EDA68688.1 hypothetical protein GOS_1956086')
+            
     def testParseString(self):
-        
+
         s = self.parser.parse_string(self.data)
-        self.assertEquals(len(s), 1)
+                                           
+        self.assertEquals(len(s), 3)
+
         self.assertTrue(isinstance(s[0], Sequence))
-        
+        self.assertTrue(s[0].id, 'gi|148654187')
+        self.assertTrue(s[0].sequence, 'RLSRSHEFQRLRREGTRVRSGYLwCVMLQDPSLPGPAVAFAIGRPFGSAVRRNRLRRQLRSILSDRESAMGGGMFLIGVNNPHRDLPMPSFAQLTHDIDEILNK')
+        self.assertTrue(s[0].header, '>gi|142801636|gb|EDA68688.1 hypothetical protein GOS_1956086')        
+
         
 if __name__ == '__main__':
     
