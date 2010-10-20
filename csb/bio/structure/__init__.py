@@ -525,12 +525,8 @@ class Chain(csb.pyutils.AbstractNIContainer):
         @return: a deep copy of self
         @rtype: L{Chain}
         """
-        
-        new_chain = csb.pyutils.deepcopy(self) # self.subregion(self.residues.start_index, self.residues.last_index, clone=True)
-        new_chain.type = self.type
-        new_chain._structure = None
-        
-        return new_chain       
+        start, end = self.residues.start_index, self.residues.last_index
+        return self.subregion(start, end, clone=True)
         
     def subregion(self, start, end, clone=False):
         """
@@ -563,7 +559,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         residues = self.residues[start : end + 1]
         
         if clone:
-            residues = csb.pyutils.deepcopy(residues)
+            residues = [r.clone() for r in residues]
         
         chain = Chain(self.id, accession=self.accession, name=self.name, 
                       type=self.type, residues=residues, molecule_id=self.molecule_id)
@@ -998,6 +994,15 @@ class Residue(csb.pyutils.AbstractNIContainer):
             return len(self.atoms) > 0
         else:
             return False
+        
+    def clone(self):
+        
+        container = self._container
+        self._container = None
+        clone = csb.pyutils.deepcopy(self)
+        self._container = container
+        
+        return clone
         
     @staticmethod
     def create(sequence_type, *arguments, **keyword_arguments):
