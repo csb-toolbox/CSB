@@ -3,6 +3,18 @@ import csb.bio.structure as structure
 import csb.pyutils
 import numpy
 
+
+@test.regression
+class TestChainCloning(test.Case):
+    
+    def runTest(self):
+        # [CSB 0000029]
+        from csb.bio.io.wwpdb import get
+        chain = get('1s72').chains['T']
+                
+        self.assertFasterThan(0.01, chain.subregion, 1, 1, clone=True)
+        self.assertFasterThan(0.5, chain.clone)
+
 @test.unit
 class TestEnsemble(test.Case):
     

@@ -131,6 +131,7 @@ import cPickle
 import hashlib
 import tempfile
 import unittest
+import time
 
 from abc import ABCMeta, abstractproperty
 
@@ -206,10 +207,8 @@ class Config(object):
         @param subDir: scan a sub-directory of L{Config.DATA}
         @type subDir: str           
         """
-        content = None
         with open(self.getTestFile(fileName, subDir)) as f:
-            content = f.read()
-        return content
+            return f.read()
         
     def getTempStream(self):
         """
@@ -249,6 +248,21 @@ class Case(unittest.TestCase):
         ex = sys.exc_info()
         ex[1].args = list(ex[1].args) + list(addArgs)
         raise ex[0], ex[1], ex[2]  
+    
+    def assertFasterThan(self, duration, callable, *args, **kargs):
+        """
+        Fail if it took more than C{duration} seconds to invoke C{callable}.
+        
+        @param duration: maximum amount of seconds allowed 
+        @type duration: float 
+        """
+        
+        start = time.time()
+        callable(*args, **kargs)
+        execution = time.time() - start
+        
+        if execution > duration:
+            self.fail('{0}s is slower than {1}s)'.format(execution, duration))
 
 class InvalidNamespaceError(NameError, ImportError):
     pass
