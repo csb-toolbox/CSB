@@ -5,15 +5,51 @@ import numpy
 
 
 @test.regression
-class TestChainCloning(test.Case):
-    
-    def runTest(self):
-        # [CSB 0000029]
+class ChainRegressions(test.Case):
+
+    def setUp(self):
+        
+        super(ChainRegressions, self).setUp()
+
+        self.structure = self.config.getPickle('1nz9.model1.pickle')        
+        self.chain = self.structure['A']
+            
+    def testClone(self):
+        """
+        @see: [CSB 0000029]
+        """      
         from csb.bio.io.wwpdb import get
         chain = get('1s72').chains['T']
                 
         self.assertFasterThan(0.01, chain.subregion, 1, 1, clone=True)
         self.assertFasterThan(0.5, chain.clone)
+        
+    def testApplyTransformation(self):
+        """
+        @see: [CSB 0000030]
+        """
+        r = numpy.eye(3)
+        t = numpy.array([1, 1, 1])
+        
+        residue = self.chain.residues[1]
+        
+        atom1 = structure.Atom(99999, 'Cx', structure.ChemElements.C, numpy.array([2, 2, 2]), alternate=True)    #@UndefinedVariable
+        atom1.occupancy = 0.2
+        atom2 = structure.Atom(99999, 'Cx', structure.ChemElements.C, numpy.array([2, 2, 2]), alternate=True)    #@UndefinedVariable
+        atom2.occupancy = 0.8
+                        
+        residue.atoms.append(atom1)
+        residue.atoms.append(atom2)
+        
+        self.chain.apply_transformation(r, t)
+        
+        disatom = residue.atoms['Cx']
+        self.assertTrue(isinstance(disatom, structure.DisorderedAtom))
+        self.assertEqual(disatom.vector.tolist(), [3, 3, 3])
+        
+        # now the regression itself
+        for altatom in disatom:
+            self.assertEqual(altatom.vector.tolist(), [3, 3, 3])
 
 @test.unit
 class TestEnsemble(test.Case):
@@ -596,6 +632,9 @@ class TestAtom(test.Case):
     
 #@test.unit
 class TestSecondaryStructure(test.Case):
+    """
+    @todo: implement secondary structure tests
+    """
     
     def setUp(self):
         
@@ -604,12 +643,13 @@ class TestSecondaryStructure(test.Case):
         self.structure = self.config.getPickle('1nz9.model1.pickle')        
         self.chain = self.structure['A']
         self.residue = self.chain[0]    
-
-    # TODO
     
 #@test.unit
 class TestTorsionAngles(test.Case):
-    
+    """
+    @todo: implement torsion angle tests
+    """
+        
     def setUp(self):
         
         super(TestSecondaryStructure, self).setUp()
