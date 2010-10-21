@@ -636,11 +636,10 @@ class Chain(csb.pyutils.AbstractNIContainer):
         @type rotation: numpy array
         @type translation: numpy array         
         """
-        rot_t = numpy.transpose(rotation)
         for residue in self.residues:
             for atom_name in residue.atoms:
                 atom = residue.atoms[atom_name]
-                atom.vector = numpy.dot(atom.vector, rot_t) + translation
+                atom._transform(rotation, translation)
                 
     def list_coordinates(self, what):
         """
@@ -1294,7 +1293,13 @@ class Atom(object):
     def __cmp__(self, other):
         return cmp(self.serial_number, other.serial_number)
     
-    def _transform_vector(self, rotation, translation):
+    def _transform(self, rotation, translation):
+        """
+        Apply in place rotation matrix and translation vector.
+        
+        @type rotation: numpy array
+        @type translation: numpy array         
+        """        
         self.vector = numpy.dot(self.vector, numpy.transpose(rotation)) + translation
         
     @property
@@ -1363,9 +1368,9 @@ class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
         super(DisorderedAtom, self).append(atom)
         atom._proxy = self
     
-    def _transform_vector(self, rotation, translation):
+    def _transform(self, rotation, translation):
         for atom in self:
-            atom._transform_vector(rotation, translation)
+            atom._transform(rotation, translation)
         self._vector = self._rep._vector
         
     def __update_rep(self, atom):

@@ -46,7 +46,8 @@ decorators you need in order to write tests for CSB.
                self.assert...
         
        The "unit" decorator marks the test case as a collection of unit tests.
-       All options are: csb.test.unit, csb.test.functional, csb.test.custom.
+       All options are: csb.test.unit, csb.test.functional, csb.test.custom,
+       and csb.test.regression.
         
        If you need to add more initialization steps, you can override the
        default C{csb.test.Case.setUp}::
@@ -67,6 +68,18 @@ decorators you need in order to write tests for CSB.
        more work. Custom tests must be functions, not classes. Basically a
        custom test is a function, which builds a unittest.TestSuite instance 
        and then returns it when called without arguments.
+       
+       Regression tests are closely related with reported bugs. Therefore, 
+       the best practice is to mark each test method with its relevant bug ID::
+       
+           @csb.test.regression
+           class SomeClassRegressions(csb.test.Case)
+               
+               def testSomeFeature(self)
+               \"""
+               @see: [CSB 000XXXX] 
+               \"""
+               # regression test body...
            
     3. Style Guide:
     
@@ -121,6 +134,28 @@ decorators you need in order to write tests for CSB.
            - C{loadFromFile} - load tests from an absolute file name
            - C{loadMultipleTests} - calls C{loadTests} for a list of 
              namespaces and combines all loaded tests in a single suite
+    
+    5. Commit Policies
+    
+       Follow these guidelines when making changes to the repository:
+    
+           - No Bugs in Repository: after fixing a bug or implementing a new
+             feature, make sure at least the default test set passes by running
+             the test console without any arguments. This is equivalent to:
+             app.py -t any "csb.test.cases". (If no test case from this set covers
+             the affected code, create a test case first, as described in the other
+             policies)
+    
+           - No Recurrent Issues: when a bug is observed, first write a regression
+             test with a proper "@see: BugID" tag in the docstring. Run the test
+             to make sure it fails. After fixing the bug, run the test again before
+             you commit, as required by the "No Bugs in Repository" policy
+             
+           - Test New Features: there should be a test case for every new feature
+             we implement. One possible approach is to write a test case first and
+             make sure it fails; when the new feature is ready, run the test again
+             to make sure it passes
+        
 """
 
 import os

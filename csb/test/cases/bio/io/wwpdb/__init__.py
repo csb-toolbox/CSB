@@ -140,7 +140,8 @@ class TestRegularStructureParser(test.Case):
         
         # Atom
         vector = [52.647, -87.443, 9.674]
-        self.assertEqual(structure['A'][0]['CA'].vector.tolist(), vector)        
+        self.assertEqual(structure['A'][0]['CA'].vector.tolist(), vector)
+        self.assertEqual(structure['A'][0]['CA']._het, True) 
 
     def testParseResidue(self):
         
