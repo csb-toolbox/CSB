@@ -21,6 +21,7 @@ URL             = "http://www.eb.tuebingen.mpg.de/departments/1-protein-evolutio
 SUMMARY         = "Computational Structural Biology Toolbox"
 DESCRIPTION     = __doc__
 LICENSE         = 'BSD'
+REQUIRES        = ['numpy']
 
 
 def sourcetree(root='csb', junk=('.svn',)):
@@ -38,35 +39,97 @@ def sourcetree(root='csb', junk=('.svn',)):
     @type junk: tuple
     
     @return: a list of "package" names
-    @rtype: tuple  
+    @rtype: list  
     """
     junk = set(junk)
     items = []
+
+    curdir = os.path.abspath(os.curdir)
+    cwd = os.path.dirname(__file__) or '.'
+    os.chdir(cwd)
     
     if root.startswith(os.path.sep):
         raise ValueError('root must be a relative path')
     elif not os.path.isdir(os.path.join('.', root)):
-        raise ValueError('root package "{0}" not found in cwd.'.format(root))        
+        raise ValueError('root package "{0}" not found in {1}.'.format(root, cwd))        
     
-    for entry in os.walk(root):    
-        item = entry[0]
-        parts = set(item.split(os.path.sep))
+    for entry in os.walk(root):
+            
+        directory = entry[0]
+        parts = set(directory.split(os.path.sep))
+            
+        init = os.path.join(directory, '__init__.py')
+        # take all packages: directories with __init__, except if a junk 
+        # directory is found at any level in the tree
+        if os.path.isfile(init) and junk.isdisjoint(parts):
+            items.append(directory)
+
+    os.chdir(curdir)
+        
+    return items
+
+
+def datatree(package, dataroot, junk=('.svn',), mask='*.*'):
+    """
+    Since dustutils will crash if the data root folder contains any subfolders,
+    we need this function to retrieve the data tree.
+
+    @param package: root "package", containing a data folder. This is a 
+                    relative path, e.g. "csb/test"
+    @type package: str
+    @param dataroot: name of the data root directory for C{package},
+                     relative to C{package}
+    @type dataroot: str
+    @param junk: skip those directories
+    @type junk: tuple
+    
+    @return: a list of all glob patterns with all subdirectories of the data
+             root, including the root itself. The paths  returned are relative
+             to C{package}  
+    @rtype: list      
+    """
+    junk = set(junk)
+    items = []
+
+    curdir = os.path.abspath(os.curdir)
+    cwd = os.path.dirname(__file__) or '.'
+    os.chdir(cwd)
+    
+    if package.startswith(os.path.sep):
+        raise ValueError('package must be a relative path')
+    elif not os.path.isdir(os.path.join('.', package)):
+        raise ValueError('package "{0}" not found in {1}.'.format(package, cwd))        
+
+    os.chdir(package)
+        
+    for entry in os.walk(dataroot):
+        
+        directory = entry[0]
+        parts = set(directory.split(os.path.sep))
+        
+        # take all directories, except if a junk dir is found at any level in the tree
         if junk.isdisjoint(parts):
+            item = os.path.join(directory, mask)
             items.append(item)
-    
-    return tuple(items)
+
+    os.chdir(curdir)
+        
+    return items
+
 
 def build():
     setup(
           name=NAME,
           packages=sourcetree(NAME, JUNK),
+          package_data={'csb/test': datatree('csb/test', 'data', JUNK, '*.*')},
           version=VERSION,
           author=AUTHOR,
           author_email=EMAIL,
           url=URL,
           description=SUMMARY,
           long_description=DESCRIPTION,
-          license=LICENSE )
+          license=LICENSE,
+          requires=REQUIRES )
 
 
 
