@@ -844,7 +844,7 @@ class ProfileHMMSegment(ProfileHMM):
         if end < hmm.layers.start_index or end > hmm.layers.last_index:
             raise ValueError('End position {0} is out of range {1.start_index} .. {1.last_index}'.format(end, hmm.layers))
         
-        hmm = csb.pyutils.deepcopy(hmm)       
+        #hmm = csb.pyutils.deepcopy(hmm)       
                 
         super(ProfileHMMSegment, self).__init__(units=hmm.score_units, scale=hmm.scale, logbase=hmm.logbase)
         self.id = hmm.id
@@ -859,7 +859,7 @@ class ProfileHMMSegment(ProfileHMM):
         
         self.alignment = hmm.alignment.subregion(start, end)
 
-        layers = hmm.layers[start : end + 1]
+        layers = csb.pyutils.deepcopy(hmm.layers[start : end + 1])
         max_score = 1.0
         if hmm.score_units != ScoreUnits.Probability:
             max_score = hmm._convert(hmm.score_units, max_score, hmm.scale, hmm.logbase)

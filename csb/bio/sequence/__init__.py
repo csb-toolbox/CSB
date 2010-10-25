@@ -407,7 +407,7 @@ class A3MAlignment(object):
         @param end_match: end rank
         @type end_match: int
                 
-        @return: a new L{A3MAlignment}
+        @return: a new L{A3MAlignment} (deep copy)
         @rtype: L{A3MAlignment}
         """
 

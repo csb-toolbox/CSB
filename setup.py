@@ -29,10 +29,6 @@ def sourcetree(root='csb', junk=('.svn',)):
     Since dustutils requires to HARD CODE the entire package hierarchy here,
     we need this function to load the source tree structure dynamically.
     
-    @note: even if some directories are not packages, they will be loaded.
-           However, distutils will print a warning of a missing __init__.py
-           and then deal with it normally. That is, distutils will fix it.
-    
     @param root: name of the root package; this is 'csb'. Must be relative!
     @type root: str
     @param junk: skip those directories
