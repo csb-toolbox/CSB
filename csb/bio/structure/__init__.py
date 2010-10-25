@@ -1716,7 +1716,10 @@ class TorsionAnglesCollection(csb.pyutils.CollectionContainer):
 
     @property
     def omega(self):       
-        return [a.omega for a in self]    
+        return [a.omega for a in self] 
+    
+    def update(self, angles):
+        self._update(angles)   
     
     def rmsd(self, other):
         """
