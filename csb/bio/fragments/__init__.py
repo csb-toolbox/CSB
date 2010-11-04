@@ -1,12 +1,13 @@
 class FragmentMatch(object):
     
-    def __init__(self, id, qstart, qend, probability, rmsd, qlength):
+    def __init__(self, id, qstart, qend, probability, rmsd, tm_score, qlength):
         
         self.id = id
         self.qstart = qstart
         self.qend = qend
         self.probability = probability
         self.rmsd = rmsd
+        self.tm_score = tm_score
         self.qlength = qlength
         
     @property
