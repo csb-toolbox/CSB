@@ -468,13 +468,13 @@ class AbstractStructureParser(object):
                     res_name = a._residue_name.value
                     if a._het:
                         # if it is a HET atom, initiate an optional fragment
-                        fragments.append([res_name, '??'])                        
+                        fragments.append([res_name, '?'])                        
                     elif i == 0 or a._sequence_number - lookup[seq_numbers[i - 1]][0] not in (0, 1, -1):
                         # if residues [i, i-1] are not consecutive or 'overlapping', initiate a new fragment:
                         fragments.append([res_name])
                     else:
                         # then they are consecutive
-                        if fragments[-1][-1] == '??':
+                        if fragments[-1][-1] == '?':
                             # but the prev was optional (maybe HET), all optionals *MUST* reside in 
                             # singleton fragments, so start a new fragment
                             fragments.append([res_name])

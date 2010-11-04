@@ -7,6 +7,29 @@ from csb.bio.sequence import SequenceAlphabets, SequenceTypes
 from csb.bio.structure import ChemElements
 
 
+@test.regression
+class TestMappingRegressions(test.Case):
+    
+    def setUp(self):
+        
+        super(TestMappingRegressions, self).setUp()
+
+        pdbfile = self.config.getTestFile('1d3z.regular.pdb')
+        self.structure = StructureParser(pdbfile).parse_structure(1)
+        
+    def testHetMapping(self):
+        """
+        @see: [CSB 0000031]
+        """
+        residue = self.structure.chains['A'].find(26)
+        self.assertTrue(residue.has_structure)
+        self.assertTrue(residue.atoms.length > 0)
+        
+        for an in residue.atoms:
+            self.assertTrue(residue[an]._het)
+            self.assertTrue(residue[an].vector.tolist())
+                    
+
 @test.unit
 class TestStructureParser(test.Case):
 
@@ -194,7 +217,7 @@ def TestPDB():
     
     import glob
     
-    mask = '/media/DB/pdb/all/pdb1xx[e-f]*.ent'
+    mask = '/media/DB/pdb/all/pdb*.ent'
     suite = unittest.TestSuite()    
     
     class PDBTestCase(test.Case):
