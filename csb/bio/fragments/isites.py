@@ -160,7 +160,28 @@ class ProteinProfile(object):
         return self._maxscore
 
 class ISitesFragmentMatch(csb.bio.fragments.FragmentMatch):
-    pass
+    
+    def __init__(self, fragment, qstart, qend, probability, rmsd, tm_score, qlength):
+        
+        self._source = fragment.representative.accession + fragment.representative.chain
+        self._start = fragment.representative.structure.residues[1].rank
+        self._end = fragment.representative.structure.residues[-1].rank
+        assert (self._end - self._start + 1) == fragment.length == (qend - qstart + 1)     
+
+        super(ISitesFragmentMatch, self).__init__(fragment.id, qstart, qend, probability, 
+                                                  rmsd, tm_score, qlength)
+        
+    @property
+    def source_id(self):
+        return self._source
+        
+    @property
+    def start(self):
+        return self._start
+
+    @property
+    def end(self):
+        return self._end    
     
 class ProfileMatch(object):
     """
