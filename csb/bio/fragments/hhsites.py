@@ -1,8 +1,9 @@
 """
 HMM fragments derived from HHpred HMM profiles. 
 """
-
+import re
 import csb.bio.fragments
+import csb.bio.hmm
 import csb.bio.structure as structure
 import csb.bio.fragments.isites as isites
 
@@ -120,4 +121,30 @@ class HMMLibraryWrapper(isites.Library):
         self.fragments = clusters    
         
 class HMMFragmentMatch(csb.bio.fragments.FragmentMatch):
-    pass
+
+    def __init__(self, fragment, qstart, qend, probability, rmsd, tm_score, qlength):
+        
+        if not isinstance(fragment, csb.bio.hmm.ProfileHMMSegment):
+            raise TypeError(fragment)
+        
+        source_info = re.split('[\-\.]', fragment.id)
+        self._source = source_info[0]
+        self._start = int(source_info[1]) + fragment.source_start - 1
+        self._end = int(source_info[1]) + fragment.source_end - 1
+        
+        assert (self._end - self._start + 1) == fragment.layers.length == (qend - qstart + 1)     
+
+        super(HMMFragmentMatch, self).__init__(fragment.id, qstart, qend, probability, 
+                                                                rmsd, tm_score, qlength)
+        
+    @property
+    def source_id(self):
+        return self._source
+        
+    @property
+    def start(self):
+        return self._start
+
+    @property
+    def end(self):
+        return self._end  

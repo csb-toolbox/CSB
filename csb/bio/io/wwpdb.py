@@ -838,6 +838,28 @@ def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
     return StructureParser(pdb.name).parse_structure(model)
 
 
+def find(id, path):
+    """
+    Try to discover a PDB file for PDB C{id} in C{path}.
+    
+    @param id: PDB ID of the entry
+    @type id: str
+    @param path: directory to scan
+    @type path: str
+    
+    @return: path and file name on success, None otherwise
+    @rtype: str
+    """
+    import os
+    
+    for token in ['pdb{id}.ent', 'pdb{id}.pdb', '{id}.pdb', '{id}.ent']:
+        fn = os.path.join(path, token.format(id=id))
+        if os.path.exists(fn):
+            return fn
+        
+    return None 
+
+
 class AsyncParseResult(object):
     
     def __init__(self, result, exception):
