@@ -223,9 +223,9 @@ class FragmentTypes(object):
     
 class BenchmarkAdapter(object):    
 
-    def __init__(self, pdb_path, connection_string=None):
+    def __init__(self, pdb_paths, connection_string=None):
                 
-        self._pdb = pdb_path
+        self._pdb = pdb_paths
         self._connection = None
         
         from csb.bio.io.wwpdb import find, StructureParser

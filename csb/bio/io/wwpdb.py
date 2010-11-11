@@ -732,7 +732,7 @@ class LegacyStructureParser(AbstractStructureParser):
                  initialized residues from ATOMs under the specified C{model}.
         @rtype: L{csb.bio.structure.Structure}
         """
-                
+         
         self._stream.seek(0)
         in_atom = False
         chains = csb.pyutils.OrderedDict()
@@ -838,24 +838,28 @@ def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
     return StructureParser(pdb.name).parse_structure(model)
 
 
-def find(id, path):
+def find(id, paths):
     """
-    Try to discover a PDB file for PDB C{id} in C{path}.
+    Try to discover a PDB file for PDB C{id} in C{paths}.
     
     @param id: PDB ID of the entry
     @type id: str
-    @param path: directory to scan
-    @type path: str
+    @param path: a list of directories to scan
+    @type path: list of str
     
     @return: path and file name on success, None otherwise
     @rtype: str
     """
     import os
     
-    for token in ['pdb{id}.ent', 'pdb{id}.pdb', '{id}.pdb', '{id}.ent']:
-        fn = os.path.join(path, token.format(id=id))
-        if os.path.exists(fn):
-            return fn
+    if isinstance(paths, basestring):
+        paths = [paths]
+        
+    for path in paths:
+        for token in ['pdb{id}.ent', 'pdb{id}.pdb', '{id}.pdb', '{id}.ent']:
+            fn = os.path.join(path, token.format(id=id))
+            if os.path.exists(fn):
+                return fn
         
     return None 
 
