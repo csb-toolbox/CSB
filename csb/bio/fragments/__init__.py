@@ -207,6 +207,13 @@ class Assignment(FragmentMatch):
     def end(self):
         return self._end
     
+    def transform(self, rotation, translation):
+        
+        for ca in self.backbone:
+            newca = numpy.dot(ca, numpy.transpose(rotation)) + translation
+            for i in range(3):
+                ca[i] = newca[i]
+    
 class FragmentTypes(object):
     
     ISites = 'IS'
