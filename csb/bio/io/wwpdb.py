@@ -844,8 +844,8 @@ def find(id, paths):
     
     @param id: PDB ID of the entry
     @type id: str
-    @param path: a list of directories to scan
-    @type path: list of str
+    @param paths: a list of directories to scan
+    @type paths: list of str
     
     @return: path and file name on success, None otherwise
     @rtype: str
