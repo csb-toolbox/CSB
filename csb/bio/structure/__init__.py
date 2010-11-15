@@ -57,6 +57,8 @@ class AlignmentArgumentLengthError(ValueError):
     pass
 class BrokenSecStructureError(ValueError):
     pass
+class UnknownSecStructureError(BrokenSecStructureError):
+    pass
 
 class Ensemble(csb.pyutils.AbstractNIContainer):
     """
@@ -1572,7 +1574,10 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         for i, char in enumerate(string + '.'):
             
             if currel != char:
-                type = csb.pyutils.Enum.parse(SecStructures, currel)
+                try:
+                    type = csb.pyutils.Enum.parse(SecStructures, currel)
+                except csb.pyutils.EnumValueError:
+                    raise UnknownSecStructureError(currel)
                 confidence = None
                 if conf_string is not None:
                     confidence = list(conf_string[start : i])
@@ -1583,7 +1588,29 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
                 currel = char
                 start = i
 
-        return motifs   
+        return motifs
+    
+    def clone(self):
+        """
+        @return: a deep copy of the object
+        """
+        return csb.pyutils.deepcopy(self)
+        
+    def to_three_state(self):
+        """
+        Convert to three-state secondary structure (Helix, Strand, Coil).
+        """           
+        for e in self:
+            if e.type in (SecStructures.Helix, SecStructures.Helix3, SecStructures.PiHelix):
+                e.type = SecStructures.Helix
+            elif e.type in (SecStructures.Strand, SecStructures.BetaBridge):
+                e.type = SecStructures.Strand
+            elif e.type in (SecStructures.Coil, SecStructures.Turn, SecStructures.Bend):
+                e.type = SecStructures.Coil
+            elif e.type == SecStructures.Gap or e.type is None:
+                pass
+            else:
+                assert False, 'Unhandled SS type: ' + repr(e.type)
     
     def to_string(self, chain_length=None):
         """
