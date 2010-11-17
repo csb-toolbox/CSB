@@ -171,13 +171,21 @@ class SSCartoonBuilder(object):
                     
         return self._format(path)
                 
-    def _strand(self, length):
+    def _strand(self, length, arrow_width=3.0):
         
+        offset = 1.0
         strand_width = float(length) * self._width / self._residues
         path = ['M', self._x, self._y, 'H']
 
         self._x += strand_width         
         path.append(self._x)
+        
+        if offset < arrow_width < strand_width:
+            arrow_start = self._x - offset - arrow_width
+            path.extend(['M', self._x - offset, self._y])
+            path.extend(['L', arrow_start, self._y + self._height / 9])
+            path.extend(['L', arrow_start, self._y - self._height / 9])
+            path.extend(['L', self._x - offset, self._y])
                 
         return self._format(path)
         
@@ -202,4 +210,4 @@ class SSCartoonBuilder(object):
     
     def _gap(self, length):
         
-        return self._strand(length)
+        return self._strand(length, arrow_width=0)
