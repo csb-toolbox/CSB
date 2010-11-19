@@ -38,6 +38,7 @@ class DSSPParser(object):
         
         data = {}
         start = False
+        offset = 0                  # assume old DSSP format
         
         for line in open(dssp_file):
             
@@ -48,7 +49,7 @@ class DSSPParser(object):
                      
                 elif line.startswith('  #  RESIDUE'):
                     if len(line) >= 140:
-                        raise DSSPParseError('This file is in the new DSSP format')                    
+                        offset = 4  # the new DSSP format           
                     start = True
             else:
                 if line[13] == '!':
@@ -64,7 +65,9 @@ class DSSPParser(object):
                         ss = csb.pyutils.Enum.parse(SecStructures, ss)  
                 except csb.pyutils.EnumValueError as e:
                     raise UnknownSecStructureError(str(e)) 
-                phi, psi = float(line[104:109]), float(line[110:115])
+                phi = float(line[104 + offset : 109 + offset])
+                psi = float(line[110 + offset : 115 + offset])
+                
                 
                 if chain not in data:
                     data[chain] = {}
