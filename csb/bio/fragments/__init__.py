@@ -314,12 +314,17 @@ class BenchmarkAdapter(object):
         native = self.structure(id[:4]).chains[id[4]]
         target = Target(id, length, native.residues, overlap)
         
+        source = None
+        
         for row in self.assignments(target_id, type):
             
             src_accession = row['Source'][:4]
             src_chain = row['Source'][4]
-                        
-            frag_chain = self.structure(src_accession).chains[src_chain]
+            
+            if source is None or source.accession != src_accession:
+                source = self.structure(src_accession)
+                
+            frag_chain = source.chains[src_chain]
             
             fragment = Assignment(source=frag_chain, 
                                   start=row['SourceStart'], 
