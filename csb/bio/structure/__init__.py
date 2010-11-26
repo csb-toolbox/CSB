@@ -1566,7 +1566,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         motifs = [ ]
 
         if not len(string) > 0:
-            raise ValueError(string)      
+            raise ValueError('Empty Secondary Structure string')      
         
         currel = string[0]
         start = 0
