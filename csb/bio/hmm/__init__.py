@@ -63,6 +63,7 @@ class ProfileHMM(object):
         self.length = ProfileLength(None, None)
         self.alignment = None
         self.dssp = None
+        self.dssp_solvent = None
         self.psipred = None
         self.effective_matches = None
         self.version = None
@@ -196,6 +197,9 @@ PCT   {0.pseudocounts}'''.format(hmm))
         if hmm.dssp:
             stream.writeline('>ss_dssp')
             stream.writeline(hmm.dssp.to_string())
+            if hmm.dssp_solvent:
+                stream.writeline('>sa_dssp')
+                stream.writeline(hmm.dssp_solvent)                
         if hmm.psipred:
             stream.writeline('>ss_pred')
             stream.writeline(hmm.psipred.to_string())
