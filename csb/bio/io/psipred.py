@@ -2,11 +2,25 @@
 PSIPRED Parser
 """
 
-from csb.bio.structure import SecondaryStructure
+import csb.pyutils
+
+from csb.bio.structure import SecondaryStructure, SecStructures, UnknownSecStructureError
 
 
 class PSIPredParseError(ValueError):
     pass
+
+
+class PSIPredResidueInfo(object):
+    
+    def __init__(self, rank, residue, sec_structure, helix, strand, coil):
+        
+        self.rank = rank
+        self.residue = residue
+        self.sec_structure = sec_structure
+        self.helix = helix
+        self.coil = coil
+        self.strand = strand    
 
 
 class PSIPredParser(object):
@@ -16,7 +30,7 @@ class PSIPredParser(object):
     
     def parse(self, psipred_file):
         """
-        @param psipred_file: source PSI-PRED file to parse
+        @param psipred_file: source PSI-PRED *.horiz file to parse
         @type psipred_file: str
         @rtype: L{SecondaryStructure}
         """
@@ -42,3 +56,33 @@ class PSIPredParser(object):
             return SecondaryStructure(ss, conf)
         else:
             return SecondaryStructure(None)
+
+    def parse_scores(self, scores_file):
+        """
+        @param psipred_file: source PSI-PRED *.ss2 file to parse
+        @type psipred_file: str
+        @rtype: list of L{PSIPredResidueInfo}
+        """
+        residues = [] 
+        
+        for line in open(scores_file):
+            
+            if line.startswith('#') or not line.strip():
+                continue
+            else:
+                line = line.split()         
+
+                rank = int(line[0])
+                residue = line[1]
+                                
+                try:
+                    ss = csb.pyutils.Enum.parse(SecStructures, line[2])  
+                except csb.pyutils.EnumValueError as e:
+                    raise UnknownSecStructureError(str(e))
+                
+                coil, helix, strand = map(float, line[3:6])
+                
+                residues.append(PSIPredResidueInfo(rank, residue, ss, helix, strand, coil))
+        
+        return tuple(residues)
+                

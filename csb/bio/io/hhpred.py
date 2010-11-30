@@ -260,13 +260,15 @@ class HHProfileParser(object):
         for entry in self._sequences:
 
             header_token = entry[:8]
-            if header_token in ['>ss_dssp', '>ss_pred', '>ss_conf']:
+            if header_token in ['>ss_dssp', '>sa_dssp', '>ss_pred', '>ss_conf']:
 
                 lines = entry.strip().splitlines()
                 seq = re.sub('\s+', '', ''.join(lines[1:]))
 
                 if header_token == '>ss_dssp':
                     hmm.dssp = structure.SecondaryStructure(seq)
+                elif header_token == '>sa_dssp':
+                    hmm.dssp_solvent = seq
                 elif header_token == '>ss_pred':
                     psipred = seq
                 elif header_token == '>ss_conf':
