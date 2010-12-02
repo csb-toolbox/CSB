@@ -59,8 +59,8 @@ class PSIPredParser(object):
 
     def parse_scores(self, scores_file):
         """
-        @param psipred_file: source PSI-PRED *.ss2 file to parse
-        @type psipred_file: str
+        @param scores_file: source PSI-PRED *.ss2 file to parse
+        @type scores_file: str
         @rtype: list of L{PSIPredResidueInfo}
         """
         residues = [] 
