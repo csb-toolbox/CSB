@@ -361,6 +361,19 @@ class Hitlist(object):
                 if best.score < hit.score or (best.score == hit.score and best.rmsd > hit.rmsd):
                     best = hit
         return best
+    
+    def top(self, n):
+        """
+        @param n: number of top hits
+        @type n: int
+        
+        @return: top C{n} hits in terms of profile score
+        @rtype: list of L{ProfileMatch} 
+        """
+        
+        hits = list(self.hits)
+        hits.sort()
+        return hits[-n:]
                        
 class Library(object):
     """
