@@ -290,6 +290,15 @@ class BenchmarkAdapter(object):
             return cmd.fetchall()
         finally:  
             cmd.close()
+
+    def scores(self, benchmark_id, type):
+        
+        cmd = self._connection.cursor()
+        try:
+            cmd.callproc('reporting."GetScores"', (benchmark_id, type))
+            return cmd.fetchall()
+        finally:  
+            cmd.close()            
             
     def structure(self, accession):
 
