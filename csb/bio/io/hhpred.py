@@ -14,7 +14,7 @@ import csb.bio.sequence as sequence
 
 from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, \
      StateExistsError, ProfileLength, HHpredHitList, HHpredHit, ScoreUnits, \
-     States
+     States, EVDParameters
 
 
 class InvalidHHFormatError(ValueError):
@@ -231,6 +231,10 @@ class HHProfileParser(object):
                 if line[6:].strip().lower() == 'true':
                     hmm.pseudocounts = True
 
+            elif line.startswith('EVD  '):
+                lamda, mu = map(float, line[6:].split())
+                hmm.evd = EVDParameters(lamda, mu)
+                    
             elif line[:5] in ('COM  ', 'DATE ', 'FILT '):
                 pass
             else:
