@@ -161,6 +161,9 @@ class TestHHOutputParser(test.Case):
             self.assertEqual(s.start, l[0])
             self.assertEqual(s.end, l[1])
             self.assertEqual(s.end - s.start, l[1] - l[0])
+            self.assertEqual(self.hitlist[9].score, s.score)
+            self.assertEqual(self.hitlist[9].ss_score, s.ss_score)
+            self.assertEqual(self.hitlist[9].probability, s.probability)
             
         # hits
         self.assertEqual(len(self.hitlist), 10)

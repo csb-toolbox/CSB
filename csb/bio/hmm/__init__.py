@@ -1430,6 +1430,22 @@ class HHpredHitAlignment(object):
         @rtype: generator
         """
         
+        def make_segment(sstart, send, qstart, qend):
+            
+            seg = HHpredHit(self._hit.rank, self._hit.id, sstart, send, 
+                            qstart, qend, self._hit.probability, self._hit.qlength)
+
+            seg.slength = self._hit.slength
+            seg.evalue = self._hit.evalue
+            seg.pvalue = self._hit.pvalue
+            seg.score = self._hit.score
+            seg.ss_score = self._hit.ss_score
+            seg.identity = self._hit.identity
+            seg.similarity = self._hit.similarity
+            seg.prob_sum = self._hit.prob_sum
+            
+            return seg
+        
         in_segment = False
         qs = self._hit.qstart - 1
         ss = self._hit.start - 1 
@@ -1445,9 +1461,7 @@ class HHpredHitAlignment(object):
                 
             if HHpredHitAlignment.GAP in (q, s):
                 if in_segment:
-                    yield HHpredHit(self._hit.rank, self._hit.id, ss, se, 
-                                    qs, qe, self._hit.probability, 
-                                    self._hit.qlength)
+                    yield make_segment(ss, se, qs, qe)
                     in_segment = False
                     qs, ss = 0, 0
                     qe, se = 0, 0
@@ -1459,8 +1473,7 @@ class HHpredHitAlignment(object):
             qe, se = qi, si                        
         
         if in_segment:
-            yield HHpredHit(self._hit.rank, self._hit.id, ss, se, qs, qe,
-                            self._hit.probability, self._hit.qlength)
+            yield make_segment(ss, se, qs, qe)
                     
     def to_a3m(self):
         """
@@ -1540,6 +1553,7 @@ class HHpredHit(object):
         self.evalue = None
         self.pvalue = None
         self.score = None
+        self.ss_score = None
         self.identity = None
         self.similarity = None
         self.prob_sum = None
