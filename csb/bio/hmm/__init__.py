@@ -66,6 +66,7 @@ class ProfileHMM(object):
         self.dssp_solvent = None
         self.psipred = None
         self.effective_matches = None
+        self.evd = EVDParameters(None, None) 
         self.version = None
         self.pseudocounts = False
         self.emission_pseudocounts = False
@@ -192,6 +193,8 @@ FAM   {0.family}
 LENG  {0.length.matches} match states, {0.length.layers} columns in multiple alignment
 NEFF  {0.effective_matches}
 PCT   {0.pseudocounts}'''.format(hmm))
+        if hmm.evd:
+            stream.writeline('EVD   {0.lamda}  {0.mu}'.format(hmm.evd))            
 
         stream.writeline('SEQ')
         if hmm.dssp:
@@ -855,6 +858,7 @@ class ProfileHMMSegment(ProfileHMM):
         self.family = hmm.family 
         self.name = hmm.name
         self.pseudocounts = hmm.pseudocounts
+        self.evd = hmm.evd
         self.effective_matches = hmm.effective_matches
         self.version = hmm.version       
         self.source = hmm.id
@@ -971,6 +975,15 @@ class ProfileLength(object):
     def __init__(self, matches, layers):
         self.matches = matches
         self.layers = layers
+        
+class EVDParameters(object):
+    
+    def __init__(self, lamda, mu):
+        self.lamda = lamda
+        self.mu = mu
+    
+    def __nonzero__(self):
+        return (self.lamda is not None or self.mu is not None)
 
 class EmissionTable(csb.pyutils.DictionaryContainer):        
     """ 
