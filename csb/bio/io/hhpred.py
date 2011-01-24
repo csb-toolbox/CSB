@@ -779,6 +779,7 @@ class HHOutputParser(object):
                 hit.evalue = float(line[41:48])
                 hit.pvalue = float(line[49:56])
                 hit.score = float(line[57:63])
+                hit.ss_score = float(line[64:69])
 
                 hit.slength = int(line[94:].replace('(', '').replace(')', ''))
 
