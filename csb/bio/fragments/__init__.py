@@ -248,6 +248,12 @@ class BenchmarkAdapter(object):
         except:
             pass
         
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *args):
+        self.close()
+        
     @staticmethod
     def connection_string(database='FragmentBenchmarks', host='', username='', password=''):
 
