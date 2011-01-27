@@ -219,6 +219,7 @@ class FragmentTypes(object):
     ISites = 'IS'
     HMMFragments = 'HH'
     HHThread = 'TH'
+    HHfrag = HHThread
     Rosetta = 'NN'        
     
 class BenchmarkAdapter(object):    
@@ -304,7 +305,16 @@ class BenchmarkAdapter(object):
             cmd.callproc('reporting."GetScores"', (benchmark_id, type))
             return cmd.fetchall()
         finally:  
-            cmd.close()            
+            cmd.close()    
+            
+    def target_segments(self, target_id):
+        
+        cmd = self._connection.cursor()
+        try:
+            cmd.callproc('reporting."GetTargetSegments"', (target_id))
+            return cmd.fetchall()
+        finally:  
+            cmd.close()                           
             
     def structure(self, accession):
 

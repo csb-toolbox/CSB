@@ -859,7 +859,6 @@ class ProfileHMMSegment(ProfileHMM):
         self.name = hmm.name
         self.pseudocounts = hmm.pseudocounts
         self.evd = hmm.evd
-        self.effective_matches = hmm.effective_matches
         self.version = hmm.version       
         self.source = hmm.id
         self.source_start = start
@@ -880,7 +879,8 @@ class ProfileHMMSegment(ProfileHMM):
             self.psipred = hmm.psipred.subregion(start, end)            
             
         self.length.layers = self.layers.length
-        self.length.matches = self.alignment.matches_count            
+        self.length.matches = self.alignment.matches_count
+        self.effective_matches = sum([(l.effective_matches or 0.0) for l in self.layers]) / self.layers.length   
         
     def _build_graph(self, source_layers, max_score):
 
