@@ -1,5 +1,6 @@
 import numpy
 import csb.pyutils
+import csb.bio.utils
 
 
 class FragmentMatch(object):
@@ -77,7 +78,7 @@ class Prediction(object):
         
 class Target(csb.pyutils.AbstractNIContainer):
     
-    def __init__(self, id, length, residues, overlap=None):
+    def __init__(self, id, length, residues, overlap=None, segments=None):
     
         self._id = id
         self._accession = id[:4]
@@ -90,6 +91,10 @@ class Target(csb.pyutils.AbstractNIContainer):
         resi = [TargetResidue(native) for native in residues]
         self._residues = csb.pyutils.ReadOnlyCollectionContainer(items=resi, 
                                             type=TargetResidue, start_index=1)
+        
+        if segments is not None:
+            segments = dict([(s.start, s) for s in segments])
+        self._segments = csb.pyutils.ReadOnlyDictionaryContainer(items=segments)
         
     @property
     def _children(self):
@@ -126,7 +131,11 @@ class Target(csb.pyutils.AbstractNIContainer):
     @property
     def residues(self):
         return self._residues
-    
+
+    @property
+    def segments(self):
+        return self._segments
+        
     def assign(self, fragment):
 
         if not 1 <= fragment.qstart <= fragment.qend <= len(self._residues):
@@ -135,7 +144,13 @@ class Target(csb.pyutils.AbstractNIContainer):
         for rank in range(fragment.qstart, fragment.qend + 1):
             ai = ResidueAssignmentInfo(fragment, rank)
             self._assignments._append_item(fragment)
-            self._residues[rank].assignments._append_item(ai)
+            self._residues[rank].assign(ai)
+            
+        if fragment.segment is not None:
+            try:
+                self._segments[fragment.segment].assign(fragment)
+            except KeyError:
+                raise ValueError("Undefined segment starting at {0}".format(fragment.segment))
             
 class TargetResidue(object):
     
@@ -157,6 +172,59 @@ class TargetResidue(object):
     def assignments(self):
         return self._assignments
     
+    def assign(self, assignment_info):
+        self._assignments._append_item(assignment_info)
+        
+    
+class TargetSegment(object):
+    
+    def __init__(self, start, end, count):
+        
+        self._start = start
+        self._end = end
+        self._count = count
+        
+        self._assignments = csb.pyutils.ReadOnlyCollectionContainer(type=Assignment)
+    
+    @property
+    def count(self):
+        return self._count
+    
+    @property
+    def start(self):
+        return self._start
+    
+    @property
+    def end(self):
+        return self._end
+
+    @property
+    def length(self):
+        return (self._end - self._start + 1)
+        
+    @property
+    def assignments(self):
+        return self._assignments
+    
+    def assign(self, fragment):
+        if fragment.segment != self.start:
+            raise ValueError('Segment origin mismatch: {0} vs {1}'.format(fragment.segment, self.start))
+        else:
+            self._assignments._append_item(fragment)
+            
+    def pairwise_rmsd(self):
+        
+        rmsd  = []
+        
+        for q in self.assignments:
+            for s in self.assignments:
+                if q is not s:
+                    rmsd.append(q.rmsd(s))
+                else:
+                    assert q.rmsd(s) < 0.01
+        
+        return [ r for r in rmsd if r is not None ]
+            
 class ResidueAssignmentInfo(object):
     
     def __init__(self, assignment, rank):
@@ -178,7 +246,8 @@ class ResidueAssignmentInfo(object):
 
 class Assignment(FragmentMatch):
     
-    def __init__(self, source, start, end, id, qstart, qend, probability, rmsd, tm_score):
+    def __init__(self, source, start, end, id, qstart, qend, probability, rmsd, tm_score, 
+                 score=None, neff=None, segment=None):
 
         sub = source.subregion(start, end, clone=True)
         calpha = [r.atoms['CA'].vector.copy() for r in sub.residues]
@@ -188,6 +257,11 @@ class Assignment(FragmentMatch):
         self._source_id = source.entry_id
         self._start = start
         self._end = end
+
+        self._score = score
+        self._neff = neff
+    
+        self._segment_start = segment
         
         super(Assignment, self).__init__(id, qstart, qend, probability, rmsd, tm_score, None)
 
@@ -206,6 +280,18 @@ class Assignment(FragmentMatch):
     @property
     def end(self):
         return self._end
+
+    @property
+    def score(self):
+        return self._score
+
+    @property
+    def neff(self):
+        return self._neff
+        
+    @property
+    def segment(self):
+        return self._segment_start    
     
     def transform(self, rotation, translation):
         
@@ -213,6 +299,34 @@ class Assignment(FragmentMatch):
             newca = numpy.dot(ca, numpy.transpose(rotation)) + translation
             for i in range(3):
                 ca[i] = newca[i]
+                
+    def backbone_at(self, qstart, qend):
+        
+        if not (self.qstart <= qstart <= qend <= self.qend):
+            raise ValueError('Region {0}..{1} is out of range {2.qstart}..{2.qend}'.format(qstart, qend, self))
+        
+        relstart = qstart - self.qstart
+        relend = qend - self.qstart + 1
+        
+        return self.backbone[relstart : relend]
+    
+    def rmsd(self, other, min_overlap=5):
+
+        qranks = set(range(self.qstart, self.qend + 1))
+        sranks = set(range(other.qstart, other.qend + 1))
+        common = qranks.intersection(sranks)
+        
+        if len(common) >= min_overlap:
+        
+            qstart, qend = min(common), max(common)
+            
+            q = self.backbone_at(qstart, qend)
+            s = other.backbone_at(qstart, qend)
+            
+            if len(q) > 0 and len(s) > 0:
+                return csb.bio.utils.rmsd(q, s)
+            
+        return None
     
 class FragmentTypes(object):
     
@@ -222,7 +336,37 @@ class FragmentTypes(object):
     HHfrag = HHThread
     Rosetta = 'NN'        
     
-class BenchmarkAdapter(object):    
+class BenchmarkAdapter(object):
+    
+    class Connection(object):
+    
+        FACTORY = None
+        DSN = None
+        
+        def __init__(self, factory=None, dsn=None):
+    
+            self.factory = factory or self.__class__.FACTORY
+            self.cs = dsn or self.__class__.DSN
+            self.connection = None
+            self.cursor = None
+    
+        def __enter__(self):
+    
+            self.connection = self.factory(self.cs)
+            try:
+                self.cursor = self.connection.cursor()
+            except:
+                self.connection.close()
+                raise 
+            return self
+    
+        def __exit__(self, *args):
+            try:
+                if not self.cursor.closed:
+                    self.cursor.close()
+            finally:
+                if not self.connection.closed:
+                    self.connection.close()
 
     def __init__(self, pdb_paths, connection_string=None):
                 
@@ -241,19 +385,8 @@ class BenchmarkAdapter(object):
         if connection_string is None:
             connection_string = self.connection_string()
             
-        self._connection = psycopg2.extras.DictConnection(connection_string)
-    
-    def __del__(self):
-        try:
-            self.close()          
-        except:
-            pass
-        
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, *args):
-        self.close()
+        BenchmarkAdapter.Connection.FACTORY = psycopg2.extras.DictConnection
+        BenchmarkAdapter.Connection.DSN = connection_string
         
     @staticmethod
     def connection_string(database='FragmentBenchmarks', host='', username='', password=''):
@@ -268,53 +401,42 @@ class BenchmarkAdapter(object):
 
         return ' '.join(fields)
         
-    def close(self):
-        self._connection.close()
-        
     def targets(self, benchmark_id):
-        
-        cmd = self._connection.cursor()
-        try:
-            cmd.callproc('reporting."GetTargets"', (benchmark_id,))
-            return cmd.fetchall()
-        finally:  
-            cmd.close()
+            
+        with BenchmarkAdapter.Connection() as db:
+            
+            db.cursor.callproc('reporting."GetTargets"', (benchmark_id,))
+            return db.cursor.fetchall()            
             
     def target_details(self, target_id):
         
-        cmd = self._connection.cursor()
-        try:
-            cmd.callproc('reporting."GetTargetDetails"', (target_id,))
-            return cmd.fetchall()
-        finally:  
-            cmd.close()            
+        with BenchmarkAdapter.Connection() as db:
+            
+            db.cursor.callproc('reporting."GetTargetDetails"', (target_id,))
+            return db.cursor.fetchall()            
             
     def assignments(self, target_id, type):
         
-        cmd = self._connection.cursor()
-        try:
-            cmd.callproc('reporting."GetAssignments"', (target_id, type))
-            return cmd.fetchall()
-        finally:  
-            cmd.close()
+        with BenchmarkAdapter.Connection() as db:
+            
+            db.cursor.callproc('reporting."GetAssignments"', (target_id, type))
+            return db.cursor.fetchall()
 
     def scores(self, benchmark_id, type):
         
-        cmd = self._connection.cursor()
-        try:
-            cmd.callproc('reporting."GetScores"', (benchmark_id, type))
-            return cmd.fetchall()
-        finally:  
-            cmd.close()    
+        with BenchmarkAdapter.Connection() as db:
+            
+            db.cursor.callproc('reporting."GetScores"', (benchmark_id, type))
+            return db.cursor.fetchall()    
             
     def target_segments(self, target_id):
         
-        cmd = self._connection.cursor()
-        try:
-            cmd.callproc('reporting."GetTargetSegments"', (target_id))
-            return cmd.fetchall()
-        finally:  
-            cmd.close()                           
+        with BenchmarkAdapter.Connection() as db:
+            
+            db.cursor.callproc('reporting."GetTargetSegments"', (target_id,))
+            data = db.cursor.fetchall()
+            
+            return [ TargetSegment(row['Start'], row['End'], row['Count']) for row in data ]
             
     def structure(self, accession):
 
@@ -337,7 +459,8 @@ class BenchmarkAdapter(object):
         overlap = float(row["MaxOverlap"]) / (length or 1.)
         
         native = self.structure(id[:4]).chains[id[4]]
-        target = Target(id, length, native.residues, overlap)
+        segments = self.target_segments(target_id)
+        target = Target(id, length, native.residues, overlap, segments)        
         
         source = None
         
@@ -358,8 +481,11 @@ class BenchmarkAdapter(object):
                                   qstart=row['Start'], 
                                   qend=row['End'], 
                                   probability=row['Probability'], 
+                                  score=row['Score'],
+                                  neff=row['Neff'],
                                   rmsd=row['RMSD'], 
-                                  tm_score=row['TMScore'])
+                                  tm_score=row['TMScore'],
+                                  segment=row['SegmentStart'])
             
             target.assign(fragment)
         
@@ -368,9 +494,14 @@ class BenchmarkAdapter(object):
     
   
 if __name__ == '__main__':
-    
+     
     fb = BenchmarkAdapter('/media/DB/pdb/all')
-    target = fb.prediction(1, FragmentTypes.HMMFragments)
-    print target.id
+    target = fb.prediction(361, FragmentTypes.HHfrag)
+    
+    print target.segments.length
+    
+    for seg_start in target.segments:
+        print '    ', seg_start, target.segments[seg_start].count
+        rmsd = target.segments[seg_start].pairwise_rmsd()
     
             

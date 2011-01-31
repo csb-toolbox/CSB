@@ -470,6 +470,14 @@ class BaseDictionaryContainer(AbstractIndexer):
         self._items.update(new_items)
         self._items.update(named_items)
         
+    def _append_item(self, key, item):
+        
+        if self._keys and key not in self._keys:
+            raise InvalidKeyError("Key {0} is not allowed for this collection.".format(key))
+        if key in self:
+            raise DuplicateKeyError("Key {0} already exists in the collection.".format(key))
+        self._items[key] = item        
+        
     def _remove_item(self, key):
         
         if key not in self._items:
@@ -503,11 +511,7 @@ class DictionaryContainer(BaseDictionaryContainer):
         @raise InvalidKeyError: when the key is not allowed for this container
         @raise DuplicateKeyError: when such a key already exists 
         """
-        if self._keys and key not in self._keys:
-            raise InvalidKeyError("Key {0} is not allowed for this collection.".format(key))
-        if key in self:
-            raise DuplicateKeyError("Key {0} already exists in the collection.".format(key))
-        self._items[key] = item
+        self._append_item(key, item)
 
     def _set(self, new_items):
         """ 
