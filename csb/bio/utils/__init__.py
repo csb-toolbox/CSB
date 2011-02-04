@@ -298,7 +298,7 @@ def center_of_mass(x, m = None):
     @rtype: (d,) numpy.array
     """
     if m is None:
-        return x.mean(1)
+        return x.mean(0)
     else:
         from numpy import dot
 
