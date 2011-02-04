@@ -1,3 +1,5 @@
+import os
+import cPickle
 import numpy
 import csb.pyutils
 import csb.bio.utils
@@ -82,7 +84,7 @@ class Target(csb.pyutils.AbstractNIContainer):
     
         self._id = id
         self._accession = id[:4]
-        self._chain_id = [4]
+        self._chain_id = id[4]
         self._length = length
         self._overlap = overlap
         
@@ -152,6 +154,51 @@ class Target(csb.pyutils.AbstractNIContainer):
             except KeyError:
                 raise ValueError("Undefined segment starting at {0}".format(fragment.segment))
             
+    def refine_map(self, path):
+        
+        import csb.bio.structure
+        from csb.bio.io import StructureParser
+        
+        pymol = open(str(self.id) + '.refined.pymol', 'w')
+        pymol.write('reinit\n')
+
+        ts = csb.bio.structure.Structure(self.accession)
+        tc = csb.bio.structure.Chain(self.chain_id, residues=[r.native for r in self.residues])
+        ts.chains.append(tc)
+        ts.to_pdb('query.pdb')
+                       
+        for s in self.segments:
+            segment = self.segments[s]
+            
+            conf = segment.confidence()
+            best = segment.longest()
+        
+            source = StructureParser(os.path.join(path, best.source_id + '.pdb')).parse()
+            frag = source.chains[best.source_id[-1]].subregion(best.start, best.end, clone=True)
+            tc.subregion(best.qstart, best.qend).align(frag)
+        
+            dummy = csb.bio.structure.Structure(best.id)
+            dummy.chains.append(frag)
+            objname = 'AT{0}'.format(segment.start)
+            dummy.to_pdb(objname + '.pdb')
+            
+            pymol.write(r'''
+            load {0}.pdb
+            set line_width, {1}, {0}
+                        '''.format(objname, conf * 2))
+            
+        pymol.write('''
+        
+        color salmon
+        
+        load query.pdb
+        set line_width, 3, query
+        color grey, query
+        
+        hide everything
+        show lines, name n+ca+c        
+        ''')                 
+    
 class TargetResidue(object):
     
     def __init__(self, native_residue):
@@ -212,18 +259,126 @@ class TargetSegment(object):
         else:
             self._assignments._append_item(fragment)
             
-    def pairwise_rmsd(self):
+    def best(self):
         
-        rmsd  = []
+        bestfrag = None
+        bestd = None
+        
+        for q in self.assignments:
+            
+            rmsds = [q.rmsd(s) for s in self.assignments]
+            rmsds = [r for r in rmsds if r is not None]
+            
+            d = sum(rmsds) / self.assignments.length
+            
+            if (d < bestd and q.length > 5) or bestd is None:
+                bestd = d
+                bestfrag = q
+        
+        return bestfrag
+    
+    def longest(self):
+    
+        best = None        
+        
+        for q in self.assignments:
+            if best is None or (q.length > best.length):
+                best = q
+                
+        return best
+            
+    def pairwise_rmsd(self, min_overlap=5):
+        
+        rmsds  = []
         
         for q in self.assignments:
             for s in self.assignments:
                 if q is not s:
-                    rmsd.append(q.rmsd(s))
+                    r = q.rmsd(s, min_overlap)
+                    if r is not None:
+                        rmsds.append(r)
                 else:
-                    assert q.rmsd(s) < 0.01
+                    assert q.rmsd(s, 1) < 0.01
         
-        return [ r for r in rmsd if r is not None ]
+        return rmsds
+    
+    def pairwise_scores(self, profiles='.', min_overlap=5):
+        
+        from csb.bio.hmm import BACKGROUND
+        back = numpy.sqrt(numpy.array(BACKGROUND))
+
+        sources = {}        
+        scores  = []
+        
+        for q in self.assignments:
+            for s in self.assignments:
+                
+                if s.source_id not in sources:
+                    # hmm = HHProfileParser(os.path.join(hmm_path, s.source_id + '.hhm')).parse(ScoreUnits.Probability)
+                    sources[s.source_id] = cPickle.load(open(os.path.join(profiles, s.source_id + '.pkl')))
+                    
+                if q is not s:
+                    
+                    common = q.overlap(s)
+                    if len(common) >= min_overlap:
+                        
+                        qprof = q.profile_at(sources[q.source_id], min(common), max(common))
+                        sprof = s.profile_at(sources[s.source_id], min(common), max(common))
+                        
+                        #score = qhmm.emission_similarity(shmm)
+                        assert len(qprof) == len(sprof)
+                        dots = [ numpy.dot(qprof[i] / back, sprof[i] / back) for i in range(len(qprof)) ]
+                        score = numpy.log(numpy.prod(dots))
+                        if score is not None:
+                            scores.append(score)        
+        return scores       
+    
+    def _entropy(self, data, binsize):
+        
+        binsize = float(binsize)
+        bins = numpy.ceil(numpy.array(data) / binsize)
+
+        hist = dict.fromkeys(bins, 0)
+        for bin in bins:
+            hist[bin] += (1.0 / len(bins))
+        
+        freq = numpy.array(hist.values())
+        return -numpy.sum(freq * numpy.log(freq))
+    
+    def rmsd_entropy(self, binsize=0.1):
+        
+        rmsds = self.pairwise_rmsd()
+        return self._entropy(rmsds, binsize)
+    
+    def score_entropy(self, profiles='.', binsize=1):
+        
+        scores = self.pairwise_scores(profiles)
+        return self._entropy(scores, binsize)    
+    
+    def rmsd_consistency(self, threshold=1.5):
+
+        rmsds = self.pairwise_rmsd()
+        
+        if len(rmsds) < 1:
+            return None
+        
+        return sum([1 for i in rmsds if i <= threshold]) / float(len(rmsds))
+    
+    def true_positives(self, threshold=1.5):
+        
+        if self.assignments.length < 1:
+            return None
+        
+        return sum([1 for i in self.assignments if i.rmsd <= threshold]) / float(self.assignments.length)
+    
+    def confidence(self):
+        
+        cons = self.rmsd_consistency()
+        
+        if cons is None:
+            return 0
+        else:
+            return numpy.log10(self.count) * cons
             
 class ResidueAssignmentInfo(object):
     
@@ -310,11 +465,29 @@ class Assignment(FragmentMatch):
         
         return self.backbone[relstart : relend]
     
-    def rmsd(self, other, min_overlap=5):
+    def profile_at(self, source, qstart, qend):
+        
+        if not (self.qstart <= qstart <= qend <= self.qend):
+            raise ValueError('Region {0}..{1} is out of range {2.qstart}..{2.qend}'.format(qstart, qend, self))
+        
+        start = qstart - self.qstart + self.start
+        end = qend - self.qstart + self.start
+        
+        if hasattr(source, 'subregion'):
+            return source.subregion(start, end)
+        else:
+            return source[start - 1 : end]
+    
+    def overlap(self, other):
 
         qranks = set(range(self.qstart, self.qend + 1))
         sranks = set(range(other.qstart, other.qend + 1))
-        common = qranks.intersection(sranks)
+        
+        return qranks.intersection(sranks)
+            
+    def rmsd(self, other, min_overlap=5):
+
+        common = self.overlap(other)
         
         if len(common) >= min_overlap:
         

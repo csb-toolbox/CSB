@@ -39,6 +39,17 @@ ScoreUnits = csb.pyutils.enum(LogScales='LogScales', Probability='Probability')
 Enumeration of HMM emission and transition score units
 """
 
+BACKGROUND = [ 0.076627178753322270, 0.018866884241976509, 0.053996136712517316,
+               0.059788009880742142, 0.034939432842683173, 0.075415244982547675, 
+               0.036829356494115069, 0.050485048600600511, 0.059581159080509941, 
+               0.099925728794059046, 0.021959667190729986, 0.040107059298840765, 
+               0.045310838527464106, 0.032644867589507229, 0.051296350550656143, 
+               0.046617000834108295, 0.071051060827250878, 0.072644631719882335, 
+               0.012473412286822654, 0.039418044025976547 ]
+"""
+Background amino acid probabilities
+"""
+
 
 class ProfileHMM(object):
     """
@@ -304,6 +315,10 @@ PCT   {0.pseudocounts}'''.format(hmm))
         @rtype: L{ProfileHMMSegment}
         """
         return ProfileHMMSegment(self, start, end)
+    
+    def subregion(self, start, end):
+        
+        return ProfileHMMRegion(self, start, end) 
 
 
     def add_emission_pseudocounts(self, tau=0.1, pca=2.5, pcb=0.5, pcc=1.0 ):
