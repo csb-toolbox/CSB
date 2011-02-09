@@ -286,7 +286,7 @@ def tm_superimpose(x, y, fit_method=fit):
 
 def center_of_mass(x, m=None):
     """
-    Compute the mean of a set of (optinally weighted) points
+    Compute the mean of a set of (optionally weighted) points
 
     @param x: array of rank (n,d) where n is the number of points
               and d the dimension
@@ -304,9 +304,9 @@ def center_of_mass(x, m=None):
 
         return dot(m, x) / m.sum()
     
-def inertia_tensor(x, m=None):
+def radius_of_gyration(x, m = None):
     """
-    Compute the inertia tensor of a set of (optionally weighted) points
+    Compute the radius of gyration of a set of (optionally weighted) points
 
     @param x: array of rank (n,d) where n is the number of points
               and d the dimension
@@ -314,14 +314,59 @@ def inertia_tensor(x, m=None):
     @param m: rank (n,) array of masses / weights
     @type m: numpy.array
 
-    @return: inertia tensor
+    @return: center of mass
+    @rtype: (d,) numpy.array
+    """
+    from numpy import sqrt, dot
+    
+    x = x - center_of_mass(x, m)
+    if m is None:
+        return sqrt((x**2).sum() / len(x))
+    else:
+        return sqrt(dot(m,(x**2).sum(1)) / m.sum())
+
+def second_moments(x, m = None):
+    """
+    Compute the tensor second moments of a set of (optionally weighted) points
+
+    @param x: array of rank (n,d) where n is the number of points
+              and d the dimension
+    @type x: numpy.array
+    @param m: rank (n,) array of masses / weights
+    @type y: numpy.array
+
+    @return: second moments
     @rtype: (d,d) numpy.array
     """
     from numpy import dot
 
     x = (x - center_of_mass(x, m)).T
+    
+    if m is not None:
+        return dot(x*m,x.T)
+    else:
+        return dot(x, x.T)
 
-    if m is not None: x *= m**0.5
+def inertia_tensor(x, m = None):
+    """
+    Compute the inertia tensor of a set of (optionally weighted) points
 
-    return dot(x, x.T)
+    @param x: array of rank (n,d) where n is the number of points
+              and d the dimension
+    @type x: numpy.array
+    @param m: rank (n,) array of masses / weights
+    @type y: numpy.array
+
+    @return: inertia tensor
+    @rtype: (d,d) numpy.array
+    """
+    from numpy import dot, eye
+
+    x = (x - center_of_mass(x, m)).T
+    r2= (x**2).sum(0)
+    
+    if m is not None:
+        return eye(x.shape[0]) * dot(m,r2) - dot(x*m,x.T)
+    else:
+        return eye(x.shape[0]) * r2.sum() - dot(x, x.T)
 
