@@ -284,7 +284,7 @@ def tm_superimpose(x, y, fit_method=fit):
     
     return R, t, score
 
-def center_of_mass(x, m = None):
+def center_of_mass(x, m=None):
     """
     Compute the mean of a set of (optinally weighted) points
 
@@ -292,7 +292,7 @@ def center_of_mass(x, m = None):
               and d the dimension
     @type x: numpy.array
     @param m: rank (n,) array of masses / weights
-    @type y: numpy.array
+    @type m: numpy.array
 
     @return: center of mass
     @rtype: (d,) numpy.array
@@ -302,17 +302,17 @@ def center_of_mass(x, m = None):
     else:
         from numpy import dot
 
-        return dot(m,x) / m.sum()
+        return dot(m, x) / m.sum()
     
-def inertia_tensor(x, m = None):
+def inertia_tensor(x, m=None):
     """
-    Compute the inertia tensor of a set of (optinally weighted) points
+    Compute the inertia tensor of a set of (optionally weighted) points
 
     @param x: array of rank (n,d) where n is the number of points
               and d the dimension
     @type x: numpy.array
     @param m: rank (n,) array of masses / weights
-    @type y: numpy.array
+    @type m: numpy.array
 
     @return: inertia tensor
     @rtype: (d,d) numpy.array

@@ -11,7 +11,7 @@ class DSSPParseError(ValueError):
     pass
 
 
-class DSSPResidueInfo(object):
+class ResidueAssignmentInfo(object):
     
     def __init__(self, residue_id, accession, chain, secondary_structure, phi, psi):
         
@@ -32,7 +32,7 @@ class DSSPParser(object):
         """
         @param dssp_file: source DSSP file to parse
         @type dssp_file: str
-        @return: a dictionary of L{DSSPResidueInfo} objects
+        @return: a dictionary of L{ResidueAssignmentInfo} objects
         @rtype: dict
         """
         
@@ -72,7 +72,44 @@ class DSSPParser(object):
                 if chain not in data:
                     data[chain] = {}
                 
-                data[chain][residue_id] = DSSPResidueInfo(residue_id, accession, chain, ss, phi, psi)
+                data[chain][residue_id] = ResidueAssignmentInfo(residue_id, accession, chain, ss, phi, psi)
+                
+        return data
+
+class StrideParser(object):
+    """
+    Simple STRIDE Secondary Structure Parser.
+    """
+    
+    def parse(self, stride_file):
+        """
+        @param stride_file: source STRIDE file to parse
+        @type stride_file: str
+        @return: a dictionary of L{ResidueAssignmentInfo} objects
+        @rtype: dict
+        """
+        
+        data = {}
+        
+        for line in open(stride_file):
+            if line.startswith('ASG '):
+                
+                fields = line.split()
+                
+                residue_id = fields[3]
+                chain = fields[2]
+                accession = fields[-1].lower()
+                try:
+                    ss = csb.pyutils.Enum.parse(SecStructures, fields[5])  
+                except csb.pyutils.EnumValueError as e:
+                    raise UnknownSecStructureError(str(e)) 
+                phi = float(fields[7])
+                psi = float(fields[8])
+                
+                if chain not in data:
+                    data[chain] = {}
+                
+                data[chain][residue_id] = ResidueAssignmentInfo(residue_id, accession, chain, ss, phi, psi)
                 
         return data
 
