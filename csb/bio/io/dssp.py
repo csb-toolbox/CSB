@@ -6,22 +6,6 @@ import csb.pyutils
 
 from csb.bio.structure import SecStructures, UnknownSecStructureError
 
-HELIX_STATES = [SecStructures.Helix,
-                SecStructures.Helix3,
-                SecStructures.PiHelix]
-
-BETA_STATES = [SecStructures.Strand,
-               SecStructures.BetaBridge ] 
-
-def dssp_to_3state(value):
-    
-    if value in HELIX_STATES:
-        return 'H'
-    elif value in BETA_STATES:
-        return 'E'
-    else:
-        return 'C'
-
 
 class DSSPParseError(ValueError):
     pass
