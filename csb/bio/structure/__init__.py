@@ -472,6 +472,10 @@ class Chain(csb.pyutils.AbstractNIContainer):
                 torsion.append(r.torsion)
                 
         return torsion
+    
+    @property
+    def has_torsion(self):
+        return self._torsion_computed
 
     @property
     def length(self):
@@ -1000,7 +1004,7 @@ class Residue(csb.pyutils.AbstractNIContainer):
         
         container = self._container
         self._container = None
-        clone = csb.pyutils.deepcopy(self)
+        clone = copy.deepcopy(self)
         self._container = container
         
         return clone
@@ -1594,7 +1598,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         """
         @return: a deep copy of the object
         """
-        return csb.pyutils.deepcopy(self)
+        return copy.deepcopy(self)
         
     def to_three_state(self):
         """
@@ -1875,6 +1879,12 @@ class TorsionAngles(object):
     def omega(self, omega):
         TorsionAngles.check_angle(omega, self._units)
         self._omega = omega        
+        
+    def copy(self):
+        """
+        @return: a deep copy of C{self}
+        """
+        return TorsionAngles(self.phi, self.psi, self.omega, self.units)
         
     def to_degrees(self):
         """
