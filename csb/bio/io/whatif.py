@@ -42,10 +42,10 @@ class WhatCheckParser(object):
     
     def parse_summary(self, fn):
         """
-        @param whatif_file: source whatif file to parse
-        @type whatif_file: str
+        @param fn: source whatif file to parse
+        @type fn: str
 
-        @return a dictinary
+        @return: a dictinary
         """
         f_handler = open(os.path.expanduser(fn))
         text = f_handler.read()
@@ -91,8 +91,8 @@ class WhatCheckParser(object):
 
     def parse_checkdb(self, fn):
         """
-        @param whatif_file: source whatif file to parse
-        @type whatif_file: str
+        @param fn: source whatif file to parse
+        @type fn: str
 
         """
 

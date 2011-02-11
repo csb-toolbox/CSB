@@ -50,10 +50,10 @@ class ProcheckParser():
     
     def parse(self, fn):
         """
-        @param whatif_file: source  file to parse
-        @type whatif_file: str
+        @param fn: source  file to parse
+        @type fn: str
 
-        @return a dict
+        @return: a dict
         """
         info = ProcheckInfo()
         

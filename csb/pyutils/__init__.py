@@ -184,6 +184,12 @@ class enum(object):
 
         if count < 1:
             raise ValueError('Empty enum.')
+        
+    def __deepcopy__(self, memo):
+        return self
+    
+    def __copy__(self, memo):
+        return self    
 
     def __check(self, i, v):
 
@@ -212,12 +218,16 @@ class enum(object):
         return '<enum: {0!r}={0!s}{1}>'.format(i, n)
 
 class EnumItem(object):
-
+    
     def __init__(self, name, value, container):
         self.__name = name
         self.__value = value
         self.__container = container
-
+        
+    def __deepcopy__(self, memo):
+        return self
+    def __copy__(self, memo):
+        return self         
     def __repr__(self):
         return '{0}'.format(self.__name, self.__value)
     def __str__(self):

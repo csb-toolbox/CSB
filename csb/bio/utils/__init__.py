@@ -304,7 +304,7 @@ def center_of_mass(x, m=None):
 
         return dot(m, x) / m.sum()
     
-def radius_of_gyration(x, m = None):
+def radius_of_gyration(x, m=None):
     """
     Compute the radius of gyration of a set of (optionally weighted) points
 
@@ -325,7 +325,7 @@ def radius_of_gyration(x, m = None):
     else:
         return sqrt(dot(m,(x**2).sum(1)) / m.sum())
 
-def second_moments(x, m = None):
+def second_moments(x, m=None):
     """
     Compute the tensor second moments of a set of (optionally weighted) points
 
@@ -333,7 +333,7 @@ def second_moments(x, m = None):
               and d the dimension
     @type x: numpy.array
     @param m: rank (n,) array of masses / weights
-    @type y: numpy.array
+    @type m: numpy.array
 
     @return: second moments
     @rtype: (d,d) numpy.array
@@ -343,11 +343,11 @@ def second_moments(x, m = None):
     x = (x - center_of_mass(x, m)).T
     
     if m is not None:
-        return dot(x*m,x.T)
+        return dot(x*m, x.T)
     else:
         return dot(x, x.T)
 
-def inertia_tensor(x, m = None):
+def inertia_tensor(x, m=None):
     """
     Compute the inertia tensor of a set of (optionally weighted) points
 
@@ -355,7 +355,7 @@ def inertia_tensor(x, m = None):
               and d the dimension
     @type x: numpy.array
     @param m: rank (n,) array of masses / weights
-    @type y: numpy.array
+    @type m: numpy.array
 
     @return: inertia tensor
     @rtype: (d,d) numpy.array
