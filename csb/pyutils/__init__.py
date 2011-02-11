@@ -188,7 +188,7 @@ class enum(object):
     def __deepcopy__(self, memo):
         return self
     
-    def __copy__(self, memo):
+    def __copy__(self):
         return self    
 
     def __check(self, i, v):
@@ -226,7 +226,7 @@ class EnumItem(object):
         
     def __deepcopy__(self, memo):
         return self
-    def __copy__(self, memo):
+    def __copy__(self):
         return self         
     def __repr__(self):
         return '{0}'.format(self.__name, self.__value)
