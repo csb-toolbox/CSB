@@ -4,7 +4,8 @@ Procheck parser
 """
 import os
 import re
-
+import tempfile
+import subprocess
 
 class ProcheckInfo(dict):
 
@@ -24,17 +25,18 @@ class ProcheckParser():
     """
     def __init__(self):
         self.binary = '/home/mechelke/install/procheck/procheck.scr'
-    
+        self.acc = 2.0
+        
     def run(self, pdb_file):
 
         wd = os.getcwd()
         tmp = tempfile.mkdtemp()
         base = os.path.basename(pdb_file)
         
-        p = subprocess.call('cp %s %s/.' % (os.path.expanduser(pdbfile), tmp), shell = True)
+        p = subprocess.call('cp %s %s/.' % (os.path.expanduser(pdb_file), tmp), shell = True)
         os.chdir(tmp)
 
-        p = subprocess.Popen('%s %s 1.5' %(self.binary, os.path.join(tmp,base)),
+        p = subprocess.Popen('%s %s %s' %(self.binary, os.path.join(tmp,base), self.acc),
                              stdout=open("/dev/null", "w"),
                              stderr=open("/dev/null", "w"),
                              shell = True)
