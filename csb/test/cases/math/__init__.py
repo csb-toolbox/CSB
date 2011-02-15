@@ -42,7 +42,7 @@ class TestMath(test.Case):
         from csb.math import polar, from_polar
 
         rand = np.random.random(10000)
-        eps = 1e-8
+        eps = 6e-8
         self.assertTrue((np.abs(rand - from_polar(polar(rand))) < eps).all())
 
 
@@ -50,14 +50,14 @@ class TestMath(test.Case):
         from csb.math import polar, from_polar
 
         rand = np.random.random(10000)
-        eps = 1e-8
+        eps = 6e-8
         self.assertTrue((np.abs(rand - from_polar(polar(rand))) < eps).all())
 
     def testRadian2Degree(self):
         from csb.math import degree2radian, radian2degree
 
         rand = np.random.random(10000) * 2 * np.pi
-        eps = 1e-8
+        eps = 6e-8
         
         self.assertTrue((np.abs(rand - degree2radian(radian2degree(rand))) < eps).all())
 
@@ -66,7 +66,7 @@ class TestMath(test.Case):
         from csb.math import degree2radian, radian2degree
 
         rand = np.random.random(10000) * 2 * np.pi
-        eps = 1e-8
+        eps = 6e-8
         
         self.assertTrue((np.abs(rand - degree2radian(radian2degree(rand))) < eps).all())
 
