@@ -72,7 +72,7 @@ class WhatCheckParser(object):
         tmp = tempfile.mkdtemp()
         base = os.path.basename(pdb_file)
         
-        p = subprocess.call('cp %s %s/.' % (os.path.expanduser(pdbfile), tmp), shell = True)
+        p = subprocess.call('cp %s %s/.' % (os.path.expanduser(pdb_file), tmp), shell = True)
         os.chdir(tmp)
 
         p = subprocess.Popen('%s %s' %(self.binary, os.path.join(tmp,base)),
