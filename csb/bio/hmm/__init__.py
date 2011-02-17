@@ -50,6 +50,11 @@ BACKGROUND = [ 0.076627178753322270, 0.018866884241976509, 0.053996136712517316,
 Background amino acid probabilities
 """
 
+RELATIVE_SA = { 'A': 0.02, 'B': 0.14, 'C': 0.33, 'D': 0.55, 'E': 1.00 }
+"""
+Relative solvent accessibility codes (upper bounds)
+"""
+
 
 class ProfileHMM(object):
     """
