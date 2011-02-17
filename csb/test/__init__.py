@@ -142,7 +142,7 @@ decorators you need in order to write tests for CSB.
            - No Bugs in Repository: after fixing a bug or implementing a new
              feature, make sure at least the default test set passes by running
              the test console without any arguments. This is equivalent to:
-             app.py -t any "csb.test.cases". (If no test case from this set covers
+             app.py -t any "csb.test.cases.*". (If no test case from this set covers
              the affected code, create a test case first, as described in the other
              policies)
     
@@ -407,7 +407,7 @@ class AbstractTestBuilder(object):
     
     def _moduleHash(self, path):
         """
-        Build a GUI used when importing a module with imp.
+        Build a GUID used when importing a module with imp.
         
         @bug: If you don't use a unique name each time you import a module,
               python gets really confused. The results are unpredictable, but
