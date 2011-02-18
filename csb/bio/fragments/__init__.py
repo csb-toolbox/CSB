@@ -4,7 +4,19 @@ import numpy
 import csb.pyutils
 import csb.bio.utils
 
-
+class FragmentTypes(object):
+    
+    ISites = 'IS'
+    HMMFragments = 'HH'
+    HHThread = 'TH'
+    HHfrag = HHThread
+    Rosetta = 'NN'   
+    
+class Metrics(object):
+    
+    RMSD = 'rmsd_to'
+    MDA = 'mda_to' 
+    
 class FragmentMatch(object):
     
     def __init__(self, id, qstart, qend, probability, rmsd, tm_score, qlength):
@@ -152,52 +164,7 @@ class Target(csb.pyutils.AbstractNIContainer):
             try:
                 self._segments[fragment.segment].assign(fragment)
             except KeyError:
-                raise ValueError("Undefined segment starting at {0}".format(fragment.segment))
-            
-    def refine_map(self, path):
-        
-        import csb.bio.structure
-        from csb.bio.io import StructureParser
-        
-        pymol = open(str(self.id) + '.refined.pymol', 'w')
-        pymol.write('reinit\n')
-
-        ts = csb.bio.structure.Structure(self.accession)
-        tc = csb.bio.structure.Chain(self.chain_id, residues=[r.native for r in self.residues])
-        ts.chains.append(tc)
-        ts.to_pdb('query.pdb')
-                       
-        for s in self.segments:
-            segment = self.segments[s]
-            
-            conf = segment.confidence()
-            best = segment.longest()
-        
-            source = StructureParser(os.path.join(path, best.source_id + '.pdb')).parse()
-            frag = source.chains[best.source_id[-1]].subregion(best.start, best.end, clone=True)
-            tc.subregion(best.qstart, best.qend).align(frag)
-        
-            dummy = csb.bio.structure.Structure(best.id)
-            dummy.chains.append(frag)
-            objname = 'AT{0}'.format(segment.start)
-            dummy.to_pdb(objname + '.pdb')
-            
-            pymol.write(r'''
-            load {0}.pdb
-            set line_width, {1}, {0}
-                        '''.format(objname, conf * 2))
-            
-        pymol.write('''
-        
-        color salmon
-        
-        load query.pdb
-        set line_width, 3, query
-        color grey, query
-        
-        hide everything
-        show lines, name n+ca+c        
-        ''')                 
+                raise ValueError("Undefined segment starting at {0}".format(fragment.segment))             
     
 class TargetResidue(object):
     
@@ -222,6 +189,43 @@ class TargetResidue(object):
     def assign(self, assignment_info):
         self._assignments._append_item(assignment_info)
         
+    def verybest(self):
+        
+        best = None
+        
+        for ai in self.assignments:
+            a = ai.fragment
+            if a.length < 5:
+                continue
+            if best is None or a.rmsd < best.rmsd:
+                best = a
+            elif a.rmsd == best.rmsd and a.length > best.length:
+                best = a
+        
+        return best
+                
+    def filter(self, method=Metrics.RMSD):
+        
+        try:
+            assignments = [ ai.fragment for ai in self.assignments ]
+            cluster = FragmentCluster(assignments, threshold=1.5,
+                                      connectedness=0.5, method=method)
+          
+            centroid = cluster.shrink(minitems=0)
+            return centroid
+        
+        except ClusterExhaustedError:
+            return None
+    
+    def longest(self):
+    
+        best = None        
+        
+        for q in self.assignments:
+            if best is None or (q.fragment.length > best.length):
+                best = q.fragment
+                
+        return best     
     
 class TargetSegment(object):
     
@@ -258,24 +262,33 @@ class TargetSegment(object):
             raise ValueError('Segment origin mismatch: {0} vs {1}'.format(fragment.segment, self.start))
         else:
             self._assignments._append_item(fragment)
-            
-    def best(self):
+                
+    def verybest(self):
         
-        bestfrag = None
-        bestd = None
+        best = None
         
-        for q in self.assignments:
-            
-            rmsds = [q.rmsd(s) for s in self.assignments]
-            rmsds = [r for r in rmsds if r is not None]
-            
-            d = sum(rmsds) / self.assignments.length
-            
-            if (d < bestd and q.length > 5) or bestd is None:
-                bestd = d
-                bestfrag = q
+        for a in self.assignments:
+            if a.length < 5:
+                continue
+            if best is None or a.rmsd < best.rmsd:
+                best = a
+            elif a.rmsd == best.rmsd and a.length > best.length:
+                best = a
         
-        return bestfrag
+        return best
+                
+    def best(self, method=Metrics.RMSD):
+        
+        try:
+            cluster = FragmentCluster(self.assignments, threshold=1.5,
+                                      connectedness=0.5, method=method)          
+            centroid = cluster.shrink(minitems=1)
+            return centroid
+                  
+        except ClusterExhaustedError:
+            return None
+        finally:
+            del cluster
     
     def longest(self):
     
@@ -294,13 +307,62 @@ class TargetSegment(object):
         for q in self.assignments:
             for s in self.assignments:
                 if q is not s:
-                    r = q.rmsd(s, min_overlap)
+                    r = q.rmsd_to(s, min_overlap)
                     if r is not None:
                         rmsds.append(r)
                 else:
-                    assert q.rmsd(s, 1) < 0.01
+                    assert q.rmsd_to(s, 1) < 0.01
         
         return rmsds
+    
+    def pairwise_mda(self, min_overlap=5):
+        
+        mdas  = []
+        
+        for q in self.assignments:
+            for s in self.assignments:
+                if q is not s:
+                    m = q.mda_to(s, min_overlap)
+                    if m is not None:
+                        mdas.append(m)
+        return mdas
+
+    def pairwise_sa_rmsd(self, profiles='.', min_overlap=5):
+        
+        from csb.bio.hmm import RELATIVE_SA
+        from csb.bio.io.hhpred import ScoreUnits, HHProfileParser
+
+        def convert_sa(sa):
+            return numpy.array([ RELATIVE_SA[i] for i in sa ])
+            
+        sources = {}        
+        scores  = []
+        
+        for q in self.assignments:
+            for s in self.assignments:
+                
+                if s.source_id not in sources:
+                    hmm = HHProfileParser(os.path.join(profiles, s.source_id + '.hhm')).parse()
+                    sources[s.source_id] = hmm.dssp_solvent
+                    
+                if q is not s:
+                    
+                    common = q.overlap(s)
+                    if len(common) >= min_overlap:
+                        
+                        qsa = q.solvent_at(sources[q.source_id], min(common), max(common))
+                        ssa = s.solvent_at(sources[s.source_id], min(common), max(common))
+                        
+                        if '-' in qsa + ssa:
+                            continue
+                        
+                        qsa = convert_sa(qsa)
+                        ssa = convert_sa(ssa)
+                        assert len(qsa) == len(ssa)
+                        sa_rmsd = numpy.sqrt(numpy.sum((qsa - ssa) ** 2) / float(len(qsa)))
+                        
+                        scores.append(sa_rmsd)        
+        return scores           
     
     def pairwise_scores(self, profiles='.', min_overlap=5):
         
@@ -363,7 +425,16 @@ class TargetSegment(object):
             return None
         
         return sum([1 for i in rmsds if i <= threshold]) / float(len(rmsds))
-    
+
+    def sa_rmsd_consistency(self, threshold=0.4, profiles='.'):
+
+        sa_rmsds = self.pairwise_sa_rmsd(profiles=profiles)
+        
+        if len(sa_rmsds) < 1:
+            return None
+        
+        return sum([1 for i in sa_rmsds if i <= threshold]) / float(len(sa_rmsds))
+        
     def true_positives(self, threshold=1.5):
         
         if self.assignments.length < 1:
@@ -404,10 +475,13 @@ class Assignment(FragmentMatch):
     def __init__(self, source, start, end, id, qstart, qend, probability, rmsd, tm_score, 
                  score=None, neff=None, segment=None):
 
+        assert source.has_torsion
         sub = source.subregion(start, end, clone=True)
         calpha = [r.atoms['CA'].vector.copy() for r in sub.residues]
+        torsion = [r.torsion.copy() for r in sub.residues]
                     
-        self._calpha = csb.pyutils.ReadOnlyCollectionContainer(items=calpha, type=numpy.ndarray)     
+        self._calpha = csb.pyutils.ReadOnlyCollectionContainer(items=calpha, type=numpy.ndarray)
+        self._torsion = torsion     
         
         self._source_id = source.entry_id
         self._start = start
@@ -423,7 +497,11 @@ class Assignment(FragmentMatch):
     @property
     def backbone(self):
         return self._calpha
-        
+
+    @property
+    def torsion(self):
+        return self._torsion
+            
     @property
     def source_id(self):
         return self._source_id
@@ -454,21 +532,42 @@ class Assignment(FragmentMatch):
             newca = numpy.dot(ca, numpy.transpose(rotation)) + translation
             for i in range(3):
                 ca[i] = newca[i]
-                
-    def backbone_at(self, qstart, qend):
-        
+
+    def _check_range(self, qstart, qend):
+
         if not (self.qstart <= qstart <= qend <= self.qend):
             raise ValueError('Region {0}..{1} is out of range {2.qstart}..{2.qend}'.format(qstart, qend, self))
+                                
+    def backbone_at(self, qstart, qend):
+        
+        self._check_range(qstart, qend)
         
         relstart = qstart - self.qstart
         relend = qend - self.qstart + 1
         
         return self.backbone[relstart : relend]
     
+    def torsion_at(self, qstart, qend):
+        
+        self._check_range(qstart, qend)
+        
+        relstart = qstart - self.qstart
+        relend = qend - self.qstart + 1
+        
+        return self.torsion[relstart : relend]    
+    
+    def solvent_at(self, sa_string, qstart, qend):
+        
+        self._check_range(qstart, qend)
+        
+        relstart = qstart - self.qstart
+        relend = qend - self.qstart + 1
+        
+        return sa_string[relstart : relend]    
+    
     def profile_at(self, source, qstart, qend):
         
-        if not (self.qstart <= qstart <= qend <= self.qend):
-            raise ValueError('Region {0}..{1} is out of range {2.qstart}..{2.qend}'.format(qstart, qend, self))
+        self._check_range(qstart, qend)
         
         start = qstart - self.qstart + self.start
         end = qend - self.qstart + self.start
@@ -485,7 +584,7 @@ class Assignment(FragmentMatch):
         
         return qranks.intersection(sranks)
             
-    def rmsd(self, other, min_overlap=5):
+    def rmsd_to(self, other, min_overlap=5):
 
         common = self.overlap(other)
         
@@ -501,14 +600,176 @@ class Assignment(FragmentMatch):
             
         return None
     
-class FragmentTypes(object):
+    def mda_to(self, other, min_overlap=5):
+
+        common = self.overlap(other)
+        
+        if len(common) >= min_overlap:
+        
+            qstart, qend = min(common), max(common)
+            
+            q = self.torsion_at(qstart, qend)
+            s = other.torsion_at(qstart, qend)
+            
+            if len(q) > 0 and len(s) > 0:
+                
+                maxphi = max( numpy.abs(i.phi-j.phi) for i, j in zip(q, s)[1:] )   # phi: 2 .. L
+                maxpsi = max( numpy.abs(i.psi-j.psi) for i, j in zip(q, s)[:-1] )  # psi: 1 .. L-1
+                
+                return max(maxphi, maxpsi)
+            
+        return None  
+
+class ClusterExhaustedError(ValueError):
+    pass    
+class ClusterEmptyError(ClusterExhaustedError):
+    pass      
     
-    ISites = 'IS'
-    HMMFragments = 'HH'
-    HHThread = 'TH'
-    HHfrag = HHThread
-    Rosetta = 'NN'        
+class FragmentCluster(object):
+
+    def __init__(self, items, threshold=1.5, connectedness=0.5, method=Metrics.RMSD):
+
+        items = set(i for i in items if i.length > 5)
+        
+        self._matrix = {}        
+        self.threshold = float(threshold)
+        self.connectedness = float(connectedness)
+           
+        for i in items:
+            
+            self._matrix[i] = {}
+            conn = 0.0
+            
+            for j in items:
+                distance = getattr(i, method)(j)
+                if distance is not None:
+                    conn += 1
+                    self._matrix[i][j] = distance
+            
+            if conn / len(items) < self.connectedness:
+                del self._matrix[i]
+                
+                
+        self._items = set(self._matrix.keys())
+                     
+        if len(self._items) < 1:
+            raise ClusterEmptyError()           
+               
+    @property
+    def count(self):
+        return len(self._items)
     
+    @property    
+    def items(self):
+        return tuple(self._items)
+    
+    def _distances(self, skip=None):
+
+        d = []
+        
+        for i in self._matrix:
+            if skip is i:
+                continue
+
+            for j in self._matrix[i]:
+                if skip is not j:
+                    d.append(self._matrix[i][j])
+                    
+        return d
+
+    def mean(self, skip=None):
+        
+        d = self._distances(skip=skip) 
+            
+        if len(d) > 0:
+            return numpy.mean(d)
+        else:
+            raise ClusterExhaustedError()
+
+    def centroid(self):
+
+        cen = None
+        avg = None
+
+        for i in self._matrix:
+            
+            curravg = numpy.mean(self._matrix[i].values())
+            
+            if avg is None or curravg < avg:
+                avg = curravg
+                cen = i
+            elif curravg == avg:
+                if i.length > cen.length:
+                    cen = i
+    
+        d = self._distances()
+        mean = numpy.mean(d)
+        cons = sum(1.0 for i in d if i <= self.threshold) / len(d)
+        
+        return CentroidInfo(cen, mean, cons, self.count)
+
+    def reject(self, item):
+        
+        if self.count == 1:
+            raise ClusterExhaustedError()
+        
+        for i in self._matrix:
+            if item in self._matrix[i]:
+                del self._matrix[i][item]
+            
+        del self._matrix[item]
+        self._items.remove(item)
+
+    def shrinkone(self):
+        
+        mean = self.mean()
+        if mean <= self.threshold or self.count == 1:
+            return False                # already shrunk enough
+
+        m = {}
+        
+        for i in self._matrix:
+            newmean = self.mean(skip=i)
+            m[newmean] = i
+
+        newmean = min(m)
+        assert newmean <= mean
+
+        if newmean < mean:            
+            junk = m[newmean]
+            self.reject(junk)
+            return True                 # successful shrink
+        else:
+            return False                # converged
+        
+    def shrink(self, minitems=2):
+
+        if self.count > minitems:
+            
+            while self.shrinkone():
+                if self.count <= minitems:
+                    raise ClusterExhaustedError()
+        else:
+            raise ClusterExhaustedError()
+            
+        return self.centroid()
+    
+class CentroidInfo(object):
+    
+    def __init__(self, centroid, mean, consistency, count):
+        
+        self.centroid = centroid
+        self.mean = mean
+        self.consistency = consistency
+        self.count = count
+    
+    @property
+    def confidence(self):
+        if self.count <= 0 or self.count is None or self.consistency is None:
+            return 0
+        else:
+            return numpy.log10(self.count) * self.consistency
+            
 class BenchmarkAdapter(object):
     
     class Connection(object):
@@ -611,10 +872,13 @@ class BenchmarkAdapter(object):
             
             return [ TargetSegment(row['Start'], row['End'], row['Count']) for row in data ]
             
-    def structure(self, accession):
+    def structure(self, accession, chain=None):
 
         pdbfile = self._find(accession, self._pdb)
         
+        if not pdbfile and chain:
+            pdbfile = self._find(accession + chain, self._pdb)
+                    
         if not pdbfile:
             raise IOError('{0} not found here: {1}'.format(accession, self._pdb))
         
@@ -631,7 +895,7 @@ class BenchmarkAdapter(object):
         length = float(row["Length"])
         overlap = float(row["MaxOverlap"]) / (length or 1.)
         
-        native = self.structure(id[:4]).chains[id[4]]
+        native = self.structure(id[:4], id[4]).chains[id[4]]
         segments = self.target_segments(target_id)
         target = Target(id, length, native.residues, overlap, segments)        
         
@@ -643,9 +907,11 @@ class BenchmarkAdapter(object):
             src_chain = row['Source'][4]
             
             if source is None or source.accession != src_accession:
-                source = self.structure(src_accession)
+                source = self.structure(src_accession, src_chain)
                 
             frag_chain = source.chains[src_chain]
+            if not frag_chain.has_torsion:
+                frag_chain.compute_torsion()
             
             fragment = Assignment(source=frag_chain, 
                                   start=row['SourceStart'], 
@@ -663,18 +929,5 @@ class BenchmarkAdapter(object):
             target.assign(fragment)
         
         return target
-            
+
     
-  
-if __name__ == '__main__':
-     
-    fb = BenchmarkAdapter('/media/DB/pdb/all')
-    target = fb.prediction(361, FragmentTypes.HHfrag)
-    
-    print target.segments.length
-    
-    for seg_start in target.segments:
-        print '    ', seg_start, target.segments[seg_start].count
-        rmsd = target.segments[seg_start].pairwise_rmsd()
-    
-            
