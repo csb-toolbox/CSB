@@ -23,16 +23,16 @@ def fit(X, Y):
     """
 
     from numpy.linalg import svd, det
-    from numpy import dot, transpose, average
+    from numpy import dot
 
     ## center configurations
 
-    x = average(X, 0)
-    y = average(Y, 0)
+    X = X - X.mean(0)
+    Y = Y - Y.mean(0)
 
     ## SVD of correlation matrix
 
-    V, _L, U = svd(dot(transpose(X - x), Y - y))
+    V, _L, U = svd(dot(X.T, Y))
 
     ## calculate rotation and translation
 
