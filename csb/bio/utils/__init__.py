@@ -27,12 +27,12 @@ def fit(X, Y):
 
     ## center configurations
 
-    X = X - X.mean(0)
-    Y = Y - Y.mean(0)
+    x = X.mean(0)
+    y = Y.mean(0)
 
     ## SVD of correlation matrix
 
-    V, _L, U = svd(dot(X.T, Y))
+    V, _L, U = svd(dot((X-x).T, Y-y))
 
     ## calculate rotation and translation
 
