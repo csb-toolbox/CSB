@@ -15,7 +15,18 @@ class FragmentTypes(object):
 class Metrics(object):
     
     RMSD = 'rmsd_to'
-    MDA = 'mda_to' 
+    NORMALIZED_RMSD = 'nrmsd_to'
+    MDA = 'mda_to'
+    
+RANDOM_RMSD = {  5: 1.8749005857255376,  6: 2.4314283686276261,  7: 2.9021135267789608,  8: 3.2477716200172715,  9: 3.5469606556031708, 10: 3.8295465524456329, 
+                11: 4.1343107114131783, 12: 4.3761697929053014, 13: 4.6707299668248394, 14: 4.9379016881069733, 15: 5.1809028645084911, 16: 5.4146957142595662, 
+                17: 5.7135948448156988, 18: 5.9597935432566782, 19: 6.1337340535741962, 20: 6.3962825155503271, 21: 6.6107937773415166, 22: 6.8099096274123401, 
+                23: 7.0435583846849639, 24: 7.2160956482560970, 25: 7.4547896324594962, 26: 7.6431870072434211, 27: 7.8727812194173836, 28: 8.0727393298443637, 
+                29: 8.2551450998965326, 30: 8.4413583511786587, 31: 8.5958719774122052, 32: 8.7730435506242408, 33: 8.9970648837941649, 34: 9.1566521405105163, 
+                35: 9.2828620878454728, 36: 9.4525824357923405, 37: 9.6322126445253300, 38: 9.7851684750961176, 39: 9.9891454649821476, 40: 10.124373939352028, 
+                41: 10.284348528344765, 42: 10.390457305096271, 43: 10.565792044674239, 44: 10.676532740033737, 45: 10.789537132283652, 46: 11.004475543757550, 
+                47: 11.064541647783571, 48: 11.231219875286985, 49: 11.319222637391441, 50: 11.485478165340824, 51: 11.607522494435521, 52: 11.700268836069840, 
+                53: 11.831245255954073, 54: 11.918975893263905 }     
     
 class FragmentMatch(object):
     
@@ -103,7 +114,7 @@ class Target(csb.pyutils.AbstractNIContainer):
         self._assignments = csb.pyutils.ReadOnlyCollectionContainer(type=Assignment)
             
         resi = [TargetResidue(native) for native in residues]
-        self._residues = csb.pyutils.ReadOnlyCollectionContainer(items=resi, 
+        self._residues = csb.pyutils.ReadOnlyCollectionContainer(items=resi,
                                             type=TargetResidue, start_index=1)
         
         if segments is not None:
@@ -204,12 +215,11 @@ class TargetResidue(object):
         
         return best
                 
-    def filter(self, method=Metrics.RMSD):
+    def filter(self, method=Metrics.RMSD, threshold=1.5):
         
         try:
             assignments = [ ai.fragment for ai in self.assignments ]
-            cluster = FragmentCluster(assignments, threshold=1.5,
-                                      connectedness=0.5, method=method)
+            cluster = FragmentCluster(assignments, threshold=threshold, method=method)
           
             centroid = cluster.shrink(minitems=0)
             return centroid
@@ -302,7 +312,7 @@ class TargetSegment(object):
             
     def pairwise_rmsd(self, min_overlap=5):
         
-        rmsds  = []
+        rmsds = []
         
         for q in self.assignments:
             for s in self.assignments:
@@ -317,7 +327,7 @@ class TargetSegment(object):
     
     def pairwise_mda(self, min_overlap=5):
         
-        mdas  = []
+        mdas = []
         
         for q in self.assignments:
             for s in self.assignments:
@@ -336,7 +346,7 @@ class TargetSegment(object):
             return numpy.array([ RELATIVE_SA[i] for i in sa ])
             
         sources = {}        
-        scores  = []
+        scores = []
         
         for q in self.assignments:
             for s in self.assignments:
@@ -370,7 +380,7 @@ class TargetSegment(object):
         back = numpy.sqrt(numpy.array(BACKGROUND))
 
         sources = {}        
-        scores  = []
+        scores = []
         
         for q in self.assignments:
             for s in self.assignments:
@@ -405,7 +415,7 @@ class TargetSegment(object):
             hist[bin] += (1.0 / len(bins))
         
         freq = numpy.array(hist.values())
-        return -numpy.sum(freq * numpy.log(freq))
+        return - numpy.sum(freq * numpy.log(freq))
     
     def rmsd_entropy(self, binsize=0.1):
         
@@ -472,8 +482,8 @@ class ResidueAssignmentInfo(object):
 
 class Assignment(FragmentMatch):
     
-    def __init__(self, source, start, end, id, qstart, qend, probability, rmsd, tm_score, 
-                 score=None, neff=None, segment=None):
+    def __init__(self, source, start, end, id, qstart, qend, probability, rmsd, tm_score,
+                 score=None, neff=None, segment=None, internal_id=None):
 
         assert source.has_torsion
         sub = source.subregion(start, end, clone=True)
@@ -483,7 +493,7 @@ class Assignment(FragmentMatch):
         self._calpha = csb.pyutils.ReadOnlyCollectionContainer(items=calpha, type=numpy.ndarray)
         self._torsion = torsion     
         
-        self._source_id = source.entry_id
+        self._source_id = source.accession[:4] + source.id 
         self._start = start
         self._end = end
 
@@ -491,6 +501,7 @@ class Assignment(FragmentMatch):
         self._neff = neff
     
         self._segment_start = segment
+        self.internal_id = internal_id
         
         super(Assignment, self).__init__(id, qstart, qend, probability, rmsd, tm_score, None)
 
@@ -600,6 +611,22 @@ class Assignment(FragmentMatch):
             
         return None
     
+    def nrmsd_to(self, other, min_overlap=5):
+        
+        common = self.overlap(other)
+        
+        if len(common) >= min_overlap:
+        
+            qstart, qend = min(common), max(common)
+            
+            q = self.backbone_at(qstart, qend)
+            s = other.backbone_at(qstart, qend)
+            
+            if len(q) > 0 and len(s) > 0:
+                return csb.bio.utils.rmsd(q, s) / RANDOM_RMSD[ len(common) ]
+            
+        return None
+    
     def mda_to(self, other, min_overlap=5):
 
         common = self.overlap(other)
@@ -613,8 +640,8 @@ class Assignment(FragmentMatch):
             
             if len(q) > 0 and len(s) > 0:
                 
-                maxphi = max( numpy.abs(i.phi-j.phi) for i, j in zip(q, s)[1:] )   # phi: 2 .. L
-                maxpsi = max( numpy.abs(i.psi-j.psi) for i, j in zip(q, s)[:-1] )  # psi: 1 .. L-1
+                maxphi = max(numpy.abs(i.phi - j.phi) for i, j in zip(q, s)[1:])   # phi: 2 .. L
+                maxpsi = max(numpy.abs(i.psi - j.psi) for i, j in zip(q, s)[:-1])  # psi: 1 .. L-1
                 
                 return max(maxphi, maxpsi)
             
@@ -653,7 +680,9 @@ class FragmentCluster(object):
         self._items = set(self._matrix.keys())
                      
         if len(self._items) < 1:
-            raise ClusterEmptyError()           
+            raise ClusterEmptyError()
+        
+        self._initcount = self.count 
                
     @property
     def count(self):
@@ -706,7 +735,7 @@ class FragmentCluster(object):
         mean = numpy.mean(d)
         cons = sum(1.0 for i in d if i <= self.threshold) / len(d)
         
-        return CentroidInfo(cen, mean, cons, self.count)
+        return CentroidInfo(cen, mean, cons, self.count, self._initcount - self.count)
 
     def reject(self, item):
         
@@ -733,9 +762,10 @@ class FragmentCluster(object):
             m[newmean] = i
 
         newmean = min(m)
-        assert newmean <= mean
 
-        if newmean < mean:            
+        if newmean > mean:
+            return False                # can't converge (not sure why, but might happen)
+        elif newmean < mean:            
             junk = m[newmean]
             self.reject(junk)
             return True                 # successful shrink
@@ -745,7 +775,7 @@ class FragmentCluster(object):
     def shrink(self, minitems=2):
 
         if self.count > minitems:
-            
+
             while self.shrinkone():
                 if self.count <= minitems:
                     raise ClusterExhaustedError()
@@ -756,12 +786,13 @@ class FragmentCluster(object):
     
 class CentroidInfo(object):
     
-    def __init__(self, centroid, mean, consistency, count):
+    def __init__(self, centroid, mean, consistency, count, rejections=0):
         
         self.centroid = centroid
         self.mean = mean
         self.consistency = consistency
         self.count = count
+        self.rejections = rejections
     
     @property
     def confidence(self):
@@ -862,6 +893,13 @@ class BenchmarkAdapter(object):
             
             db.cursor.callproc('reporting."GetScores"', (benchmark_id, type))
             return db.cursor.fetchall()    
+
+    def centroids(self, benchmark_id):
+        
+        with BenchmarkAdapter.Connection() as db:
+            
+            db.cursor.callproc('reporting."GetCentroids"', (benchmark_id,))
+            return db.cursor.fetchall() 
             
     def target_segments(self, target_id):
         
@@ -913,18 +951,19 @@ class BenchmarkAdapter(object):
             if not frag_chain.has_torsion:
                 frag_chain.compute_torsion()
             
-            fragment = Assignment(source=frag_chain, 
-                                  start=row['SourceStart'], 
-                                  end=row['SourceEnd'], 
-                                  id=row['FragmentName'], 
-                                  qstart=row['Start'], 
-                                  qend=row['End'], 
-                                  probability=row['Probability'], 
+            fragment = Assignment(source=frag_chain,
+                                  start=row['SourceStart'],
+                                  end=row['SourceEnd'],
+                                  id=row['FragmentName'],
+                                  qstart=row['Start'],
+                                  qend=row['End'],
+                                  probability=row['Probability'],
                                   score=row['Score'],
                                   neff=row['Neff'],
-                                  rmsd=row['RMSD'], 
+                                  rmsd=row['RMSD'],
                                   tm_score=row['TMScore'],
-                                  segment=row['SegmentStart'])
+                                  segment=row['SegmentStart'],
+                                  internal_id=row['InternalID'])
             
             target.assign(fragment)
         
