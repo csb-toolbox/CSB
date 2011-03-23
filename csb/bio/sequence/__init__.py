@@ -381,7 +381,7 @@ class A3MAlignment(object):
         @return: a new A3M Alignment instance
         @rtype: L{A3MAlignment}
         """
-        from StringIO import StringIO
+        from cStringIO import StringIO
 
         stream = StringIO()
         stream.write(a3m_string)

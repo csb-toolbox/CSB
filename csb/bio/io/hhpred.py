@@ -708,9 +708,9 @@ class HHOutputParser(object):
 
         @raise InvalidHHOutputError: if the output is corrupt
         """
-        import StringIO
+        import cStringIO
 
-        stream = StringIO.StringIO()
+        stream = cStringIO.StringIO()
         stream.write(output)
         stream.seek(0)
 
