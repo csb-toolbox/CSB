@@ -2,26 +2,26 @@
 Common IO-related utility functions and classes. 
 """
 
+import csb.pyutils
+
+
 NEWLINE = '\n'
     
-class UnbufferedStreamWrapper(object):
+class AutoFlushStream(csb.pyutils.Proxy):
     """
     Wrapper around a buffered stream which automatically calls flush()
-    after each write(). 
+    after each write(). This is essentially a proxy/decorator. 
     
     @param stream: the stream object to wrap
     @type stream: file
     """
 
     def __init__(self, stream):
-        self.stream = stream
+        super(AutoFlushStream, self).__init__(stream)
 
     def write(self, data):
-        self.stream.write(data)
-        self.stream.flush()
-
-    def flush(self):
-        self.stream.flush()
+        self._subject.write(data)
+        self._subject.flush()
 
 class EntryReader(object):
     """

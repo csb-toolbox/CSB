@@ -73,6 +73,24 @@ class InterruptableThread(threading.Thread):
         except Exception as ex:
             print ex
             self.__result = None
+            
+class Proxy(object):
+    """
+    Base class implementing the proxy pattern. Subclasses that define
+    a customized constructor must call super().__init__(subject) for proper
+    initialization.
+    
+    @param subject: an arbitrary object, hidden behind the proxy
+    """
+
+    def __init__(self, subject):
+        self._subject = subject
+        
+    def __getattr__(self, name):
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            return getattr(self._subject, name)                        
         
 class REMatchProxy(object):
     

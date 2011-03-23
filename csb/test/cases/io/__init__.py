@@ -2,23 +2,23 @@
 @todo: write tests for C{dump} and C{load}
 """
 
-import StringIO
+import cStringIO
 import types
 import csb.io
 import csb.test as test
 
 
 @test.unit
-class TestUnbufferedStream(test.Case):
+class TestAutoFlushStream(test.Case):
     
     def setUp(self):
         
-        super(TestUnbufferedStream, self).setUp()
+        super(TestAutoFlushStream, self).setUp()
         self.temp = self.config.getTempStream()
         
     def testWrite(self):
         
-        stream = csb.io.UnbufferedStreamWrapper(self.temp)
+        stream = csb.io.AutoFlushStream(self.temp)
         stream.write('$')
         
         content = open(self.temp.name).read()
@@ -34,7 +34,7 @@ class TestEntryReader(test.Case):
         
         super(TestEntryReader, self).setUp()
         
-        self.stream = StringIO.StringIO()
+        self.stream = cStringIO.StringIO()
         self.data = r"""
 
 >>E0
@@ -83,7 +83,7 @@ text3
         
     def testDel(self):
         
-        stream = StringIO.StringIO()
+        stream = cStringIO.StringIO()
         reader = csb.io.EntryReader(stream, None, None)
 
         self.assertFalse(stream.closed)        
