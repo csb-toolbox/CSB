@@ -48,8 +48,11 @@ Options:
         self._input = None
         self._output = None
         self._temp = None
+        self._docs = None         
+        self._apidocs = None
+        self._root = None
         self._verbosity = None
-        
+                
         self.program = sys.argv[0]
         self.input = input
         self.output = output
@@ -97,7 +100,12 @@ Options:
 
     def build(self):
         """
-        Run the console.
+        Run the console. 
+        
+        Since test packages do extensive imports, reload ROOT and
+        sub-packages from the output folder. Also modify sys.path temporarily
+        so that tests are not executed from the wrong CSB package: the output
+        folder is added at the B{beginning} of sys.path.
         """
         self.log('\n# Build started.\n')
         self._init()        
@@ -140,7 +148,7 @@ Options:
         
         sys.path = list(syspath)
         
-        for m in sys.modules:
+        for m in sys.modules.keys():
             if (m == root or m.startswith(root + '.')) and sys.modules[m]:
                 
                 self.log('{0:70}'.format(sys.modules[m].__file__), level=2, ending='')     
@@ -193,10 +201,9 @@ Options:
                 
     def _test(self):
         """
-        Run tests. Since test packages do extensive imports, reload ROOT and
-        sub-packages from the output folder. Also modify sys.path temporarily
-        so that tests are not executed from the wrong CSB package: the output
-        folder is added at the B{beginning} of sys.path.
+        Run tests. Also make sure the current environment loads all modules from
+        the output folder (assume a proper self._environment() call has already
+        been done).
         """
         import csb.test
         assert csb.test.__file__.startswith(self._temp), 'csb.test not loaded from the output!'     #@UndefinedVariable
@@ -231,7 +238,7 @@ Options:
         self.log('\n# Running the Doc Console...')
         try:
             epydoc.cli.cli()
-            raise sys.exit(0)
+            sys.exit(0)
         except SystemExit as ex:
             if ex.code is 0:
                 self.log('\n     PASSED all doc tests')
@@ -241,7 +248,7 @@ Options:
                 else:
                     self.log('\n     FAIL! Epydoc returned "#{0.code}: {0}"'.format(ex))
 
-        self.log('\n# Restoring the the previous ARGV...', level=2)    
+        self.log('\n# Restoring the previous ARGV...', level=2)    
         sys.argv = argv    
                         
     def _package(self):
