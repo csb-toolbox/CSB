@@ -211,6 +211,38 @@ def rmsd(X, Y):
 
     return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300) / len(X))
 
+def wrmsd(X, Y, w):
+    """
+    Calculate the weighted root mean squared deviation (wRMSD) using Kabsch' formula 
+
+    @param X: 3 x n input vector
+    @type X: numpy array
+    @param Y: 3 x n  input vector
+    @type Y: numpy array
+    @param w: input weights
+    @type w: numpy array
+
+    @return: rmsd value between the input vectors
+    @rtype: float
+    """
+
+    from numpy import sum, dot, transpose, sqrt, clip, average
+    from numpy.linalg import svd
+
+    ## normalize weights
+
+    w = w / w.sum()
+
+    X = X - dot(w,X)
+    Y = Y - dot(w,Y)
+
+    R_x = sum(X.T**2 * w)
+    R_y = sum(Y.T**2 * w)
+
+    L = svd(dot(transpose(Y)*w, X))[1]
+
+    return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300))
+
 def _tm_d0(Lmin):
     
     from numpy import power
