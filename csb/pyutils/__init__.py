@@ -747,6 +747,24 @@ class AbstractContainer(object):
     def _children(self):
         pass
     
+class Container(AbstractContainer):
+    """
+    Generic implementation of L{AbstractContainer}. Provides an easy way to
+    encapsulate class properties that behave like read-only collections or
+    dictionaries. This container is super lightweight and completely dynamic:
+    it serves as a proxy to an internal list or dict and stores no data in its
+    own instance. Owning classes are therefore free to modify those internal
+    data structures, which provides advantages over using 
+    L{ReadOnlyCollectionContainer}s. 
+    """
+    
+    def __init__(self, data):
+        self._data = data
+
+    @property
+    def _children(self):
+        return self._data        
+    
 class AbstractNIContainer(AbstractContainer):
     """
     Same as the L{AbstractContainer}, but provides access to the child elements

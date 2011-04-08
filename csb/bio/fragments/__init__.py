@@ -206,7 +206,7 @@ class TargetResidue(object):
         
         for ai in self.assignments:
             a = ai.fragment
-            if a.length < 5:
+            if a.length < FragmentCluster.MIN_LENGTH:
                 continue
             if best is None or a.rmsd < best.rmsd:
                 best = a
@@ -215,14 +215,22 @@ class TargetResidue(object):
         
         return best
                 
-    def filter(self, method=Metrics.RMSD, threshold=1.5):
+    def filter(self, method=Metrics.RMSD, threshold=1.5, extend=False):
         
         try:
-            assignments = [ ai.fragment for ai in self.assignments ]
-            cluster = FragmentCluster(assignments, threshold=threshold, method=method)
+            nodes = []
+            for ai in self.assignments:
+                if ai.fragment.probability > 0.7 and ai.fragment.length >= FragmentCluster.MIN_LENGTH:
+                    node = ClusterNode(ai.fragment, distance=method, fixed=extend)
+                else:
+                    node = ClusterNode(ai.fragment, distance=method, fixed=False)
+                nodes.append(node)
+            cluster = FragmentCluster(nodes, threshold=threshold)
           
-            centroid = cluster.shrink(minitems=0)
-            return centroid
+            center = cluster.shrink(minitems=0)
+            if center.has_alternative:
+                center.exchange()
+            return center
         
         except ClusterExhaustedError:
             return None
@@ -278,7 +286,7 @@ class TargetSegment(object):
         best = None
         
         for a in self.assignments:
-            if a.length < 5:
+            if a.length < FragmentCluster.MIN_LENGTH:
                 continue
             if best is None or a.rmsd < best.rmsd:
                 best = a
@@ -491,7 +499,8 @@ class Assignment(FragmentMatch):
         torsion = [r.torsion.copy() for r in sub.residues]
                     
         self._calpha = csb.pyutils.ReadOnlyCollectionContainer(items=calpha, type=numpy.ndarray)
-        self._torsion = torsion     
+        self._torsion = torsion
+        self._sequence = sub.sequence
         
         self._source_id = source.accession[:4] + source.id 
         self._start = start
@@ -508,6 +517,10 @@ class Assignment(FragmentMatch):
     @property
     def backbone(self):
         return self._calpha
+    
+    @property
+    def sequence(self):
+        return self._sequence
 
     @property
     def torsion(self):
@@ -587,6 +600,15 @@ class Assignment(FragmentMatch):
             return source.subregion(start, end)
         else:
             return source[start - 1 : end]
+        
+    def chain_at(self, source, qstart, qend):
+        
+        self._check_range(qstart, qend)
+        
+        start = qstart - self.qstart + self.start
+        end = qend - self.qstart + self.start
+        
+        return source.subregion(start, end)
     
     def overlap(self, other):
 
@@ -646,17 +668,56 @@ class Assignment(FragmentMatch):
                 return max(maxphi, maxpsi)
             
         return None  
+    
+    def to_rosetta(self, source, qstart=None, qend=None, weight=None):
+        
+        from cStringIO import StringIO
+        stream = StringIO()
+        
+        if weight is None:
+            weight = self.probability
+        if not qstart:
+            qstart = self.qstart
+        if not qend:
+            qend = self.qend            
+        
+        source.compute_torsion()
+        chain = self.chain_at(source, qstart, qend)
+        
+        for i, r in enumerate(chain.residues):
+                
+            acc = self.source_id[:4]
+            ch = self.source_id[4].upper()
+
+            start = qstart - self.qstart + self.start + i
+            aa = r.type
+            ss = 'L'
+            phi, psi, omega = 0, 0, 0
+            if r.torsion.phi:
+                phi = r.torsion.phi
+            if r.torsion.psi:
+                psi = r.torsion.psi
+            if r.torsion.omega:
+                omega = r.torsion.omega
+            
+            stream.write(' {0:4} {1:1} {2:>5} {3!s:1} {4!s:1} {5:>8.3f} {6:>8.3f} {7:>8.3f} {8:>8.3f}\n'.format(acc, ch, start, aa, ss, phi, psi, omega, weight))            
+        
+        return stream.getvalue()    
 
 class ClusterExhaustedError(ValueError):
     pass    
 class ClusterEmptyError(ClusterExhaustedError):
-    pass      
+    pass
+class ClusterDivergingError(RuntimeError):
+    pass
     
 class FragmentCluster(object):
+    
+    MIN_LENGTH = 6
 
-    def __init__(self, items, threshold=1.5, connectedness=0.5, method=Metrics.RMSD):
+    def __init__(self, items, threshold=1.5, connectedness=0.5):
 
-        items = set(i for i in items if i.length > 5)
+        items = set(i for i in items if i.fragment.length >= FragmentCluster.MIN_LENGTH)
         
         self._matrix = {}        
         self.threshold = float(threshold)
@@ -668,14 +729,14 @@ class FragmentCluster(object):
             conn = 0.0
             
             for j in items:
-                distance = getattr(i, method)(j)
+                distance = i.distance(j)
                 if distance is not None:
                     conn += 1
                     self._matrix[i][j] = distance
             
             if conn / len(items) < self.connectedness:
+                # reject i as a first class node
                 del self._matrix[i]
-                
                 
         self._items = set(self._matrix.keys())
                      
@@ -687,10 +748,14 @@ class FragmentCluster(object):
     @property
     def count(self):
         return len(self._items)
-    
+
     @property    
     def items(self):
         return tuple(self._items)
+        
+    @property    
+    def fragments(self):
+        return [i.fragment for i in self._items]
     
     def _distances(self, skip=None):
 
@@ -705,6 +770,13 @@ class FragmentCluster(object):
                     d.append(self._matrix[i][j])
                     
         return d
+    
+    def _distance(self, i, j):
+        
+        if j in self._matrix[i]:
+            return self._matrix[i][j]
+        else:
+            return None
 
     def mean(self, skip=None):
         
@@ -717,6 +789,7 @@ class FragmentCluster(object):
 
     def centroid(self):
 
+        alt = None
         cen = None
         avg = None
 
@@ -728,19 +801,29 @@ class FragmentCluster(object):
                 avg = curravg
                 cen = i
             elif curravg == avg:
-                if i.length > cen.length:
+                if i.fragment.length > cen.fragment.length:
                     cen = i
     
         d = self._distances()
         mean = numpy.mean(d)
         cons = sum(1.0 for i in d if i <= self.threshold) / len(d)
         
-        return CentroidInfo(cen, mean, cons, self.count, self._initcount - self.count)
+        for i in self._matrix:
+            if i is not cen and i.fixed and i.fragment.length > cen.fragment.length:
+                distance = self._distance(i, cen)
+                if distance is not None and distance < 0.5 * self.threshold:
+                    if alt is None or alt.fragment.length < i.fragment.length:
+                        alt = i
+
+        return ClusterRep(cen, mean, cons, len(self._matrix[cen]), alternative=alt,
+                            rejections=(self._initcount - self.count))
 
     def reject(self, item):
         
         if self.count == 1:
             raise ClusterExhaustedError()
+        
+        assert not item.fixed
         
         for i in self._matrix:
             if item in self._matrix[i]:
@@ -753,24 +836,28 @@ class FragmentCluster(object):
         
         mean = self.mean()
         if mean <= self.threshold or self.count == 1:
-            return False                # already shrunk enough
+            return False                  # already shrunk enough
 
         m = {}
         
         for i in self._matrix:
-            newmean = self.mean(skip=i)
-            m[newmean] = i
+            if not i.fixed:
+                newmean = self.mean(skip=i)
+                m[newmean] = i
+
+        if len(m) == 0:                   # only fixed items remaining
+            raise ClusterExhaustedError()
 
         newmean = min(m)
 
         if newmean > mean:
-            return False                # can't converge (not sure why, but might happen)
+            raise ClusterDivergingError() # can't converge, usually when fixed items are too far away from the average         
         elif newmean < mean:            
             junk = m[newmean]
             self.reject(junk)
-            return True                 # successful shrink
+            return True                   # successful shrink
         else:
-            return False                # converged
+            return False                  # converged
         
     def shrink(self, minitems=2):
 
@@ -784,15 +871,36 @@ class FragmentCluster(object):
             
         return self.centroid()
     
-class CentroidInfo(object):
+class ClusterNode(object):
     
-    def __init__(self, centroid, mean, consistency, count, rejections=0):
+    def __init__(self, fragment, distance=Metrics.RMSD, fixed=False):
         
-        self.centroid = centroid
-        self.mean = mean
-        self.consistency = consistency
-        self.count = count
-        self.rejections = rejections
+        if fixed and fragment.length < FragmentCluster.MIN_LENGTH:
+            raise ValueError("Can't fix a short fragment")
+        
+        self.fragment = fragment
+        self.fixed = bool(fixed)
+                
+        self._distance = getattr(self.fragment, distance)
+        
+    def distance(self, other):
+        return self._distance(other.fragment)
+    
+class ClusterRep(object):
+    
+    def __init__(self, centroid, mean, consistency, count, rejections=0, alternative=None):
+        
+        if isinstance(centroid, ClusterNode):
+            centroid = centroid.fragment
+        if isinstance(alternative, ClusterNode):
+            alternative = alternative.fragment
+                    
+        self._centroid = centroid
+        self._alternative = alternative
+        self._mean = mean
+        self._consistency = consistency
+        self._count = count
+        self._rejections = rejections
     
     @property
     def confidence(self):
@@ -800,6 +908,201 @@ class CentroidInfo(object):
             return 0
         else:
             return numpy.log10(self.count) * self.consistency
+        
+    @property
+    def centroid(self):
+        return self._centroid
+    
+    @property
+    def alternative(self):
+        return self._alternative
+    
+    @property    
+    def has_alternative(self):
+        return self._alternative is not None        
+    
+    @property
+    def mean(self):
+        return self._mean
+    
+    @property
+    def consistency(self):
+        return self._consistency
+    
+    @property
+    def count(self):
+        return self._count
+    
+    @property
+    def rejections(self):
+        return self._rejections
+    
+    def exchange(self):
+        
+        if self._alternative is not None:
+
+            centroid = self._centroid
+            self._centroid = self._alternative
+            self._alternative = centroid
+
+    def to_rosetta(self, source):
+        return self.centroid.to_rosetta(source, weight=self.confidence)
+            
+class AdaptedAssignment(object):
+    
+    @staticmethod
+    def with_overhangs(center, start, end, overhang=1):
+        
+        if center.centroid.qstart <= (start - overhang):
+            start -= overhang
+        elif center.centroid.qstart < start:
+            start = center.centroid.qstart
+            
+        if center.centroid.qend >= (end + overhang):
+            end += overhang
+        elif center.centroid.qend > end:
+            end = center.centroid.end
+                        
+        return AdaptedAssignment(center, start, end)
+    
+    def __init__(self, center, qstart, qend):
+        
+        if qstart < center.centroid.qstart:
+            raise ValueError(qstart)
+        if qend > center.centroid.qend:
+            raise ValueError(qend)
+                
+        self._qstart = qstart
+        self._qend = qend
+        self._center = center
+        
+    @property
+    def fragment(self):
+        return self._center.centroid
+
+    @property
+    def center(self):
+        return self._center
+        
+    @property
+    def confidence(self):
+        return self._center.confidence
+    
+    @property
+    def qstart(self):
+        return self._qstart
+    
+    @property
+    def qend(self):
+        return self._qend
+    
+    @property
+    def backbone(self):
+        return self.fragment.backbone_at(self.qstart, self.qend)
+    
+    def chain(self, source):
+        return self.fragment.chain_at(source, self.qstart, self.qend) 
+    
+    def to_rosetta(self, source):
+        return self.fragment.to_rosetta(source, self.qstart, self.qend, self.confidence)
+        
+class SmoothFragmentMap(csb.pyutils.AbstractContainer):
+    
+    def __init__(self, length, centroids):
+        
+        if not length > 0:
+            raise ValueError(length)
+        
+        self._length = int(length)  
+        self._slots = set(range(1, self._length + 1))
+        self._map = {}
+    
+        centers = list(centroids)
+        centers.sort(key=lambda i: i.confidence, reverse=True)
+        
+        for c in centers:
+            self.assign(c)
+        
+    @property
+    def _children(self):
+        return self._map
+    
+    def assign(self, center):
+        
+        for r in range(center.centroid.qstart, center.centroid.qend + 1):
+            if r in self._slots:
+                self._map[r] = center
+                self._slots.remove(r)
+    
+    def patches(self):            
+            
+        center = None
+        start = None
+        end = None
+        
+        for r in range(1, self._length + 1):
+            
+            if center is None:
+                if r in self._map:
+                    center = self._map[r]
+                    start = end = r
+                else:
+                    center = None
+                    start = end = None
+            else:
+                if r in self._map:
+                    if self._map[r] is center:
+                        end = r
+                    else:
+                        yield AdaptedAssignment(center, start, end)
+                        center = self._map[r]
+                        start = end = r
+                else:
+                    yield AdaptedAssignment(center, start, end)
+                    center = None
+                    start = end = None
+    
+
+class RosettaFragsetFactory(object):
+    
+    def __init__(self):
+        import csb.bio.fragments.rosetta as rosetta
+        self.rosetta = rosetta
+    
+    def make_fragset(self, target):
+        
+        frag_factory = self.rosetta.RosettaFragment
+        fragments = map(frag_factory.from_object, target.matches)
+        #fragments = [ frag_factory.from_object(f) for f in target.matches if f.length >= 6 ]
+        fragments.sort()
+                
+        return self.rosetta.RosettaFragmentMap(fragments, target.length)
+    
+    def make_combined(self, target, filling, threshold=0.5):
+        
+        fragmap = self.make_fragset(target)
+        covered = set()
+        
+        for r in target.residues:
+            
+            if r.assignments.length == 0:
+                continue
+            
+            cluster = r.filter()
+            if cluster is None:
+                continue
+
+            if cluster.confidence >= threshold:
+                covered.add(r.native.rank)
+                
+        for r in target.residues:
+            if r.native.rank not in covered:               # true for gaps and low-conf residues
+                fragmap.mark_unconfident(r.native.rank)
+                
+        for frag in filling:
+            fragmap.complement(frag)
+            
+        return fragmap
             
 class BenchmarkAdapter(object):
     
@@ -969,4 +1272,25 @@ class BenchmarkAdapter(object):
         
         return target
 
+    
+if __name__ == '__main__':
+    
+    class A(object):
+        
+        def __init__(self, r):
+            self.r = r
+            self.length = 8
+        
+        def __repr__(self):
+            return 'A' + str(self.r)
+        
+        def rmsd_to(self, other):
+            return abs(self.r - other.r)
+        
+    c = FragmentCluster([ ClusterNode(A(0.4)), ClusterNode(A(1.3)), ClusterNode(A(1.2)), ClusterNode(A(1.2)), ClusterNode(A(0.1), fixed=0), ClusterNode(A(0.09), fixed=1) ], threshold=0.1)
+    print c.mean()
+    ci = c.shrink(minitems=0)
+    print '==============='
+    print ci.mean, ci.rejections, ci.centroid
+    print c.fragments
     
