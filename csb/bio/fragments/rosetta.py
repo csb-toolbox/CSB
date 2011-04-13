@@ -21,7 +21,10 @@ class ResidueInfo(object):
     
     @property
     def omega(self):
-        return self.torsion.omega or 0.       
+        return self.torsion.omega or 0.
+    
+    def copy(self):
+        return ResidueInfo(self.rank, self.aa, self.ss, self.torsion.copy()) 
 
 class RosettaFragment(object):
     
@@ -39,6 +42,23 @@ class RosettaFragment(object):
         self._end = int(end)
         self._score = float(score)
         self._residues = list(residues)
+        
+    def subregion(self, qstart, qend):
+        
+        if not self.qstart <= qstart <= qend <= self.qend:
+            raise ValueError('Invalid subregion')
+        
+        start = qstart - self.qstart + self.start
+        end = qend - self.qend + self.end
+        
+        diff = qstart - self.qstart
+        size = qend - qstart + 1
+        assert 0 <= diff 
+        
+        residues = [ r.copy() for r in self.residues[diff : diff + size] ]
+        assert len(residues) == size 
+        
+        return RosettaFragment(self.source_id, qstart, qend, start, end, self.score, residues)
         
     def __cmp__(self, other):
         # lower score means a better fragment

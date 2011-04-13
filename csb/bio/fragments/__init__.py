@@ -1078,6 +1078,16 @@ class RosettaFragsetFactory(object):
                 
         return self.rosetta.RosettaFragmentMap(fragments, target.length)
     
+    def make_chopped(self, fragments, window):
+        
+        frags = []
+        
+        for f in fragments:
+            for qs in range(f.qstart, f.qend - window + 1):
+                frags.append(f.subregion(qs, qs + window - 1))
+        
+        return self.rosetta.RosettaFragmentMap(frags)
+    
     def make_combined(self, target, filling, threshold=0.5):
         
         fragmap = self.make_fragset(target)
