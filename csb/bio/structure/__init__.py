@@ -1825,12 +1825,8 @@ class TorsionAngles(object):
     def __init__(self, phi, psi, omega, units=AngleUnits.Degrees):
         
         try:
-            if isinstance(units, csb.pyutils.EnumItem):
-                if not csb.pyutils.Enum.ismember(units, AngleUnits):
-                    raise ValueError()
-            else:
+            if not isinstance(units, csb.pyutils.EnumItem):
                 units = csb.pyutils.Enum.parse(AngleUnits, units, ignore_case=True)
-                
         except ValueError:
             raise ValueError('Unknown angle unit type {0}'.format(units))                              
 
