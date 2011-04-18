@@ -112,6 +112,7 @@ class Target(csb.pyutils.AbstractNIContainer):
         self._overlap = overlap
         
         self._assignments = csb.pyutils.ReadOnlyCollectionContainer(type=Assignment)
+        self._errors = csb.pyutils.CollectionContainer()
             
         resi = [TargetResidue(native) for native in residues]
         self._residues = csb.pyutils.ReadOnlyCollectionContainer(items=resi,
@@ -123,7 +124,11 @@ class Target(csb.pyutils.AbstractNIContainer):
         
     @property
     def _children(self):
-        return self._residues        
+        return self._residues       
+    
+    @property
+    def errors(self):
+        return self._errors 
     
     @property
     def id(self):
@@ -1258,7 +1263,11 @@ class BenchmarkAdapter(object):
             src_chain = row['Source'][4]
             
             if source is None or source.accession != src_accession:
-                source = self.structure(src_accession, src_chain)
+                try:
+                    source = self.structure(src_accession, src_chain)
+                except IOError as ioe:
+                    target.errors.append(ioe)
+                    continue
                 
             frag_chain = source.chains[src_chain]
             if not frag_chain.has_torsion:
