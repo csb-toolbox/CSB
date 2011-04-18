@@ -1268,8 +1268,11 @@ class BenchmarkAdapter(object):
                 except IOError as ioe:
                     target.errors.append(ioe)
                     continue
-                
-            frag_chain = source.chains[src_chain]
+            
+            if src_chain == '_':
+                frag_chain = source.first_chain
+            else:
+                frag_chain = source.chains[src_chain]
             if not frag_chain.has_torsion:
                 frag_chain.compute_torsion()
             
