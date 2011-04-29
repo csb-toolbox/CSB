@@ -296,6 +296,29 @@ def density(x, nbins, normalize=True):
 
     return hx, hy
 
+def circvar(a,axis=None):
+    """
+    Calculate circular variance of a circular variable
+
+    @param a: input array
+    @param axis: axis along which mean is calculated
+    @type axis: None or integer    
+    """
+    from numpy import average, cos, sin
+
+    return 1 - average(cos(a-b),axis)**2 - average(sin(a-b),axis)**2
+
+def circmean(a,axis=None):
+    """
+    Estimate mean of a circular variable
+
+    @param a: input array
+    @param axis: axis along which mean is calculated
+    @type axis: None or integer
+    """
+    from numpy import sin, cos, arctan2
+
+    return arctan2(sum(sin(a),axis), sum(cos(a),axis))
 
 if __name__ == '__main__':
 
