@@ -306,7 +306,7 @@ def circvar(a,axis=None):
     """
     from numpy import average, cos, sin
 
-    return 1 - average(cos(a-b),axis)**2 - average(sin(a-b),axis)**2
+    return 1 - average(cos(a),axis)**2 - average(sin(a),axis)**2
 
 def circmean(a,axis=None):
     """
@@ -316,9 +316,9 @@ def circmean(a,axis=None):
     @param axis: axis along which mean is calculated
     @type axis: None or integer
     """
-    from numpy import sin, cos, arctan2
+    from numpy import sin, cos, arctan2, average
 
-    return arctan2(sum(sin(a),axis), sum(cos(a),axis))
+    return arctan2(average(sin(a),axis), average(cos(a),axis))
 
 if __name__ == '__main__':
 
