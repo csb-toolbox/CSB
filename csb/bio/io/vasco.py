@@ -18,7 +18,7 @@ class ShiftInfo(object):
     __repr__ = __str__
 
         
-class ChemicalShiftContainter(dict):
+class ChemicalShiftContainer(dict):
 
     def __init__(self, bmrb_id = '', pdb_id = '', sequence = '',
                  chain = '', exptype = ''):
@@ -32,7 +32,7 @@ class ChemicalShiftContainter(dict):
 
     def add_to_structure(self, structure):
         """
-        @param structure:  L{Structure} which is extended with shift information
+        @param structure: Structure which shall be extended with shift information
         @type : Structure
         """
         
@@ -93,8 +93,8 @@ class VascoStructureParser(object):
                 break
 
          
-        return ChemicalShiftContainter(bmrb_id, pdb_id, chain,
-                                       sequence, exptype )
+        return ChemicalShiftContainer(bmrb_id, pdb_id, chain,
+                                      sequence, exptype )
             
     
     def _parse_shifts(self, data, ignore_outliers = True):
