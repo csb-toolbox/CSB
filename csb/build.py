@@ -257,7 +257,7 @@ Options:
             package = d.dist_files[0][2]
         except SystemExit as ex:
             if ex.code is not 0:
-                product = 'FAIL'
+                package = 'FAIL'
                 self.log('\n  FAIL: Setup returned: \n\n{0}\n'.format(ex))
             
         self.log('\n# Restoring the previous CWD and ARGV...', level=2)
@@ -386,7 +386,11 @@ class RevisionHandler(object):
         
         with open(sourcefile, 'w') as src:
             src.write(content)
-            
+
+        compiled = os.path.splitext(sourcefile)[0] + '.pyc'
+        if os.path.exists(compiled):
+            os.remove(compiled)
+        
         return imp.load_source('____source', sourcefile).__version__      
     
     def _run(self, cmd):
