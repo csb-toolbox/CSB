@@ -114,18 +114,18 @@ def datatree(package, dataroot, junk=('.svn',), mask='*.*'):
 
 
 def build():
-    setup(
-          name=NAME,
-          packages=sourcetree(NAME, JUNK),
-          package_data={'csb/test': datatree('csb/test', 'data', JUNK, '*.*')},
-          version=VERSION,
-          author=AUTHOR,
-          author_email=EMAIL,
-          url=URL,
-          description=SUMMARY,
-          long_description=DESCRIPTION,
-          license=LICENSE,
-          requires=REQUIRES )
+    return setup(
+              name=NAME,
+              packages=sourcetree(NAME, JUNK),
+              package_data={'csb/test': datatree('csb/test', 'data', JUNK, '*.*')},
+              version=VERSION,
+              author=AUTHOR,
+              author_email=EMAIL,
+              url=URL,
+              description=SUMMARY,
+              long_description=DESCRIPTION,
+              license=LICENSE,
+              requires=REQUIRES )
 
 
 

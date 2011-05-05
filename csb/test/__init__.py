@@ -163,7 +163,6 @@ import sys
 import imp
 import types
 import cPickle
-import hashlib
 import tempfile
 import unittest
 import time
@@ -327,7 +326,7 @@ class AbstractTestBuilder(object):
         @return: a C{unittest.TestSuite} ready for the test runner
         @rtype: C{unittest.TestSuite}         
         """         
-        mod = imp.load_source(self._moduleHash(file), file)
+        mod = self._loadSource(file)
         suite = unittest.TestLoader().loadTestsFromModule(mod)        
         return unittest.TestSuite(self._filter(suite)) 
                 
@@ -405,15 +404,20 @@ class AbstractTestBuilder(object):
                 
         return unittest.TestSuite(suites) 
     
-    def _moduleHash(self, path):
+    def _loadSource(self, path):
         """
-        Build a GUID used when importing a module with imp.
+        Import and return the Python module identified by C{path}.
         
-        @bug: If you don't use a unique name each time you import a module,
-              python gets really confused. The results are unpredictable, but
-              also silent - no exception, just corrupt program!
+        @note: Module objects behave as singletons. If you import two different
+               modules and give them the same name in imp.load_source(mn), this
+               counts for a redefinition of the module originally named mn, which
+               is basically the same as reload(mn). Therefore, you need to ensure
+               that for every call to imp.load_source(mn, src.py) the mn parameter
+               is a string that uniquely identifies the source file src.py.
         """
-        return hashlib.sha1(path).hexdigest()
+        #name = hashlib.sha1(path).hexdigest()
+        name = os.path.splitext(os.path.abspath(path))[0]
+        return imp.load_source(name, path)        
     
     def _recurse(self, obj):
         """
@@ -493,7 +497,7 @@ class CustomTestBuilder(AbstractTestBuilder):
     
     def loadFromFile(self, file):
             
-        mod = imp.load_source(self._moduleHash(file), file)
+        mod = self._loadSource(file)
         suites = self._inspect(mod)
         
         return unittest.TestSuite(suites) 
