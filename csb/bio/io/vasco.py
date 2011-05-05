@@ -1,8 +1,9 @@
-import os, sys
+import os
 
 class ShiftInfo(object):
 
-    def __init__(self, residue_id, amino_acid, nucleus, shift, element, secondary_structure):
+    def __init__(self, residue_id, amino_acid, nucleus,
+                 shift, element, secondary_structure):
 
         self.residue_id = residue_id
         self.nucleus = nucleus
@@ -12,15 +13,16 @@ class ShiftInfo(object):
         self.secondary_structre = secondary_structure
 
     def __str__(self):
-        return '%s %s %s'%(self.amino_acid, self.nucleus, self.shift)
+        return '%s %s %s' %(self.amino_acid, self.nucleus, self.shift)
 
     __repr__ = __str__
 
         
 class ChemicalShiftContainter(dict):
 
-    def __init__(self, bmrb_id = '', pdb_id = '', sequence = '', chain = '', exptype = ''):
-
+    def __init__(self, bmrb_id = '', pdb_id = '', sequence = '',
+                 chain = '', exptype = ''):
+        dict.__init__(self)
         self.bmrb_id = bmrb_id
         self.pdb_id = pdb_id
         self.sequence = sequence
@@ -29,7 +31,12 @@ class ChemicalShiftContainter(dict):
 
 
     def add_to_structure(self, structure):
-        pass
+        """
+        @param structure:  L{Structure} which is extended with shift information
+        @type : Structure
+        """
+        
+        raise NotImplementedError('Not implemented')
     
 
     
@@ -39,6 +46,9 @@ class VascoStructureParser(object):
     Simple Vasco Parser
     """
 
+    def __init__(self):
+        self._stream  = None
+
     def parse(self, file_name, ignore_outliers = True):
         """
         @param file_name: source  file to parse
@@ -46,7 +56,6 @@ class VascoStructureParser(object):
         @return: a L{ChemicalShiftContainer} of L{ShiftInfo} objects
         @rtype: dict
         """
-
         self._stream  = open(file_name)
         shifts = self._parse_header()
 
@@ -84,7 +93,8 @@ class VascoStructureParser(object):
                 break
 
          
-        return ChemicalShiftContainter(bmrb_id, pdb_id, chain, sequence, exptype )
+        return ChemicalShiftContainter(bmrb_id, pdb_id, chain,
+                                       sequence, exptype )
             
     
     def _parse_shifts(self, data, ignore_outliers = True):
