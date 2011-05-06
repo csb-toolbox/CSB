@@ -24,12 +24,12 @@ import imp
 import shutil
 
 if os.path.basename(__file__) == '__init__.py':
-    _parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    PARENT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 else:
-    _parent = os.path.abspath(os.path.dirname(__file__))
+    PARENT = os.path.abspath(os.path.dirname(__file__))
 
 ROOT = 'csb'
-SOURCETREE = os.path.abspath(os.path.join(_parent, ".."))
+SOURCETREE = os.path.abspath(os.path.join(PARENT, ".."))
 
 if __name__ == '__main__':
     sys.path = [SOURCETREE] + sys.path     
@@ -57,11 +57,13 @@ class Console(object):
            See the module documentation for more info.
     """
     
+    PROGRAM = __file__
+    
     USAGE = r"""
 CSB Build Console: build, test and package the entire csb project.
 
 Usage:
-     python {0} -o output [-v verbosity] [-h]
+     python {program} -o output [-v verbosity] [-h]
      
 Options:
       -o  output     Build output directory
@@ -71,7 +73,6 @@ Options:
     
     def __init__(self, output='.', verbosity=1):
         
-        self._program = None
         self._input = None
         self._output = None
         self._temp = None
@@ -80,20 +81,12 @@ Options:
         self._root = None
         self._verbosity = None        
             
-        if os.path.join(SOURCETREE, ROOT) != _parent:
+        if os.path.join(SOURCETREE, ROOT) != PARENT:
             raise IOError('{0} must be a sub-package or sub-module of {1}'.format(__file__, ROOT))
         self._input = SOURCETREE
                 
-        self.program = sys.argv[0]
         self.output = output
         self.verbosity = verbosity
-                
-    @property
-    def program(self):
-        return self._program
-    @program.setter
-    def program(self, value):
-        self._program = os.path.basename(value)
         
     @property
     def input(self):
@@ -273,7 +266,7 @@ Options:
         if message:
             print message
         if usage:
-            print Console.USAGE.format(sys.argv[0])    
+            print Console.USAGE.format(program=Console.PROGRAM)    
                 
         sys.exit(code)               
 
@@ -308,8 +301,11 @@ Options:
         if not output:
             Console.exit(code=1, usage=True)
         else:
-            # @todo: try..except -> exit
-            Console(output, verbosity=verb).build()
+            try:
+                Console(output, verbosity=verb).build()
+            except Exception as ex:
+                Console.exit(message='Unexpected Error: ' + str(ex), code=99, usage=False)
+                
             
 class RevisionError(RuntimeError):
     
@@ -408,6 +404,7 @@ class RevisionInfo(object):
         self.item = item
         self.revision = revision
         self.maxrevision = maxrevision
+
         
 def main():
     Console.run()
