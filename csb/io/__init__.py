@@ -4,6 +4,8 @@ Common IO-related utility functions and classes.
 
 import csb.pyutils
 
+from csb.io.tsv import Table
+
 
 NEWLINE = '\n'
     
