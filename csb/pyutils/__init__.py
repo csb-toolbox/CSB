@@ -39,6 +39,31 @@ class Shell(object):
                 
         return ShellInfo(code, stdout or '', stderr or '', cmd or 0)
 
+    @staticmethod
+    def runstrict(cmd):
+        """
+        Same as L{Shell.run()}, but raises L{ProcessError} on bad exit code.
+        
+        @param cmd: shell command with its arguments
+        @param cmd: tuple or str
+        
+        @rtype: L{ShellInfo}
+        """
+        si = Shell.run(cmd)
+        
+        if si.code == 0:
+            return si
+        else:
+            raise ProcessError(si)            
+    
+class ProcessError(Exception):
+    """
+    Raised on L{Shell.run()} failures.
+    @type context: L{ShellInfo} 
+    """    
+    def __init__(self, context):
+        self.context = context  
+
 class ShellInfo(object):
     """
     Shell command execution info
