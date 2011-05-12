@@ -33,7 +33,7 @@ class ProcheckParser():
         tmp = tempfile.mkdtemp()
         base = os.path.basename(pdb_file)
         
-        p = subprocess.call('cp %s %s/.' % (os.path.expanduser(pdb_file), tmp), shell = True)
+        p = subprocess.call('cp %s %s/.' % (os.path.expanduser(pdb_file), tmp), shell=True)                   #@UnusedVariable
         os.chdir(tmp)
 
         p = subprocess.Popen('%s %s %s' %(self.binary, os.path.join(tmp,base), self.acc),
@@ -41,7 +41,7 @@ class ProcheckParser():
                              stderr=open("/dev/null", "w"),
                              shell = True)
         
-        sts = os.waitpid(p.pid, 0)[1]
+        sts = os.waitpid(p.pid, 0)[1]                                                                         #@UnusedVariable
         summary = '.'.join([os.path.splitext(base)[0],'sum'])
         out = self.parse(os.path.join(tmp,summary))
         
@@ -65,9 +65,9 @@ class ProcheckParser():
         inputFileName = re.compile('>>>-----.*?\n.*?\n\s*\|\s*(\S+)\s+')
         residues = re.compile('(\d+)\s*residues\s\|')
         ramachandranPlot = re.compile('Ramachandran\splot:\s*(\d+\.\d+)%\s*core\s*(\d+\.\d+)%\s*allow\s*(\d+\.\d+)%\s*gener\s*(\d+\.\d+)%\s*disall')
-        labelledAll = re.compile('Ramachandrans:\s*(\d+)\s*.*?out\sof\s*(\d+)')
-        labelledChi = re.compile('Chi1-chi2\splots:\s*(\d+)\s*.*?out\sof\s*(\d+)')
-        badContacts = re.compile('Bad\scontacts:\s*(\d+)')
+        labelledAll = re.compile('Ramachandrans:\s*(\d+)\s*.*?out\sof\s*(\d+)')                                                 #@UnusedVariable
+        labelledChi = re.compile('Chi1-chi2\splots:\s*(\d+)\s*.*?out\sof\s*(\d+)')                                              #@UnusedVariable
+        badContacts = re.compile('Bad\scontacts:\s*(\d+)')                                                                      #@UnusedVariable
         gFactors = re.compile('G-factors\s*Dihedrals:\s*([0-9-+.]+)\s*Covalent:\s*([0-9-+.]+)\s*Overall:\s*([0-9-+.]+)')
 
         info['input_file']  = inputFileName.search(text).groups()[0]

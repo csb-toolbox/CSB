@@ -59,7 +59,7 @@ class WhatCheckParser(object):
         tmp = tempfile.mkdtemp()
         base = os.path.basename(pdb_file)
         
-        p = subprocess.call('cp %s %s/.' %(os.path.expanduser(pdb_file),
+        p = subprocess.call('cp %s %s/.' %(os.path.expanduser(pdb_file),                                        #@UnusedVariable
                                            tmp), shell = True)
         os.chdir(tmp)
 
@@ -68,7 +68,7 @@ class WhatCheckParser(object):
                              stderr=open("/dev/null", "w"),
                              shell = True)
         
-        sts = os.waitpid(p.pid, 0)[1]
+        sts = os.waitpid(p.pid, 0)[1]                                                                           #@UnusedVariable
         
         out = self.parse_summary(os.path.join(tmp,'pdbout.txt'))
         

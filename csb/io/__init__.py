@@ -238,7 +238,6 @@ def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
     @param lock: Use a lockfile to restrict access
     """
 
-    import os
     ## check whether file is locked
     if lock is not None:
 
@@ -288,7 +287,7 @@ def load(filename, gzip=False, lock=None, lock_path='~/'):
     
     @return: Python object unpickled from file
     """
-    import cPickle, os
+    import cPickle
 
 
     ## file locked?
