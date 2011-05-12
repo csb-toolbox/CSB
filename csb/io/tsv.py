@@ -618,8 +618,6 @@ class Table(object):
         @param file: destination stream or filename
         @type file: file (stream) or str (filename)
         """
-
-        import csb.io
                 
         with csb.io.EntryWriter(file, close=False) as out:
             
