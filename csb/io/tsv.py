@@ -59,7 +59,7 @@ The data contained in a Table can be extracted in several ways:
 """
 
 import os
-import tempfile
+import csb.io
 import cStringIO
 import __builtin__
 
@@ -463,7 +463,7 @@ class Table(object):
         
     def __setstate__(self, state):
 
-        with tempfile.NamedTemporaryFile() as temp:
+        with csb.io.TempFile() as temp:
             temp.write(state)
             temp.flush()
             clone = Table.from_tsv(temp.name)
