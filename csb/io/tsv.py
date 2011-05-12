@@ -311,7 +311,8 @@ class DataRow(object):
     
     @property
     def columns(self):
-        return tuple(self._columns)
+        c = dict((self._columns[cn], cn) for cn in self._columns)
+        return tuple(c[i] for i in sorted(c))
                 
 class Table(object):
     """
@@ -519,7 +520,7 @@ class Table(object):
         
         if isinstance(i[0], int):
             self._checkrow(i[0])
-            if len(columns) == 1 and isinstance(i[1], int):
+            if len(columns) == 1 and isinstance(i[1], (int, basestring)):
                 exp.scalar = True
             exp.predicate = Equals(i[0] + 1)
             
