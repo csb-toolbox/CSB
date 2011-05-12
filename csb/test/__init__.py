@@ -164,6 +164,7 @@ import imp
 import types
 import cPickle
 import tempfile
+import csb.io
 import unittest
 import time
 
@@ -255,7 +256,7 @@ class Config(object):
         
         @rtype: file stream
         """
-        return tempfile.NamedTemporaryFile()
+        return csb.io.TempFile()
 
 class Case(unittest.TestCase):
     """

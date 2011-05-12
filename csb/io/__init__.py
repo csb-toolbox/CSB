@@ -2,6 +2,8 @@
 Common IO-related utility functions and classes. 
 """
 
+import os
+import tempfile
 import csb.pyutils
 
 from csb.io.tsv import Table
@@ -24,6 +26,48 @@ class AutoFlushStream(csb.pyutils.Proxy):
     def write(self, data):
         self._subject.write(data)
         self._subject.flush()
+        
+class TempFile(csb.pyutils.Proxy):
+    """
+    Create a temporary file and take care of deleting it upon object
+    destruction. The file can opened multiple times on any platform, unlike
+    the case with tempfile.NamedTemporaryFile (does not work on Windows).
+    """
+
+    def __init__(self):
+        
+        self.__file = tempfile.mkstemp()[1]
+        self.__fh = open(self.__file, 'w')
+        
+        super(TempFile, self).__init__(self.__fh)
+        
+    def __del__(self):
+        try:
+            self.close()
+        except:
+            pass
+        
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *args):
+        self.close() 
+        
+    def close(self):
+        """
+        Flush, close and delete the file.
+        """
+        
+        if not self.__fh.closed:
+            self.__fh.flush()
+            self.__fh.close()
+            
+            if os.path.exists(self.__file):
+                os.remove(self.__file)
+            
+    @property
+    def name(self):
+        return self.__file        
 
 class EntryReader(object):
     """

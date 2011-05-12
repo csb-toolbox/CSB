@@ -3,6 +3,7 @@ DSSP Parser
 """
 
 import csb.pyutils
+import csb.io
 
 from csb.bio.structure import SecStructures, UnknownSecStructureError
 
@@ -127,9 +128,8 @@ def get(accession, prefix='http://www.pdb.org/pdb/files/'):
     @rtype: dict
     """
     import urllib2
-    from tempfile import NamedTemporaryFile
 
-    dssp = NamedTemporaryFile()
+    dssp = csb.io.TempFile()
 
     browser = urllib2.urlopen(prefix + accession.lower() + '.dssp')
     dssp.write(browser.read())

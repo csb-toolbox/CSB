@@ -2,6 +2,7 @@
 @todo: write tests for C{dump} and C{load}
 """
 
+import os
 import cStringIO
 import types
 import csb.io
@@ -25,8 +26,48 @@ class TestAutoFlushStream(test.Case):
         self.assertEqual(content, '$')          # will fail if not flushed (this is the actual test)
         stream.flush()
         self.assertEqual(content, '$')
-                           
-                            
+
+
+@test.unit
+class TestTempFile(test.Case):                           
+            
+    def testCallForwarding(self):
+        
+        with csb.io.TempFile() as temp:
+            
+            self.assertTrue(hasattr(temp, 'write'))        
+            self.assertTrue(hasattr(temp, 'flush'))        
+            self.assertTrue(hasattr(temp, 'name'))
+            self.assertTrue(hasattr(temp, 'close'))
+            self.assertTrue(hasattr(temp, 'read'))                                    
+            self.assertTrue(hasattr(temp, 'readline'))
+            
+            self.assertFalse(hasattr(temp, 'jxYUgg8'))
+            self.assertRaises(AttributeError, lambda:getattr(temp, 'jxYUgg8'))
+
+    def testAutoCleanup(self):
+        
+        with csb.io.TempFile() as temp:
+            self.assertTrue(os.path.exists(temp.name))
+        self.assertFalse(os.path.exists(temp.name))
+        
+        temp = csb.io.TempFile()
+        name = temp.name
+        self.assertTrue(os.path.exists(name))
+        del temp
+        self.assertFalse(os.path.exists(name))
+        
+    def testMultipleHandles(self):
+        
+        with csb.io.TempFile() as temp:
+            
+            data = '_Test_'
+            temp.write(data)
+            temp.flush()
+            
+            self.assertEqual(data, open(temp.name).read())        
+        
+                                        
 @test.unit
 class TestEntryReader(test.Case):
     

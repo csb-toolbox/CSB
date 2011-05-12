@@ -6,6 +6,7 @@ import re
 import multiprocessing
 import csb.bio.structure
 import csb.pyutils
+import csb.io
 
 from abc import ABCMeta, abstractmethod
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets
@@ -827,9 +828,8 @@ def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
     @rtype: L{Structure}
     """
     import urllib2
-    from tempfile import NamedTemporaryFile
 
-    pdb = NamedTemporaryFile()
+    pdb = csb.io.TempFile()
 
     browser = urllib2.urlopen(prefix + accession.lower() + '.ent')
     pdb.write(browser.read())
