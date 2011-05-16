@@ -25,17 +25,24 @@ class Shell(object):
         @param cmd: shell command with its arguments
         @param cmd: tuple or str
         
-        @rtype: L{ShellInfo}         
+        @rtype: L{ShellInfo}
+        @raise L{InvalidCommandError}: on invalid executable   
         """
         
         if isinstance(cmd, basestring):
             cmd = shlex.split(cmd)
-            
-        cmd = tuple(cmd)    
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        stdout, stderr = process.communicate()                
-        code = process.returncode
+        
+        try:
+            cmd = tuple(cmd)    
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+            stdout, stderr = process.communicate()                
+            code = process.returncode
+        except OSError as oe:
+            if oe.errno == 2:
+                raise InvalidCommandError(oe.strerror, cmd)
+            else:
+                raise
                 
         return ShellInfo(code, stdout or '', stderr or '', cmd or 0)
 
@@ -48,6 +55,7 @@ class Shell(object):
         @param cmd: tuple or str
         
         @rtype: L{ShellInfo}
+        @raise L{ProcessError}: on bad exit code
         """
         si = Shell.run(cmd)
         
@@ -62,7 +70,22 @@ class ProcessError(Exception):
     @type context: L{ShellInfo} 
     """    
     def __init__(self, context):
-        self.context = context  
+        self.context = context
+        
+    def __str__(self):
+        return 'Bad exit code: #{0.code}'.format(self.context)
+        
+class InvalidCommandError(ValueError):
+    """
+    Raised when L{Shell.run()} encounters an OSError.
+    """
+    def __init__(self, message, cmd):
+        
+        if hasattr(cmd, '__iter__'):
+            cmd = ' '.join(cmd)
+        self.cmd = cmd
+        
+        super(InvalidCommandError, self).__init__(message)
 
 class ShellInfo(object):
     """
@@ -74,7 +97,7 @@ class ShellInfo(object):
         self.code = code
         self.stdout = stdout
         self.stderr = stderr
-        self.cmd = cmd    
+        self.cmd = cmd
 
 class InterruptableThread(threading.Thread):
     
