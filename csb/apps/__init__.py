@@ -305,7 +305,25 @@ class ArgHandler(object):
         @type choices: tuple
         """
         self._checkname(name)
-        self.parser.add_argument(name, nargs=1, type=type, help=help, choices=choices)
+        self.parser.add_argument(name, type=type, help=help, choices=choices)
+
+    def add_array_argument(self, name, type, help, choices=None):
+        """
+        Same as L{self.add_positional_argument()}, but allow unlimited number
+        of values to be specified on the command line.
+        
+        @param name: name of the argument
+        @type name: str
+        @param type: argument data type
+        @type type: type (type factory callable)
+        @param help: help text
+        @type help: str
+        @param choices: list of allowed argument values
+        @type choices: tuple
+        """
+        self._checkname(name)
+        self.parser.add_argument(name, type=type, help=help, choices=choices,
+                                 nargs=argparse.ONE_OR_MORE)        
 
     def add_boolean_option(self, name, shortname, help, default=False):
         """
@@ -325,6 +343,10 @@ class ArgHandler(object):
         self._checkname(name)
         self._checkname(shortname, True)
         
+        if not help:
+            help = ''
+        help = '{0} (default={1})'.format(help, default)
+        
         if default:
             action = 'store_false'
         else:
@@ -333,7 +355,7 @@ class ArgHandler(object):
         self.parser.add_argument('-' + shortname, '--' + name, help=help, action=action,
                                  default=bool(default))
         
-    def add_scalar_option(self, name, shortname, type, help, default=None, choices=None):
+    def add_scalar_option(self, name, shortname, type, help, default=None, choices=None, required=False):
         """
         Define a scalar option (a dashed argument that accepts a single value).
         
@@ -347,15 +369,22 @@ class ArgHandler(object):
         @type help: str
         @param default: default value, assigned when the option is omitted
         @param choices: list of allowed argument values
-        @type choices: tuple                     
+        @type choices: tuple
+        @param required: make this option a named mandatory argument
+        @type required: bool      
         """
         self._checkname(name)
-        self._checkname(shortname, True)        
+        self._checkname(shortname, True)
+
+        if not help:
+            help = ''
+        if default is not None:
+            help = '{0} (default={1})'.format(help, default)             
          
         self.parser.add_argument('-' + shortname, '--' + name, type=type, help=help,
-                                 default=default, choices=choices)        
+                                 default=default, choices=choices, required=required)        
 
-    def add_array_option(self, name, shortname, type, help, choices=None):
+    def add_array_option(self, name, shortname, type, help, default=None, choices=None, required=False):
         """
         Define an array option (a dashed argument that may receive one
         or multiple values on the command line, separated with spaces).
@@ -369,13 +398,20 @@ class ArgHandler(object):
         @param help: help text
         @type help: str
         @param choices: list of allowed argument values
-        @type choices: tuple                
+        @type choices: tuple
+        @param required: make this option a named mandatory argument
+        @type required: bool                   
         """
         self._checkname(name)
-        self._checkname(shortname, True)        
+        self._checkname(shortname, True)
+
+        if not help:
+            help = ''
+        if default is not None:
+            help = '{0} (default={1})'.format(help, default)           
          
         self.parser.add_argument('-' + shortname, '--' + name, nargs=argparse.ZERO_OR_MORE, type=type,
-                                 help=help, choices=choices)
+                                 help=help, choices=choices, required=required)
         
     def parse(self, args):
         """
