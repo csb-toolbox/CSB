@@ -23,7 +23,7 @@ class AppRunner(csb.apps.AppRunner):
         
         cmd = csb.apps.ArgHandler(self.program, 'This program prints "Hello World".')
         
-        cmd.add_scalar_option('text', 't', str, 'The text to print (default=' + text + ')', default=text)
+        cmd.add_scalar_option('text', 't', str, 'The text to print', default=text)
         cmd.add_boolean_option('upper', 'u', 'Print in upper case', default=False)
         
         return cmd
