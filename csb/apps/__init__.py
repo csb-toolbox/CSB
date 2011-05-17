@@ -276,6 +276,14 @@ class ArgHandler(object):
     @note: a help argument (-h) is provided automatically. 
     """
     
+    SHORT_PREFIX = '-'
+    LONG_PREFIX = '--'
+    
+    class Type(object):
+        
+        POSITIONAL = 1
+        NAMED = 2
+    
     def __init__(self, program, description=''):
         
         self._argformat = re.compile('[a-z][a-z0-9_]*', re.IGNORECASE)
@@ -284,19 +292,42 @@ class ArgHandler(object):
         self._description = description
         
         self._parser = argparse.ArgumentParser(prog=program, description=description)
-    
-    def _checkname(self, name, short=False):
         
-        if not re.match(self._argformat, name):
-            raise ValueError('Malformed option name: {0}.'.format(name))        
-        if short and len(name) != 1:
-            raise ValueError('Short options must be 1 character in length')        
+    def _add(self, kind, name, shortname, *a, **k):
+        
+        args = []
+        kargs = dict(k)
+        
+        if name is not None or kind == ArgHandler.Type.POSITIONAL:
+            if not re.match(self._argformat, name):
+                raise ValueError('Malformed option name: {0}.'.format(name))
+            
+            if kind == ArgHandler.Type.POSITIONAL:
+                args.append(name)
+            else:
+                args.append(ArgHandler.LONG_PREFIX + name)
+            
+        if shortname is not None:
+            if not re.match(self._argformat, shortname):
+                raise ValueError('Malformed option name: {0}.'.format(name))
+            if len(shortname) != 1:
+                raise ValueError('Short options must be 1 character in length')
+
+            if kind == ArgHandler.Type.POSITIONAL:
+                args.append(shortname)
+            else:                     
+                args.append(ArgHandler.SHORT_PREFIX + shortname)
+        
+        assert len(args) in (1, 2)   
+        args.extend(a)
+        
+        self.parser.add_argument(*args, **kargs)        
         
     def add_positional_argument(self, name, type, help, choices=None):
         """
         Define a mandatory positional argument (an argument without a dash).
         
-        @param name: name of the argument
+        @param name: name of the argument (used in help only)
         @type name: str
         @param type: argument data type
         @type type: type (type factory callable)
@@ -305,15 +336,15 @@ class ArgHandler(object):
         @param choices: list of allowed argument values
         @type choices: tuple
         """
-        self._checkname(name)
-        self.parser.add_argument(name, type=type, help=help, choices=choices)
+        self._add(ArgHandler.Type.POSITIONAL, name, None,
+                  type=type, help=help, choices=choices)
 
     def add_array_argument(self, name, type, help, choices=None):
         """
         Same as L{self.add_positional_argument()}, but allow unlimited number
         of values to be specified on the command line.
         
-        @param name: name of the argument
+        @param name: name of the argument (used in help only)
         @type name: str
         @param type: argument data type
         @type type: type (type factory callable)
@@ -322,18 +353,17 @@ class ArgHandler(object):
         @param choices: list of allowed argument values
         @type choices: tuple
         """
-        self._checkname(name)
-        self.parser.add_argument(name, type=type, help=help, choices=choices,
-                                 nargs=argparse.ONE_OR_MORE)        
+        self._add(ArgHandler.Type.POSITIONAL, name, None,
+                  type=type, help=help, choices=choices, nargs=argparse.ONE_OR_MORE)        
 
     def add_boolean_option(self, name, shortname, help, default=False):
         """
         Define an optional switch (a dashed argument with no value).
         
-        @param name: long name of the option
-        @type name: str
-        @param shortname: short (single character) name of the option
-        @type shortname: str
+        @param name: long name of the option (or None)
+        @type name: str, None
+        @param shortname: short (single character) name of the option (or None)
+        @type shortname:str, None
         @param help: help text
         @type help: str
         @param default: default value, assigned when the option is omitted. 
@@ -341,9 +371,6 @@ class ArgHandler(object):
                         inverse value is assigned  
         @type default: bool       
         """
-        self._checkname(name)
-        self._checkname(shortname, True)
-        
         if not help:
             help = ''
         help = '{0} (default={1})'.format(help, default)
@@ -353,17 +380,17 @@ class ArgHandler(object):
         else:
             action = 'store_true'
                      
-        self.parser.add_argument('-' + shortname, '--' + name, help=help, action=action,
-                                 default=bool(default))
+        self._add(ArgHandler.Type.NAMED, name, shortname,
+                  help=help, action=action, default=bool(default))
         
     def add_scalar_option(self, name, shortname, type, help, default=None, choices=None, required=False):
         """
         Define a scalar option (a dashed argument that accepts a single value).
         
-        @param name: long name of the option
-        @type name: str
-        @param shortname: short (single character) name of the option
-        @type shortname: str
+        @param name: long name of the option (or None)
+        @type name: str, None
+        @param shortname: short (single character) name of the option (or None)
+        @type shortname: str, None
         @param type: argument data type
         @type type: type (type factory callable)        
         @param help: help text
@@ -374,26 +401,23 @@ class ArgHandler(object):
         @param required: make this option a named mandatory argument
         @type required: bool      
         """
-        self._checkname(name)
-        self._checkname(shortname, True)
-
         if not help:
             help = ''
         if default is not None:
             help = '{0} (default={1})'.format(help, default)             
          
-        self.parser.add_argument('-' + shortname, '--' + name, type=type, help=help,
-                                 default=default, choices=choices, required=required)        
+        self._add(ArgHandler.Type.NAMED, name, shortname,
+                  type=type, help=help, default=default, choices=choices, required=required)        
 
     def add_array_option(self, name, shortname, type, help, default=None, choices=None, required=False):
         """
         Define an array option (a dashed argument that may receive one
         or multiple values on the command line, separated with spaces).
 
-        @param name: long name of the option
-        @type name: str
-        @param shortname: short (single character) name of the option
-        @type shortname: str
+        @param name: long name of the option (or None)
+        @type name: str, None
+        @param shortname: short (single character) name of the option (or None)
+        @type shortname: str, None
         @param type: argument data type
         @type type: type (type factory callable)        
         @param help: help text
@@ -403,16 +427,13 @@ class ArgHandler(object):
         @param required: make this option a named mandatory argument
         @type required: bool                   
         """
-        self._checkname(name)
-        self._checkname(shortname, True)
-
         if not help:
             help = ''
         if default is not None:
             help = '{0} (default={1})'.format(help, default)           
          
-        self.parser.add_argument('-' + shortname, '--' + name, nargs=argparse.ZERO_OR_MORE, type=type,
-                                 help=help, choices=choices, required=required)
+        self._add(ArgHandler.Type.NAMED, name, shortname,
+                  nargs=argparse.ZERO_OR_MORE, type=type, help=help, choices=choices, required=required)
         
     def parse(self, args):
         """
