@@ -286,7 +286,8 @@ class ArgHandler(object):
     
     def __init__(self, program, description=''):
         
-        self._argformat = re.compile('[a-z][a-z0-9_]*', re.IGNORECASE)
+        self._argformat = re.compile('^[a-z][a-z0-9_-]*$', re.IGNORECASE)
+        self._optformat = re.compile('^[a-z0-9]$', re.IGNORECASE)
         
         self._program = program
         self._description = description
@@ -297,29 +298,27 @@ class ArgHandler(object):
         
         args = []
         kargs = dict(k)
-        
-        if name is not None or kind == ArgHandler.Type.POSITIONAL:
-            if not re.match(self._argformat, name):
-                raise ValueError('Malformed option name: {0}.'.format(name))
-            
-            if kind == ArgHandler.Type.POSITIONAL:
-                args.append(name)
-            else:
-                args.append(ArgHandler.LONG_PREFIX + name)
-            
+                    
         if shortname is not None:
-            if not re.match(self._argformat, shortname):
-                raise ValueError('Malformed option name: {0}.'.format(name))
-            if len(shortname) != 1:
-                raise ValueError('Short options must be 1 character in length')
+            if not re.match(self._optformat, shortname):
+                raise ValueError('Invalid short option name: {0}.'.format(shortname))
 
             if kind == ArgHandler.Type.POSITIONAL:
                 args.append(shortname)
             else:                     
                 args.append(ArgHandler.SHORT_PREFIX + shortname)
-        
+
+        if name is not None or kind == ArgHandler.Type.POSITIONAL:
+            if not re.match(self._argformat, name):
+                raise ValueError('Malformed argument name: {0}.'.format(name))
+            
+            if kind == ArgHandler.Type.POSITIONAL:
+                args.append(name)
+            else:
+                args.append(ArgHandler.LONG_PREFIX + name)
+
         assert len(args) in (1, 2)   
-        args.extend(a)
+        args.extend(a)                        
         
         self.parser.add_argument(*args, **kargs)        
         
