@@ -69,8 +69,9 @@ class ProcessError(Exception):
     Raised on L{Shell.run()} failures.
     @type context: L{ShellInfo} 
     """    
-    def __init__(self, context):
+    def __init__(self, context, *args):
         self.context = context
+        super(ProcessError, self).__init__(context, [])
         
     def __str__(self):
         return 'Bad exit code: #{0.code}'.format(self.context)
@@ -81,6 +82,7 @@ class InvalidCommandError(ValueError):
     """
     def __init__(self, message, cmd):
         
+        self.program = cmd[0]
         if hasattr(cmd, '__iter__'):
             cmd = ' '.join(cmd)
         self.cmd = cmd
