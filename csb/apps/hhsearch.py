@@ -46,10 +46,11 @@ class HHsearchApp(csb.apps.Application):
         
         try:
             if len(queries) == 1:
+                exe.cpu = self.args.cpu
                 context = HHTask(queries[0])
-                results = [ exe.run(context, cpu=self.args.cpu) ]
+                results = [ exe.run(context) ]
             else:
-                context = [ HHTask(q for q in queries) ]
+                context = [ HHTask(q) for q in queries ]
                 results = exe.runmany(context, workers=self.args.cpu)
 
         except IOError as io:
@@ -103,44 +104,47 @@ class HHTask(Context):
     
         
 def _task(args):
-    binary, db, context = args
-    return HHsearch(binary, db).run(context)
+    
+    try:
+        binary, db, context = args
+        return HHsearch(binary, db).run(context)
+    except (KeyboardInterrupt, SystemExit):
+        print '\nTerminating...'
+        return
 
     
 class HHsearch(object):
     
-    def __init__(self, binary, db):
+    def __init__(self, binary, db, cpu=1):
         
         self.program = binary
         self.db = db
+        self.cpu = cpu
         self.parser = csb.bio.io.HHOutputParser()
         
-    def run(self, context, cpu=1):
-
-        try:
-            with csb.io.TempFile() as q:
-                
-                q.write(context.query)
-                q.flush()
-                
-                with csb.io.TempFile() as o:
-                    
-                    cmd = '{0.program} -i {1} -d {0.db} -o {2} -cpu {3}'.format(self, q.name, o.name, cpu)
-                    csb.pyutils.Shell.runstrict(cmd)
-                    
-                    context.result = self.parser.parse_file(o.name)
-                    return context
-                
-        except KeyboardInterrupt:
-            return context
+    def run(self, context):
+        
+        with csb.io.TempFile() as q:
             
-    def runmany(self, contexts, workers=mp.cpu_count()):
+            q.write(context.query)
+            q.flush()
+            
+            with csb.io.TempFile() as o:
+                
+                cmd = '{0.program} -i {1} -d {0.db} -o {2} -cpu {3}'.format(self, q.name, o.name, self.cpu)
+                csb.pyutils.Shell.runstrict(cmd)
+                
+                context.result = self.parser.parse_file(o.name)
+                return context
+            
+    def runmany(self, contexts, workers=mp.cpu_count(), cpu=1):
         
         if workers > len(contexts):
             workers = len(contexts)
 
         results = []
         taskargs = [(self.program, self.db, c) for c in contexts]
+
         pool = mp.Pool(workers)
         
         try:
@@ -151,7 +155,7 @@ class HHsearch(object):
         except:
             pool.terminate()
             raise
-            
+        
         return results
     
     

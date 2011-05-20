@@ -84,8 +84,12 @@ class InvalidCommandError(ValueError):
         if hasattr(cmd, '__iter__'):
             cmd = ' '.join(cmd)
         self.cmd = cmd
+        self.msg = message
         
-        super(InvalidCommandError, self).__init__(message)
+        super(InvalidCommandError, self).__init__(message, cmd)
+        
+    def __str__(self):
+        return self.msg
 
 class ShellInfo(object):
     """
