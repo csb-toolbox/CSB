@@ -1,8 +1,12 @@
 import os
 import cPickle
 import numpy
+
 import csb.pyutils
 import csb.bio.utils
+import csb.bio.structure
+import csb.bio.sequence
+
 
 class FragmentTypes(object):
     
@@ -99,7 +103,7 @@ class Prediction(object):
     def __init__(self, alignment, coordinates):
         
         self.alignment = alignment
-        self.coordinates = coordinates
+        self.coordinates = coordinates  
         
 class Target(csb.pyutils.AbstractNIContainer):
     
@@ -121,6 +125,26 @@ class Target(csb.pyutils.AbstractNIContainer):
         if segments is not None:
             segments = dict([(s.start, s) for s in segments])
         self._segments = csb.pyutils.ReadOnlyDictionaryContainer(items=segments)
+        
+    @staticmethod
+    def from_sequence(id, sequence):
+        
+        if isinstance(sequence, csb.bio.sequence.Sequence):
+            sequence = sequence.sequence
+        
+        residues = []
+        
+        for rn, aa in enumerate(sequence, start=1):
+            residue = csb.bio.structure.ProteinResidue(rank=rn, type=aa)
+            residues.append(residue)
+            
+        return Target(id, len(residues), residues)
+    
+    @staticmethod
+    def from_profile(hmm):
+        
+        residues = [ r.clone() for r in hmm.residues ]
+        return Target(hmm.id, hmm.layers.length, residues)
         
     @property
     def _children(self):
@@ -170,17 +194,23 @@ class Target(csb.pyutils.AbstractNIContainer):
 
         if not 1 <= fragment.qstart <= fragment.qend <= len(self._residues):
             raise ValueError("Fragment out of range")
+        
+        self._assignments._append_item(fragment)
                     
         for rank in range(fragment.qstart, fragment.qend + 1):
             ai = ResidueAssignmentInfo(fragment, rank)
-            self._assignments._append_item(fragment)
-            self._residues[rank].assign(ai)
+            self._residues[rank].assign(ai) 
             
         if fragment.segment is not None:
             try:
                 self._segments[fragment.segment].assign(fragment)
             except KeyError:
-                raise ValueError("Undefined segment starting at {0}".format(fragment.segment))             
+                raise ValueError("Undefined segment starting at {0}".format(fragment.segment))
+            
+    def assignall(self, fragments):
+        
+        for frag in fragments:
+            self.assign(frag)         
     
 class TargetResidue(object):
     
@@ -500,7 +530,10 @@ class Assignment(FragmentMatch):
 
         assert source.has_torsion
         sub = source.subregion(start, end, clone=True)
-        calpha = [r.atoms['CA'].vector.copy() for r in sub.residues]
+        try:
+            calpha = [r.atoms['CA'].vector.copy() for r in sub.residues]
+        except csb.pyutils.ItemNotFoundError:
+            raise csb.bio.structure.Broken3DStructureError()
         torsion = [r.torsion.copy() for r in sub.residues]
                     
         self._calpha = csb.pyutils.ReadOnlyCollectionContainer(items=calpha, type=numpy.ndarray)
@@ -1068,6 +1101,15 @@ class SmoothFragmentMap(csb.pyutils.AbstractContainer):
                     start = end = None
     
 
+class ResidueEventInfo(object):
+    
+    def __init__(self, rank, confidence=None, count=None, confident=True):
+        
+        self.rank = rank
+        self.confidence = confidence
+        self.confident = confident
+        self.count = count    
+    
 class RosettaFragsetFactory(object):
     
     def __init__(self):
@@ -1081,7 +1123,7 @@ class RosettaFragsetFactory(object):
         #fragments = [ frag_factory.from_object(f) for f in target.matches if f.length >= 6 ]
         fragments.sort()
                 
-        return self.rosetta.RosettaFragmentMap(fragments, target.length)
+        return self.rosetta.RosettaFragmentMap(fragments, target.length) 
     
     def make_chopped(self, fragments, window):
         
@@ -1093,7 +1135,7 @@ class RosettaFragsetFactory(object):
         
         return self.rosetta.RosettaFragmentMap(frags)
     
-    def make_combined(self, target, filling, threshold=0.5):
+    def make_combined(self, target, filling, threshold=0.5, callback=None):
         
         fragmap = self.make_fragset(target)
         covered = set()
@@ -1101,14 +1143,20 @@ class RosettaFragsetFactory(object):
         for r in target.residues:
             
             if r.assignments.length == 0:
+                if callback:
+                    callback(ResidueEventInfo(r.native.rank, None, 0, False))
                 continue
             
             cluster = r.filter()
             if cluster is None:
+                if callback:
+                    callback(ResidueEventInfo(r.native.rank, 0, 0, False))                
                 continue
 
             if cluster.confidence >= threshold:
                 covered.add(r.native.rank)
+            elif callback:
+                callback(ResidueEventInfo(r.native.rank, cluster.confidence, cluster.count, False))
                 
         for r in target.residues:
             if r.native.rank not in covered:               # true for gaps and low-conf residues
@@ -1118,6 +1166,32 @@ class RosettaFragsetFactory(object):
             fragmap.complement(frag)
             
         return fragmap
+    
+    def make_filtered(self, target, extend=False, callback=None):
+        
+        fragments = []
+        
+        for r in target.residues:
+            if r.assignments.length == 0:
+                continue    
+            
+            cluster = r.filter(extend=extend)
+            if cluster is None:
+                continue
+            
+            if extend and cluster.has_alternative:
+                best = cluster.alternative
+            else:
+                best = cluster.centroid
+                
+            fragment = self.rosetta.RosettaFragment.from_object(best)
+            fragments.append(fragment)
+            if callback:
+                callback(ResidueEventInfo(r.native.rank, cluster.confidence, cluster.count))
+        
+        fragments.sort()
+        return self.rosetta.RosettaFragmentMap(fragments, target.length)            
+                    
             
 class BenchmarkAdapter(object):
     
