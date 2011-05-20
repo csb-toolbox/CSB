@@ -553,7 +553,7 @@ class Alignment(ordered_dict):
 
     def read(self, filename, numbers_as_keys=False):
 
-        from Bio import Fasta
+        from Bio import Fasta                                                       #@UnresolvedImport
 
         import os
 
