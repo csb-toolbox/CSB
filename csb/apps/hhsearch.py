@@ -57,7 +57,7 @@ class HHsearchApp(csb.apps.Application):
             HHsearchApp.exit(str(io), ExitCodes.IO_ERROR)
 
         except csb.pyutils.InvalidCommandError as ose:
-            msg = '{0!s}: {0.cmd}'.format(ose)
+            msg = '{0!s}: {0.program}'.format(ose)
             HHsearchApp.exit(msg, ExitCodes.IO_ERROR)   
                               
         except csb.pyutils.ProcessError as pe:
