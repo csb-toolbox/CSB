@@ -186,6 +186,8 @@ class HHfrag(object):
             probes = []
             
             for end in range(start + min - 1, start + max):
+                if end > qp.layers.length:
+                    break
                 context = SliceContext(qp.segment(start, end), start, end)
                 probes.append(context)
                 
