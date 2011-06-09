@@ -180,9 +180,9 @@ class HHfrag(object):
         if not cpu:
             cpu = max - min + 1
         
-        for start in range(1, qp.layers.length + 1, step):
+        for start in range(1, qp.layers.length - min + 1 + 1, step):
             
-            self.log('{0:3}.      '.format(start), ending='', level=2)
+            self.log('{0:3}.      '.format(start), ending='', level=1)
             probes = []
             
             for end in range(start + min - 1, start + max):
@@ -197,9 +197,9 @@ class HHfrag(object):
             if len(probes) > 0:
                 rep = probes[-1]
                 hsqs.append(rep)
-                self.log('{0.start:3} {0.end:3} ({0.length:2} aa)    {0.recurrence:3} hits'.format(rep), level=2)
+                self.log('{0.start:3} {0.end:3} ({0.length:2} aa)    {0.recurrence:3} hits'.format(rep), level=1)
             else:
-                self.log('                     no hits', level=2)
+                self.log('                     no hits', level=1)
         
         self._hsqs = hsqs
         return tuple(hsqs)
@@ -214,7 +214,7 @@ class HHfrag(object):
         fragments = []
         
         for si in self._hsqs:
-            self.log('\nSEGMENT:   {0.start:3} {0.end:3}   ({0.recurrence})'.format(si), level=2)
+            self.log('\nSEGMENT:  {0.start:3} {0.end:3}   ({0.recurrence})'.format(si), level=2)
             
             for hit in si.hits:
                 cn = 0
@@ -222,9 +222,12 @@ class HHfrag(object):
                     chunk.qstart = chunk.qstart + si.start - 1
                     chunk.qend = chunk.qend + si.start - 1
                     cn += 1
-                    self.log(' {0.id:5}   L:{0.qstart:3} {0.qend:3}  {0.length:2}aa   P:{0.probability:5.3f}'.format(chunk), ending='', level=2)
+                    self.log(' {0.id:5}   L{0.qstart:3} {0.qend:3}  {0.length:2}aa   P:{0.probability:5.3f}'.format(chunk), ending='', level=2)
                                     
                     sourcefile = os.path.join(self.database, hit.id + '.pdb')
+                    if not os.path.isfile(sourcefile):
+                        self.log('    missing', level=2)
+                        continue
                     source = csb.bio.io.StructureParser(sourcefile).parse().first_chain
                     assert hit.id[-1] == source.id
                     
@@ -242,7 +245,7 @@ class HHfrag(object):
                                           
                     except csb.bio.structure.Broken3DStructureError:
                         self.log('    corrupt', level=2)
-                        continue
+                        continue                    
         
         self._matches = fragments
         return tuple(fragments)
