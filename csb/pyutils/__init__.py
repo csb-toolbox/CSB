@@ -144,7 +144,8 @@ class Proxy(object):
         try:
             return object.__getattribute__(self, name)
         except AttributeError:
-            return getattr(self._subject, name)                        
+            subject = object.__getattribute__(self, '_subject')
+            return getattr(subject, name)                        
         
 class REMatchProxy(object):
     
