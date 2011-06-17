@@ -36,9 +36,11 @@ class AppRunner(csb.apps.AppRunner):
                               'multiple chains, CHAIN is used to pull the required chain from the file.',
                               required=True)
         cmd.add_scalar_option('tk_root', 't', str, 'path to the ToolkitRoot folder in your HHpred setup', default='/ebio/abt1_toolkit/share/wye')
-        
-        cmd.add_boolean_option('pseudo', 'p', 'add emission and transition pseudocounts', default=True)
-        cmd.add_boolean_option('calibrate', 'c', 'calibrate the profile', default=True)
+        cmd.add_scalar_option('cpu', None, int, 'maximum degree of parallelism', default=1)        
+
+        cmd.add_boolean_option('no-ss', None, 'do not include secondary structure', default=False)        
+        cmd.add_boolean_option('no-pseudo', None, 'do not add emission and transition pseudocounts', default=False)
+        cmd.add_boolean_option('no-calibration', None, 'do not calibrate the profile', default=False)
 
         cmd.add_positional_argument('query', str, 'input sequence (FASTA or PDB file)')        
                 
@@ -56,7 +58,7 @@ class BuildProfileApp(csb.apps.Application):
         try:
             self.log(self.args.query)
             pb = ProfileBuilder.create(self.args.query, self.args.query_id, self.args.tk_root,
-                                       pseudo=self.args.pseudo)
+                                       pseudo=not self.args.no_pseudo, ss=not self.args.no_ss, cpu=self.args.cpu)
             
             self.log(' - building profile...')
             pb.build_alignment()
@@ -64,7 +66,7 @@ class BuildProfileApp(csb.apps.Application):
             self.log(' - building HMM...')            
             pb.make_hmm()
             
-            if self.args.calibrate:
+            if not self.args.no_calibration:
                 self.log(' - calibrating profile...')                
                 pb.calibrate_hmm()
 
@@ -100,7 +102,7 @@ class ProfileBuilder(object):
     TRANSITION_PSEUDO = '-gapb 1.0 -gapd 0.15 -gape 1.0 -gapf 0.6 -gapg 0.6 -gapi 0.6'
     
     @staticmethod
-    def create(query, target_id, tk_root, pseudo):
+    def create(query, target_id, tk_root, pseudo=True, ss=True, cpu=1):
 
         if not os.path.isfile(query):
             raise BuildIOError('File not found: ' + query)
@@ -117,16 +119,18 @@ class ProfileBuilder(object):
             else:
                 raise BuildArgError('Unknown input file format')
                 
-    def __init__(self, query, target_id, tk_root, pseudo=True):
+    def __init__(self, query, target_id, tk_root, pseudo=True, ss=True, cpu=1):
         
         self.tk_root = tk_root
         if 'TK_ROOT' not in os.environ or not os.environ['TK_ROOT']:
             os.putenv('TK_ROOT', tk_root)
                     
         self.query = query
-        self.accession = target_id[:-1].lower()
+        self.accession = target_id[:-1]
         self.chain = target_id[-1]
         self.pseudo = bool(pseudo)
+        self.ss = bool(ss)
+        self.cpu = cpu
         
         self._input = None
         self._a3m = None
@@ -148,12 +152,16 @@ class ProfileBuilder(object):
     def configure_input(self):
         pass
     
-    def build_alignment(self, cpu=1):
+    def build_alignment(self):
         assert self._input is not None
         
         program = os.path.join(self.tk_root, 'bioprogs', 'hhpred', 'buildali.pl')
-                    
-        cmd = 'perl {0} -cpu {1} {2}'.format(program, cpu, self._input)
+        
+        if not self.ss:
+            noss = '-noss'
+        else:
+            noss = ''        
+        cmd = 'perl {0} {1} -cpu {2} {3}'.format(program, noss, self.cpu, self._input)
         bali = csb.pyutils.Shell.run(cmd)
         
         ali = self.target_id + '.a3m'
@@ -180,13 +188,13 @@ class ProfileBuilder(object):
         self._hhm = hhm
         return hhm
     
-    def calibrate_hmm(self, cpu=1):
+    def calibrate_hmm(self):
         assert self._hhm is not None
         
         program = os.path.join(self.tk_root, 'bioprogs', 'hhpred', 'hhsearch')
         caldb = os.path.join(self.tk_root, 'databases', 'hhpred', 'cal.hhm')
           
-        cmd = '{0} -i {1}.hhm -d {2} -cal -cpu {3}'.format(program, self.target_id, caldb, cpu)
+        cmd = '{0} -i {1}.hhm -d {2} -cal -cpu {3}'.format(program, self.target_id, caldb, self.cpu)
         csb.pyutils.Shell.runstrict(cmd)
 
 
@@ -201,10 +209,6 @@ class FASTAProfileBuilder(ProfileBuilder):
                 
 
 class PDBProfileBuilder(ProfileBuilder):
-    
-    def __init__(self, query, target_id, tk_root, pseudo=True):
-        
-        super(PDBProfileBuilder, self).__init__(query, target_id, tk_root, pseudo)
 
     def configure_input(self):
         
