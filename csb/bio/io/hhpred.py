@@ -812,7 +812,7 @@ class HHOutputParser(object):
                         elif key == 'Sum_probs':
                             hits[c_rank].prob_sum = float(value)
                 elif line.startswith('Q ') and not line[:11].rstrip() in \
-                         ('Q Consensus', 'Q ss_pred', 'Q ss_dssp'):
+                         ('Q Consensus', 'Q ss_pred','Q ss_conf', 'Q ss_dssp'):
                     for residue in line[22:]:
                         if residue.isspace() or residue.isdigit():
                             break
@@ -820,7 +820,7 @@ class HHOutputParser(object):
                             alis[c_rank]['q'].append(residue)
                             has_alis = True
                 elif line.startswith('T ') and not line[:11].rstrip() in \
-                         ('T Consensus', 'T ss_pred', 'T ss_dssp'):
+                         ('T Consensus', 'T ss_pred','T ss_conf', 'T ss_dssp'):
                     for residue in line[22:]:
                         if residue.isspace() or residue.isdigit():
                             break
