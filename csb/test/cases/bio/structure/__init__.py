@@ -359,7 +359,7 @@ class TestChain(test.Case):
             self.assertAlmostEqual(coord, 0.0)
             
         clone.apply_transformation(si.rotation, si.translation)
-        self.assertEqual(self.chain.rmsd(clone), 0)
+        self.assertAlmostEqual(self.chain.rmsd(clone), 0, 5)
         
         # not testable for now, but ensure at least no exception is raised
         si = self.chain.superimpose(clone, what=('C', 'CA',))
@@ -387,7 +387,7 @@ class TestChain(test.Case):
         for coord in si.translation:
             self.assertAlmostEqual(coord, 0.0)
             
-        self.assertEqual(self.chain.rmsd(clone), 0)
+        self.assertAlmostEqual(self.chain.rmsd(clone), 0, 5)
         
         # mutate clone a bit to achieve RMSD <> 0
         clone[0]['CA'].vector[0] += 2.0

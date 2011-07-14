@@ -10,7 +10,7 @@ class TestNumeric(test.Case):
         x = np.linspace(-10.,10,1000)
         y = exp(-0.5 * x * x)/np.sqrt(2 * np.pi)
 
-        self.assertEqual(trapezoidal(x,y),1.0)
+        self.assertAlmostEqual(trapezoidal(x,y), 1.0, 10)
 
     def testLogTrapezoidal(self):
         from csb.numeric import log_trapezoidal
