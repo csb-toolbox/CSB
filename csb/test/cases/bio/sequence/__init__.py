@@ -39,12 +39,12 @@ class TestSequence(test.Case):
         temp = self.config.getTempStream()
         self.sequence.to_fasta(temp)
         temp.flush()
-        self.assertEqual(open(temp.name).read(), self.data)
+        self.assertEqual(open(temp.name).read(), self.data + '\n')
         
         # to file
         temp = self.config.getTempStream().name
         self.sequence.to_fasta(temp)
-        self.assertEqual(open(temp).read(), self.data)
+        self.assertEqual(open(temp).read(), self.data + '\n')
         
     def testExpand(self):
         self.assertEqual(self.sequence.expand(), [0, 1, 3, 4])   
