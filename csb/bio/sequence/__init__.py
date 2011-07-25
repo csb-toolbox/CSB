@@ -134,7 +134,7 @@ class Sequence(object):
 
         if output_file:
             with csb.io.EntryWriter(output_file, close=False) as out:
-                out.write(fasta)
+                out.writeline(fasta)
         else:
             return fasta
 
