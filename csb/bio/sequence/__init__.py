@@ -39,6 +39,13 @@ class SequenceAlphabets(object):
     @cvar: Protein sequence alphabet
     """
 
+    Std_Protein = csb.pyutils.enum(ALA='A', CYS='C', ASP='D', GLU='E', PHE='F', GLY='G', HIS='H', ILE='I', LYS='K', LEU='L', MET='M', ASN='N',
+                                PRO='P', GLN='Q', ARG='R', SER='S', THR='T',  VAL='V', TRP='W', TYR='Y', )
+    """
+    @cvar: Standard protein sequence alphabet
+    """
+
+
     Unknown = csb.pyutils.enum(UNK='X')
     """
     @cvar: Unknown sequence alphabet
@@ -544,51 +551,46 @@ def get_accession_number(fasta_record):
     return re.sub('[^a-zA-Z0-9_\-]', '', name)
 
 
-from csb.pyutils import ordered_dict
+from csb.pyutils import OrderedDict
 
-class Alignment(ordered_dict):
+class Alignment(OrderedDict):
 
-    formats = ('.fasta', '.fsa', '.fas')
+    formats = ('.fasta', '.fsa', '.fas', '.fa')
     gap_characters = ('-', '.')
 
     def read(self, filename, numbers_as_keys=False):
-
-        from Bio import Fasta                                                       #@UnresolvedImport
-
+        
+        from Bio import SeqIO
         import os
 
         Sequence.gap_characters = Alignment.gap_characters
 
-        format = os.path.splitext(filename)[1]
+        file_format = os.path.splitext(filename)[1]
 
-        if format not in self.formats:
+        if file_format not in self.formats:
             message = 'Format of file "%s" is "%s"; supported formats: %s'
             raise IOError, message % (filename, format,
                                       ' / '.join(self.formats))
 
-        parser = Fasta.RecordParser()
-        file = open(os.path.expanduser(filename))
-        iterator = Fasta.Iterator(file, parser)
-
-        record = iterator.next()
+        handle = open(os.path.expanduser(filename))
+        iterator = SeqIO.parse(handle, "fasta")
 
         counter = 1
 
-        while record:
+        for record in iterator:
 
-            id = record.title
-            seq = record.sequence
+            rec_id = record.description
+            seq = str(record.seq)
 
             if numbers_as_keys:
-                id = counter
+                rec_id = counter
                 counter += 1
 
-            if self.has_key(id):
-                raise ValueError, 'Multiple entries found for %s.' % id
+            if self.has_key(rec_id):
+                raise ValueError, 'Multiple entries found for %s.' % rec_id
 
-            self[id] = Sequence(id=id, header=record.title, sequence=seq)
-
-            record = iterator.next()
+            self[rec_id] = Sequence(id=rec_id, header=record.description, sequence=seq)
+        handle.close()
 
     def write(self, filename):
         import os
@@ -610,7 +612,7 @@ class Alignment(ordered_dict):
                                 sequence=new)
 
     def column(self, index):
-        from numpy import array, sum
+        from numpy import array
 
         columns = array([list(v.sequence) for v in self.values()])
 
@@ -618,9 +620,9 @@ class Alignment(ordered_dict):
 
 
     def columns(self, indices=None):
-        from numpy import array, take, sum
+        from numpy import array, take
 
-        columns = array([list(v.sequence) for v in self.values()])
+        columns = array([list(v.sequence) for v in self.values()]).T
 
         if indices is not None:
             indices = list(indices)
@@ -644,8 +646,10 @@ class Alignment(ordered_dict):
         a = 0
         b = 0
 
-        if member1 is None: member1 = self.keys()[0]
-        if member2 is None: member2 = self.keys()[1]
+        if member1 is None:
+            member1 = self.keys()[0]
+        if member2 is None:
+            member2 = self.keys()[1]
 
         x = self[member1].sequence
         y = self[member2].sequence
@@ -699,11 +703,16 @@ class Alignment(ordered_dict):
         return cons
 
     def rename(self, key1, key2):
+        """
+        Renames a key
 
+        This function does not preserve the ordering;
+        the altered element will be the last element
+        
+        """
+   
         if key2 in self.keys():
             raise KeyError('"%s" already in alignment' % key2)
-
-        self._ordered_dict__keys[self.keys().index(key1)] = key2
-        self[key2] = self[key1]
-        dict.__delitem__(self, key1)
+      
+        self[key2] = self.popitem(key1)
 
