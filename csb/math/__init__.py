@@ -73,6 +73,18 @@ def log_sum_exp(x, axis=0):
 
     return log(exp(x - xmax).sum(axis)) + xmax
 
+def log_sum_exp_accumulate(x,axis=0):
+    """
+    Returns the logarithm of the accumulated sums of exponentials.
+
+    @type x: Numpy array
+    """
+    from numpy import add
+
+    xmax = x.max(axis)
+
+    return log(add.accumulate(exp(x-xmax), axis)) + xmax
+
 def radian2degree(x):
     """
     Converts radians angles to torsion angles

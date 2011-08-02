@@ -320,6 +320,19 @@ def circmean(a,axis=None):
 
     return arctan2(average(sin(a),axis), average(cos(a),axis))
 
+def running_average(x, w, axis=None):
+    """
+    Calculates a running average for given window size
+
+    @param x: input array
+    @param w: window size
+    @type w: integer
+    @param axis: axis along which mean is calculated
+    """
+    from numpy import array, mean
+
+    return array([mean(x[i:i+w],axis) for i in range(len(x)-w)])
+
 if __name__ == '__main__':
 
     from numpy import array
