@@ -10,7 +10,7 @@ class ShiftInfo(object):
         self.element = element
         self.amino_acid = amino_acid
         self.shift = shift
-        self.secondary_structre = secondary_structure
+        self.secondary_structure = secondary_structure
 
     def __str__(self):
         return '%s %s %s' %(self.amino_acid, self.nucleus, self.shift)
