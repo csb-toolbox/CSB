@@ -7,7 +7,7 @@ Copyright (C) 2010 Klaus Kopec
 All rights reserved.
 No warranty implied or expressed.
 '''
-import os, re, sys
+import os, re, sys, operator
 from numpy import array, float64, eye, random
 
 
@@ -406,12 +406,20 @@ class ClansWriter:
         self.file.write('<%s>\n' % self.clans_instance.hsp_att_mode)
 
         ## sorting is not necessary, but makes a nicer looking clans file
-        for entry1 in self.clans_instance.entries:
-            entry1_id = entry1.get_id()
+        idToEntryMapping = [(e.get_id(), e)
+                            for e in self.clans_instance.entries]
+        idToEntryMapping.sort(key=operator.itemgetter(0))
+        entryToIdMapping = dict([(entry, identifier)
+                                 for (identifier, entry) in idToEntryMapping])
 
-            for (entry2, pvalue) in sorted(entry1.hsp.items()):
-                entry2_id = entry2.get_id()
+        for i, (entry1_id, entry1) in enumerate(idToEntryMapping):
 
+            ## sort list of hsp targets by id
+            hspTargets = [(entryToIdMapping[entry2], pvalue)
+                          for (entry2, pvalue) in entry1.hsp.items()]
+            hspTargets.sort(key=operator.itemgetter(0))
+
+            for (entry2_id, pvalue) in hspTargets:
                 if entry1_id >= entry2_id:
                     continue
 
@@ -1125,6 +1133,6 @@ if __name__ == '__main__':
     if False:
 
         fn = '/tmp/cl/2be1_psiblast.clans'
-        fn =  '~/tmp/20000_K.clans'
+        fn = '~/tmp/20000_K.clans'
         cp = ClansParser()
         c = cp.parse_file(fn)
