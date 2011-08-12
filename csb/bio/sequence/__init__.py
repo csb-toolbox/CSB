@@ -559,7 +559,6 @@ class Alignment(OrderedDict):
     gap_characters = ('-', '.')
 
     def read(self, filename, numbers_as_keys=False):
-        
         from Bio import SeqIO
         import os
 
@@ -587,9 +586,10 @@ class Alignment(OrderedDict):
                 counter += 1
 
             if self.has_key(rec_id):
-                raise ValueError, 'Multiple entries found for %s.' % rec_id
+                raise ValueError('Multiple entries found for %s.' % rec_id)
 
-            self[rec_id] = Sequence(id=rec_id, header=record.description, sequence=seq)
+            self[rec_id] = Sequence(id=rec_id, header=record.description,
+                                    sequence=seq)
         handle.close()
 
     def write(self, filename):
@@ -614,7 +614,7 @@ class Alignment(OrderedDict):
     def column(self, index):
         from numpy import array
 
-        columns = array([list(v.sequence) for v in self.values()])
+        columns = array([list(v.sequence) for v in self.values()]).T
 
         return columns[index].tolist()
 
