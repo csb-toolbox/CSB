@@ -282,7 +282,7 @@ class AbstractStructureParser(object):
                     
         structure = self._parse_header(model)
         self._parse_atoms(structure, model)
-        self._parse_ss(structure)
+        ## self._parse_ss(structure)
 
         return structure    
     

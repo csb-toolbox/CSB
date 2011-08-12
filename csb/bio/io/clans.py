@@ -993,6 +993,9 @@ class ClansSeqgroup(object):
                'hide: %s; color: %s; #members: %i' % \
                (self.hide, self.color.rgb, len(self.members))
 
+    def __len__(self):
+        return len(self.members)
+
     def is_empty(self):
         '''Checks if the group contains entries.
 
@@ -1073,6 +1076,8 @@ def transfer_groups(origin, target):
     @param target: group definitions are added to this
     @type target: Clans instance
     '''
+
+    transferCount = 0
     for group in origin.seqgroups:
 
         new_group = ClansSeqgroup(name=group.name,
@@ -1093,6 +1098,36 @@ def transfer_groups(origin, target):
 
         if len(new_group.members) > 0:
             target.add_group(new_group)
+            transferCount += 1
+    print 'transferred {0} groups (source had {1} groups)'.format(
+        transferCount, len(origin.seqgroups))
+
+
+def transfer_sequences(origin, target):
+    '''Transfers the sequences of entries that are recognized by comparing
+    entrynames.
+    Warning 1: this does not work for entries with identical names!
+    Warning 2: existing sequences in target will be overwritten if matching
+               entries are found in origin.
+
+    @param origin: sequences of this are added to target
+    @type origin: Clans instance
+
+    @param target: sequences are added to this
+    @type target: Clans instance
+    '''
+    targetEntryDict = {entry.name: entry for entry in target.entries}
+    transferCount = 0
+    for entry in origin.entries:
+
+        if entry.name not in targetEntryDict:
+            continue
+
+        targetEntryDict[entry.name].seq = entry.seq
+        transferCount += 1
+
+    print 'transferred {0} sequences (total target entries: {1}'.format(
+        transferCount, len(target.entries))
 
 if __name__ == '__main__':
     if len(sys.argv) not in [4, 5]:
@@ -1136,3 +1171,33 @@ if __name__ == '__main__':
         fn = '~/tmp/20000_K.clans'
         cp = ClansParser()
         c = cp.parse_file(fn)
+
+    if False:
+        ## entry name transfer
+        entryPairs = []
+        for e in target.entries:
+            if not e.name.startswith('match '):
+                continue
+            found_match = False
+            for e2 in source.entries:
+                if e2.name.startswith(e.name.split()[1]):
+                    found_match = True
+                    entryPairs.append((e, e2))
+
+            if not found_match:
+                raise ValueError('no match found for: ' + e.name)
+
+        groups = {}
+        for e, e2 in entryPairs:
+            key = e.name.split()[1]
+            if key not in groups:
+                groups[key] = [e]
+            groups[key].append(e2)
+
+        problems = []
+        for k, v in groups.items():
+            if len(v) == 2:
+                continue
+            e = v[0]
+            for e2 in v[1:]
+            
