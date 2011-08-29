@@ -1105,9 +1105,9 @@ def transfer_groups(origin, target):
 def transfer_sequences(origin, target):
     '''Transfers the sequences of entries that are recognized by comparing
     entrynames.
-    Warning 1: this does not work for entries with identical names!
-    Warning 2: existing sequences in target will be overwritten if matching
-               entries are found in origin.
+    @warning: this does not work for entries with identical names!
+    @warning: existing sequences in target will be overwritten if matching
+              entries are found in origin. 
 
     @param origin: sequences of this are added to target
     @type origin: Clans instance
