@@ -7,7 +7,10 @@ Copyright (C) 2010 Klaus Kopec
 All rights reserved.
 No warranty implied or expressed.
 '''
-import os, re, sys, operator
+import os
+import re
+import sys
+import operator
 from numpy import array, float64, eye, random
 
 
@@ -883,12 +886,8 @@ class ClansEntry(object):
         if len(self.groups) > 0:
             groups = 'groups: %s' % (', '.join([g.name for g in self.groups]))
 
-        seq = 'NoSequenceSet'
-        if self.seq is not '':
-            seq = 'seq: %s' % self.seq
-
         return 'ClansEntry "%s": %s ' % \
-               (self.name, '; '.join((seq, coords_string, groups)))
+               (self.name, '; '.join((coords_string, groups)))
 
     def get_id(self):
         '''Returns the id of the current entry.
@@ -1194,10 +1193,10 @@ if __name__ == '__main__':
                 groups[key] = [e]
             groups[key].append(e2)
 
-        problems = []
-        for k, v in groups.items():
-            if len(v) == 2:
-                continue
-            e = v[0]
-            for e2 in v[1:]
-            
+        raise ValueError('continue to code here')
+        ## problems = []
+        ## for k, v in groups.items():
+        ##     if len(v) == 2:
+        ##         continue
+        ##     e = v[0]
+        ##     for e2 in v[1:]
