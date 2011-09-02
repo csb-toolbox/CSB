@@ -1115,7 +1115,7 @@ def transfer_sequences(origin, target):
     @param target: sequences are added to this
     @type target: Clans instance
     '''
-    targetEntryDict = {entry.name: entry for entry in target.entries}
+    targetEntryDict = dict((entry.name, entry) for entry in target.entries)
     transferCount = 0
     for entry in origin.entries:
 
