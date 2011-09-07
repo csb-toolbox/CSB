@@ -9,7 +9,7 @@ import multiprocessing
 import csb.apps
 import csb.apps.hhsearch as hhsearch
 
-import csb.bio.io
+import csb.bio.io.hhpred
 import csb.bio.fragments
 import csb.bio.structure
 import csb.pyutils
@@ -86,7 +86,11 @@ class HHfragApp(csb.apps.Application):
 
         except csb.pyutils.InvalidCommandError as ose:
             msg = '{0!s}: {0.program}'.format(ose)
-            HHfragApp.exit(msg, ExitCodes.IO_ERROR)   
+            HHfragApp.exit(msg, ExitCodes.IO_ERROR)
+
+        except csb.bio.io.hhpred.HHProfileFormatError as hfe:
+            msg = 'Corrupt HMM: {0!s}'.format(hfe)
+            HHfragApp.exit(msg, code=ExitCodes.INVALID_DATA)           
                               
         except csb.pyutils.ProcessError as pe:
             message = 'Bad exit code from HHsearch: #{0.code}.\nSTDERR: {0.stderr}\nSTDOUT: {0.stdout}'.format(pe.context)

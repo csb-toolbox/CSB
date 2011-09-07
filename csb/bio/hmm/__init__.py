@@ -28,6 +28,11 @@ class TransitionExistsError(KeyError):
 class EmissionExistsError(KeyError):
     pass
 
+
+class HMMArgumentError(ValueError):
+    pass
+
+
 States = csb.pyutils.enum(Match='M', Insertion='I', Deletion='D',
                           Start='S', End='E')
 """
@@ -1158,13 +1163,23 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
     def __init__(self, rank, residue, states=None):
         
         self.rank = int(rank)
+        self._residue = None
         self.residue = residue        
         self.effective_matches = None
         self.effective_insertions = None
         self.effective_deletions = None
         
         super(HMMLayer, self).__init__(states, restrict=csb.pyutils.Enum.members(States))
-
+        
+    @property
+    def residue(self):
+        return self._residue
+    @residue.setter
+    def residue(self, residue):
+        if residue.type == sequence.SequenceAlphabets.Protein.GAP:          #@UndefinedVariable
+            raise HMMArgumentError('HMM match states cannot be gaps')
+        self._residue = residue
+    
     def append(self, state):
         """
         Append a new C{state} to the catalog.
@@ -1402,6 +1417,9 @@ class HHpredHitAlignment(object):
             raise ValueError(
                 'query and subject must be of the same and positive length (got {0} and {1})'.format(
                     len(query), len(subject)))
+            
+        if HHpredHitAlignment.GAP in (query[0], query[-1], subject[0], subject[-1]):
+            raise ValueError("An alignment can't start or end with a gap")
 
         self._query = []
         self._subject = []
