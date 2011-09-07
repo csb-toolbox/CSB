@@ -17,11 +17,11 @@ from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, \
      States, EVDParameters
 
 
-class InvalidHHFormatError(ValueError):
+class HHProfileFormatError(ValueError):
     pass
 
 
-class InvalidHHOutputError(InvalidHHFormatError):
+class HHOutputFormatError(HHProfileFormatError):
     pass
 
 
@@ -126,7 +126,7 @@ class HHProfileParser(object):
         @return: a L{ProfileHMM} instance
         @rtype: L{ProfileHMM}
 
-        @raise InvalidHHFormatError: when the hhm file is invalid/corrupt
+        @raise HHProfileFormatError: when the hhm file is invalid/corrupt
         """
         assert self._chopped
 
@@ -134,17 +134,17 @@ class HHProfileParser(object):
         if self._profile:
             self._parse_profile(hmm, units)
         else:
-            raise InvalidHHFormatError('Missing HMM profile table.')
+            raise HHProfileFormatError('Missing HMM profile table.')
 
         if self._properties:
             self._parse_properties(hmm)
         else:
-            raise InvalidHHFormatError('No profile properties found.')
+            raise HHProfileFormatError('No profile properties found.')
 
         if self._sequences:
             self._parse_sequences(hmm)
         else:
-            raise InvalidHHFormatError('No profile MSA and secondary ' +
+            raise HHProfileFormatError('No profile MSA and secondary ' +
                                            'structure found.')
 
         if hmm.dssp:
@@ -176,7 +176,7 @@ class HHProfileParser(object):
 
             self._chopped = True
         except IndexError:
-            raise InvalidHHFormatError('This file is either not in HHM ' +
+            raise HHProfileFormatError('This file is either not in HHM ' +
                                            'format, or it is corrupt.')
 
     def _issue(self, hmm, issue):
@@ -376,6 +376,9 @@ class HHProfileParser(object):
                 residue = structure.ProteinResidue(
                     rank=rank, type=emprobs[0], sequence_number=rank,
                     insertion_code=None)
+                if residue.type == sequence.SequenceAlphabets.Protein.GAP:                  #@UndefinedVariable
+                    raise HHProfileFormatError(
+                        "Layer {0} can't be represented by a gap".format(rank))
 
                 new_layer = hmm.layers.append(HMMLayer(rank, residue))
                 assert new_layer == rank, '{0} vs {1}'.format(rank, new_layer)
@@ -565,7 +568,7 @@ class HHProfileParser(object):
         @rtype: hmm
 
         @raise ValueError: if the structure file does not refer to the HMM
-        @raise InvalidHHFormatError: when any residue cannot be assigned
+        @raise HHProfileFormatError: when any residue cannot be assigned
                                          to layer from the HMM
         @raise NotImplementedError: when an unknown data field is encountered
                                     in the PDB file
@@ -601,7 +604,7 @@ class HHProfileParser(object):
                             self._issue(hmm, issue)
                             offset_fix += 1
                     except csb.pyutils.CollectionIndexError:
-                        raise InvalidHHFormatError(
+                        raise HHProfileFormatError(
                             'ProteinResidue {0} at fixed position {1} (former {2}) is out of range.'.format(
                                 line[17:20], rank + offset_fix, rank))
 
@@ -690,7 +693,7 @@ class HHOutputParser(object):
         @return: parsed hits
         @rtype: HHpredHitList
 
-        @raise InvalidHHOutputError: if the output is corrupt
+        @raise HHOutputFormatError: if the output is corrupt
         """
 
         with open(os.path.expanduser(hhr_file)) as stream:
@@ -706,7 +709,7 @@ class HHOutputParser(object):
         @return: parsed hits
         @rtype: HHpredHitList
 
-        @raise InvalidHHOutputError: if the output is corrupt
+        @raise HHOutputFormatError: if the output is corrupt
         """
         import cStringIO
 
@@ -797,7 +800,7 @@ class HHOutputParser(object):
                 elif line.startswith('No '):
                     c_rank = int(line[3:])
                     if c_rank not in hits:
-                        raise InvalidHHOutputError(
+                        raise HHOutputFormatError(
                             'Alignment {0}. refers to a non-existing hit'.format(c_rank))
                 elif line.startswith('>'):
                     hits[c_rank].name = line[1:].strip()
@@ -832,7 +835,7 @@ class HHOutputParser(object):
                 try:
                     hits[rank].add_alignment(alis[rank]['q'], alis[rank]['s'])
                 except (KeyError, ValueError) as er:
-                    raise InvalidHHOutputError(
+                    raise HHOutputFormatError(
                         'Corrupt alignment at hit No {0}.\n {1}'.format(
                             rank, er))
 
