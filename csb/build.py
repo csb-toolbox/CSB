@@ -22,6 +22,7 @@ import os
 import sys
 import imp
 import shutil
+import tarfile
 
 if os.path.basename(__file__) == '__init__.py':
     PARENT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -43,6 +44,24 @@ import csb
 from csb.pyutils import Shell
 
 
+class BuildTypes(object):
+    """
+    Enumeration of build types.
+    """
+    
+    SOURCE = 'source'
+    BINARY = 'binary'
+
+    _du = { SOURCE: 'sdist', BINARY: 'bdist' }    
+    
+    @staticmethod
+    def get(key):
+        try:
+            return BuildTypes._du[key]
+        except KeyError:
+            raise ValueError('Unhandled build type: {0}'.format(key))
+    
+        
 class Console(object):
     """
     CSB Build Bot. Run with -h for usage.
@@ -63,15 +82,18 @@ class Console(object):
 CSB Build Console: build, test and package the entire csb project.
 
 Usage:
-     python {program} -o output [-v verbosity] [-h]
+     python {program} -o output [-v verbosity] [-t type] [-h]
      
 Options:
       -o  output     Build output directory
-      -v  verbosity  Verbosity level, default is 1        
+      -v  verbosity  Verbosity level, default is 1
+      -t  type       Build type:
+                        source - build source code distribution (default)
+                        binary - build executable
       -h, --help     Display this help
     """    
     
-    def __init__(self, output='.', verbosity=1):
+    def __init__(self, output='.', verbosity=1, buildtype=BuildTypes.SOURCE):
         
         self._input = None
         self._output = None
@@ -79,7 +101,9 @@ Options:
         self._docs = None         
         self._apidocs = None
         self._root = None
-        self._verbosity = None        
+        self._verbosity = None
+        self._type = buildtype
+        self._dist = BuildTypes.get(buildtype) 
             
         if os.path.join(SOURCETREE, ROOT) != PARENT:
             raise IOError('{0} must be a sub-package or sub-module of {1}'.format(__file__, ROOT))
@@ -240,14 +264,18 @@ Options:
         else:
             verbosity = '-q'
         argv = sys.argv            
-        sys.argv = ['setup.py', verbosity, 'sdist', '-d', self._output]        
+        sys.argv = ['setup.py', verbosity, self._dist, '-d', self._output]        
             
-        self.log('\n# Building Source Distribution...')
+        self.log('\n# Building {0} distribution...'.format(self._type))
         try:       
             setup = imp.load_source('setupcsb', 'setup.py')
             d = setup.build()
             version = d.get_fullname()
             package = d.dist_files[0][2]
+            
+            if self._type == BuildTypes.BINARY:
+                self._strip_source(package)
+            
         except SystemExit as ex:
             if ex.code is not 0:
                 package = 'FAIL'
@@ -259,6 +287,46 @@ Options:
 
         self.log('  Packaged ' + package)   
         return version
+    
+    def _strip_source(self, package, source='*.py'):
+        """
+        Delete plain text source code files from the package.
+        """    
+        cwd = os.getcwd()
+        
+        try:  
+            tmp = os.path.join(self.output, 'tmp')
+            os.mkdir(tmp)
+        
+            self.log('\n# Entering {1} in order to delete .py files from {0}...'.format(package, tmp), level=2)        
+            os.chdir(tmp)
+                
+            oldtar = tarfile.open(package)
+            oldtar.extractall(tmp)
+            oldtar.close()
+            
+            newtar = tarfile.open(package, mode='w:gz')            
+    
+            try:
+                for i in os.walk('.'):
+                    for fn in i[2]:
+                        if fn.endswith('.py'):
+                            module = os.path.join(i[0], fn);
+                            if not os.path.isfile(module.replace('.py', '.pyc')):
+                                raise ValueError('Missing bytecode for module {0}'.format(module))
+                            else:                                          
+                                os.remove(os.path.join(i[0], fn))
+                
+                for i in os.listdir('.'):
+                    newtar.add(i)        
+            finally:
+                newtar.close()
+                
+        finally:
+            self.log('\n# Restoring the previous CWD...', level=2)            
+            os.chdir(cwd)
+            if os.path.exists(tmp):
+                shutil.rmtree(tmp)    
         
     @staticmethod
     def exit(message=None, code=0, usage=True):
@@ -276,12 +344,14 @@ Options:
         if argv is None:
             argv = sys.argv[1:]
             
-        output, verb = None, 1
+        output = None
+        verb = 1
+        buildtype = BuildTypes.SOURCE
             
         import getopt
         
         try:   
-            options, dummy = getopt.getopt(argv, 'o:v:h', ['output=', 'verbosity=', 'help'])
+            options, dummy = getopt.getopt(argv, 'o:v:t:h', ['output=', 'verbosity=', 'type=', 'help'])
             
             for option, value in options:
                 if option in('-h', '--help'):
@@ -294,7 +364,11 @@ Options:
                     try:
                         verb = int(value)
                     except ValueError:
-                        Console.exit(message='E: Verbosity must be an integer.'.format(value), code=4)                    
+                        Console.exit(message='E: Verbosity must be an integer.', code=4)
+                if option in('-t', '--type'):
+                    if value not in [BuildTypes.SOURCE, BuildTypes.BINARY]:
+                        Console.exit(message='E: Invalid build type "{0}".'.format(value), code=5)
+                    buildtype = value                                         
         except getopt.GetoptError as oe:
             Console.exit(message='E: ' + str(oe), code=1)        
 
@@ -302,7 +376,7 @@ Options:
             Console.exit(code=1, usage=True)
         else:
             try:
-                Console(output, verbosity=verb).build()
+                Console(output, verbosity=verb, buildtype=buildtype).build()
             except Exception as ex:
                 Console.exit(message='Unexpected Error: ' + str(ex), code=99, usage=False)
                 
