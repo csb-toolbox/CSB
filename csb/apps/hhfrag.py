@@ -176,7 +176,7 @@ class HHfrag(object):
         if not 0 < step:
             raise ArgumentError('step must be positive number')        
 
-        self.log('\n# Processing query {0}...'.format(self.query.id))
+        self.log('\n# Processing profile HMM "{0}"...'.format(self.query.id))
         self.log('', level=2)                
         qp = self.query
         hsqs = []
