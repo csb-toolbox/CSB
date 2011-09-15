@@ -31,7 +31,7 @@ class AppRunner(csb.apps.AppRunner):
         
         cmd = csb.apps.ArgHandler(self.program, __doc__)
         
-        cmd.add_scalar_option('query_id', 'q', str, 'ID of the query, in PDB-like format (accessionCHAIN).'
+        cmd.add_scalar_option('query-id', 'q', str, 'ID of the query, in PDB-like format (accessionCHAIN).'
                               'Used for naming the output files. Also, if the input is a PDB file with '
                               'multiple chains, CHAIN is used to pull the required chain from the file.',
                               required=True)
@@ -52,22 +52,19 @@ class BuildProfileApp(csb.apps.Application):
     def main(self):
         
         if os.path.isfile(self.args.query_id + '.hhm'):
-            BuildProfileApp.exit('skipping: profile {0} already exists'.format(self.args.query_id),
+            BuildProfileApp.exit('# Profile "{0}" already exists, skipping'.format(self.args.query_id),
                                  ExitCodes.CLEAN)  
         
         try:
-            self.log(self.args.query)
+            self.log('# Building profile HMM for {0}...'.format(self.args.query))
             pb = ProfileBuilder.create(self.args.query, self.args.query_id, self.args.tk_root,
                                        pseudo=not self.args.no_pseudo, ss=not self.args.no_ss, cpu=self.args.cpu)
             
-            self.log(' - building profile...')
             pb.build_alignment()
-
-            self.log(' - building HMM...')            
+            
             pb.make_hmm()
             
-            if not self.args.no_calibration:
-                self.log(' - calibrating profile...')                
+            if not self.args.no_calibration:                
                 pb.calibrate_hmm()
 
         except BuildArgError as ae:
@@ -80,18 +77,33 @@ class BuildProfileApp(csb.apps.Application):
             msg = '{0!s}: {0.cmd}'.format(ose)
             BuildProfileApp.exit(msg, ExitCodes.IO_ERROR)            
 
+        except NoOutputError as noe:
+            msg = 'Expected file {0} not produced by: {1.cmd}.\nSTDERR: {1.stderr}\nSTDOUT: {1.stdout}'.format(noe.expected, noe.context)
+            BuildProfileApp.exit(msg, ExitCodes.EXT_TOOL_FAILURE)  
+            
         except csb.pyutils.ProcessError as pe:
             msg = 'Bad exit code #{0.code} from: {0.cmd}.\nSTDERR: {0.stderr}\nSTDOUT: {0.stdout}'.format(pe.context)
             BuildProfileApp.exit(msg, ExitCodes.EXT_TOOL_FAILURE)              
 
-        self.log('DONE {0}'.format(self.args.query_id))            
+        self.log('  successfully created profile "{0}"'.format(self.args.query_id))            
+
 
 class BuildError(Exception):
     pass
+
 class BuildIOError(BuildError):
     pass
+
 class BuildArgError(BuildError):
     pass
+
+class NoOutputError(BuildError):
+
+    def __init__(self, expected, context, *args):
+        
+        self.expected = expected
+        self.context = context
+        super(NoOutputError, self).__init__(*args)
 
 
 class ProfileBuilder(object):
@@ -113,9 +125,9 @@ class ProfileBuilder(object):
                 continue
             
             if line.startswith('>'):
-                return FASTAProfileBuilder(query, target_id, tk_root, pseudo)
+                return FASTAProfileBuilder(query, target_id, tk_root, pseudo, ss, cpu)
             elif line.startswith('HEADER') or line.startswith('ATOM'): 
-                return PDBProfileBuilder(query, target_id, tk_root, pseudo)
+                return PDBProfileBuilder(query, target_id, tk_root, pseudo, ss, cpu)
             else:
                 raise BuildArgError('Unknown input file format')
                 
@@ -165,8 +177,10 @@ class ProfileBuilder(object):
         bali = csb.pyutils.Shell.run(cmd)
         
         ali = self.target_id + '.a3m'
-        if bali.code <> 0 or not os.path.isfile(ali):
+        if bali.code <> 0:
             raise csb.pyutils.ProcessError(bali)
+        if not os.path.isfile(ali):
+            raise NoOutputError(ali, bali)        
         
         self._ali = ali
         return ali
@@ -182,8 +196,10 @@ class ProfileBuilder(object):
             cmd = '{0} {1} {2}'.format(cmd, ProfileBuilder.EMISSION_PSEUDO, ProfileBuilder.TRANSITION_PSEUDO)
                     
         nnmake = csb.pyutils.Shell.run(cmd)
-        if nnmake.code <> 0 or not os.path.isfile(hhm):
+        if nnmake.code <> 0:
             raise csb.pyutils.ProcessError(nnmake)
+        if not os.path.isfile(hhm):
+            raise NoOutputError(hhm, nnmake)
         
         self._hhm = hhm
         return hhm
@@ -205,7 +221,7 @@ class FASTAProfileBuilder(ProfileBuilder):
         if not os.path.isfile(self.query):
             raise BuildIOError('File not found: ' + self.query)
         
-        self._input = self.query
+        self._input = os.path.basename(self.query)
                 
 
 class PDBProfileBuilder(ProfileBuilder):
