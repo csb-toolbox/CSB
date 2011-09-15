@@ -220,9 +220,16 @@ class FASTAProfileBuilder(ProfileBuilder):
         
         if not os.path.isfile(self.query):
             raise BuildIOError('File not found: ' + self.query)
+
+        fasta = self.target_id + '.fa'
         
-        self._input = os.path.basename(self.query)
-                
+        with csb.io.EntryWriter(fasta) as f:
+            with open(self.query) as q:
+                f.write(q.read())
+                    
+        self._input = fasta
+        return fasta
+
 
 class PDBProfileBuilder(ProfileBuilder):
 
