@@ -715,6 +715,21 @@ class RegularStructureParser(AbstractStructureParser):
         return structure   
 
 
+class PDBHeaderParser(RegularStructureParser):
+    """
+    Ultra fast PDB HEADER parser. Will not read any structural data.
+    """
+    
+    def _parse_atoms(self, structure, model):
+        pass
+    
+    def _parse_ss(self, structure):
+        pass
+    
+    def _parse_header(self, model):
+        return super(PDBHeaderParser, self)._parse_header(model)
+        
+
 class LegacyStructureParser(AbstractStructureParser):
     """
     This is a customized PDB parser, which is designed to read both sequence and
