@@ -20,6 +20,7 @@ class ExitCodes(csb.apps.ExitCodes):
     IO_ERROR = 2
     INVALID_DATA = 3
     HHSEARCH_FAILURE = 4
+    NO_OUTPUT = 5
 
 
 class AppRunner(csb.apps.AppRunner):
@@ -63,7 +64,10 @@ class HHfragApp(csb.apps.Application):
             output = os.path.join(self.args.output, hhf.query.id)                
                     
             hhf.slice_query(self.args.min, self.args.max, self.args.step, self.args.cpu)
-            hhf.extract_fragments()
+            frags = hhf.extract_fragments()
+            
+            if len(frags) == 0:
+                HHfragApp.exit('No fragments found!', code=ExitCodes.NO_OUTPUT)                
             
             fragmap = hhf.build_fragment_map()
             fragmap.dump(output + '.hhfrags.09')

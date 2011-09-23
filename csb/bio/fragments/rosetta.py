@@ -155,10 +155,14 @@ class RosettaFragmentMap(AbstractContainer):
             self.append(f)
             
         if length is not None:
-            assert length >= max(self._ends) 
+            assert length >= self._maxend
             self._length = int(length)
         else:
-            self._length = max(self._ends)
+            self._length = self._maxend
+            
+    @property
+    def _maxend(self):
+        return max(self._ends or [0])
             
     def append(self, fragment):
         
