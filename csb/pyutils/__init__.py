@@ -44,7 +44,7 @@ class Shell(object):
             else:
                 raise
                 
-        return ShellInfo(code, stdout or '', stderr or '', cmd or 0)
+        return ShellInfo(code, stdout or '', stderr or '', cmd)
 
     @staticmethod
     def runstrict(cmd):
@@ -103,7 +103,7 @@ class ShellInfo(object):
         self.code = code
         self.stdout = stdout
         self.stderr = stderr
-        self.cmd = cmd
+        self.cmd = ' '.join(cmd)
 
 class InterruptableThread(threading.Thread):
     

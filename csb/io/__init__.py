@@ -62,8 +62,8 @@ class TempFile(csb.pyutils.Proxy):
             self.__fh.flush()
             self.__fh.close()
             
-            if os.path.exists(self.__file):
-                os.remove(self.__file)
+        if os.path.exists(self.__file):
+            os.remove(self.__file)
             
     @property
     def name(self):
