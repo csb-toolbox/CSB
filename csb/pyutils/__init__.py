@@ -10,34 +10,57 @@ Common high-level Python code utilities.
 """
 
 import re
+import time
 import shlex
 import subprocess
 import threading
+
 from abc import ABCMeta, abstractproperty, abstractmethod
 
+
 class Shell(object):
+    
+    POLL = 1.0
 
     @staticmethod        
-    def run(cmd):
+    def run(cmd, timeout=None):
         """
         Run a shell command and return the output.
         
         @param cmd: shell command with its arguments
         @param cmd: tuple or str
+        @param timeout: maximum duration in seconds
+        @type timeout: float or None
         
         @rtype: L{ShellInfo}
-        @raise L{InvalidCommandError}: on invalid executable   
+        @raise L{InvalidCommandError}: on invalid executable
+        @raise L{TimeoutError}: when the timeout is expired
         """
         
         if isinstance(cmd, basestring):
             cmd = shlex.split(cmd)
         
         try:
-            cmd = tuple(cmd)    
+            cmd = tuple(cmd)
+            start = time.time()    
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+            if timeout is not None:
+                while True:
+                    if process.poll() == 0:
+                        break
+                    elif time.time() >= (start + timeout):
+                        try:
+                            process.kill()
+                        except:
+                            pass
+                        raise TimeoutError(cmd, timeout)
+                    else:
+                        time.sleep(Shell.POLL)
     
             stdout, stderr = process.communicate()                
             code = process.returncode
+            
         except OSError as oe:
             if oe.errno == 2:
                 raise InvalidCommandError(oe.strerror, cmd)
@@ -47,23 +70,26 @@ class Shell(object):
         return ShellInfo(code, stdout or '', stderr or '', cmd)
 
     @staticmethod
-    def runstrict(cmd):
+    def runstrict(cmd, timeout=None):
         """
         Same as L{Shell.run()}, but raises L{ProcessError} on bad exit code.
         
         @param cmd: shell command with its arguments
         @param cmd: tuple or str
+        @param timeout: maximum duration in seconds
+        @type timeout: float or None        
         
         @rtype: L{ShellInfo}
         @raise L{ProcessError}: on bad exit code
+        @raise L{TimeoutError}: when the timeout is expired        
         """
-        si = Shell.run(cmd)
+        si = Shell.run(cmd, timeout=timeout)
         
         if si.code == 0:
             return si
         else:
             raise ProcessError(si)            
-    
+   
 class ProcessError(Exception):
     """
     Raised on L{Shell.run()} failures.
@@ -75,6 +101,20 @@ class ProcessError(Exception):
         
     def __str__(self):
         return 'Bad exit code: #{0.code}'.format(self.context)
+
+class TimeoutError(ProcessError):
+    """
+    Raised on L{Shell.run()} timeouts. 
+    """    
+    def __init__(self, cmd, timeout, *args):
+        
+        self.timeout = timeout
+        context = ShellInfo(None, '', '', cmd)
+        
+        super(TimeoutError, self).__init__(context, *args)
+        
+    def __str__(self):
+        return 'The process "{0.context.cmd}" did not finish in {0.timeout}s'.format(self)
         
 class InvalidCommandError(ValueError):
     """
@@ -101,8 +141,8 @@ class ShellInfo(object):
     def __init__(self, code, stdout, stderr, cmd):
         
         self.code = code
-        self.stdout = stdout
-        self.stderr = stderr
+        self.stdout = stdout or ''
+        self.stderr = stderr or ''
         self.cmd = ' '.join(cmd)
 
 class InterruptableThread(threading.Thread):
