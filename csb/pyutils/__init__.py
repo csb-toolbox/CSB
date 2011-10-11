@@ -167,6 +167,19 @@ class InterruptableThread(threading.Thread):
         except Exception as ex:
             print ex
             self.__result = None
+
+def singleton(klass):
+    """
+    Singleton class decorator.
+    """
+    instances = {}
+    
+    def get():
+        if klass not in instances:
+            instances[klass] = klass()
+        return instances[klass]
+    
+    return get
             
 class Proxy(object):
     """
