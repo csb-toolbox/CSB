@@ -286,10 +286,10 @@ class DataRow(object):
         
     def __getitem__(self, i):
         
-        if isinstance(i, int):
-            return self._row[i]
-        else:
+        if isinstance(i, basestring):            
             return self._row[self._columns[i]]
+        else:
+            return self._row[i]            
         
     def __len__(self):
         return len(self._row)

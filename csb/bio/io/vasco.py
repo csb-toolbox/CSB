@@ -1,4 +1,5 @@
-import os
+import csb.pyutils
+
 
 class ShiftInfo(object):
 
@@ -13,21 +14,23 @@ class ShiftInfo(object):
         self.secondary_structure = secondary_structure
 
     def __str__(self):
-        return '%s %s %s' %(self.amino_acid, self.nucleus, self.shift)
+        return '{0.amino_acid} {0.nucleus} {0.shift}'.format(self)
 
     __repr__ = __str__
 
         
-class ChemicalShiftContainer(dict):
+class ChemicalShiftContainer(csb.pyutils.DictionaryContainer):
 
-    def __init__(self, bmrb_id = '', pdb_id = '', sequence = '',
-                 chain = '', exptype = ''):
-        dict.__init__(self)
+    def __init__(self, bmrb_id='', pdb_id='', sequence='',
+                 chain='', exptype=''):
+        
         self.bmrb_id = bmrb_id
         self.pdb_id = pdb_id
         self.sequence = sequence
         self.chain = chain
         self.exptype = exptype
+        
+        super(ChemicalShiftContainer, self).__init__()
 
 
     def add_to_structure(self, structure):
@@ -49,7 +52,7 @@ class VascoStructureParser(object):
     def __init__(self):
         self._stream  = None
 
-    def parse(self, file_name, ignore_outliers = True):
+    def parse(self, file_name, ignore_outliers=True):
         """
         @param file_name: source  file to parse
         @type file_name: str
@@ -59,7 +62,7 @@ class VascoStructureParser(object):
         self._stream  = open(file_name)
         shifts = self._parse_header()
 
-        self._parse_shifts(shifts, ignore_outliers = ignore_outliers)
+        self._parse_shifts(shifts, ignore_outliers=ignore_outliers)
         self._stream.close()
 
         return shifts
@@ -97,7 +100,7 @@ class VascoStructureParser(object):
                                       sequence, exptype )
             
     
-    def _parse_shifts(self, data, ignore_outliers = True):
+    def _parse_shifts(self, data, ignore_outliers=True):
 
         while True:
             try:
@@ -105,7 +108,7 @@ class VascoStructureParser(object):
             except StopIteration:
                 break
 
-            if "Shift outlier" in line and ignore_outliers:
+            if ignore_outliers and "Shift outlier" in line:
                 continue
       
             chain_id = line[7]
@@ -121,7 +124,7 @@ class VascoStructureParser(object):
                              nucleus_element, res_ss)
 
             if not chain_id in data:
-                data[chain_id] = {}
+                data.append(chain_id, csb.pyutils.OrderedDict())
 
             if not res_code in data[chain_id]:
                 data[chain_id][res_code] = {}
@@ -129,10 +132,4 @@ class VascoStructureParser(object):
             
             data[chain_id][res_code][nucleus_name] = info
 
-
-if __name__ == '__main__':
-
-    fn = os.path.expanduser('~/data/vasco/bmr15469.2rnk.vasco')
-    v = VascoStructureParser()
-
-    shifts = v.parse(fn)
+    
