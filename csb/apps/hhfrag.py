@@ -11,6 +11,7 @@ import csb.apps.hhsearch as hhsearch
 
 import csb.bio.io.hhpred
 import csb.bio.fragments
+import csb.bio.fragments.rosetta as rosetta
 import csb.bio.structure
 import csb.pyutils
 
@@ -40,14 +41,15 @@ class AppRunner(csb.apps.AppRunner):
         cmd.add_scalar_option('min', 'm', int, 'minimum query segment length', default=6)
         cmd.add_scalar_option('max', 'M', int, 'maximum query segment length', default=21)
         cmd.add_scalar_option('step', 's', int, 'query segmentation step', default=3)
-        cmd.add_scalar_option('cpu', 'c', int, 'maximum degree of parallelism', default=cpu)        
+        cmd.add_scalar_option('cpu', 'c', int, 'maximum degree of parallelism', default=cpu)
 
         cmd.add_scalar_option('verbosity', 'v', int, 'verbosity level', default=2)        
-        cmd.add_scalar_option('output', 'o', str, 'output directory', default='.')
+        cmd.add_scalar_option('output', 'o', str, 'output directory', default='.')        
         cmd.add_scalar_option('gap-filling', 'g', str, 'path to a Rosetta 9-mer fragment file, that will be used '
                               'to complement gaps in the fragment map (if specified, a joint fragment file will be produced)')
         cmd.add_boolean_option('filtered-map', 'f', 'make an additional filtered fragment map', default=False)
-        
+        cmd.add_boolean_option('c-alpha', None, 'include also C-alpha vectors in the output', default=False)
+                
         cmd.add_positional_argument('QUERY', str, 'query profile HMM (e.g. created with csb.apps.buildhmm)')
                         
         return cmd
@@ -58,6 +60,11 @@ class HHfragApp(csb.apps.Application):
     def main(self):
         if not os.path.isdir(self.args.output):
             HHfragApp.exit('Output directory does not exist', code=ExitCodes.INVALID_DATA, usage=True)
+            
+        if self.args.c_alpha:
+            builder = rosetta.ExtendedOutputBuilder
+        else:
+            builder = rosetta.OutputBuilder
             
         try:
             hhf = HHfrag(self.args.QUERY, self.args.hhsearch, self.args.database, logger=self)
@@ -70,15 +77,15 @@ class HHfragApp(csb.apps.Application):
                 HHfragApp.exit('No fragments found!', code=ExitCodes.NO_OUTPUT)                
             
             fragmap = hhf.build_fragment_map()
-            fragmap.dump(output + '.hhfrags.09')
+            fragmap.dump(output + '.hhfrags.09', builder)
             
             if self.args.filtered_map:
                 fragmap = hhf.build_filtered_map()
-                fragmap.dump(output + '.filtered.09')
+                fragmap.dump(output + '.filtered.09', builder)
                 
             if self.args.gap_filling:
                 fragmap = hhf.build_combined_map(self.args.gap_filling)
-                fragmap.dump(output + '.complemented.09')
+                fragmap.dump(output + '.complemented.09', builder)
                 
             self.log('\nDONE.')
 
