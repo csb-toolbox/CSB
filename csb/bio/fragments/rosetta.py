@@ -4,12 +4,13 @@ from csb.pyutils import AbstractContainer
 
 class ResidueInfo(object):
     
-    def __init__(self, rank, aa, ss, torsion):
+    def __init__(self, rank, aa, ss, torsion, calpha=[]):
         
         self.rank = rank
         self.aa = aa
         self.ss = ss
         self.torsion = torsion
+        self.calpha = tuple(calpha)
         
     @property
     def phi(self):
@@ -24,8 +25,8 @@ class ResidueInfo(object):
         return self.torsion.omega or 0.
     
     def copy(self):
-        return ResidueInfo(self.rank, self.aa, self.ss, self.torsion.copy()) 
-
+        return ResidueInfo(self.rank, self.aa, self.ss, self.torsion.copy(), self.calpha)
+    
 class RosettaFragment(object):
     
     def __init__(self, source_id, qstart, qend, start, end, score, residues):
@@ -86,8 +87,8 @@ class RosettaFragment(object):
         residues = []        
         a = assignment
         
-        for rank, aa, torsion in zip(range(a.start, a.end + 1), a.sequence, a.torsion):
-            residues.append(ResidueInfo(rank, aa, 'L', torsion))
+        for rank, aa, torsion, calpha in zip(range(a.start, a.end + 1), a.sequence, a.torsion, a.backbone):
+            residues.append(ResidueInfo(rank, aa, 'L', torsion, calpha))
             
         return RosettaFragment(a.source_id, a.qstart, a.qend, a.start, a.end, 1 - a.probability, residues)
     
@@ -138,6 +139,44 @@ class RosettaFragment(object):
     @property
     def torsion(self):
         return TorsionAnglesCollection(r.torsion for r in self._residues)    
+        
+class OutputBuilder(object):
+    
+    def __init__(self, output):
+        self._out = output
+        
+    @property
+    def output(self):
+        return self._out
+        
+    def add_position(self, qstart, frags):
+        self.output.write(' position: {0:>12} neighbors: {1:>12}\n\n'.format(qstart, len(frags)))
+    
+    def add_fragment(self, fragment):
+        
+        for residue in fragment.residues:
+            self.add_residue(fragment, residue)
+            self.output.write('\n')
+            
+        self.output.write('\n')
+        
+    def add_residue(self, fragment, residue):
+        
+        line = ' {0.accession:4} {0.chain:1} {1.rank:>5} {1.aa:1} {1.ss:1} {1.phi:>8.3f} {1.psi:>8.3f} {1.omega:>8.3f} {0.score:>8.3f}'
+        self.output.write(line.format(fragment, residue))
+    
+class ExtendedOutputBuilder(OutputBuilder):
+    
+    def add_residue(self, fragment, residue):        
+        
+        super(ExtendedOutputBuilder, self).add_residue(fragment, residue)
+
+        if residue.calpha:
+            calpha = residue.calpha
+        else:
+            calpha = [0, 0, 0]
+        
+        self.output.write('        {0:>7.3f} {1:>7.3f} {2:>7.3f}'.format(*calpha))            
         
 class RosettaFragmentMap(AbstractContainer):
     
@@ -225,18 +264,18 @@ class RosettaFragmentMap(AbstractContainer):
         
         self._fragments.sort(key=lambda i:getattr(i, field), reverse=reverse)
         
-    def dump(self, file):
-                
+    def dump(self, file, builder=OutputBuilder):
+                       
         with open(file, 'w') as out:
-
+            builder = builder(out)
+            
             for qstart in self.start_positions:
-                
+
                 frags = self.starting_at(qstart)
-                out.write(' position: {0:>12} neighbors: {1:>12}\n\n'.format(qstart, len(frags)))
+                builder.add_position(qstart, frags)
                 
                 for fragment in frags:
-                    out.write(str(fragment))
-                    out.write('\n\n')
+                    builder.add_fragment(fragment)
     
     @staticmethod
     def read(file, top=None):
