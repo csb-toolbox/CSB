@@ -80,7 +80,7 @@ class TestEnsemble(test.Case):
         self.assertEqual(self.ensemble.models[3], testModel)        
         self.assertEqual(self.ensemble.models[3].model_id, 3)        
         
-        self.assertRaises(TypeError, self.ensemble.models.append, 1)  
+        self.assertRaises(Exception, self.ensemble.models.append, 1)  
 
 @test.unit
 class TestStructure(test.Case):
@@ -181,7 +181,8 @@ class TestStructure(test.Case):
         
         self.assertTrue(pdb[0].startswith, 'HEADER')
         self.assertTrue(pdb[0].endswith('1NZ9              '))
-        self.assertEqual(pdb[-2].rstrip(), 'TER')        
+        self.assertEqual(pdb[-3].rstrip(), 'TER')
+        self.assertEqual(pdb[-2].rstrip(), 'ENDMDL')  
         self.assertEqual(pdb[-1].rstrip(), 'END')
                 
         has_seqres = False

@@ -7,13 +7,18 @@ import re
 import copy
 import math
 import numpy
+import datetime
+import StringIO
+
 import csb.io
 import csb.pyutils
 import csb.math
 import csb.bio.utils
 
-from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentTypes
+from abc import ABCMeta, abstractmethod
 from itertools import izip
+
+from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentTypes
 
 
 AngleUnits = csb.pyutils.enum( Degrees='deg', Radians='rad' )
@@ -46,6 +51,8 @@ class Broken3DStructureError(ValueError):
 class Missing3DStructureError(Broken3DStructureError):
     pass       
 class InvalidOperation(Exception):
+    pass
+class DuplicateModelIDError(csb.pyutils.DuplicateKeyError):
     pass
 class DuplicateChainIDError(csb.pyutils.DuplicateKeyError):
     pass
@@ -90,11 +97,51 @@ class Ensemble(csb.pyutils.AbstractNIContainer):
         if len(self._models) > 0:
             return self[0]
         return None
+    
+    def to_pdb(self, output_file=None):
+        """
+        Dump the ensemble in PDB format.
+        
+        @param output_file: output file name or open stream
+        @type output_file: str or stream
+        """
+        if self.models.length < 1:
+            raise InvalidOperation("Can't dump an empty ensemble")
+        
+        temp = StringIO.StringIO()
+
+        builder = PDBFileBuilder(temp)        
+        builder.add_header(self.first_model)
+
+        for model in self.models:
+            builder.add_structure(model)
+
+        builder.finalize()
+        
+        data = temp.getvalue()        
+        temp.close()
+        
+        if not output_file:
+            return data
+        else:
+            with csb.io.EntryWriter(output_file, close=False) as out:
+                out.write(data)  
         
 class EnsembleModelsCollection(csb.pyutils.CollectionContainer):
     
     def __init__(self):
+        
         super(EnsembleModelsCollection, self).__init__(type=Structure, start_index=1)
+        self._models = set()
+        
+    def append(self, structure):
+        
+        if not structure.model_id or not str(structure.model_id).strip():
+            raise ValueError("Invalid model identifier: '{0.model_id}'".format(structure))
+        if structure.model_id in self._models:
+            raise DuplicateModelIDError(structure.model_id) 
+        else:
+            return super(EnsembleModelsCollection, self).append(structure)
 
 class Structure(csb.pyutils.AbstractNIContainer):
     """
@@ -207,88 +254,16 @@ class Structure(csb.pyutils.AbstractNIContainer):
         @param output_file: output file name or open stream
         @type output_file: str or stream
         """
-        from datetime import datetime
-        import StringIO
+        temp = StringIO.StringIO()
         
-        def isnull(this, that, null=None):
-            if this is null: return that
-            return this
-            
-        class MyStringIO(StringIO.StringIO):
-            def writeline(self, data):
-                self.write('{0:80}\n'.format(data))
+        builder = PDBFileBuilder(temp)
         
-        stream = MyStringIO()
+        builder.add_header(self)
+        builder.add_structure(self)
+        builder.finalize()
         
-        stream.writeline('HEADER    {0:40}{1:%d-%b-%y}   {2:4}'.format('.', datetime.now(), self.accession.upper()))
-        
-        molecules = { }
-        for chain_id in self.chains:
-            chain = self.chains[chain_id]
-            if chain.molecule_id not in molecules:
-                molecules[chain.molecule_id] = [ ]
-            molecules[chain.molecule_id].append(chain_id)
-        
-        k = 0
-        for mol_id in sorted(molecules):
-            
-            chains = molecules[mol_id]
-            first_chain = self.chains[ chains[0] ]            
-            
-            stream.writeline('COMPND {0:3} MOL_ID: {1};'.format(k + 1, isnull(mol_id, '0')))
-            stream.writeline('COMPND {0:3} MOLECULE: {1};'.format(k + 2, isnull(first_chain.name, '')))
-            stream.writeline('COMPND {0:3} CHAIN: {1};'.format(k + 3, ', '.join(chains)))
-            k += 3
-            
-        for chain_id in self.chains:
-            
-            chain = self.chains[chain_id]
-            res = [ chain.format_residue(r) for r in chain.residues ]
-
-            rn = 0
-            for j in range(0, chain.length, 13):
-                rn += 1
-                residues = [ '{0:>3}'.format(r) for r in res[j : j + 13] ]
-                stream.writeline('SEQRES {0:>3} {1} {2:>4}  {3}'.format(
-                                            rn, chain.id, chain.length, ' '.join(residues) ))
-        
-        for chain_id in self.chains:
-        
-            chain = self.chains[chain_id]
-            for residue in chain.residues:
-        
-                atoms = [ ]
-                for an in residue.atoms:
-                    atom = residue.atoms[an]
-                    if type(atom) is DisorderedAtom:
-                        for dis_atom in atom: atoms.append(dis_atom)
-                    else:
-                        atoms.append(atom)
-                atoms.sort()
-                
-                for atom in atoms:
-
-                    alt = atom.alternate
-                    if alt is True:
-                        alt = 'A'
-                    elif alt is False:
-                        alt = ' '
-                    
-                    if atom.element:
-                        element = repr(atom.element)
-                    else:
-                        element = ' '
-                    stream.writeline('ATOM  {0:>5} {1:>4}{2}{3:>3} {4}{5:>4}{6}   {7:>8.3f}{8:>8.3f}{9:>8.3f}{10:>6.2f}{11:>6.2f}{12:>12}{13:2}'.format(
-                                        atom.serial_number, atom._full_name, isnull(alt, ' '), 
-                                        chain.format_residue(residue), chain.id, 
-                                        isnull(residue.sequence_number, residue.rank), isnull(residue.insertion_code, ' '), 
-                                        atom.vector[0], atom.vector[1], atom.vector[2], isnull(atom.occupancy, 0.0), isnull(atom.temperature, 0.0), 
-                                        element, isnull(atom.charge, ' ') ))
-            stream.writeline('TER')
-        stream.writeline('END')
-        
-        data = stream.getvalue()        
-        stream.close()
+        data = temp.getvalue()        
+        temp.close()
         
         if not output_file:
             return data
@@ -1398,6 +1373,166 @@ class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
     def __repr__(self):
         return "<DisorderedAtom: {0.length} alternative locations>".format(self)
         
+class FileBuilder(object):
+    """
+    Base abstract files for all structure file formatters.
+    Defines a common step-wise interface according to the Builder pattern.
+    
+    @param output: output stream (this is where the product is constructed)
+    @type param: stream
+    """
+    
+    __metaclass__ = ABCMeta
+
+    def __init__(self, output):
+
+        if not hasattr(output, 'write'):
+            raise TypeError(output)
+        
+        def isnull(this, that, null=None):
+            if this is null:
+                return that
+            else:
+                return this        
+
+        self._out = output
+        self._isnull = isnull
+        
+    @property
+    def output(self):
+        return self._out
+    
+    @property
+    def isnull(self):
+        return self._isnull
+    
+    def write(self, text):
+        """
+        Write a chunk of text
+        """
+        self._out.write(text)   
+
+    def writeline(self, text):
+        """
+        Write a chunk of text and append a new line terminator
+        """        
+        self._out.write(text)
+        self._out.write('\n')
+                    
+    @abstractmethod
+    def add_header(self, master_structure):
+        pass
+    
+    @abstractmethod
+    def add_structure(self, structure):
+        pass
+    
+    def finalize(self):
+        pass
+
+class PDBFileBuilder(FileBuilder):
+    """
+    PDB file format builder.
+    """
+        
+    def writeline(self, text):
+        self.write('{0:80}\n'.format(text))
+        
+    def add_header(self, master):
+        """
+        Write the HEADER of the file using C{master}
+        
+        @type master: L{Structure}
+        """
+
+        isnull = self.isnull
+        
+        header = 'HEADER    {0:40}{1:%d-%b-%y}   {2:4}'
+        self.writeline(header.format('.', datetime.datetime.now(), master.accession.upper()))
+        
+        molecules = { }
+        
+        for chain_id in master.chains:
+            chain = master.chains[chain_id]
+            if chain.molecule_id not in molecules:
+                molecules[chain.molecule_id] = [ ]
+            molecules[chain.molecule_id].append(chain_id)
+        
+        k = 0
+        for mol_id in sorted(molecules):
+            
+            chains = molecules[mol_id]
+            first_chain = master.chains[ chains[0] ]            
+            
+            self.writeline('COMPND {0:3} MOL_ID: {1};'.format(k + 1, isnull(mol_id, '0')))
+            self.writeline('COMPND {0:3} MOLECULE: {1};'.format(k + 2, isnull(first_chain.name, '')))
+            self.writeline('COMPND {0:3} CHAIN: {1};'.format(k + 3, ', '.join(chains)))
+            k += 3
+            
+        for chain_id in master.chains:
+            
+            chain = master.chains[chain_id]
+            res = [ chain.format_residue(r) for r in chain.residues ]
+
+            rn = 0
+            for j in range(0, chain.length, 13):
+                rn += 1
+                residues = [ '{0:>3}'.format(r) for r in res[j : j + 13] ]
+                self.writeline('SEQRES {0:>3} {1} {2:>4}  {3}'.format(
+                                            rn, chain.id, chain.length, ' '.join(residues) ))
+                
+    def add_structure(self, structure):
+        """
+        Append a new model to the file
+        
+        @type structure: L{Structure}
+        """
+
+        isnull = self.isnull
+        self.writeline('MODEL     {0:>4}'.format(isnull(structure.model_id, 1)))
+         
+        for chain_id in structure.chains:
+        
+            chain = structure.chains[chain_id]
+            for residue in chain.residues:
+        
+                atoms = [ ]
+                for an in residue.atoms:
+                    atom = residue.atoms[an]
+                    if type(atom) is DisorderedAtom:
+                        for dis_atom in atom: atoms.append(dis_atom)
+                    else:
+                        atoms.append(atom)
+                atoms.sort()
+                
+                for atom in atoms:
+
+                    alt = atom.alternate
+                    if alt is True:
+                        alt = 'A'
+                    elif alt is False:
+                        alt = ' '
+                    
+                    if atom.element:
+                        element = repr(atom.element)
+                    else:
+                        element = ' '
+                    self.writeline('ATOM  {0:>5} {1:>4}{2}{3:>3} {4}{5:>4}{6}   {7:>8.3f}{8:>8.3f}{9:>8.3f}{10:>6.2f}{11:>6.2f}{12:>12}{13:2}'.format(
+                                        atom.serial_number, atom._full_name, isnull(alt, ' '), 
+                                        chain.format_residue(residue), chain.id, 
+                                        isnull(residue.sequence_number, residue.rank), isnull(residue.insertion_code, ' '), 
+                                        atom.vector[0], atom.vector[1], atom.vector[2], isnull(atom.occupancy, 0.0), isnull(atom.temperature, 0.0), 
+                                        element, isnull(atom.charge, ' ') ))        
+
+            self.writeline('TER')
+        self.writeline('ENDMDL')
+        
+    def finalize(self):
+        """
+        Add the END marker
+        """
+        self.writeline('END')
+        self._out.flush()     
         
 class SuperimposeInfo(object):
     """
