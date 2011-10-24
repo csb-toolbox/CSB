@@ -295,13 +295,16 @@ class HHfrag(object):
         factory = csb.bio.fragments.RosettaFragsetFactory()
         return factory.make_fragset(target)
 
-    def _filter_event_handler(self, rei):
-        self.log('{0.rank:3}.    {0.confidence:5.3f}    {0.count:3}'.format(rei), level=2)
+    def _filter_event_handler(self, ri):
+        if ri.rep is None:
+            self.log('{0.rank:3}.     {0.confidence:5.3f}    {0.count:3}        -    -   -'.format(ri, ri.rep), level=2)            
+        else:
+            self.log('{0.rank:3}.     {0.confidence:5.3f}    {0.count:3}    {1.id:5}  {1.start:3} {1.end:3}'.format(ri, ri.rep), level=2)
             
     def build_filtered_map(self):
 
         self.log('\n# Building filtered map...')
-        self.log('', level=2)
+        self.log('\n    Confidence  Count    Representative', level=2)
                 
         target = csb.bio.fragments.Target.from_profile(self.query)
         target.assignall(self._matches)
@@ -312,9 +315,9 @@ class HHfrag(object):
 
     def _merge_event_handler(self, rei):
         if rei.confidence is None:
-            self.log('{0.rank:3}.        -    {0.count:3}'.format(rei), level=2)
+            self.log('{0.rank:3}.         -    {0.count:3}'.format(rei), level=2)
         else:
-            self.log('{0.rank:3}.    {0.confidence:5.3f}    {0.count:3}'.format(rei), level=2)        
+            self.log('{0.rank:3}.     {0.confidence:5.3f}    {0.count:3}'.format(rei), level=2)        
                     
     def build_combined_map(self, fragfile, top=25):
 
@@ -327,7 +330,7 @@ class HHfrag(object):
             raise ArgumentIOError(str(io))
 
         self.log('\n  {0} rosetta fragments loaded'.format(filling.size))
-        self.log('', level=2)               
+        self.log('    Confidence  Count', level=2)               
    
         target = csb.bio.fragments.Target.from_profile(self.query)
         target.assignall(self._matches)
