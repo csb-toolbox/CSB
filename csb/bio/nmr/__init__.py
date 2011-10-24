@@ -140,11 +140,15 @@ class RandomCoil(object):
             @param value: raw chemical shift value
             @type value: float            
             """
-            if isinstance(residue, int):
-                residue = chain.residues[residue]
-                
-            elif isinstance(residue, basestring):
-                residue = chain.find(residue)
+            try:
+                if isinstance(residue, int):
+                    residue = chain.residues[residue]
+                elif isinstance(residue, basestring):
+                    residue = chain.find(residue)
+                else:
+                    residue = chain.residues[residue.rank]
+            except (pu.ItemNotFoundError, pu.CollectionIndexError):
+                raise InvalidResidueError("Can't find residue {0} in {1}".format(residue, chain))
                 
             shift = self.simple_secondary_shift(residue.type, nucleus, value)
             

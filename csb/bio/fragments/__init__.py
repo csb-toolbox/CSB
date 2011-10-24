@@ -1103,12 +1103,13 @@ class SmoothFragmentMap(csb.pyutils.AbstractContainer):
 
 class ResidueEventInfo(object):
     
-    def __init__(self, rank, confidence=None, count=None, confident=True):
+    def __init__(self, rank, confidence=None, count=None, confident=True, rep=None):
         
         self.rank = rank
         self.confidence = confidence
         self.confident = confident
-        self.count = count    
+        self.count = count
+        self.rep = rep
     
 class RosettaFragsetFactory(object):
     
@@ -1187,7 +1188,7 @@ class RosettaFragsetFactory(object):
             fragment = self.rosetta.RosettaFragment.from_object(best)
             fragments.append(fragment)
             if callback:
-                callback(ResidueEventInfo(r.native.rank, cluster.confidence, cluster.count))
+                callback(ResidueEventInfo(r.native.rank, cluster.confidence, cluster.count, rep=cluster.centroid))
         
         fragments.sort()
         return self.rosetta.RosettaFragmentMap(fragments, target.length)            
