@@ -631,14 +631,14 @@ class RegularStructureParser(AbstractStructureParser):
                  initialized residues from the SEQRES.
         @rtype: L{csb.bio.structure.Structure}
         
-        @raise ValueError: if the stream has no HEADER at byte 0
+        @raise PDBParseError: if the stream has no HEADER at byte 0
         """
         
         self._stream.seek(0)
 
         header = self._stream.next()
         if not header.startswith('HEADER'):
-            raise ValueError('Does not look like a regular PDB file.')
+            raise PDBParseError('Does not look like a regular PDB file.')
 
         structure = csb.bio.structure.Structure(header.split()[-1])
 

@@ -44,6 +44,8 @@ class AppRunner(csb.apps.AppRunner):
         cmd.add_scalar_option('rmsd', 'r', float, 'RMSD cutoff for precision and coverage', default=1.5)         
         cmd.add_scalar_option('output', 'o', str, 'output directory', default='.')
         
+        cmd.add_boolean_option('save-structures', 's', 'create a PDB file for each fragment, superimposed over the native', default=False)
+        
         cmd.add_positional_argument('library', str, 'Fragment library file in Rosetta NNmake format')
                         
         return cmd
@@ -111,7 +113,7 @@ class GlobalInfo(object):
         
 class LibrarySuperimposer(object):
     
-    def __init__(self, native, library, pdb, output, cutoff=1.5):
+    def __init__(self, native, library, pdb, output, save=False, cutoff=1.5):
     
         if not isinstance(native, structure.Chain):
             raise TypeError(native)
@@ -132,6 +134,7 @@ class LibrarySuperimposer(object):
         self._tab = os.path.join(self._output, native.entry_id + '.fragments.tab')
         self._figure = os.path.join(self._output, native.entry_id + '.precision.png')
         self._out = open(self._tab, 'w')
+        self._save = bool(save)
         self._cutoff = float(cutoff)
 
     def __del__(self):
@@ -153,11 +156,15 @@ class LibrarySuperimposer(object):
         
         tasks = []
         matches = []
+        save = None
+        if self._save:
+            save = self._output
+            
         pool = multiprocessing.Pool(cpu)
         
         for source in self._library.sources:
             fragments = self._library.fromsource(source)
-            task = pool.apply_async(rmsd, [self._native, source, fragments, self._pdb])
+            task = pool.apply_async(rmsd, [self._native, source, fragments, self._pdb, save])
             tasks.append(task)
         
         for task in tasks:
@@ -229,7 +236,7 @@ class LibrarySuperimposer(object):
         
         return GlobalInfo(avg_precision, coverage)
             
-def rmsd(target, source, fragments, pdb):
+def rmsd(target, source, fragments, pdb, save=None):
 
     matches = []
     
@@ -244,7 +251,7 @@ def rmsd(target, source, fragments, pdb):
         matches.append('Error parsing {0:5}: {1!s}'.format(source, ex))
         return matches
             
-    for fragment in fragments:            
+    for fn, fragment in enumerate(fragments):            
             try:                
                 if fragment.chain not in ('_', '', None):
                     src_chain = src_structure.chains[fragment.chain]
@@ -259,11 +266,17 @@ def rmsd(target, source, fragments, pdb):
                     matches.append('Fragment {1.source_id:>5} {0.start:>4}-{0.end:>4} is out of range'.format(fragment))                 
                     continue                    
             
-                rmsd = query.rmsd(subject)
+                si = query.align(subject)
                 match = csb.bio.fragments.FragmentMatch(fragment.id, qstart=fragment.qstart, qend=fragment.qend,
-                                                        probability=None, rmsd=rmsd, tm_score=None, qlength=target.length)              
+                                                        probability=None, rmsd=si.rmsd, tm_score=None, qlength=target.length)              
                 matches.append(match)
-
+                
+                if save:
+                    dummy = structure.Structure(subject.entry_id)
+                    dummy.chains.append(subject)
+                    filename = '{0.qstart:}-{0.qend}.{1.entry_id}{2}.frag'.format(fragment, query, fn or '')
+                    dummy.to_pdb(os.path.join(save, filename))
+                    
             except (structure.Broken3DStructureError, IOError) as ex:
                 matches.append("Can't superimpose fragment {0}: {1!s}".format(fragment.id, ex))          
                 continue
