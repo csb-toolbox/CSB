@@ -388,7 +388,7 @@ class PlotsCollection(object):
                 raise ValueError(i)
             
         if not cell <= rows * columns:
-            raise ValueError('Position {0} is greater than the number'
+            raise ValueError('Position {2} is greater than the number'
                              ' of cells in a {0}x{1} grid'.format(rows, columns, cell))
             
         plot = self._figure.add_subplot(rows, columns, cell)
