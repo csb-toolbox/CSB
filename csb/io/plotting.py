@@ -2,7 +2,7 @@
 Plotting facilities, based on Python's MPL library.
 
 The L{Chart} object is a facade which provides intuitive access to MPL's plotting
-objects. The following examples shows a typical use of L{Chart}:
+objects. The following examples show a typical use of L{Chart}:
 
     1. Instantiation
         
@@ -11,9 +11,9 @@ objects. The following examples shows a typical use of L{Chart}:
     2. Adding plots (equivalent to MPL's subplots)
     
     >>> chart.plots.add(1, 2, 1)
-    Plot (matplotlib.Axes)
+    Plot (matplotlib.axes.AxesSubplot)
     >>> chart.plots.add(1, 2, 2)
-    Plot (matplotlib.Axes)
+    Plot (matplotlib.axes.AxesSubplot)
     
     3. Plotting
     
@@ -30,7 +30,7 @@ objects. The following examples shows a typical use of L{Chart}:
     
     5. Saving as image
     
-    >>> chart.save(filename)
+    >>> chart.save(filename, format=chart.formats.PDF)
     
 If using the GUI, do not forget to dispose the chart at the end:
 
@@ -43,6 +43,7 @@ or simply use the chart in a context manager:
 """
 
 import time
+import csb.pyutils
 
 from abc import ABCMeta, abstractmethod
 
@@ -187,16 +188,28 @@ class Backend(Thread):
             self._invoke(callable, *args)
                 
     def add(self, figure):
+        """
+        Add a new figure.
+        """
         self.invoke(self._add, figure)
 
     def show(self, figure):
+        """
+        Show existing figure.
+        """        
         self.invoke(self._show, figure)
     
     def hide(self, figure):
+        """
+        Hide existing figure.
+        """        
         self.invoke(self._hide, figure)
         
     def destroy(self, figure, wait=False):
-        
+        """
+        Destroy existing figure. If C{wait} is True, make sure the asynchronous
+        figure deletion is complete before returning from the method.
+        """        
         has_figure = (figure in self._figures)
         self.invoke(self._destroy, figure)
         
@@ -257,7 +270,9 @@ class Backend(Thread):
     
 class WxBackendImpl(Backend):
     """
-    WxPython L{Backend} implementor. 
+    WxPython L{Backend} implementor.
+    
+    @note: not meant to be instantiated directly, use L{Backend.get} instead.
     """
     
     _wxapp = None
@@ -357,8 +372,8 @@ class PlotsCollection(object):
         """
         Add a new plot to the figure. By default the new plot will span the
         whole figure (window). The optional parameters can be used to position
-        the plot explicitly by dividing the figure virtually into a grid and
-        specifying the location of the plot in that grid. All cells in the
+        the plot explicitly by virtually dividing the figure into a grid and
+        specifying the location of the plot on the grid. All cells in the
         grid are numbered sequentially, left-to-right, starting from 1.
         
         @param rows: number of "rows" in the grid
@@ -433,8 +448,11 @@ class Chart(object):
         self._figure.suptitle(self._title)
         self._beclass = backend
         self._hasgui = False
+        self._plots = PlotsCollection(self._figure)        
         self._canvas = FigureCanvasAgg(self._figure)
-        self._plots = PlotsCollection(self._figure)
+        
+        formats = [ (f.upper(), f) for f in self._canvas.get_supported_filetypes() ]
+        self._formats = csb.pyutils.enum(**dict(formats))
     
     def __getitem__(self, i):
         if i in self._plots:
@@ -464,9 +482,9 @@ class Chart(object):
     def plots(self):
         return self._plots
     
-    @property     
-    def figure(self):
-        return self._figure
+    @property
+    def formats(self):
+        return self._formats
             
     def show(self):
         """
@@ -502,5 +520,12 @@ class Chart(object):
     def save(self, file, format='png', dpi=None, *a, **k):
         """
         Save all plots to an image.
+        
+        @param file: destination file name
+        @type file: str
+        @param format: output image format; see C{chart.formats} for enumeration
+        @type format: str or L{csb.pyutils.EnumItem}
+        
+        @note: additional arguments are passed directly to MPL's savefig method
         """
-        self._canvas.print_figure(file, format=format, dpi=dpi, *a, **k)
+        self._canvas.print_figure(file, format=str(format), dpi=dpi, *a, **k)
