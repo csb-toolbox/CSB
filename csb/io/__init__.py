@@ -36,7 +36,10 @@ class TempFile(csb.pyutils.Proxy):
 
     def __init__(self):
         
-        self.__file = tempfile.mkstemp()[1]
+        fd, file = tempfile.mkstemp()
+        
+        self.__file = file
+        self.__fd = fd
         self.__fh = open(self.__file, 'w')
         
         super(TempFile, self).__init__(self.__fh)
@@ -61,6 +64,7 @@ class TempFile(csb.pyutils.Proxy):
         if not self.__fh.closed:
             self.__fh.flush()
             self.__fh.close()
+            os.close(self.__fd)
             
         if os.path.exists(self.__file):
             os.remove(self.__file)
@@ -259,7 +263,7 @@ def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
         f_handle = open(filename, 'w')
 
     if type(this).__name__ == 'array':
-        import Numeric
+        import Numeric                                                  #@UnresolvedImport
         p = Numeric.Pickler(f_handle)
         p.dump(this)
 
@@ -315,7 +319,7 @@ def load(filename, gzip=False, lock=None, lock_path='~/'):
     try:
         this = cPickle.load(f_handle)
     except:
-        import Numeric
+        import Numeric                                                  #@UnresolvedImport
         f_handle.close()
         try:
             f_handle = gzip.GzipFile(filename)
