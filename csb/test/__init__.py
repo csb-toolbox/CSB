@@ -621,15 +621,15 @@ CSB Test Runner Console. Usage:
      python {0.program} [-t type] [-v verbosity] namespace(s) 
  
 Options:
-          namespace(s)   A list of CSB test dotted namespaces, from which to
+      namespace(s)       A list of CSB test dotted namespaces, from which to
                          load tests. '__main__' and '.' are interpreted as the
                          current module. If a namespace ends with an asterisk
                          '.*', all sub-packages will be scanned as well.
                           
                          Examples:
-                             csb.test.cases.bio.*
-                             csb.test.cases.bio.io csb.test.cases.bio.utils
-                             .
+                             "csb.test.cases.bio.*"
+                             "csb.test.cases.bio.io" "csb.test.cases.bio.utils"
+                             "."
                              
       -t  type           Type of tests to load from each namespace. Possible
                          values are:
