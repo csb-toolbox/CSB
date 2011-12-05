@@ -1617,7 +1617,7 @@ class SecondaryStructureElement(object):
         """
         this = set(range(self.start, self.end + 1))
         that = set(range(other.start, other.end + 1))
-        return not this.isdisjoint(that)     
+        return not this.isdisjoint(that)
     
     def merge(self, other):
         """
@@ -1649,6 +1649,21 @@ class SecondaryStructureElement(object):
         @rtype: str
         """
         return str(self.type) * self.length
+    
+    def simplify(self):
+        """
+        Convert to three-state secondary structure (Helix, Strand, Coil).
+        """           
+        if self.type in (SecStructures.Helix, SecStructures.Helix3, SecStructures.PiHelix):
+            self.type = SecStructures.Helix
+        elif self.type in (SecStructures.Strand, SecStructures.BetaBridge):
+            self.type = SecStructures.Strand
+        elif self.type in (SecStructures.Coil, SecStructures.Turn, SecStructures.Bend):
+            self.type = SecStructures.Coil
+        elif self.type == SecStructures.Gap or self.type is None:
+            pass
+        else:
+            assert False, 'Unhandled SS type: ' + repr(self.type)    
 
 class SecondaryStructure(csb.pyutils.CollectionContainer):
     """
@@ -1663,7 +1678,10 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
     def __init__(self, string=None, conf_string=None):
 
         super(SecondaryStructure, self).__init__(type=SecondaryStructureElement, start_index=1)
-                       
+        
+        self._minstart = None
+        self._maxend = None
+         
         if string is not None:
             for motif in SecondaryStructure.parse(string, conf_string):
                 self.append(motif)
@@ -1675,9 +1693,14 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         """
         Add a new SecondaryStructureElement. Then sort all added elements by
         their start position.
-        """ 
+        """
         super(SecondaryStructure, self).append(element)
         super(SecondaryStructure, self)._sort()
+        
+        if self._minstart is None or element.start < self._minstart:
+            self._minstart = element.start
+        if self._maxend is None or element.end > self._maxend:
+            self._maxend = element.end            
                         
     @staticmethod  
     def parse(string, conf_string=None):
@@ -1729,6 +1752,14 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
 
         return motifs
     
+    @property
+    def start(self):
+        return self._minstart
+        
+    @property
+    def end(self):
+        return self._maxend
+    
     def clone(self):
         """
         @return: a deep copy of the object
@@ -1740,16 +1771,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         Convert to three-state secondary structure (Helix, Strand, Coil).
         """           
         for e in self:
-            if e.type in (SecStructures.Helix, SecStructures.Helix3, SecStructures.PiHelix):
-                e.type = SecStructures.Helix
-            elif e.type in (SecStructures.Strand, SecStructures.BetaBridge):
-                e.type = SecStructures.Strand
-            elif e.type in (SecStructures.Coil, SecStructures.Turn, SecStructures.Bend):
-                e.type = SecStructures.Coil
-            elif e.type == SecStructures.Gap or e.type is None:
-                pass
-            else:
-                assert False, 'Unhandled SS type: ' + repr(e.type)
+            e.simplify()
     
     def to_string(self, chain_length=None):
         """
@@ -1829,8 +1851,61 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
                     matches.append(copy.deepcopy(m))                                    
 
         matches.sort()
-        return matches    
+        return matches
+    
+    def q3(self, reference, relaxed=True):
+        """
+        Compute Q3 score.
+        
+        @param reference: reference secondary structure
+        @type reference: L{SecondaryStructure}
+        @param relaxed: if True, treat gaps as coils
+        @type relaxed: bool
+        
+        @return: the percentage of C{reference} residues with identical
+                 3-state secondary structure.
+        @rtype: float
+        """
+        
+        this = self.clone()
+        this.to_three_state()
+        
+        ref = reference.clone()
+        ref.to_three_state()
+        
+        total = 0
+        identical = 0
+        
+        def at(ss, rank):
+            elements = ss.at(rank)
+            if len(elements) == 0:
+                return None
+            elif len(elements) > 1:
+                raise ValueError('Flat secondary structure expected')
+            else:
+                return elements[0] 
+        
+        for rank in range(ref.start, ref.end + 1):
+            q = at(this, rank)
+            s = at(ref, rank)            
 
+            if s:
+                if relaxed or s.type != SecStructures.Gap:
+                    total += 1
+                    if q:
+                        if q.type == s.type:
+                            identical += 1
+                        elif relaxed:
+                            pair = set([q.type, s.type])
+                            match = set([SecStructures.Gap, SecStructures.Coil])
+                            if pair.issubset(match):
+                                identical += 1
+                    
+        if total == 0:
+            return 0.0
+        else:
+            return identical * 100.0 / total
+        
     def subregion(self, start, end):
         """
         Same as C{ss.scan(...cut=True)}, but also shift the start-end positions
