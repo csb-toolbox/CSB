@@ -5,15 +5,16 @@ The L{Chart} object is a facade which provides intuitive access to MPL's plottin
 objects. The following examples show a typical use of L{Chart}:
 
     1. Instantiation
-        
-    >>> chart = Chart()
     
-    2. Adding plots (equivalent to MPL's subplots)
+    >>> chart = Chart()                     # a chart with a single plot    
+    >>> chart = Chart(rows=2, columns=2)    # a chart with 2x2=4 plots
     
-    >>> chart.plots.add(1, 2, 1)
-    Plot (matplotlib.axes.AxesSubplot)
-    >>> chart.plots.add(1, 2, 2)
-    Plot (matplotlib.axes.AxesSubplot)
+    2. Accessing plots (equivalent to MPL's subplots)
+
+    >>> chart.plots[0]                      # first plot (at row=0, column=0) 
+    Plot (matplotlib.axes.AxesSubplot)    
+    >>> chart.plots[0, 1]
+    Plot (matplotlib.axes.AxesSubplot)      # plot at row=0, column=1
     
     3. Plotting
     
@@ -363,50 +364,52 @@ class PlotsCollection(object):
     A list-like collection of all plots in the chart (0-based).
     """
     
-    def __init__(self, figure):
+    def __init__(self, figure, rows=1, columns=1):
         
+        assert rows >= 1 and columns >= 1
+                
         self._plots = []
         self._figure = figure
-        
-    def add(self, rows=1, columns=1, cell=1):
-        """
-        Add a new plot to the figure. By default the new plot will span the
-        whole figure (window). The optional parameters can be used to position
-        the plot explicitly by virtually dividing the figure into a grid and
-        specifying the location of the plot on the grid. All cells in the
-        grid are numbered sequentially, left-to-right, starting from 1.
-        
-        @param rows: number of "rows" in the grid
-        @type rows: int
-        @param columns: number of "columns" in the grid
-        @type columns: int
-        @param cell: in which "cell" to put the new plot
-        @type cell: int
-        """
-        for i in [rows, columns, cell]:
-            if i < 1:
-                raise ValueError(i)
+        self._rows = int(rows)
+        self._columns = int(columns)
+    
+        for dummy in range(self._rows * self._columns):
+            self._plots.append(None)
             
-        if not cell <= rows * columns:
-            raise ValueError('Position {2} is greater than the number'
-                             ' of cells in a {0}x{1} grid'.format(rows, columns, cell))
+    @property
+    def _active_plots(self):
+        return [p for p in self._plots if p is not None]
             
-        plot = self._figure.add_subplot(rows, columns, cell)
-        self._plots.append(plot)
+    def _add(self, index=1):
+        
+        assert 0 <= index < len(self._plots)
+          
+        plot = self._figure.add_subplot(self._rows, self._columns, index + 1)
+        self._plots[index] = plot
         
         return plot
     
-    def __getitem__(self, i):
-        try:
+    def __getitem__(self, location):
+        
+        if isinstance(location, tuple):
+            row, col = location 
+            i = row * self._columns + col
+        else:
+            i = int(location)
+            
+        if not (0 <= i < len(self._plots)):
+            raise IndexError("No such plot: {0}".format(location))
+        
+        if self._plots[i] is None:
+            return self._add(i)
+        else:
             return self._plots[i]
-        except IndexError:
-            raise IndexError("No such plot number: {0}".format(i))
         
     def __len__(self):
-        return len(self._plots)
+        return len(self._active_plots)
     
     def __iter__(self):
-        return iter(self._plots)
+        return iter(self._active_plots)
     
               
 class Chart(object):
@@ -421,10 +424,32 @@ class Chart(object):
     The GUI can be safely opened in the background and closed infinite number
     of times, as long as the client program is still running.
     
+    By default, a chart contains a single plot:
+    
+    >>> chart.plot
+    matplotlib.axes.AxesSubplot
+    >>> chart.plot.hist(...)
+    
+    If C{rows} and C{columns} are defined, the chart will contain
+    C{rows} x C{columns} number of plots (equivalent to MPL's sub-plots).
+    Each plot can be assessed by its index:
+    
+    >>> chart.plots[0]
+    first plot
+    
+    or by its position in the grid:
+    
+    >>> chart.plots[0, 1]
+    plot at row=0, column=1
+    
     @param number: chart number; by default this a L{Chart.AUTONUMBER}
     @type number: int or None
     @param title: chart master title
     @type title: str
+    @param rows: number of rows in the chart window
+    @type rows: int
+    @param columns: number of columns in the chart window
+    @type columns: int
     
     @note: additional arguments are passed directly to Matplotlib's Figure
            constructor. 
@@ -435,12 +460,19 @@ class Chart(object):
     _serial = 0
     
     
-    def __init__(self, number=None, title='', backend=Backends.WX_WIDGETS, *fa, **fk):
+    def __init__(self, number=None, title='', rows=1, columns=1, backend=Backends.WX_WIDGETS, *fa, **fk):
         
         if number == Chart.AUTONUMBER:
             Chart._serial += 1
             number = Chart._serial
+        
+        if rows < 1:
+            rows = 1
+        if columns < 1:
+            columns = 1
             
+        self._rows = int(rows)
+        self._columns = int(columns)
         self._number = int(number)
         self._title = str(title)
         self._figure = Figure(*fa, **fk)
@@ -448,7 +480,7 @@ class Chart(object):
         self._figure.suptitle(self._title)
         self._beclass = backend
         self._hasgui = False
-        self._plots = PlotsCollection(self._figure)        
+        self._plots = PlotsCollection(self._figure, self._rows, self._columns)        
         self._canvas = FigureCanvasAgg(self._figure)
         
         formats = [ (f.upper(), f) for f in self._canvas.get_supported_filetypes() ]
@@ -481,6 +513,18 @@ class Chart(object):
     @property
     def plots(self):
         return self._plots
+    
+    @property
+    def plot(self):
+        return self._plots[0]
+    
+    @property
+    def rows(self):
+        return self._rows
+    
+    @property
+    def columns(self):
+        return self._columns    
     
     @property
     def formats(self):
