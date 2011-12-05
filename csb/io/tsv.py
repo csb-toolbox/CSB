@@ -159,6 +159,27 @@ class SQLiteRepository(RepositoryImp):
 
     PK = 'ROWID'
     TYPES = { int: 'INT', long: 'BIGINT', float: 'REAL', str: 'VARCHAR' }
+    
+    class ChunkedReader(object):
+        
+        SIZE = 10000
+
+        def __init__(self, cursor):
+            self._cursor = cursor
+            
+        def __iter__(self):
+            while True:
+                rows = self._cursor.fetchmany(self.SIZE)
+                if not rows:
+                    break
+                else:
+                    for row in rows:
+                        yield row
+                        
+            self._cursor.close()
+            
+        def __del__(self):
+            self._cursor.close()
         
     def __init__(self, tablename):
         import sqlite3
@@ -172,13 +193,17 @@ class SQLiteRepository(RepositoryImp):
     def pk(self):
         return self._pk
     
-    def query(self, sql, params=None):
+    def _cursor(self, sql, params=None):
         
         sql = sql.replace(Predicate.PH, '?')
         if not params:
             params = []
         
-        return self._conn.execute(sql, params).fetchall() 
+        return self._conn.execute(sql, params)
+            
+    def query(self, sql, params=None):
+        
+        return self._cursor(sql, params).fetchall()
         
     def execute(self, exp):
 
@@ -188,8 +213,10 @@ class SQLiteRepository(RepositoryImp):
             predicate = str(exp.predicate).replace(Predicate.PH, '?')
             query += 'WHERE   {0} {1}\n'.format(exp.where, predicate)
 
-        query += 'ORDER BY  {0} ASC\n'.format(self.pk)                
-        return self.query(query, exp.params)
+        query += 'ORDER BY  {0} ASC\n'.format(self.pk)
+                
+        cursor = self._cursor(query, exp.params)
+        return SQLiteRepository.ChunkedReader(cursor)
     
     def update(self, exp):
 
@@ -741,7 +768,7 @@ class Table(object):
         exp.where = self.pk
         exp.predicate = Equals([row])
         
-        reader = self._imp.execute(exp)
+        reader = list(self._imp.execute(exp))
         if len(reader) > 0:
             return reader[0][0]
         else:
