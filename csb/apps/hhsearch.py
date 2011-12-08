@@ -112,14 +112,22 @@ def _task(args):
         print '\nTerminating...'
         return
 
+class SecStructureScoring(object):
+    
+    OFF = 0
+    AFTER = 1
+    DURING = 2
+    AFTER_PREDICTED = 3
+    DURING_PREDICTED = 4
     
 class HHsearch(object):
     
-    def __init__(self, binary, db, cpu=1):
+    def __init__(self, binary, db, cpu=1, ss=SecStructureScoring.DURING):
         
         self.program = binary
         self.db = db
         self.cpu = cpu
+        self.ss = ss
         self.parser = csb.bio.io.HHOutputParser()
         
     def run(self, context):
@@ -131,7 +139,7 @@ class HHsearch(object):
             
             with csb.io.TempFile() as o:
                 
-                cmd = '{0.program} -i {1} -d {0.db} -o {2} -cpu {3}'.format(self, q.name, o.name, self.cpu)
+                cmd = '{0.program} -i {1} -d {0.db} -o {2} -cpu {3} -ssm {4}'.format(self, q.name, o.name, self.cpu, self.ss)
                 csb.pyutils.Shell.runstrict(cmd)
                 
                 context.result = self.parser.parse_file(o.name)
