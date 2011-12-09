@@ -315,7 +315,7 @@ class WxBackendImpl(Backend):
             frame = FigureFrameWx(figure._figure_number, figure)
             frame.Show()
             frame.Bind(wx.EVT_ACTIVATE, lambda e: e.GetEventObject().Layout())
-            frame.Bind(wx.EVT_CLOSE, lambda e: self.invoke(self._destroy, figure))
+            frame.Bind(wx.EVT_CLOSE, lambda e: self.invoke(self._hide, figure))
 
             self._figures[figure] = frame
 
