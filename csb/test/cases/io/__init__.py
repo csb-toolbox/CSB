@@ -4,6 +4,7 @@
 
 import os
 import cStringIO
+import numpy
 import types
 import csb.io
 import csb.io.tsv
@@ -24,6 +25,16 @@ class TestTable(test.Case):
         
         data = list(self.table)
         self.assertEqual(len(data), 3)
+        
+    def testArrayCompatibility(self):
+        
+        array = numpy.array(self.table)
+        self.assertEqual(array.shape, (3, 3))
+        
+        t = csb.io.tsv.Table('a:int b:float')
+        t.insert([1, 1.2])
+        array = numpy.array(t)
+        self.assertEqual(list(array[0]), [1, 1.2])        
 
     def testDataAccess(self):
         

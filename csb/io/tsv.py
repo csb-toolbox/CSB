@@ -99,6 +99,15 @@ class RepositoryImp(object):
         raise NotImplementedError()
     
     @abstractmethod
+    def count(self):
+        """
+        Count the number of rows in the table.
+        
+        @rtype: int
+        """
+        pass    
+    
+    @abstractmethod
     def execute(self, expression):
         """
         Perform a select operation given L{expression}.
@@ -168,18 +177,16 @@ class SQLiteRepository(RepositoryImp):
             self._cursor = cursor
             
         def __iter__(self):
-            while True:
-                rows = self._cursor.fetchmany(self.SIZE)
-                if not rows:
-                    break
-                else:
-                    for row in rows:
-                        yield row
-                        
-            self._cursor.close()
-            
-        def __del__(self):
-            self._cursor.close()
+            try:
+                while True:
+                    rows = self._cursor.fetchmany(self.SIZE)
+                    if not rows:
+                        break
+                    else:
+                        for row in rows:
+                            yield row
+            finally:           
+                self._cursor.close()
         
     def __init__(self, tablename):
         import sqlite3
@@ -204,6 +211,11 @@ class SQLiteRepository(RepositoryImp):
     def query(self, sql, params=None):
         
         return self._cursor(sql, params).fetchall()
+    
+    def count(self):
+        
+        query = 'SELECT  COUNT(*)\nFROM    {0}\n'.format(self.table)
+        return self._cursor(query).fetchone()[0]   
         
     def execute(self, exp):
 
@@ -478,10 +490,17 @@ class Table(object):
     def __del__(self):
         self._imp.close()
         
+    def __len__(self):
+        return self._imp.count()
+        
     def __iter__(self):
         exp = Expression(self.columns)
         for row in self._imp.execute(exp):
             yield DataRow(self.columns, row)
+            
+    def __array__(self):
+        import numpy
+        return numpy.array([ tuple(row) for row in self ])
             
     def __getstate__(self):
         
