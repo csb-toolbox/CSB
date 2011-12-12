@@ -312,8 +312,9 @@ class DataRow(object):
     column name-based access to the data.
     """
     
-    def __init__(self, columns, row):
-                
+    def __init__(self, columns, number, row):
+            
+        self._number = number
         self._row = tuple(row)
         self._columns = {}
         for i, c in enumerate(columns):
@@ -352,6 +353,10 @@ class DataRow(object):
     def columns(self):
         c = dict((self._columns[cn], cn) for cn in self._columns)
         return tuple(c[i] for i in sorted(c))
+    
+    @property
+    def number(self):
+        return self._number
                 
 class Table(object):
     """
@@ -494,9 +499,12 @@ class Table(object):
         return self._imp.count()
         
     def __iter__(self):
+        rn = 0
         exp = Expression(self.columns)
+        
         for row in self._imp.execute(exp):
-            yield DataRow(self.columns, row)
+            rn += 1
+            yield DataRow(self.columns, rn, row)
             
     def __array__(self):
         import numpy

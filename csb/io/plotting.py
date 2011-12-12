@@ -48,7 +48,6 @@ import csb.pyutils
 
 from abc import ABCMeta, abstractmethod
 
-from Queue import Queue
 from threading import Thread, Event
 
 from matplotlib.figure import Figure
@@ -108,7 +107,6 @@ class Backend(Thread):
         super(Backend, self).__init__()
         
         self._figures = {}
-        self._queue = Queue()
         self._started = Event()        
         self._running = Event()
                 
