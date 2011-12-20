@@ -7,6 +7,7 @@ import tempfile
 import csb.pyutils
 
 from csb.io.tsv import Table
+from csb.io.plotting import Chart
 
 
 NEWLINE = '\n'

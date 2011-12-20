@@ -157,6 +157,13 @@ class Backend(Thread):
         pass
 
     @abstractmethod    
+    def _resize(self, figure):
+        """
+        Handle a 'Resize existing figure' event
+        """
+        pass
+    
+    @abstractmethod    
     def _hide(self, figure):
         """
         Handle a 'Hide existing figure' event
@@ -197,7 +204,13 @@ class Backend(Thread):
         Show existing figure.
         """        
         self.invoke(self._show, figure)
-    
+
+    def resize(self, figure):
+        """
+        Resize existing figure.
+        """        
+        self.invoke(self._resize, figure)
+            
     def hide(self, figure):
         """
         Hide existing figure.
@@ -323,7 +336,20 @@ class WxBackendImpl(Backend):
             self._add(figure)
         
         self._figures[figure].Show()
+        
+    def _resize(self, figure):
+        
+        if figure in self._figures:
             
+            frame = self._figures[figure]
+            
+            w = figure.get_figwidth() * figure.get_dpi()
+            h = figure.get_figheight() * figure.get_dpi()
+            
+            size = self.wx.Size(w, h)
+            frame.canvas.SetInitialSize(size)
+            frame.GetSizer().Fit(frame)
+        
     def _hide(self, figure):
         
         if figure in self._figures:
@@ -522,8 +548,32 @@ class Chart(object):
     
     @property
     def columns(self):
-        return self._columns    
+        return self._columns
     
+    @property
+    def width(self):
+        return self._figure.get_figwidth()
+    @width.setter
+    def width(self, inches):
+        self._figure.set_figwidth(inches)
+        self._backend.resize(self._figure)
+
+    @property
+    def height(self):
+        return self._figure.get_figheight()
+    @height.setter
+    def height(self, inches):
+        self._figure.set_figheight(inches)
+        self._backend.resize(self._figure)
+                
+    @property
+    def dpi(self):
+        return self._figure.get_dpi()
+    @dpi.setter
+    def dpi(self, dpi):
+        self._figure.set_dpi(dpi)
+        self._backend.resize(self._figure)
+            
     @property
     def formats(self):
         return self._formats
@@ -559,7 +609,7 @@ class Chart(object):
             service.destroy(self._figure, wait=True)
             service.client_disposed(self)    
         
-    def save(self, file, format='png', dpi=None, *a, **k):
+    def save(self, file, format='png', crop=True, dpi=None, *a, **k):
         """
         Save all plots to an image.
         
@@ -567,7 +617,18 @@ class Chart(object):
         @type file: str
         @param format: output image format; see C{chart.formats} for enumeration
         @type format: str or L{csb.pyutils.EnumItem}
-        
+        @param crop: if True, crop the image (equivalent to MPL's bbox=tight)
+        @type crop: bool
+                
         @note: additional arguments are passed directly to MPL's savefig method
         """
-        self._canvas.print_figure(file, format=str(format), dpi=dpi, *a, **k)
+        if 'bbox_inches' in k:
+            bbox = k['bbox_inches']
+            del k['bbox_inches']
+        else:
+            if crop:
+                bbox = 'tight'
+            else:
+                bbox = None
+            
+        self._canvas.print_figure(file, format=str(format), bbox_inches=bbox, dpi=dpi, *a, **k)
