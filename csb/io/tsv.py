@@ -800,6 +800,18 @@ class Table(object):
             return reader[0][0]
         else:
             raise IndexError()
+        
+    def column(self, column):
+        """
+        @return: a list all values in the specified column 
+        
+        @param column: column to fetch        
+        @type column: str
+        """
+        if column not in self.columns:
+            raise InvalidColumnError(column)
+        
+        return [ row[column] for row in self ]
 
 class Expression(object):
     """
@@ -905,13 +917,19 @@ class Where(Step):
     
     def in_(self, *values):
         return Operator(self.table, self.expression, In(values))
+
+    def notin(self, *values):
+        return Operator(self.table, self.expression, NotIn(values))    
     
     def between(self, start, end):
         return Operator(self.table, self.expression, Between(start, end))
     
     def equals(self, value):
         return Operator(self.table, self.expression, Equals(value))
-    
+
+    def notequals(self, value):
+        return Operator(self.table, self.expression, NotEquals(value))
+        
     def greater(self, value):
         return Operator(self.table, self.expression, Greater(value))
 
@@ -997,11 +1015,24 @@ class In(Predicate):
         p = [Predicate.PH for dummy in self.params]
         return 'IN ({0})'.format(', '.join(p))
 
+class NotIn(Predicate):
+    
+    @property
+    def sql(self):
+        p = [Predicate.PH for dummy in self.params]
+        return 'NOT IN ({0})'.format(', '.join(p))
+    
 class Equals(Predicate):
         
     @property
     def sql(self):
         return '= {0}'.format(Predicate.PH)
+    
+class NotEquals(Predicate):
+        
+    @property
+    def sql(self):
+        return '!= {0}'.format(Predicate.PH)    
     
 class Greater(Predicate):
         
