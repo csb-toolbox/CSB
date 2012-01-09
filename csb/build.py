@@ -20,9 +20,6 @@ by the Console itself, belong to the same CSB package.
 
 import os
 import sys
-import imp
-import shutil
-import tarfile
 
 if os.path.basename(__file__) == '__init__.py':
     PARENT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -33,12 +30,26 @@ ROOT = 'csb'
 SOURCETREE = os.path.abspath(os.path.join(PARENT, ".."))
 
 if __name__ == '__main__':
-    sys.path = [SOURCETREE] + sys.path     
+
+    # make sure "import io" imports the built in module, not csb.io
+    # io is required by tarfile    
+    for path in sys.path:
+        if path.startswith(SOURCETREE):
+            sys.path.remove(path)
+            
+    import io
+    assert hasattr(io, 'BufferedIOBase')   
+            
+    sys.path = [SOURCETREE] + sys.path
 
 
 """
 It is now safe to import any modules  
 """
+import imp
+import shutil
+import tarfile
+
 import csb
 
 from csb.pyutils import Shell
@@ -301,7 +312,7 @@ Options:
             self.log('\n# Entering {1} in order to delete .py files from {0}...'.format(package, tmp), level=2)        
             os.chdir(tmp)
                 
-            oldtar = tarfile.open(package)
+            oldtar = tarfile.open(package, mode='r:gz')
             oldtar.extractall(tmp)
             oldtar.close()
             
