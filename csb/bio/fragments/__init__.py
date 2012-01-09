@@ -110,8 +110,8 @@ class Target(csb.pyutils.AbstractNIContainer):
     def __init__(self, id, length, residues, overlap=None, segments=None):
     
         self._id = id
-        self._accession = id[:4]
-        self._chain_id = id[4]
+        self._accession = id[:-1]
+        self._chain_id = id[-1]
         self._length = length
         self._overlap = overlap
         
