@@ -80,7 +80,30 @@ class TestEnsemble(test.Case):
         self.assertEqual(self.ensemble.models[3], testModel)        
         self.assertEqual(self.ensemble.models[3].model_id, 3)        
         
-        self.assertRaises(Exception, self.ensemble.models.append, 1)  
+        self.assertRaises(Exception, self.ensemble.models.append, 1)
+        
+    def testToPDB(self):
+
+        pdbraw = self.ensemble.to_pdb()
+        pdb = pdbraw.splitlines()
+        
+        model = 0
+        endmdl = 0
+        
+        for line in pdb:
+            if line.startswith('MODEL '):
+                model += 1
+            if line.startswith('ENDMDL '):
+                endmdl += 1
+                
+        self.assertEqual(model, self.ensemble.models.length)
+        self.assertEqual(endmdl, self.ensemble.models.length)
+        
+        self.assertTrue(pdb[0].startswith, 'HEADER')
+        self.assertTrue(pdb[0].endswith('1NZ9              '))
+        self.assertEqual(pdb[-3].rstrip(), 'TER')
+        self.assertEqual(pdb[-2].rstrip(), 'ENDMDL')
+        self.assertEqual(pdb[-1].rstrip(), 'END')                
 
 @test.unit
 class TestStructure(test.Case):
@@ -181,9 +204,12 @@ class TestStructure(test.Case):
         
         self.assertTrue(pdb[0].startswith, 'HEADER')
         self.assertTrue(pdb[0].endswith('1NZ9              '))
-        self.assertEqual(pdb[-3].rstrip(), 'TER')
-        self.assertEqual(pdb[-2].rstrip(), 'ENDMDL')  
+        self.assertEqual(pdb[-2].rstrip(), 'TER')  
         self.assertEqual(pdb[-1].rstrip(), 'END')
+        
+        for line in pdb:
+            self.assertTrue(not line.startswith('MODEL '))
+            self.assertTrue(not line.startswith('ENDMDL '))
                 
         has_seqres = False
         has_atom = False 
