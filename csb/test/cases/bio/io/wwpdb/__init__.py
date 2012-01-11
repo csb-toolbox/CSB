@@ -9,26 +9,40 @@ from csb.bio.structure import ChemElements
 
 @test.regression
 class TestMappingRegressions(test.Case):
-    
-    def setUp(self):
-        
-        super(TestMappingRegressions, self).setUp()
-
-        pdbfile = self.config.getTestFile('1d3z.regular.pdb')
-        self.structure = StructureParser(pdbfile).parse_structure(1)
         
     def testHetMapping(self):
         """
         @see: [CSB 0000031]
         """
-        residue = self.structure.chains['A'].find(26)
+        pdbfile = self.config.getTestFile('1d3z.regular.pdb')
+        structure = StructureParser(pdbfile).parse_structure(1)
+                
+        residue = structure.chains['A'].find(26)
         self.assertTrue(residue.has_structure)
         self.assertTrue(residue.atoms.length > 0)
         
         for an in residue.atoms:
             self.assertTrue(residue[an]._het)
             self.assertTrue(residue[an].vector.tolist())
-                    
+
+    def testNonStandardResidueMapping(self):
+        """
+        @see: [CSB 0000052]
+        """
+        pdbfile = self.config.getTestFile('3p1u.pdb')
+        chain = StructureParser(pdbfile).parse_structure().chains['A']
+        
+        for residue in chain.residues:
+            
+            if residue.rank < 15:
+                self.assertFalse(residue.has_structure)
+                
+            elif residue.rank in (15, 16):
+                self.assertTrue(residue.has_structure)
+                
+        self.assertEqual(chain.residues[2].sequence_number, None)
+        self.assertEqual(chain.residues[15].sequence_number, 39)
+        self.assertEqual(chain.residues[16].sequence_number, 40)
 
 @test.unit
 class TestStructureParser(test.Case):
@@ -216,8 +230,8 @@ class TestGet(test.Case):
 def TestPDB():
     
     import glob
-    
-    mask = '/media/DB/pdb/all/pdb*.ent'
+
+    mask = raw_input('PDB file(s) (enter file name or mask): ')
     suite = unittest.TestSuite()    
     
     class PDBTestCase(test.Case):
