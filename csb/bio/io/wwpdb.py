@@ -350,6 +350,7 @@ class AbstractStructureParser(object):
 
         atoms = dict( (chain, []) for chain in structure.chains )
         chains = set()
+        het_residues = dict( (chain, set()) for chain in structure.chains )
         in_ligands = False                
         in_atom = False
 
@@ -360,8 +361,18 @@ class AbstractStructureParser(object):
                 line = self._stream.next()
             except StopIteration:
                 break
-
-            if line.startswith('MODEL'):
+            
+            if line.startswith('HET '):
+                het_residue, het_chain, het_residue_id = line[7:10].strip(), line[12], line[13:18].strip()
+                
+                if het_chain in structure:
+                    chain = structure.chains[het_chain]
+                    if chain.type == SequenceTypes.Protein and het_residue in PDB_AMINOACIDS:              #@UndefinedVariable
+                        het_residues[het_chain].add(het_residue_id)
+                    elif chain.type == SequenceTypes.NucleicAcid and het_residue in PDB_NUCLEOTIDES:       #@UndefinedVariable
+                        het_residues[het_chain].add(het_residue_id)              
+                
+            elif line.startswith('MODEL'):
                 if model and model != int(line[10:14]):
                     self._scroll_model(model, self._stream)
                     structure.model_id = model
@@ -445,9 +456,9 @@ class AbstractStructureParser(object):
         if structure.model_id != model:
             raise ValueError('No such model {0} in the structure.'.format(model))
 
-        self._map_residues(structure, atoms)        
+        self._map_residues(structure, atoms, het_residues)        
 
-    def _map_residues(self, structure, atoms):
+    def _map_residues(self, structure, atoms, het_residues):
 
         assert set(structure.chains) == set(atoms.keys())
 
@@ -467,8 +478,9 @@ class AbstractStructureParser(object):
                     lookup[a._residue_id] = [a._sequence_number, a._insertion_code]
                     seq_numbers.append(a._residue_id)
                     res_name = a._residue_name.value
-                    if a._het:
-                        # if it is a HET atom, initiate an optional fragment
+                    res_id = '{0}{1}'.format(a._sequence_number or '', a._insertion_code or '').strip()
+                    if a._het and res_id not in het_residues[chain]:
+                        # if it is a HETATM, but not a modified residue, initiate an optional fragment
                         fragments.append([res_name, '?'])                        
                     elif i == 0 or a._sequence_number - lookup[seq_numbers[i - 1]][0] not in (0, 1, -1):
                         # if residues [i, i-1] are not consecutive or 'overlapping', initiate a new fragment:
