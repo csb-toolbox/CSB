@@ -110,7 +110,7 @@ class Ensemble(csb.pyutils.AbstractNIContainer):
         
         temp = StringIO.StringIO()
 
-        builder = PDBFileBuilder(temp)        
+        builder = PDBEnsembleFileBuilder(temp)        
         builder.add_header(self.first_model)
 
         for model in self.models:
@@ -1489,7 +1489,6 @@ class PDBFileBuilder(FileBuilder):
         """
 
         isnull = self.isnull
-        self.writeline('MODEL     {0:>4}'.format(isnull(structure.model_id, 1)))
          
         for chain_id in structure.chains:
         
@@ -1525,7 +1524,6 @@ class PDBFileBuilder(FileBuilder):
                                         element, isnull(atom.charge, ' ') ))        
 
             self.writeline('TER')
-        self.writeline('ENDMDL')
         
     def finalize(self):
         """
@@ -1533,7 +1531,23 @@ class PDBFileBuilder(FileBuilder):
         """
         self.writeline('END')
         self._out.flush()     
+
+class PDBEnsembleFileBuilder(PDBFileBuilder):
+    """
+    Supports serialization of NMR ensembles.
+    
+    Functions as a simple decorator, which wraps C{add_structure} with
+    MODEL/ENDMDL records.
+    """
+
+    def add_structure(self, structure):
         
+        model_id = self.isnull(structure.model_id, 1)
+        
+        self.writeline('MODEL     {0:>4}'.format(model_id))       
+        super(PDBEnsembleFileBuilder, self).add_structure(structure)
+        self.writeline('ENDMDL')
+            
 class SuperimposeInfo(object):
     """
     Describes a structural alignment result.
