@@ -1,7 +1,7 @@
 EXP_MIN = -1e308
-EXP_MAX = +308
-LOG_MIN = 1e-300
-LOG_MAX = 1e+300
+EXP_MAX = +709
+LOG_MIN = 1e-308
+LOG_MAX = 1e+308
 
 import numpy 
 import math
