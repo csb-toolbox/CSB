@@ -6,6 +6,23 @@ from csb.bio.sequence import SequenceAlphabets
 from csb.bio.structure import SecStructures
 
 
+@test.regression
+class TestHHOutputRegressions(test.Case):
+
+    def setUp(self):
+        
+        super(TestHHOutputRegressions, self).setUp()
+        
+        filename = self.config.getTestFile('d1ea0a1.hhr')
+        self.hitlist = HHOutputParser().parse_file(filename)
+        
+    def testLargeHitlist(self):
+        
+        hit = self.hitlist[-1]
+        
+        self.assertEqual(hit.rank, 10000)
+        self.assertEqual(hit.id, 'd1v8qa_')
+
 @test.unit
 class TestHHProfileParser(test.Case):
     
@@ -123,7 +140,7 @@ class TestHHOutputParser(test.Case):
             self.assertEqual(s.end - s.start, l[1] - l[0])
             
         # hits
-        self.assertEqual(len(self.hitlist), 10)
+        self.assertEqual(len(self.hitlist), 11)
         self.assertRaises(IndexError, self.hitlist.__getitem__, 20)                   
         self.assertEqual(self.hitlist[0].rank, 1)
 
@@ -166,7 +183,7 @@ class TestHHOutputParser(test.Case):
             self.assertEqual(self.hitlist[9].probability, s.probability)
             
         # hits
-        self.assertEqual(len(self.hitlist), 10)
+        self.assertEqual(len(self.hitlist), 11)
         self.assertRaises(IndexError, self.hitlist.__getitem__, 20)                   
         self.assertEqual(self.hitlist[0].rank, 1)
 
