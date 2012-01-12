@@ -769,8 +769,9 @@ class HHOutputParser(object):
                     in_alis = False
                     break
 
-                rank = int(line[:3])
-                id = line[4:34].split()[0]
+                description = line[:34].split()
+                rank = int(description[0]) 
+                id = description[1]
 
                 pos = line[85:94].strip()
                 start, end = map(int, pos.split('-'))
