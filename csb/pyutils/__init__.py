@@ -106,12 +106,12 @@ class TimeoutError(ProcessError):
     """
     Raised on L{Shell.run()} timeouts. 
     """    
-    def __init__(self, cmd, timeout, *args):
+    def __init__(self, cmd, timeout):
         
         self.timeout = timeout
         context = ShellInfo(None, '', '', cmd)
         
-        super(TimeoutError, self).__init__(context, *args)
+        super(TimeoutError, self).__init__(context)
         
     def __str__(self):
         return 'The process "{0.context.cmd}" did not finish in {0.timeout}s'.format(self)
