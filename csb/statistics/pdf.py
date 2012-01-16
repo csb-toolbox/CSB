@@ -276,7 +276,7 @@ class LaplaceDistribution(AbstractDensity):
     def _validate(self, param, value):
         
         if param == 'b' and value < 0:
-            raise ParameterValueError(param)
+            raise ParameterValueError(param, value)
         
     @property
     def b(self):
