@@ -256,7 +256,7 @@ class AbstractDensity(object):
 
         try:
             for param in pdf.parameters:
-                    self[param] = pdf[param]
+                self[param] = pdf[param]
                     
         except ParameterNotFoundError:
             raise IncompatibleEstimatorError(self.estimator)
