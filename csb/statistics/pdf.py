@@ -64,7 +64,7 @@ class LaplaceMLEstimator(AbstractEstimator):
         mu = median(x)
         b = mean(fabs(x - mu))
         
-        return LaplaceDistribution(b, mu)
+        return Laplace(b, mu)
     
 class GaussianMLEstimator(AbstractEstimator):
     
@@ -75,7 +75,7 @@ class GaussianMLEstimator(AbstractEstimator):
         mu = mean(x)
         sigma = sqrt(mean((x - mu)**2))
         
-        return NormalDistribution(mu, sigma)
+        return Normal(mu, sigma)
     
 class GenNormalBruteForceEstimator(AbstractEstimator):
     
@@ -89,7 +89,7 @@ class GenNormalBruteForceEstimator(AbstractEstimator):
         
     def estimate(self, data):
         
-        pdf = GeneralizedNormalDistribution(1, 1, 1)
+        pdf = GeneralizedNormal(1, 1, 1)
         data = array(data)
         logl = []
         
@@ -261,11 +261,11 @@ class AbstractDensity(object):
         except ParameterNotFoundError:
             raise IncompatibleEstimatorError(self.estimator)
 
-class LaplaceDistribution(AbstractDensity):
+class Laplace(AbstractDensity):
         
     def __init__(self, b, mu):
         
-        super(LaplaceDistribution, self).__init__()
+        super(Laplace, self).__init__()
         
         self._register('b')
         self._register('mu')
@@ -306,11 +306,11 @@ class LaplaceDistribution(AbstractDensity):
         
         return numpy.random.laplace(loc, scale, size)
     
-class NormalDistribution(AbstractDensity):
+class Normal(AbstractDensity):
     
     def __init__(self, mu=0, sigma=1):
         
-        super(NormalDistribution, self).__init__()
+        super(Normal, self).__init__()
         
         self._register('mu')
         self._register('sigma')
@@ -346,11 +346,11 @@ class NormalDistribution(AbstractDensity):
                 
         return numpy.random.normal(mu, sigma, size)
         
-class GeneralizedNormalDistribution(AbstractDensity):
+class GeneralizedNormal(AbstractDensity):
     
     def __init__(self, mu, alpha, beta):
         
-        super(GeneralizedNormalDistribution, self).__init__()
+        super(GeneralizedNormal, self).__init__()
         
         self._register('mu')
         self._register('alpha')
