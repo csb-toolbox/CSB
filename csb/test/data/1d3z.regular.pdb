@@ -147,7 +147,7 @@ REMARK 900
 REMARK 900 RELATED ENTRIES                                                      
 REMARK 900 RELATED ID: 1UBQ   RELATED DB: PDB                                   
 DBREF  1D3Z A    1    76  UNP    P62988   UBIQ_HUMAN     136    211             
-SEQRES   1 A   76  MET GLN ILE PHE VAL LYS THR LEU THR GLY LYS THR ILE          
+SEQRES   1 A   76  MSE GLN ILE PHE VAL LYS THR LEU THR GLY LYS THR ILE          
 SEQRES   2 A   76  THR LEU GLU VAL GLU PRO SER ASP THR ILE GLU ASN VAL          
 SEQRES   3 A   76  LYS ALA LYS ILE GLN ASP LYS GLU GLY ILE PRO PRO ASP          
 SEQRES   4 A   76  GLN GLN ARG LEU ILE PHE ALA GLY LYS GLN LEU GLU ASP          
@@ -169,25 +169,25 @@ SCALE1      1.000000  0.000000  0.000000        0.00000
 SCALE2      0.000000  1.000000  0.000000        0.00000                         
 SCALE3      0.000000  0.000000  1.000000        0.00000                         
 MODEL        1                                                                  
-ATOM      1  N   MET A   1      52.923 -90.016   8.509  1.00  9.67           N  
-HETATM    2  CA  MET A   1      51.653 -89.304   8.833  1.00 10.38           C  
-ATOM      3  C   MET A   1      50.851 -89.086   7.556  1.00  9.62           C  
-ATOM      4  O   MET A   1      51.414 -89.033   6.462  1.00  9.62           O  
-ATOM      5  CB  MET A   1      51.976 -87.958   9.485  1.00 13.77           C  
-ATOM      6  CG  MET A   1      52.864 -87.131   8.557  1.00 16.29           C  
-ATOM      7  SD  MET A   1      53.355 -85.606   9.403  1.00 17.17           S  
-ATOM      8  CE  MET A   1      53.359 -84.524   7.954  1.00 16.11           C  
-ATOM      9  H1  MET A   1      52.721 -91.019   8.328  1.00  0.00           H  
-ATOM     10  H2  MET A   1      53.581 -89.933   9.311  1.00  0.00           H  
-ATOM     11  H3  MET A   1      53.352 -89.592   7.663  1.00  0.00           H  
-ATOM     12  HA  MET A   1      51.073 -89.904   9.519  1.00  0.00           H  
-ATOM     13  HB2 MET A   1      51.058 -87.421   9.674  1.00  0.00           H  
-ATOM     14  HB3 MET A   1      52.492 -88.123  10.416  1.00  0.00           H  
-ATOM     15  HG2 MET A   1      53.746 -87.700   8.302  1.00  0.00           H  
-ATOM     16  HG3 MET A   1      52.319 -86.887   7.657  1.00  0.00           H  
-ATOM     17  HE1 MET A   1      53.985 -84.956   7.185  1.00  0.00           H  
-ATOM     18  HE2 MET A   1      53.745 -83.555   8.228  1.00  0.00           H  
-ATOM     19  HE3 MET A   1      52.348 -84.415   7.585  1.00  0.00           H  
+HETATM    1  N   MSE A   1      52.923 -90.016   8.509  1.00  9.67           N  
+HETATM    2  CA  MSE A   1      51.653 -89.304   8.833  1.00 10.38           C  
+HETATM    3  C   MSE A   1      50.851 -89.086   7.556  1.00  9.62           C  
+HETATM    4  O   MSE A   1      51.414 -89.033   6.462  1.00  9.62           O  
+HETATM    5  CB  MSE A   1      51.976 -87.958   9.485  1.00 13.77           C  
+HETATM    6  CG  MSE A   1      52.864 -87.131   8.557  1.00 16.29           C  
+HETATM    7 SE   MSE A   1      53.355 -85.606   9.403  1.00 17.17          SE  
+HETATM    8  CE  MSE A   1      53.359 -84.524   7.954  1.00 16.11           C  
+HETATM    9  H1  MSE A   1      52.721 -91.019   8.328  1.00  0.00           H  
+HETATM   10  H2  MSE A   1      53.581 -89.933   9.311  1.00  0.00           H  
+HETATM   11  H3  MSE A   1      53.352 -89.592   7.663  1.00  0.00           H  
+HETATM   12  HA  MSE A   1      51.073 -89.904   9.519  1.00  0.00           H  
+HETATM   13  HB2 MSE A   1      51.058 -87.421   9.674  1.00  0.00           H  
+HETATM   14  HB3 MSE A   1      52.492 -88.123  10.416  1.00  0.00           H  
+HETATM   15  HG2 MSE A   1      53.746 -87.700   8.302  1.00  0.00           H  
+HETATM   16  HG3 MSE A   1      52.319 -86.887   7.657  1.00  0.00           H  
+HETATM   17  HE1 MSE A   1      53.985 -84.956   7.185  1.00  0.00           H  
+HETATM   18  HE2 MSE A   1      53.745 -83.555   8.228  1.00  0.00           H  
+HETATM   19  HE3 MSE A   1      52.348 -84.415   7.585  1.00  0.00           H  
 ATOM     20  N   GLN A   2      49.535 -88.953   7.698  1.00  9.27           N  
 ATOM     21  CA  GLN A   2      48.664 -88.733   6.544  1.00  9.07           C  
 ATOM     22  C   GLN A   2      48.393 -87.246   6.365  1.00  8.72           C  

@@ -101,9 +101,11 @@ class TestLegacyStructureParser(test.Case):
         # Residue level 
         self.assertEqual(len(structure['A'][1:10]), 9)
         self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)             #@UndefinedVariable
+        self.assertEqual(structure['A'][0]._pdb_name, 'MSE')
+        self.assertEqual(structure['A'][1]._pdb_name, 'GLN')        
         
         # Atom level
-        self.assertEqual(structure['A'][0].atoms['CA'].element, None)
+        self.assertEqual(structure['A'][1].atoms['CA'].element, None)
         self.assertNotEqual(structure['A'][2].atoms['CA'].element, None)
         self.assertEqual(structure['A'][2].atoms['CA'].element, ChemElements.C)             #@UndefinedVariable
 
@@ -174,6 +176,8 @@ class TestRegularStructureParser(test.Case):
         self.assertEqual(len(structure['A'][1:10]), 9)
         self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)                                                 #@UndefinedVariable
         self.assertEqual(structure['A'][0].secondary_structure, None)
+        self.assertEqual(structure['A'][0]._pdb_name, 'MSE')
+        self.assertEqual(structure['A'][1]._pdb_name, 'GLN')
         
         # Atom
         vector = [52.647, -87.443, 9.674]

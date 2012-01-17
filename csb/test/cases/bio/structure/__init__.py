@@ -215,18 +215,24 @@ class TestStructure(test.Case):
         has_atom = False 
         # check first SEQRES line
         for l in pdb:
-            if l.startswith('SEQRES'):
+            if l.startswith('SEQRES') and not has_seqres:
                 has_seqres = True                
                 self.assertEqual(l, 'SEQRES   1 A   58  ALA GLN VAL ALA PHE ARG GLU GLY ASP GLN VAL ARG VAL          ')
-                break        
+        
+            if l.startswith('SEQRES   3 A   58'):          
+                self.assertEqual(l, 'SEQRES   3 A   58  GLU ILE ASN PRO GLU ARG GLY LYS VAL LYS VAL MSE VAL          ')
+                break                   
         
         # check first ATOM line
         for l in pdb:
-            if l.startswith('ATOM'):
+            if l.startswith('ATOM') and not has_atom:
                 has_atom = True                
                 self.assertEqual(l, 'ATOM      1  N   ALA A 127      -0.977 -18.702  -7.689  1.00  0.00           N  ')
+            
+            if l.startswith('ATOM    572'):
+                self.assertEqual(l, 'ATOM    572 SE   MSE A 164       8.107   5.802   4.753  1.00  0.00          Se  ')
                 break
-        
+                
         self.assertTrue(has_seqres)
         self.assertTrue(has_atom)
         
