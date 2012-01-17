@@ -716,8 +716,9 @@ class RegularStructureParser(AbstractStructureParser):
 
                 for i, residue_name in enumerate(seq_fields[3:]):
                     rank = rank_base * 13 - (13 - (i + 1))
-                    residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[chain_id].type)
-                    residue = csb.bio.structure.Residue.create(structure.chains[chain_id].type, rank=rank, type=residue_name)
+                    rname = self.parse_residue_safe(residue_name, as_type=structure.chains[chain_id].type)
+                    residue = csb.bio.structure.Residue.create(structure.chains[chain_id].type, rank=rank, type=rname)
+                    residue._pdb_name = residue_name
                     structure.chains[chain_id].residues.append(residue)
                     assert structure.chains[chain_id].residues.last_index == rank        
 
@@ -830,8 +831,9 @@ class LegacyStructureParser(AbstractStructureParser):
                 residue_name = chains[chain_id][residue_id]
                 rank = (structure.chains[chain_id].residues.last_index or 0) + 1
                 
-                residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[chain_id].type)
-                residue = csb.bio.structure.Residue.create(structure.chains[chain_id].type, rank=rank, type=residue_name)
+                rname = self.parse_residue_safe(residue_name, as_type=structure.chains[chain_id].type)
+                residue = csb.bio.structure.Residue.create(structure.chains[chain_id].type, rank=rank, type=rname)
+                residue._pdb_name = residue_name
                 structure.chains[chain_id].residues.append(residue)                                  
                         
         return structure    

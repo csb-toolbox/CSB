@@ -872,6 +872,7 @@ class Residue(csb.pyutils.AbstractNIContainer):
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
         
         self._type = None    
+        self._pdb_name = None
         self._rank = int(rank)
         self._atoms = ResidueAtomsTable(self)   
         self._atomslist = ResidueAtomsCollection(self) 
@@ -883,6 +884,7 @@ class Residue(csb.pyutils.AbstractNIContainer):
         
         self.type = type
         self.id = sequence_number, insertion_code
+        self._pdb_name = repr(type)
         
     @property
     def _children(self):
@@ -1127,6 +1129,7 @@ class NucleicResidue(Residue):
             raise TypeError(type)
             
         super(NucleicResidue, self).__init__(rank, type, sequence_number, insertion_code)  
+        self._pdb_name = str(type)
 
 class UnknownResidue(Residue):
     
@@ -1472,7 +1475,7 @@ class PDBFileBuilder(FileBuilder):
         for chain_id in master.chains:
             
             chain = master.chains[chain_id]
-            res = [ chain.format_residue(r) for r in chain.residues ]
+            res = [ r._pdb_name for r in chain.residues ]
 
             rn = 0
             for j in range(0, chain.length, 13):
@@ -1518,7 +1521,7 @@ class PDBFileBuilder(FileBuilder):
                         element = ' '
                     self.writeline('ATOM  {0:>5} {1:>4}{2}{3:>3} {4}{5:>4}{6}   {7:>8.3f}{8:>8.3f}{9:>8.3f}{10:>6.2f}{11:>6.2f}{12:>12}{13:2}'.format(
                                         atom.serial_number, atom._full_name, isnull(alt, ' '), 
-                                        chain.format_residue(residue), chain.id, 
+                                        residue._pdb_name, chain.id, 
                                         isnull(residue.sequence_number, residue.rank), isnull(residue.insertion_code, ' '), 
                                         atom.vector[0], atom.vector[1], atom.vector[2], isnull(atom.occupancy, 0.0), isnull(atom.temperature, 0.0), 
                                         element, isnull(atom.charge, ' ') ))        
