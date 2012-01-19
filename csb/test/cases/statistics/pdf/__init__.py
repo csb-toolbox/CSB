@@ -2,7 +2,7 @@
 import numpy
 import csb.test as test
 
-from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace
+from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma
 
 
 @test.functional
@@ -40,7 +40,19 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(data)
         
         self.assertAlmostEqual(pdf.mu, mu, places=1)
-        self.assertAlmostEqual(pdf.b, b, places=1)        
+        self.assertAlmostEqual(pdf.b, b, places=1)
+
+    def testGamma(self):
+
+        alpha = 0.1
+        beta = 0.1
+
+        data = numpy.random.gamma(alpha, 1./beta,10000)
+        pdf = Gamma(1.,1.)
+        pdf.estimate(data)
+        
+        self.assertAlmostEqual(pdf.alpha, alpha, places=2)
+        self.assertAlmostEqual(pdf.beta, beta, places=2)
 
 
 if __name__ == '__main__':
