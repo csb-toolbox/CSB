@@ -3,6 +3,9 @@ EXP_MAX = +709
 LOG_MIN = 1e-308
 LOG_MAX = 1e+308
 
+## Euler-Mascheroni constant
+EULER_MASCHERONI = 0.57721566490153286060651209008240243104215933593992
+
 import numpy 
 import math
 
@@ -266,3 +269,81 @@ def dihedral_angle(a, b, c, d):
 
     
     
+
+
+def psi(x):
+    """
+    digamma function
+    """
+    from numpy import inf, log, sum, exp
+
+    coef = [-1./12., 1./120., -1./252., 1./240., -1./132.,
+            691./32760., -1./12.]
+
+    if x == 0.:
+        return -inf
+    elif x < 0.:
+        raise ValueError('not defined for negative values')
+    elif x < 6.:
+        return psi(x+1) - 1./x
+    else:
+        logx = log(x)
+        res  = logx - 0.5/x
+        res += sum([coef[i] * exp(-2*(i+1)*logx) for i in range(7)])
+        return res
+
+def approx_psi(x):
+    from numpy import log, clip,where
+
+    if type(x) == numpy.ndarray:
+        y = 0. * x
+        y[where(x < 0.6)] =  - EULER_MASCHERONI - 1. /clip(x[where(x < 0.6)],1e-154,1e308)
+        y[where(x >= 0.6)] = log(x[where(x >= 0.6)]-0.5)
+        return y
+    else:
+        if x < 0.6:
+            return - EULER_MASCHERONI - 1 / clip(x,1e-154,1e308)
+        else:
+            return log(x-0.5)
+
+        
+
+def d_approx_psi(x):
+    from numpy import clip,where
+    
+    if type(x) == numpy.ndarray:
+        y = 0. * x
+        y[where(x < 0.6)] = 1. /clip(x[where(x < 0.6)],1e-154,1e308)**2
+        y[where(x >= 0.6)] = 1./(x[where(x >= 0.6)]-0.5)
+        return y
+    else:
+
+        if x < 0.6:
+            return 1 / clip(x,1e-154,1e308)**2
+        else:
+            return 1 / (x - 0.5)
+    
+def inv_psi(y, tol=1e-10, n_iter=100, psi=psi):
+    """
+    inverse digamma function
+    """
+    from numpy import exp
+    
+    ## initial value
+
+    if y < - 5/3. - EULER_MASCHERONI:
+        x = -1 / (EULER_MASCHERONI + y)
+    else:
+        x = 0.5 + exp(y)
+
+    ## Newton root finding
+
+    for i in range(n_iter):
+
+        z = psi(x) - y
+
+        if abs(z) < tol: break
+        
+        x -= z / d_approx_psi(x)
+
+    return x

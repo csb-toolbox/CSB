@@ -7,9 +7,9 @@ import numpy
 from abc import ABCMeta, abstractmethod
 from csb.pyutils import OrderedDict
 
-from csb.math import log, exp
+from csb.math import log, exp, inv_psi
 from scipy.special import gammaln
-from numpy import array, fabs, power, sqrt, pi, mean, median
+from numpy import array, fabs, power, sqrt, pi, mean, median, clip
 
 
 class IncompatibleEstimatorError(TypeError):
@@ -76,6 +76,35 @@ class GaussianMLEstimator(AbstractEstimator):
         sigma = sqrt(mean((x - mu)**2))
         
         return Normal(mu, sigma)
+
+class InverseGammaPosteriorSampler(AbstractEstimator):
+    """
+    Density parameter estimation based on adaptive rejection sampling
+    """
+    pass
+
+class GammaMLEstimator(AbstractEstimator):
+
+    def __init__(self):
+        AbstractEstimator.__init__(self)
+        self.n_iter = 1000
+        
+
+    def estimate(self, data):
+        
+        mu = mean(data)
+        logmean = mean(log(data))
+
+        a = 0.5 / (log(mu) - logmean)
+
+        for i in range(self.n_iter):
+
+            a = inv_psi(logmean - log(mu) + log(a))
+
+        return Gamma(a, a / mu)
+
+    
+    
     
 class GenNormalBruteForceEstimator(AbstractEstimator):
     
@@ -388,3 +417,77 @@ class GeneralizedNormal(AbstractDensity):
              
         return log(beta / (2.0 * alpha)) - gammaln(1. / beta) - power(fabs(x - mu) / alpha, beta)
 
+
+class Gamma(AbstractDensity):
+
+    def __init__(self, alpha = 1.,  beta = 1. ):
+        super(Gamma, self).__init__()
+
+        self._register('alpha')
+        self._register('beta')
+
+        self.set_params(alpha = alpha, beta = beta)
+        self.estimator = GammaMLEstimator()
+
+
+    @property
+    def alpha(self):
+        return self['alpha']
+    @alpha.setter
+    def alpha(self, value):
+        self['alpha'] = value
+        
+    @property
+    def beta(self):
+        return self['beta']
+
+    @beta.setter
+    def beta(self, value):
+        self['beta'] = value
+
+    def log_prob(self,x):
+            
+        a, b = self['alpha'], self['beta']
+
+        return a * log(b) - gammaln(clip(a, 1e-308, 1e308)) + \
+               (a-1) * log(clip(x, 1e-308, 1e308)) - b * x
+
+    def random(self, size = None):
+        return numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
+
+
+class InverseGamma(AbstractDensity):
+
+    def __init__(self, alpha = 1.,  beta = 1. ):
+        super(InverseGamma, self).__init__()
+
+        self._register('alpha')
+        self._register('beta')
+
+        self.set_params(alpha = alpha, beta = beta)
+        self.estimator = NullEstimator()
+
+
+    @property
+    def alpha(self):
+        return self['alpha']
+    @alpha.setter
+    def alpha(self,value):
+        self['alpha'] = value
+        
+    @property
+    def beta(self):
+        return self['beta']
+
+    @beta.setter
+    def beta(self, value):
+        self['beta'] = value
+
+    def log_prob(self, x):
+        a, b = self['alpha'], self['beta']
+        return a * log(b) - gammaln(a) - (a+1) * log(x) - b / x
+
+    def random(self, size = None):
+        return 1./ numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
+    
+    
