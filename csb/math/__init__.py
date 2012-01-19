@@ -293,11 +293,11 @@ def psi(x):
         return res
 
 def approx_psi(x):
-    from numpy import log, clip,where
+    from numpy import log, clip, where
 
     if type(x) == numpy.ndarray:
         y = 0. * x
-        y[where(x < 0.6)] =  - EULER_MASCHERONI - 1. /clip(x[where(x < 0.6)],1e-154,1e308)
+        y[where(x < 0.6)] =  - EULER_MASCHERONI - 1. / clip(x[where(x < 0.6)], 1e-154, 1e308)
         y[where(x >= 0.6)] = log(x[where(x >= 0.6)]-0.5)
         return y
     else:
@@ -309,12 +309,12 @@ def approx_psi(x):
         
 
 def d_approx_psi(x):
-    from numpy import clip,where
+    from numpy import clip, where
     
     if type(x) == numpy.ndarray:
         y = 0. * x
-        y[where(x < 0.6)] = 1. /clip(x[where(x < 0.6)],1e-154,1e308)**2
-        y[where(x >= 0.6)] = 1./(x[where(x >= 0.6)]-0.5)
+        y[where(x < 0.6)] = 1. / clip(x[where(x < 0.6)], 1e-154,1e308)**2
+        y[where(x >= 0.6)] = 1. / (x[where(x >= 0.6)]-0.5)
         return y
     else:
 
@@ -338,7 +338,7 @@ def inv_psi(y, tol=1e-10, n_iter=100, psi=psi):
 
     ## Newton root finding
 
-    for i in range(n_iter):
+    for dummy in range(n_iter):
 
         z = psi(x) - y
 
