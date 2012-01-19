@@ -86,7 +86,7 @@ class InverseGammaPosteriorSampler(AbstractEstimator):
 class GammaMLEstimator(AbstractEstimator):
 
     def __init__(self):
-        AbstractEstimator.__init__(self)
+        super(GammaMLEstimator, self).__init__()
         self.n_iter = 1000
         
 
@@ -97,15 +97,12 @@ class GammaMLEstimator(AbstractEstimator):
 
         a = 0.5 / (log(mu) - logmean)
 
-        for i in range(self.n_iter):
+        for dummy in range(self.n_iter):
 
             a = inv_psi(logmean - log(mu) + log(a))
 
         return Gamma(a, a / mu)
 
-    
-    
-    
 class GenNormalBruteForceEstimator(AbstractEstimator):
     
     def __init__(self, minbeta=0.5, maxbeta=8.0, step=0.1):
@@ -420,13 +417,13 @@ class GeneralizedNormal(AbstractDensity):
 
 class Gamma(AbstractDensity):
 
-    def __init__(self, alpha = 1.,  beta = 1. ):
+    def __init__(self, alpha=1, beta=1):
         super(Gamma, self).__init__()
 
         self._register('alpha')
         self._register('beta')
 
-        self.set_params(alpha = alpha, beta = beta)
+        self.set_params(alpha=alpha, beta=beta)
         self.estimator = GammaMLEstimator()
 
 
@@ -458,13 +455,13 @@ class Gamma(AbstractDensity):
 
 class InverseGamma(AbstractDensity):
 
-    def __init__(self, alpha = 1.,  beta = 1. ):
+    def __init__(self, alpha=1, beta=1):
         super(InverseGamma, self).__init__()
 
         self._register('alpha')
         self._register('beta')
 
-        self.set_params(alpha = alpha, beta = beta)
+        self.set_params(alpha=alpha, beta=beta)
         self.estimator = NullEstimator()
 
 
@@ -488,6 +485,6 @@ class InverseGamma(AbstractDensity):
         return a * log(b) - gammaln(a) - (a+1) * log(x) - b / x
 
     def random(self, size = None):
-        return 1./ numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
+        return 1. / numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
     
     

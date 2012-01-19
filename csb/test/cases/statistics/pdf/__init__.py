@@ -47,12 +47,12 @@ class TestParameterEstimation(test.Case):
         alpha = 0.1
         beta = 0.1
 
-        data = numpy.random.gamma(alpha, 1./beta,10000)
-        pdf = Gamma(1.,1.)
+        data = numpy.random.gamma(alpha, 1. / beta, 10000)
+        pdf = Gamma(1, 1)
         pdf.estimate(data)
         
         self.assertAlmostEqual(pdf.alpha, alpha, places=2)
-        self.assertAlmostEqual(pdf.beta, beta, places=2)
+        self.assertAlmostEqual(pdf.beta, beta, places=1)
 
 
 if __name__ == '__main__':
