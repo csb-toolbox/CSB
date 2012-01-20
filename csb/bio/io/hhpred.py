@@ -4,17 +4,18 @@ HHpred-related format parsers.
 
 import os
 import re
-
 import numpy
+
 import csb.io
-import csb.pyutils
 import csb.bio.io
 import csb.bio.structure as structure
-import csb.bio.sequence as sequence
 
-from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, \
-     StateExistsError, ProfileLength, HHpredHitList, HHpredHit, ScoreUnits, \
-     States, EVDParameters
+from csb.pyutils import Enum, CollectionIndexError, ItemNotFoundError, EnumMemberError
+
+from csb.bio.sequence import Sequence, SequenceAlphabets, A3MAlignment
+
+from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, StateExistsError, ProfileLength
+from csb.bio.hmm import HHpredHitList, HHpredHit, ScoreUnits, States, EVDParameters
 
 
 class HHProfileFormatError(ValueError):
@@ -51,8 +52,7 @@ class HHProfileParser(object):
 
         if pdb_file:
             if not os.path.exists(pdb_file):
-                raise IOError("Could not read structure file {0}".format(
-                    pdb_file))
+                raise IOError("Could not read structure file {0}".format(pdb_file))
 
         self._file = hhm_file
         self._pdb = pdb_file
@@ -101,7 +101,7 @@ class HHProfileParser(object):
                         raise ValueError(
                             'Residue {0} differs from the residue under the layer with the same rank: {1}'.format(
                                 residue, hmm.layers[residue.rank].residue.type))
-            except csb.pyutils.ItemNotFoundError:
+            except ItemNotFoundError:
                 raise ValueError(
                     "Residue {0} is out of the HMM's range {1}..{2}".format(
                         residue, hmm.layers.start_index, hmm.layers.last_index))
@@ -144,8 +144,7 @@ class HHProfileParser(object):
         if self._sequences:
             self._parse_sequences(hmm)
         else:
-            raise HHProfileFormatError('No profile MSA and secondary ' +
-                                           'structure found.')
+            raise HHProfileFormatError('No profile MSA and secondary structure found.')
 
         if hmm.dssp:
             hmm._assign_secstructure()
@@ -175,9 +174,9 @@ class HHProfileParser(object):
                 self._profile = hr.readall()[0].splitlines()
 
             self._chopped = True
+            
         except IndexError:
-            raise HHProfileFormatError('This file is either not in HHM ' +
-                                           'format, or it is corrupt.')
+            raise HHProfileFormatError('Corrupt HHM file.')
 
     def _issue(self, hmm, issue):
         """
@@ -239,8 +238,7 @@ class HHProfileParser(object):
                 pass
             else:
                 raise NotImplementedError(
-                    'Unexpected line. Don\'t know how to parse field {0}.'.format(
-                        line[0:5]))
+                    'Unexpected line. Don\'t know how to parse field {0}.'.format(line[0:5]))
 
         if not hmm.id and hmm.name:
             hmm.id = hmm.name.split()[0]
@@ -279,14 +277,14 @@ class HHProfileParser(object):
                     conf = seq
                     hmm.psipred = structure.SecondaryStructure(psipred, conf)
             else:
-                entry = sequence.Sequence.from_string(entry)
+                entry = Sequence.from_string(entry)
                 if entry.id == 'Consensus':
                     consensus = entry
                 else:
                     msa_entries.append(entry)
 
         if msa_entries:
-            hmm.alignment = sequence.A3MAlignment(msa_entries, consensus)
+            hmm.alignment = A3MAlignment(msa_entries, consensus)
 
         return hmm
 
@@ -333,8 +331,8 @@ class HHProfileParser(object):
                     return hmm._convert(units, float(v),
                                         hmm.scale, hmm.logbase)
 
-        # 1. Create all layers (profile columns), create and attach their match
-        #    states
+        # 1. Create all layers (profile columns), create and attach their match states
+        
         while True:
             try:
                 line = lines.next()
@@ -347,8 +345,7 @@ class HHProfileParser(object):
 
                     line = lines.next()
                     residues = line.split()[1:]
-                    residues = [csb.pyutils.Enum.parse(sequence.SequenceAlphabets.Protein, aa)
-                                for aa in residues]
+                    residues = [Enum.parse(SequenceAlphabets.Protein, aa) for aa in residues]
 
                     for pos, aa in enumerate(residues):
                         background[aa] = backprobs[pos]
@@ -374,17 +371,14 @@ class HHProfileParser(object):
 
                 rank = int(emprobs[1])
                 residue = structure.ProteinResidue(
-                    rank=rank, type=emprobs[0], sequence_number=rank,
-                    insertion_code=None)
-                if residue.type == sequence.SequenceAlphabets.Protein.GAP:                  #@UndefinedVariable
-                    raise HHProfileFormatError(
-                        "Layer {0} can't be represented by a gap".format(rank))
+                    rank=rank, type=emprobs[0], sequence_number=rank, insertion_code=None)
+                if residue.type == SequenceAlphabets.Protein.GAP:                  #@UndefinedVariable
+                    raise HHProfileFormatError("Layer {0} can't be represented by a gap".format(rank))
 
                 new_layer = hmm.layers.append(HMMLayer(rank, residue))
                 assert new_layer == rank, '{0} vs {1}'.format(rank, new_layer)
 
-                match = State(States.Match, emit=csb.pyutils.Enum.members(
-                    sequence.SequenceAlphabets.Protein))
+                match = State(States.Match, emit=Enum.members(SequenceAlphabets.Protein))
 
                 match.rank = rank
                 match.background.set(background)
@@ -396,71 +390,87 @@ class HHProfileParser(object):
                 hmm.layers[new_layer].append(match)
                 assert hmm.layers.last_index == match.rank
 
-        # 2. Append starting transitions: S -> M[1] and optionally S -> D[1].
-        #    In the latter case D[1] will be created and attached to first
-        #    layer beforehand.
+        # 2. Append starting transitions: S -> M[1] and optionally S -> D[1] and S -> I[0].
+        #    States D[1] and I[0] will be created if needed
+        #    Note that [0] is not a real layer, I[0] is simply an insertion at the level of Start
         if len(hmm.layers) > 0:
 
             first_match = hmm.layers[hmm.layers.start_index]
 
             assert start_probs[0] is not None          # Start -> M[1]
-            start_tran = Transition(hmm.start, first_match[States.Match],
-                                    start_probs[0])
+            start_tran = Transition(hmm.start, first_match[States.Match], start_probs[0])
             hmm.start.transitions.append(start_tran)
 
-            if start_probs[1] is not None and start_probs[3] is not None:  # Start -> I[0]
-                start_ins = State(States.Insertion,
-                                  emit=csb.pyutils.Enum.members(sequence.SequenceAlphabets.Protein))
+            if start_probs[1] is not None and start_probs[3] is not None:  # Start -> I[0] -> M[1]
+                start_ins = State(States.Insertion, emit=Enum.members(SequenceAlphabets.Protein))
                 start_ins.rank = 0
                 start_ins.background.set(background)
                 start_ins.emission = start_ins.background
 
                 hmm.start_insertion = start_ins
                 # Start -> I[0]
-                hmm.start.transitions.append(Transition(hmm.start,
-                                                          hmm.start_insertion,
-                                                          start_probs[1]))
+                hmm.start.transitions.append(
+                        Transition(hmm.start, hmm.start_insertion, start_probs[1]))
                 # I[0] -> M[1]
-                hmm.start_insertion.transitions.append(Transition(hmm.start_insertion,
-                                                                   first_match[States.Match],
-                                                                   start_probs[3]))
+                hmm.start_insertion.transitions.append(
+                        Transition(hmm.start_insertion, first_match[States.Match], start_probs[3]))
+                # I[0] -> I[0]
                 if start_probs[4]:
-                    hmm.start_insertion.transitions.append(Transition(hmm.start_insertion,
-                                                                       hmm.start_insertion,
-                                                                       start_probs[4]))
+                    hmm.start_insertion.transitions.append(
+                        Transition(hmm.start_insertion, hmm.start_insertion, start_probs[4]))
 
 
             if start_probs[2] is None and start_probs[6] is not None:
-                self._issue(hmm, 'M->D is corrupt (*) at the Start layer, using D->D instead ({0}).'.format(start_probs[6]))
+                # M->D is corrupt (*) at the Start layer, using D->D instead
                 start_probs[2] = start_probs[6]
 
             if start_probs[2] is not None:  # Start -> D[1]
                 start_del = State(States.Deletion)
                 start_del.rank = 1
                 hmm.layers[1].append(start_del)
-                start_tran = Transition(
-                    hmm.start, first_match[States.Deletion], start_probs[2])
+                start_tran = Transition(hmm.start, first_match[States.Deletion], start_probs[2])
                 hmm.start.transitions.append(start_tran)
         else:
             start_tran = Transition(hmm.start, hmm.end, start_probs[0])
             hmm.start.transitions.append(start_tran)
 
 
-        # 3. Append remaining transitions. If a transition is demanding an I or
-        #    D state, create it on the fly according to the HMM graph model.
-        #    For such reasons the main order of transition parsing is
-        #    significant:
-        #        1) M[i]->any(M[i+1], I[i], D[i+1]) - this creates the I[i] and
-        #           D[i+1] states coming from M[i]
-        #        2) I[i]->any(I[i], M[i+1]) and D[i]->any(M[i+1], D[i+1]) -
-        #           this creates D[i+1] coming from D[i]
-        for rank, fields in enumerate(tran_lines,
-                                      start=hmm.layers.start_index):
+        # 3. Append remaining transitions. I and D states will be created on demand.
+
+        for rank, fields in enumerate(tran_lines, start=hmm.layers.start_index):
             assert hmm.layers[rank][States.Match].rank == rank
 
             ofields = fields.split()
             fields = map(parse_probability, ofields)
+            
+            # 3a. Parse all Neff values and create I[i] and D[i] states if NeffX[i] is not None
+            for col, neff in enumerate(tran_types[7:10], start=7):
 
+                if fields[col] is not None:
+                    neff_value = float(ofields[col]) / abs(hmm.scale)
+
+                    if neff == 'Neff':
+                        hmm.layers[rank].effective_matches = neff_value
+                        
+                    elif neff == 'Neff_I':
+                        hmm.layers[rank].effective_insertions = neff_value
+                        
+                        if States.Insertion not in hmm.layers[rank]:
+                            insertion = State(States.Insertion, emit=Enum.members(SequenceAlphabets.Protein))
+                            insertion.background.set(background)
+                            insertion.emission = insertion.background
+                            insertion.rank = rank                        
+                            hmm.layers[rank].append(insertion)
+                        
+                    elif neff == 'Neff_D':
+                        hmm.layers[rank].effective_deletions = neff_value
+    
+                        if States.Deletion not in hmm.layers[rank] and neff_value > 0:
+                            deletion = State(States.Deletion)
+                            deletion.rank = rank
+                            hmm.layers[rank].append(deletion)                         
+            
+            # 3b. Starting from the first layer, parse all transitions and build the HMM graph stepwise
             for col, tran in enumerate(tran_types):
 
                 probability = fields[col]
@@ -477,84 +487,52 @@ class HHProfileParser(object):
                 if tran == 'M->M':
                     transition = Transition(match, nextmatch, probability)
                     match.transitions.append(transition)
+                                        
                 elif tran == 'M->I':
-                    insertion = State(States.Insertion,
-                                      emit=csb.pyutils.Enum.members(
-                                          sequence.SequenceAlphabets.Protein))
-                    insertion.background.set(background)
-                    insertion.emission = insertion.background
-                    insertion.rank = rank
-                    hmm.layers[rank].append(insertion)
+                    insertion = hmm.layers[rank][States.Insertion]
                     transition = Transition(match, insertion, probability)
                     match.transitions.append(transition)
+                    
                 elif tran == 'M->D':
                     deletion = State(States.Deletion)
                     deletion.rank = rank + 1
                     hmm.layers[rank + 1].append(deletion)
                     transition = Transition(match, deletion, probability)
                     match.transitions.append(transition)
+                                        
                 elif tran == 'I->M':
-                    try:
-                        insertion = hmm.layers[rank][States.Insertion]
-                        transition = Transition(insertion, nextmatch,
-                                                probability)
-                        insertion.transitions.append(transition)
-                    except csb.pyutils.ItemNotFoundError as ke:
-                        if rank == hmm.layers.last_index:
-                            issue = 'Transition I -> M at the last layer ' \
-                                           + '{0} ({1}-based) references a non-existent I state.'.format(rank, hmm.layers.start_index)
-                            self._issue(hmm, issue)
-                        else:
-                            raise ke
+                    insertion = hmm.layers[rank][States.Insertion]
+                    transition = Transition(insertion, nextmatch, probability)
+                    insertion.transitions.append(transition)
+                        
                 elif tran == 'I->I':
-                    try:
-                        insertion = hmm.layers[rank][States.Insertion]
-                        selfloop = Transition(insertion, insertion,
-                                              probability)
-                        insertion.transitions.append(selfloop)
-                    except csb.pyutils.ItemNotFoundError as ke:
-                        if rank == hmm.layers.last_index:
-                            issue = 'Transition I -> I at the last layer ' \
-                                           + '{0} ({1}-based) references a non-existent I state.'.format(rank, hmm.layers.start_index)
-                            self._issue(hmm, issue)
-                        else:
-                            raise ke
+                    insertion = hmm.layers[rank][States.Insertion]
+                    selfloop = Transition(insertion, insertion, probability)
+                    insertion.transitions.append(selfloop)
+                        
                 elif tran == 'D->M':
                     deletion = hmm.layers[rank][States.Deletion]
                     transition = Transition(deletion, nextmatch, probability)
                     deletion.transitions.append(transition)
+                    
                 elif tran == 'D->D':
                     deletion = hmm.layers[rank][States.Deletion]
-                    try:
+
+                    if States.Deletion not in hmm.layers[rank + 1]:
                         nextdeletion = State(States.Deletion)
                         nextdeletion.rank = rank + 1
                         hmm.layers[rank + 1].append(nextdeletion)
-                    except StateExistsError:
+                        
+                    else:
                         nextdeletion = hmm.layers[rank + 1][States.Deletion]
-                        assert match.transitions[States.Deletion].successor \
-                               == nextdeletion
-                    except csb.pyutils.CollectionIndexError as cie:
-                        if rank == hmm.layers.last_index:
-                            issue = 'Transition D -> D at the last layer ' \
-                                    + '{0} ({1}-based) references a non-existent D state.'.format(rank,
-                                                                                              hmm.layers.start_index)
-                            self._issue(hmm, issue)
-                        else:
-                            raise cie
-                    transition = Transition(deletion, nextdeletion,
-                                            probability)
+                        assert match.transitions[States.Deletion].successor == nextdeletion
+                        
+                    transition = Transition(deletion, nextdeletion, probability)
                     deletion.transitions.append(transition)
 
-
-                elif tran == 'Neff':
-                    hmm.layers[rank].effective_matches = float(ofields[col]) / abs(hmm.scale)
-                elif tran == 'Neff_I':
-                    hmm.layers[rank].effective_insertions = float(ofields[col]) / abs(hmm.scale)
-                elif tran == 'Neff_D':
-                    hmm.layers[rank].effective_deletions = float(ofields[col]) / abs(hmm.scale)
                 else:
-                    raise NotImplementedError(
-                        'Unknown transition "{0}"'.format(tran))
+                    if not tran.startswith('Neff'):
+                        raise NotImplementedError('Unknown transition "{0}"'.format(tran))
 
         return hmm
 
@@ -603,7 +581,8 @@ class HHProfileParser(object):
                                 rank + offset_fix)
                             self._issue(hmm, issue)
                             offset_fix += 1
-                    except csb.pyutils.CollectionIndexError:
+                            
+                    except CollectionIndexError:
                         raise HHProfileFormatError(
                             'ProteinResidue {0} at fixed position {1} (former {2}) is out of range.'.format(
                                 line[17:20], rank + offset_fix, rank))
@@ -612,13 +591,14 @@ class HHProfileParser(object):
                     name = line[12:16]
                     element = line[76:78].strip()
                     try:
-                        element = csb.pyutils.Enum.parsename(
-                            structure.ChemElements, element)
-                    except csb.pyutils.EnumMemberError as ee:
+                        element = Enum.parsename(structure.ChemElements, element)
+                        
+                    except EnumMemberError as ee:
                         if element in ('D', 'X'):
                             element = structure.ChemElements.x              #@UndefinedVariable
                         else:
                             raise ee
+                        
                     x, y, z = line[30:38], line[38:46], line[46:54]
                     vector = numpy.array([float(x), float(y), float(z)])
 
@@ -634,13 +614,11 @@ class HHProfileParser(object):
                     if atom.charge:
                         atom.charge = int(atom.charge)
 
-                    assert repr(hmm.layers[atom.rank].residue.type) \
-                           == line[17:20].strip(), atom.rank
+                    assert repr(hmm.layers[atom.rank].residue.type) == line[17:20].strip(), atom.rank
                     #atom.residue = hmm.layers[atom.rank].residue
                     hmm.layers[atom.rank].residue.atoms.append(atom)
 
-                elif line[:6].strip() in ('AUTHOR', 'REMARK', 'COMPND',
-                                          'SEQRES', 'TER', 'END'):
+                elif line[:6].strip() in ('AUTHOR', 'REMARK', 'COMPND', 'SEQRES', 'TER', 'END'):
                     pass
 
                 else:
@@ -781,8 +759,7 @@ class HHOutputParser(object):
 
                 probability = float(line[35:40]) / 100.0
 
-                hit = HHpredHit(rank, id, start, end, qstart, qend,
-                                probability, qlen)
+                hit = HHpredHit(rank, id, start, end, qstart, qend, probability, qlen)
 
                 hit.evalue = float(line[41:48])
                 hit.pvalue = float(line[49:56])
@@ -798,13 +775,15 @@ class HHOutputParser(object):
                 if line.startswith('Done'):
                     in_alis = False
                     break
+                
                 elif line.startswith('No '):
                     c_rank = int(line[3:])
                     if c_rank not in hits:
-                        raise HHOutputFormatError(
-                            'Alignment {0}. refers to a non-existing hit'.format(c_rank))
+                        raise HHOutputFormatError('Alignment {0}. refers to a non-existing hit'.format(c_rank))
+                    
                 elif line.startswith('>'):
                     hits[c_rank].name = line[1:].strip()
+                    
                 elif line.startswith('Probab='):
                     for pair in line.split():
                         key, value = pair.split('=')
@@ -815,16 +794,16 @@ class HHOutputParser(object):
                             hits[c_rank].similarity = float(value)
                         elif key == 'Sum_probs':
                             hits[c_rank].prob_sum = float(value)
-                elif line.startswith('Q ') and not line[:11].rstrip() in \
-                         ('Q Consensus', 'Q ss_pred','Q ss_conf', 'Q ss_dssp'):
+                            
+                elif line.startswith('Q ') and not line[:11].rstrip() in ('Q Consensus', 'Q ss_pred','Q ss_conf', 'Q ss_dssp'):
                     for residue in line[22:]:
                         if residue.isspace() or residue.isdigit():
                             break
                         else:
                             alis[c_rank]['q'].append(residue)
                             has_alis = True
-                elif line.startswith('T ') and not line[:11].rstrip() in \
-                         ('T Consensus', 'T ss_pred','T ss_conf', 'T ss_dssp'):
+                            
+                elif line.startswith('T ') and not line[:11].rstrip() in ('T Consensus', 'T ss_pred','T ss_conf', 'T ss_dssp'):
                     for residue in line[22:]:
                         if residue.isspace() or residue.isdigit():
                             break
@@ -835,10 +814,9 @@ class HHOutputParser(object):
             for rank in alis:
                 try:
                     hits[rank].add_alignment(alis[rank]['q'], alis[rank]['s'])
+                    
                 except (KeyError, ValueError) as er:
-                    raise HHOutputFormatError(
-                        'Corrupt alignment at hit No {0}.\n {1}'.format(
-                            rank, er))
+                    raise HHOutputFormatError('Corrupt alignment at hit No {0}.\n {1}'.format(rank, er))
 
         del alis
 
