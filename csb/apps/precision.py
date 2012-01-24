@@ -5,6 +5,7 @@ NNmake format.
 
 import os
 import multiprocessing
+import matplotlib
 
 import csb.apps
 
@@ -13,10 +14,7 @@ import csb.bio.structure as structure
 import csb.bio.fragments
 import csb.bio.fragments.rosetta as rosetta
 import csb.pyutils
-
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as pyplot
+import csb.io.plotting
 
 
 class ExitCodes(csb.apps.ExitCodes):
@@ -80,14 +78,15 @@ class PrecisionApp(csb.apps.Application):
                 raise ArgumentError("Chain {0!s} not found in native structure".format(ce))            
 
             self.log('Superimposing fragments...\n')
-            lsi = LibrarySuperimposer(native, library, self.args.pdb, self.args.output, self.args.rmsd)
-            matches = lsi.run(self.args.cpu)
+            si = LibrarySuperimposer(native, library, self.args.pdb, self.args.output,
+                                      save=self.args.save_structures, cutoff=self.args.rmsd)
+            matches = si.run(self.args.cpu)
             
-            info = lsi.plot(matches)
+            info = si.plot(matches)
             self.log(' RMSD Cutoff    {0:>6.2f} A'.format(self.args.rmsd))            
             self.log(' AVG Precision  {0.precision:>6.2f} %'.format(info))
             self.log(' Coverage       {0.coverage:>6.2f} %'.format(info))
-            self.log(' RW  Precision  {0.figure}'.format(lsi))
+            self.log(' RW  Precision  {0.figure}'.format(si))
 
 
             
@@ -215,24 +214,29 @@ class LibrarySuperimposer(object):
         coverage = len(covered) * 100.0 / len(residues)
         avg_precision = sum(precision) / len(precision)                 
         
-        
-        pyplot.ion()
-        pyplot.bar(residues, background, color='#FFB0B0', linewidth=None, edgecolor='#FFB0B0')
-        pyplot.bar(residues, precision, color='#50A6DA', linewidth=None, edgecolor='#50A6DA')
-        
-        pyplot.title(self._native.entry_id)
-        pyplot.xlabel('Residue')
-        pyplot.xlim(1, len(residues))
-        pyplot.ylabel('Precision, %')
-        pyplot.ylim(0, 100)
-        pyplot.axes().xaxis.set_minor_locator(matplotlib.ticker.IndexLocator(1, 0))
-        pyplot.axes().xaxis.set_major_locator(matplotlib.ticker.IndexLocator(5, 0))        
-        
-        try:
-            pyplot.gcf().set_size_inches(15, 5.5)
-            pyplot.savefig(self._figure)
-        except IOError as io:
-            raise ArgumentIOError("Can't save figure: " + str(io))
+        with csb.io.plotting.Chart() as chart:
+                        
+            chart.plot.bar(residues, background, color='#FFB0B0', linewidth=None, edgecolor='#FFB0B0')
+            chart.plot.bar(residues, precision, color='#50A6DA', linewidth=None, edgecolor='#50A6DA')            
+
+            chart.plot.set_title(self._native.entry_id)
+            chart.plot.set_xlabel('Residue')
+            chart.plot.set_xlim(1, len(residues))
+            chart.plot.set_ylabel('Precision, %')
+            chart.plot.set_ylim(0, 100)
+
+            xaxis = chart.plot.axes.xaxis            
+            xaxis.set_minor_locator(matplotlib.ticker.IndexLocator(1, 0))
+            xaxis.set_major_locator(matplotlib.ticker.IndexLocator(5, 0))               
+            
+            try:
+                chart.width = 15
+                chart.height = 5.5
+                
+                chart.save(self._figure)
+                
+            except IOError as io:
+                raise ArgumentIOError("Can't save figure: " + str(io))
         
         return GlobalInfo(avg_precision, coverage)
             
