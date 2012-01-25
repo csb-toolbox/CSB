@@ -3,16 +3,22 @@ Classes for parsing/manipulating/writing CLANS (by Tancred Frickey) files
 
 Author: Klaus Kopec
 MPI fuer Entwicklungsbiologie, Tuebingen
-Copyright (C) 2010 Klaus Kopec
+Copyright (C) 2012 Klaus Kopec
 All rights reserved.
 No warranty implied or expressed.
 '''
 import os
 import re
-import sys
 import operator
 from numpy import array, float64, eye, random
 
+
+class MissingBlockError(Exception):
+    '''Thrown if an expected tag is not found during parsing of a CLANS file.'''
+    pass
+class UnknownTagError(Exception):
+    '''Thrown if an unknown tag is encountered while parsing a CLANS file.'''
+    pass
 
 class ClansParser:
     '''
@@ -28,12 +34,18 @@ class ClansParser:
 
     __str__ = __repr__
 
-    def parse_file(self, filename):
+    def parse_file(self, filename, permissive=True, debug=False):
         '''Parse a CLANS file.
 
         @param filename: name of the CLANS file.
         @type filename: string
 
+        @param permissive: if True, the parser tolerates missing non-essential or unknown blocks. If False, a MissingBlockError is thrown for missing non-essential blocks and an UnknownTagError is thrown if any tag is unknown
+        @type permissive: bool
+
+        @param debug: prints an error message for each encountered error that is allowed according to parameter \'permissive\'.
+        @type debug: bool
+        
         @rtype: L{Clans} instance
         @return: a Clans instance containing the parsed data
         '''
@@ -42,20 +54,54 @@ class ClansParser:
 
         self._read_block_dict()  # read and preprocess the CLANS file
 
-        self._parse_param()
-        self._parse_rotmtx()
-        seq = self._parse_seq()
+        try:  # param and rotmtx are non-essential blocks
+            self._parse_param()
+            self._parse_rotmtx()
+        except MissingBlockError, error:
+            if debug:
+                print 'MissingBlockError: {0}'.format(error)
+            if not permissive:
+                raise MissingBlockError(error)
+
+        seq = {}
+        try:
+            seq = self._parse_seq()
+        except MissingBlockError, error:
+
+            if debug:
+                print 'MissingBlockError: {0}'.format(error)
+            if not permissive:
+                raise MissingBlockError(error)
+            
         seqgroups = self._parse_seqgroups()
-        pos = self._parse_pos()
+
+        pos = {}
+        try:
+            pos = self._parse_pos()
+        except MissingBlockError, error:
+            if not permissive:
+                raise MissingBlockError(error)
+            if debug:
+                print 'MissingBlockError: {0}'.format(error)
 
         hsp_att_mode = "hsp"
-        if 'hsp' in self.data_block_dict:
-            hsp = self._parse_hsp_att('hsp')
-        elif 'mtx' in self.data_block_dict:
-            hsp = self._parse_mtx()
-        elif 'att' in self.data_block_dict:
-            hsp_att_mode = "att"
-            hsp = self._parse_hsp_att('att')
+        hsp = {}
+        try:
+            if 'hsp' in self.data_block_dict:
+                hsp = self._parse_hsp_att('hsp')
+
+            elif 'att' in self.data_block_dict:
+                hsp_att_mode = "att"
+                hsp = self._parse_hsp_att('att')
+
+            elif 'mtx' in self.data_block_dict:
+                hsp = self._parse_mtx()
+
+        except MissingBlockError, error:
+            if debug:
+                print 'MissingBlockError: {0}'.format(error)
+            if not permissive:
+                raise MissingBlockError(error)
 
         ## print unknown blocks in case further implementations are needed
         known_block_tags = set(('param', 'rotmtx', 'seq', 'seqgroups', 'pos',
@@ -64,9 +110,12 @@ class ClansParser:
             known_block_tags)
 
         for unprocessed_tag in unprocessed_block_tags:
-            print '[ClansParser.parse_file:WARNING] tag "%s" unknown.' \
-                  % unprocessed_tag \
-                  + '    File corrupt or further implementations needed!'
+            message = ('tag "{0}" is unknown. File corrupt or further '
+                       + 'implementations needed!').format(unprocessed_tag)
+            if not permissive:
+                raise UnknownTagError(message)
+            if debug:
+                print 'UnknownTagError: {0}'.format(message)
 
         ## if no entries exist, we cannot add pos, seqgroup and hsp data
         if len(seq) > 0:
@@ -132,8 +181,7 @@ class ClansParser:
         ...
         '''
         if 'param' not in self.data_block_dict:
-            print 'WARNING: CLANS file contains no <param> block.'
-            return
+            raise MissingBlockError('file contains no <param> block.')
 
         block = self.data_block_dict['param']
 
@@ -159,8 +207,7 @@ class ClansParser:
         @raise ValueError: if the rotmtx block does not contain exactly 3 lines
         '''
         if 'rotmtx' not in self.data_block_dict:
-            print 'WARNING: CLANS file contains no <rotmtx> block.'
-            return
+            raise MissingBlockError('file contains no <rotmtx> block.')
 
         block = self.data_block_dict['rotmtx']
 
@@ -179,9 +226,9 @@ class ClansParser:
                  as values
         '''
         if 'seq' not in self.data_block_dict:
-            print 'WARNING: CLANS file contains no <seq> block. This is OK,'
-            print '         if the file does not contain any sequences.'
-            return {}
+            raise MissingBlockError(
+                'file contains no <seq> block. This is OK if the file does '
+                + 'not contain any sequences.')
 
         block = self.data_block_dict['seq']
         if len(block) % 2 == 1:
@@ -233,9 +280,9 @@ class ClansParser:
                  from the three floats as values.
         '''
         if 'pos' not in self.data_block_dict:
-            print 'WARNING: CLANS file contains no <pos> block. This is OK,'
-            print '         if the file does not contain any sequences.'
-            return {}
+            raise MissingBlockError(
+                'file contains no <pos> block. This is OK if the file does '
+                + 'not contain any sequences.')
 
         block = self.data_block_dict['pos']
 
@@ -262,12 +309,11 @@ class ClansParser:
             raise ValueError('mode must be either "hsp" or "att"')
 
         if mode not in self.data_block_dict:
-            print 'WARNING: CLANS file contains no <%s> block. This is OK,' \
-                  % mode
-            print '         if the file does not contain any sequences or if'
-            print '         none of the contained sequences have connections.'
-            return {}
-
+            raise MissingBlockError(
+                ('file contains no <{0}> block. This is OK if the file does '
+                 + 'not contain any sequences or if none of the contained '
+                 + 'sequences have any connections.').format(mode))
+        
         block = self.data_block_dict[mode]
 
         if mode == "hsp":
@@ -290,10 +336,10 @@ class ClansParser:
                  float as values
         '''
         if 'mtx' not in self.data_block_dict:
-            print 'WARNING: CLANS file contains no <mtx> block. This is OK,'
-            print '         if the file does not contain any sequences or if'
-            print '         none of the contained sequences have connections.'
-            return {}
+            raise MissingBlockError(
+                'file contains no <mtx> block. This is OK if the file does '
+                + 'not contain any sequences or if none of the contained '
+                + 'sequences have any connections.')
 
         block = self.data_block_dict['mtx']
 
@@ -696,6 +742,13 @@ class Clans(object):
         '''Resets the rotation matrix (rotmtx) to no rotation.'''
         self.rotmtx = eye(3)
 
+    def sortEntriesByName(self):
+        '''Sorts the entries by their name.'''
+        self.entries.sort(cmp=entryNameCmp)
+
+        self._has_good_index = False
+        self._update_index()
+        
     def add_group(self, group, members=None):
         '''Adds a new group.
 
@@ -797,7 +850,7 @@ class Clans(object):
 
         elif len(hits) > 1:
             if pedantic:
-                raise ValueError('multiple entries have name \'{}\''.format(
+                raise ValueError('multiple entries have name \'{0}\''.format(
                     name))
             return hits
 
@@ -1063,6 +1116,9 @@ class ClansSeqgroup(object):
                (self.name, self.type, self.size, self.hide, self.color.rgb,
                 ';'.join([str(val) for val in sorted_members]) + ';')
 
+
+def entryNameCmp(e1, e2):
+    return cmp(e1.name, e2.name)
 
 def transfer_groups(origin, target):
     '''Transfers the CLANS group definitions from origin to target by comparing
