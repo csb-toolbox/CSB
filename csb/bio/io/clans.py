@@ -20,6 +20,9 @@ class UnknownTagError(Exception):
     '''Thrown if an unknown tag is encountered while parsing a CLANS file.'''
     pass
 
+def entryNameCmp(e1, e2):
+    return cmp(e1.name, e2.name)
+
 class ClansParser:
     '''
     Class for parsing CLANS files.
@@ -742,9 +745,12 @@ class Clans(object):
         '''Resets the rotation matrix (rotmtx) to no rotation.'''
         self.rotmtx = eye(3)
 
-    def sortEntriesByName(self):
-        '''Sorts the entries by their name.'''
-        self.entries.sort(cmp=entryNameCmp)
+    def sortEntries(self, cmp=entryNameCmp):
+        '''Sorts the entries.
+
+        @param cmp: a function to compare two L{ClansEntry} instances. By default they are sorted by their name. 
+        @type cmp: function'''
+        self.entries.sort(cmp=cmp)
 
         self._has_good_index = False
         self._update_index()
@@ -1116,9 +1122,6 @@ class ClansSeqgroup(object):
                (self.name, self.type, self.size, self.hide, self.color.rgb,
                 ';'.join([str(val) for val in sorted_members]) + ';')
 
-
-def entryNameCmp(e1, e2):
-    return cmp(e1.name, e2.name)
 
 def transfer_groups(origin, target):
     '''Transfers the CLANS group definitions from origin to target by comparing
