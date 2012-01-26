@@ -4,8 +4,20 @@ import csb.test as test
 from csb.bio.io.wwpdb import StructureParser, RegularStructureParser,\
                              LegacyStructureParser, get, UnknownPDBResidueError
 from csb.bio.sequence import SequenceAlphabets, SequenceTypes
-from csb.bio.structure import ChemElements
+from csb.bio.structure import ChemElements, SecStructures
 
+
+@test.regression
+class TestSecStructureRegressions(test.Case):
+        
+    def testSecStructureParsing(self):
+        """
+        @see: [CSB 0000045]
+        """
+        pdbfile = self.config.getTestFile('1d3z.regular.pdb')
+        structure = StructureParser(pdbfile).parse_structure(1)
+        
+        self.assertTrue(structure.chains['A'].secondary_structure is not None)
 
 @test.regression
 class TestMappingRegressions(test.Case):
@@ -167,15 +179,20 @@ class TestRegularStructureParser(test.Case):
         # Chain level
         self.assertEqual(structure.chains.length, 1)
         self.assertEqual(len(structure.chains), 1)
-        self.assertEqual(structure.chains['A'].sequence, 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG')        
-
+        self.assertEqual(structure.chains['A'].sequence, 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG')
+        
+        ss = structure.chains['A'].secondary_structure
+        self.assertEqual(ss.to_string(), '-EEEEE-----EEEEE-----HHHHHHHHHHHHHH-HHH-EEEEE--EE------HHHHH-----EEEEEE')
+        self.assertEqual(len(ss.scan(1, 99, filter=SecStructures.Helix)), 3)
+        self.assertEqual(ss[1].start, 2)
+        self.assertEqual(ss[1].end, 6)
+        
         self.assertEqual(len(structure.chains['A']), 76)
         self.assertEqual(len(structure['A']), 76)
 
         # Residue level 
         self.assertEqual(len(structure['A'][1:10]), 9)
         self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)                                                 #@UndefinedVariable
-        self.assertEqual(structure['A'][0].secondary_structure, None)
         self.assertEqual(structure['A'][0]._pdb_name, 'MSE')
         self.assertEqual(structure['A'][1]._pdb_name, 'GLN')
         
