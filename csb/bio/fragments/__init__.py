@@ -104,21 +104,33 @@ class Prediction(object):
         
         self.alignment = alignment
         self.coordinates = coordinates  
-        
+
+class AssignmentFactory(object):
+    
+    def target(self, *a, **k):
+        return Target(*a, **k)
+    
+    def residue(self, *a, **k):
+        return TargetResidue(*a, **k)
+    
+    def assignment(self, *a, **k):
+        return Assignment(*a, **k)
+            
 class Target(csb.pyutils.AbstractNIContainer):
     
-    def __init__(self, id, length, residues, overlap=None, segments=None):
+    def __init__(self, id, length, residues, overlap=None, segments=None, factory=AssignmentFactory()):
     
         self._id = id
         self._accession = id[:-1]
         self._chain_id = id[-1]
         self._length = length
         self._overlap = overlap
+        self._factory = factory
         
         self._assignments = csb.pyutils.ReadOnlyCollectionContainer(type=Assignment)
         self._errors = csb.pyutils.CollectionContainer()
             
-        resi = [TargetResidue(native) for native in residues]
+        resi = [factory.residue(native) for native in residues]
         self._residues = csb.pyutils.ReadOnlyCollectionContainer(items=resi,
                                             type=TargetResidue, start_index=1)
         
@@ -1226,14 +1238,15 @@ class BenchmarkAdapter(object):
                 if not self.connection.closed:
                     self.connection.close()
 
-    def __init__(self, pdb_paths, connection_string=None):
+    def __init__(self, pdb_paths, connection_string=None, factory=AssignmentFactory()):
                 
         self._pdb = pdb_paths
         self._connection = None
         
         from csb.bio.io.wwpdb import find, StructureParser
         self._parser = StructureParser
-        self._find = find     
+        self._find = find
+        self._factory = factory
     
         try:    
             import psycopg2.extras
@@ -1328,7 +1341,7 @@ class BenchmarkAdapter(object):
         
         native = self.structure(id[:4], id[4]).chains[id[4]]
         segments = self.target_segments(target_id)
-        target = Target(id, length, native.residues, overlap, segments)        
+        target = self._factory.target(id, length, native.residues, overlap, segments)        
         
         source = None
         
@@ -1351,23 +1364,25 @@ class BenchmarkAdapter(object):
             if not frag_chain.has_torsion:
                 frag_chain.compute_torsion()
             
-            fragment = Assignment(source=frag_chain,
-                                  start=row['SourceStart'],
-                                  end=row['SourceEnd'],
-                                  id=row['FragmentName'],
-                                  qstart=row['Start'],
-                                  qend=row['End'],
-                                  probability=row['Probability'],
-                                  score=row['Score'],
-                                  neff=row['Neff'],
-                                  rmsd=row['RMSD'],
-                                  tm_score=row['TMScore'],
-                                  segment=row['SegmentStart'],
-                                  internal_id=row['InternalID'])
+            fragment = self._factory.assignment(
+                                        source=frag_chain,
+                                        start=row['SourceStart'],
+                                        end=row['SourceEnd'],
+                                        id=row['FragmentName'],
+                                        qstart=row['Start'],
+                                        qend=row['End'],
+                                        probability=row['Probability'],
+                                        score=row['Score'],
+                                        neff=row['Neff'],
+                                        rmsd=row['RMSD'],
+                                        tm_score=row['TMScore'],
+                                        segment=row['SegmentStart'],
+                                        internal_id=row['InternalID'])
             
             target.assign(fragment)
         
         return target
+
 
     
 if __name__ == '__main__':
