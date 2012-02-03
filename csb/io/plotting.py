@@ -95,7 +95,29 @@ class Backend(Thread):
         if started and not instance.started:
             instance.start()  
         return instance
-    
+
+    @staticmethod
+    def query(backend):
+        """
+        Backend factory, ensures one instance per subclass. 
+        
+        @param backend: one of the L{Backend} subclasses
+        @type backend: type
+        
+        @return: True if a service of type C{backend} is running
+        @rtype: bool
+        """
+
+        if not issubclass(backend, Backend):
+            raise TypeError(backend)
+        
+        if backend in Backend._instances:
+            instance = Backend._instances[backend]
+            return instance.started
+
+        else:
+            return False
+        
     def __init__(self):
         
         name = self.__class__
@@ -525,7 +547,11 @@ class Chart(object):
     @property
     def _backend(self):
         return Backend.get(self._beclass, started=True)
-  
+
+    @property
+    def _backend_started(self):
+        return Backend.query(self._beclass)
+      
     @property
     def title(self):
         return self._title
@@ -556,7 +582,8 @@ class Chart(object):
     @width.setter
     def width(self, inches):
         self._figure.set_figwidth(inches)
-        self._backend.resize(self._figure)
+        if self._backend_started:
+            self._backend.resize(self._figure)
 
     @property
     def height(self):
@@ -564,7 +591,8 @@ class Chart(object):
     @height.setter
     def height(self, inches):
         self._figure.set_figheight(inches)
-        self._backend.resize(self._figure)
+        if self._backend_started:
+            self._backend.resize(self._figure)
                 
     @property
     def dpi(self):
@@ -603,11 +631,13 @@ class Chart(object):
         @note: Failing to call this method if show() has been called at least
         once may cause backend-related errors.
         """
-        service = self._backend
+        if self._backend_started:
         
-        if service and service.running:
-            service.destroy(self._figure, wait=True)
-            service.client_disposed(self)    
+            service = self._backend
+            
+            if service and service.running:
+                service.destroy(self._figure, wait=True)
+                service.client_disposed(self)    
         
     def save(self, file, format='png', crop=True, dpi=None, *a, **k):
         """
