@@ -128,6 +128,7 @@ class HHsearch(object):
         self.db = db
         self.cpu = cpu
         self.ss = ss
+        self.mac_threshold = 0.3
         self.parser = csb.bio.io.HHOutputParser()
         
     def run(self, context):
@@ -139,7 +140,8 @@ class HHsearch(object):
             
             with csb.io.TempFile() as o:
                 
-                cmd = '{0.program} -i {1} -d {0.db} -o {2} -cpu {3} -ssm {4}'.format(self, q.name, o.name, self.cpu, self.ss)
+                cmd = '{0.program} -i {1} -d {0.db} -o {2} -cpu {3} -ssm {4} -mact {5}'.format(
+                                            self, q.name, o.name, self.cpu, self.ss, self.mac_threshold)
                 csb.pyutils.Shell.runstrict(cmd)
                 
                 context.result = self.parser.parse_file(o.name)
