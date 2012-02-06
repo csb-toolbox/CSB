@@ -1,8 +1,10 @@
 
 import numpy
+import numpy.random
+
 import csb.test as test
 
-from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma
+from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, MultivariateGaussian
 
 
 @test.functional
@@ -54,6 +56,36 @@ class TestParameterEstimation(test.Case):
         self.assertAlmostEqual(pdf.alpha, alpha, places=2)
         self.assertAlmostEqual(pdf.beta, beta, places=1)
 
+
+    def testMultivariateGaussian(self):
+        d = 3
+        mu = numpy.ones(d)
+        sigma = numpy.eye(d)
+
+        pdf = MultivariateGaussian(mu, sigma)
+        samples = pdf.random(100000)
+        pdf.estimate(samples)
+
+        for i in range(d):
+            self.assertAlmostEqual(pdf.mu[i], mu[i], delta = 1e-2)
+            for j in range(d):
+                self.assertAlmostEqual(pdf.sigma[i,j], sigma[i,j], delta = 1e-2)
+                
+
+        d = 3
+        mu = numpy.array([0.,1.,2.])
+        sigma = numpy.random.random((d,d))
+        sigma = numpy.dot(sigma, sigma.T)
+        pdf = MultivariateGaussian(mu, sigma)
+        samples = pdf.random(1000000)
+        pdf.estimate(samples)
+
+        for i in range(d):
+            self.assertAlmostEqual(pdf.mu[i], mu[i], delta = 1e-2)
+            for j in range(d):
+                self.assertAlmostEqual(pdf.sigma[i,j], sigma[i,j], delta = 1e-2)
+
+        
 
 if __name__ == '__main__':
     
