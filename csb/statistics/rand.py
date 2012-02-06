@@ -124,12 +124,14 @@ def sample_sphere3d(radius = 1. ,n_samples = 1 ):
 
 
 
-def sample_from_histogram(p):
+def sample_from_histogram(p, n_samples = 1):
     """
     returns the indice of bin according to the histogram p
 
     @param p: histogram
-    @type p: array
+    @type p: numpy.array
+    @param n_smples: number of samples to generate
+    @type w: integer
     """
     from numpy import add, less, argsort, take, arange
     from numpy.random import random
@@ -139,7 +141,7 @@ def sample_from_histogram(p):
 
     c = add.accumulate(take(p,indices)) / add.reduce(p)
 
-    return indices[add.reduce(less(c, random()))]
+    return indices[add.reduce(less.outer(c, random(n_samples)),0)]
 
 def test_truncated_gamma(alpha = 2., beta  = 1., x_min = 0.1, x_max = 5.):
 
