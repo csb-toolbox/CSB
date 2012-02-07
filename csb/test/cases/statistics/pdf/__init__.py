@@ -67,7 +67,7 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(samples)
 
         for i in range(d):
-            self.assertAlmostEqual(pdf.mu[i], mu[i], delta = 1e-1
+            self.assertAlmostEqual(pdf.mu[i], mu[i], delta = 1e-1)
             for j in range(d):
                 self.assertAlmostEqual(pdf.sigma[i,j], sigma[i,j], delta = 1e-1)
                 
