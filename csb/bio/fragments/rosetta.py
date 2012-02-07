@@ -221,6 +221,10 @@ class RosettaFragmentMap(AbstractContainer):
         return self._fragments
     
     @property
+    def unconfident_positions(self):
+        return tuple(sorted(self._unconf))
+    
+    @property
     def size(self):
         return len(self) 
         

@@ -157,7 +157,7 @@ class Target(csb.pyutils.AbstractNIContainer):
         
         residues = [ r.clone() for r in hmm.residues ]
         return Target(hmm.id, hmm.layers.length, residues)
-        
+    
     @property
     def _children(self):
         return self._residues       
@@ -611,6 +611,14 @@ class Assignment(FragmentMatch):
 
         if not (self.qstart <= qstart <= qend <= self.qend):
             raise ValueError('Region {0}..{1} is out of range {2.qstart}..{2.qend}'.format(qstart, qend, self))
+        
+    def anchored_around(self, rank):
+        
+        if self.qstart < rank < self.qend:
+            if (rank - self.qstart + 1) > 0.4 * (self.qend - self.qstart + 1):
+                return True
+        
+        return False
                                 
     def backbone_at(self, qstart, qend):
         
@@ -1203,7 +1211,21 @@ class RosettaFragsetFactory(object):
                 callback(ResidueEventInfo(r.native.rank, cluster.confidence, cluster.count, rep=cluster.centroid))
         
         fragments.sort()
-        return self.rosetta.RosettaFragmentMap(fragments, target.length)            
+        return self.rosetta.RosettaFragmentMap(fragments, target.length)
+    
+    def mix(self, *fragsets):
+        
+        fragments = []
+        length = 0
+        
+        for fragset in fragsets:
+            if fragset._length > length:
+                length = fragset._length  
+            
+            for fragment in fragset:
+                fragments.append(fragment)
+                
+        return self.rosetta.RosettaFragmentMap(fragments, length)        
                     
             
 class BenchmarkAdapter(object):
