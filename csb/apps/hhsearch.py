@@ -106,8 +106,8 @@ class HHTask(Context):
 def _task(args):
     
     try:
-        binary, db, context = args
-        return HHsearch(binary, db).run(context)
+        binary, db, cpu, context = args
+        return HHsearch(binary, db, cpu=cpu).run(context)
     except (KeyboardInterrupt, SystemExit):
         print '\nTerminating...'
         return
@@ -122,15 +122,123 @@ class SecStructureScoring(object):
     
 class HHsearch(object):
     
-    def __init__(self, binary, db, cpu=1, ss=SecStructureScoring.DURING):
+    class Options(object):
         
-        self.program = binary
-        self.db = db
+        CPU = 'cpu'
+        SS = 'ssm'
+        MACT = 'mact'
+        MAX_HITS = 'Z'
+        MAX_ALI = 'B'
+        MAX_E = 'E'
+        MIN_P = 'p'
+    
+    def __init__(self, binary, db, cpu=None):
+        
+        self._program = binary
+        self._db = db
+        self._opt = {}
+        self._parser = csb.bio.io.HHOutputParser()
+        
         self.cpu = cpu
-        self.ss = ss
-        self.mac_threshold = 0.3
-        self.parser = csb.bio.io.HHOutputParser()
+        self.ss = None
+        self.mac_threshold = None
+        self.max_hits = None
+        self.max_alignments = None
+        self.max_evalue = None
+        self.min_probability = None
+
+    @property
+    def program(self):
+        return self._program
+    @program.setter
+    def program(self, value):
+        self._program = value
+      
+    @property
+    def db(self):
+        return self._db
+    @db.setter
+    def db(self, value):
+        self._db = value
+    
+    @property
+    def parser(self):
+        return self._parser
+    @parser.setter
+    def parser(self, value):
+        self._parser = value
+    
+    @property
+    def cpu(self):
+        return self._get(HHsearch.Options.CPU)
+    @cpu.setter
+    def cpu(self, value):
+        self._opt[HHsearch.Options.CPU] = value
+                        
+    @property
+    def ss(self):
+        return self._get(HHsearch.Options.SS)
+    @ss.setter
+    def ss(self, value):
+        self._opt[HHsearch.Options.SS] = value
+    
+    @property
+    def mac_threshold(self):
+        return self._get(HHsearch.Options.MACT)
+    @mac_threshold.setter
+    def mac_threshold(self, value):
+        self._opt[HHsearch.Options.MACT] = value
+    
+    @property
+    def max_hits(self):
+        return self._get(HHsearch.Options.MAX_HITS)
+    @max_hits.setter
+    def max_hits(self, value):
+        self._opt[HHsearch.Options.MAX_HITS] = value
+    
+    @property
+    def max_alignments(self):
+        return self._get(HHsearch.Options.MAX_ALI)
+    @max_alignments.setter
+    def max_alignments(self, value):
+        self._opt[HHsearch.Options.MAX_ALI] = value
+    
+    @property
+    def max_evalue(self):
+        return self._get(HHsearch.Options.MAX_E)
+    @max_evalue.setter
+    def max_evalue(self, value):
+        self._opt[HHsearch.Options.MAX_E] = value
+    
+    @property
+    def min_probability(self):
+        return self._get(HHsearch.Options.MIN_P)
+    @min_probability.setter
+    def min_probability(self, value):
+        self._opt[HHsearch.Options.MIN_P] = value
+    
+    def _get(self, option):
         
+        if option in self._opt:
+            return self._opt[option]
+        else:
+            return None
+        
+    def _options(self):
+        
+        options = []
+        
+        for option in self._opt:
+            value = self._opt[option]
+            
+            if value is not None and value != '':
+                if isinstance(value, bool):
+                    options.append('-{0}'.format(option))
+                else:    
+                    options.append('-{0} {1}'.format(option, value))         
+        
+        return ' '.join(options)
+                        
     def run(self, context):
         
         with csb.io.TempFile() as q:
@@ -140,8 +248,7 @@ class HHsearch(object):
             
             with csb.io.TempFile() as o:
                 
-                cmd = '{0.program} -i {1} -d {0.db} -o {2} -cpu {3} -ssm {4} -mact {5}'.format(
-                                            self, q.name, o.name, self.cpu, self.ss, self.mac_threshold)
+                cmd = '{0.program} -i {1} -d {0.db} -o {2} {3}'.format(self, q.name, o.name, self._options())                    
                 csb.pyutils.Shell.runstrict(cmd)
                 
                 context.result = self.parser.parse_file(o.name)
@@ -153,7 +260,7 @@ class HHsearch(object):
             workers = len(contexts)
 
         results = []
-        taskargs = [(self.program, self.db, c) for c in contexts]
+        taskargs = [(self.program, self.db, cpu, c) for c in contexts]
 
         pool = mp.Pool(workers)
         
