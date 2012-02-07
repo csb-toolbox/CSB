@@ -130,9 +130,10 @@ def sample_from_histogram(p, n_samples = 1):
 
     @param p: histogram
     @type p: numpy.array
-    @param n_smples: number of samples to generate
-    @type w: integer
+    @param n_samples: number of samples to generate
+    @type n_samples: integer
     """
+    
     from numpy import add, less, argsort, take, arange
     from numpy.random import random
 
@@ -142,6 +143,7 @@ def sample_from_histogram(p, n_samples = 1):
     c = add.accumulate(take(p,indices)) / add.reduce(p)
 
     return indices[add.reduce(less.outer(c, random(n_samples)),0)]
+
 
 def test_truncated_gamma(alpha = 2., beta  = 1., x_min = 0.1, x_max = 5.):
 
