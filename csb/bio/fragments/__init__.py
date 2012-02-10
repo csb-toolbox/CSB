@@ -104,6 +104,167 @@ class Prediction(object):
         
         self.alignment = alignment
         self.coordinates = coordinates  
+        
+class TorsionAnglesPredictor(object):
+    """
+    Fragment-based phi/psi angles predictor.
+    
+    @param target: target protein, containing fragment assignments
+    @type target: L{Target}
+    @param threshold: RMSD distance threshold for L{FragmentCluster}-based filtering
+    @type threshold: float
+    @param extend: pick alternative, longer cluster reps, if possible
+    @type extend: bool
+    @param init: populate all L{FragmentCluster}s on instantiation. If False, this step
+                 will be performed on demand (the first time C{predictor.compute()} is invoked)
+                 
+    @note: if C{init} is False, the first call to C{predictor.compute()} might take a long
+           time. Subsequent calls will be very fast.
+    """
+    
+    def __init__(self, target, threshold=1.5, extend=False, init=False):
+        
+        if not isinstance(target, Target):
+            raise TypeError(target)
+        if target.matches.length == 0:
+            raise ValueError('This target has no fragment assignments')
+        
+        self._target = target
+        self._threshold = float(threshold)
+        self._extend = bool(extend)
+        
+        self._initialized = False
+        self._reps = {}
+            
+        if init:
+            self.init()
+        
+    @property
+    def target(self):
+        return self._target
+
+    @property
+    def threshold(self):
+        return self._threshold
+    
+    @property
+    def extend(self):
+        return self._extend
+    
+    def init(self):
+        """
+        Compute and cache all L{FragmentCluster}s.
+        """
+
+        self._reps = {}
+                
+        for residue in self.target.residues:
+            rep = residue.filter(threshold=self.threshold, extend=self.extend)
+            
+            if rep is not None:
+                self._reps[residue.native.rank] = rep
+                
+        self._initialized = True      
+       
+    def _residue(self, rank):
+        
+        for r in self._target.residues:
+            if r.native.rank == rank:
+                return r
+        
+        raise ValueError('Rank {0} is out of range'.format(rank))
+    
+    def compute_single(self, rank):
+        """
+        Extract torsion angles from the L{ClusterRep} at residue C{#rank}.
+        
+        @param rank: target residue rank
+        @type rank: int
+        
+        @rtype: L{TorsionPredictionInfo} 
+        """
+        
+        residue = self._residue(rank)
+        rep = residue.filter(threshold=self.threshold, extend=self.extend)
+        
+        if rep is None:
+            return None
+        
+        else:
+            fragment = rep.centroid
+            torsion = fragment.torsion_at(rank, rank)[0]
+            
+            return TorsionPredictionInfo(rank, rep.confidence, torsion, primary=True)    
+            
+    def compute(self, rank):
+        """
+        Extract torsion angles from all L{ClusterRep}s, covering residue C{#rank}.
+        
+        @param rank: target residue rank
+        @type rank: int
+        
+        @return: a tuple of L{TorsionPredictionInfo}, sorted by confidence  
+        @rtype: tuple  
+        """        
+        
+        if not self._initialized:
+            self.init()
+        
+        residue = self._residue(rank)
+        prediction = []
+        
+        for rep in self._reps.values():
+            
+            if rep.centroid.qstart <= residue.native.rank <= rep.centroid.qend:
+                
+                fragment = rep.centroid
+                torsion = fragment.torsion_at(rank, rank)[0]
+                info = TorsionPredictionInfo(rank, rep.confidence, torsion)
+
+                if rep is self._reps.get(rank, None):
+                    info.primary = True
+                    
+                prediction.append(info)
+        
+        prediction.sort(reverse=True)
+        return tuple(prediction)
+
+class TorsionPredictionInfo(object):
+    """
+    Struct container for a single torsion angle prediction.
+    
+    @param rank: target residue rank
+    @type rank: int
+    @param confidence: confidence of prediction
+    @type confidence: float
+    @param torsion: assigned phi/psi/omega angles
+    @type torsion: L{TorsionAngles}
+    @param primary: if True, designates that the assigned angles are extracted
+                    from the L{ClusterRep} at residue C{#rank}; otherwise: the
+                    angles are coming from another, overlapping L{ClusterRep}
+    
+    """
+    
+    def __init__(self, rank, confidence, torsion, primary=False):
+        
+        self.rank = rank
+        self.confidence = confidence
+        self.torsion = torsion
+        self.primary = primary
+            
+    def as_tuple(self):
+        """
+        @return: convert this prediction to a tuple: (confidence, phi, psi, omega)
+        @rtype: tuple
+        """        
+        return tuple([self.confidence, self.torsion.phi, self.torsion.psi, self.torsion.omega])
+    
+    def __str__(self):
+        return '<TorsionPredictionInfo: {0.confidence:6.3f} at #{0.rank}>'.format(self)
+    
+    def __cmp__(self, other):
+        return cmp(self.confidence, other.confidence)
+
 
 class AssignmentFactory(object):
     
@@ -157,6 +318,12 @@ class Target(csb.pyutils.AbstractNIContainer):
         
         residues = [ r.clone() for r in hmm.residues ]
         return Target(hmm.id, hmm.layers.length, residues)
+    
+    @staticmethod
+    def deserialize(pickle):
+        
+        with open(pickle) as stream:
+            return cPickle.load(stream)
     
     @property
     def _children(self):
