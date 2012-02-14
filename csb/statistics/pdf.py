@@ -2,7 +2,6 @@
 Probability density functions.
 """
 
-import numpy
 import numpy.random
 
 from abc import ABCMeta, abstractmethod
@@ -159,14 +158,8 @@ class MultivariateGaussianMLEstimator(AbstractEstimator):
         super(MultivariateGaussianMLEstimator, self).__init__()
 
     def estimate(self, data):
-
-        d = data.shape[1]
-
-        pdf = MultivariateGaussian(numpy.mean(data, 0),
-                                   numpy.cov(data.T))
-
-        return pdf
-
+        return MultivariateGaussian(numpy.mean(data, 0), numpy.cov(data.T))
+    
             
 class AbstractDensity(object):
     """
@@ -429,7 +422,6 @@ class GeneralizedNormal(AbstractDensity):
              
         return log(beta / (2.0 * alpha)) - gammaln(1. / beta) - power(fabs(x - mu) / alpha, beta)
 
-
 class Gamma(AbstractDensity):
 
     def __init__(self, alpha=1, beta=1):
@@ -440,7 +432,6 @@ class Gamma(AbstractDensity):
 
         self.set_params(alpha=alpha, beta=beta)
         self.estimator = GammaMLEstimator()
-
 
     @property
     def alpha(self):
@@ -467,7 +458,6 @@ class Gamma(AbstractDensity):
     def random(self, size = None):
         return numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
 
-
 class InverseGamma(AbstractDensity):
 
     def __init__(self, alpha=1, beta=1):
@@ -478,7 +468,6 @@ class InverseGamma(AbstractDensity):
 
         self.set_params(alpha=alpha, beta=beta)
         self.estimator = NullEstimator()
-
 
     @property
     def alpha(self):
@@ -502,48 +491,34 @@ class InverseGamma(AbstractDensity):
     def random(self, size = None):
         return 1. / numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
     
-    
-
 class MultivariateGaussian(Normal):
 
-    def __init__(self,
-                 mu = numpy.zeros(2),
-                 sigma = numpy.eye(2)):
-
-        
+    def __init__(self, mu=numpy.zeros(2), sigma=numpy.eye(2)):
+                
         super(MultivariateGaussian, self).__init__(mu, sigma)
-
         self.estimator = MultivariateGaussianMLEstimator()
         
-        
-    def random(self, size = None):
-
+    def random(self, size=None):
         return numpy.random.multivariate_normal(self.mu, self.sigma, size)
-
 
     def log_prob(self, x):
 
-        from numpy import log, pi, clip
-        from scipy.special import kv
         from numpy.linalg import det
         
         mu = self.mu
         S = self.sigma
         D = len(mu)
         q = self.__q(x)
-        return - 0.5 * (D * log(2*pi) + log(abs(det(S)))) - 0.5 * q**2
-
+        return - 0.5 * (D * log(2 * pi) + log(abs(det(S)))) - 0.5 * q**2
 
     def __q(self,x):
-        from numpy import sum, dot, sqrt, clip, reshape
+        from numpy import sum, dot, reshape
         from numpy.linalg import inv
 
         mu = self.mu
         S = self.sigma
         
-        return sqrt(clip(sum(reshape((x-mu)*dot(x-mu,inv(S).T.squeeze()),(-1,len(mu))),-1),0.,1e308))
-
-
+        return sqrt(clip(sum(reshape((x - mu) * dot(x - mu, inv(S).T.squeeze()), (-1, len(mu))), -1), 0., 1e308))
 
     def conditional(self, x, dims):
         """
@@ -561,14 +536,14 @@ class MultivariateGaussian(Normal):
         mu1 = take(self['mu'],dims)
         mu2 = take(self['mu'],dims2)
 
-        x1 = take(x,dims)
-        x2 = take(x,dims2)
+        # x1 = take(x, dims)
+        x2 = take(x, dims2)
 
-        A = take(take(self['Sigma'],dims,0),dims,1)
-        B = take(take(self['Sigma'],dims2,0),dims2,1)
-        C = take(take(self['Sigma'],dims,0),dims2,1)
+        A = take(take(self['Sigma'], dims, 0), dims,1)
+        B = take(take(self['Sigma'], dims2, 0), dims2,1)
+        C = take(take(self['Sigma'], dims, 0), dims2,1)
 
-        mu    = mu1 + dot(C,dot(inv(B),x2-mu2))
-        Sigma = A - dot(C,dot(inv(B),C.T))
+        mu = mu1 + dot(C, dot(inv(B), x2 - mu2))
+        Sigma = A - dot(C, dot(inv(B), C.T))
         
-        return MultivariateGaussian((mu,Sigma))
+        return MultivariateGaussian((mu, Sigma))
