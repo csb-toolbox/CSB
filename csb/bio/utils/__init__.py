@@ -402,3 +402,29 @@ def inertia_tensor(x, m=None):
     else:
         return eye(x.shape[0]) * r2.sum() - dot(x, x.T)
 
+def distance_matrix(X, Y=None):
+    """
+    Calculates a matrix of pairwise distances
+
+    @param X: m x n input vector
+    @type X: numpy array
+
+    @param Y: k x n input vector or None, which defaults to Y=X
+    @type X: numpy array
+
+    @return: m x k distance matrix
+    @type X: numpy array
+    """
+    from numpy import add, clip, sqrt, dot, transpose, sum
+
+    if Y is None: Y = X
+
+    if X.ndim < 2: X = X.reshape((1, -1))
+    if Y.ndim < 2: Y = Y.reshape((1, -1))
+
+    C = dot(X, transpose(Y))
+    S = add.outer(sum(X**2, 1), sum(Y**2, 1))
+
+    return sqrt(clip(S - 2 * C, 0., 1e300))
+
+# vi:expandtab:smarttab:sw=4
