@@ -410,10 +410,10 @@ def distance_matrix(X, Y=None):
     @type X: numpy array
 
     @param Y: k x n input vector or None, which defaults to Y=X
-    @type X: numpy array
+    @type Y: numpy array
 
     @return: m x k distance matrix
-    @type X: numpy array
+    @rtype: numpy array
     """
     from numpy import add, clip, sqrt, dot, transpose, sum
 
