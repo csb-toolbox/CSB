@@ -7,7 +7,7 @@ import numpy.random
 from abc import ABCMeta, abstractmethod
 from csb.pyutils import OrderedDict
 
-from csb.math import log, exp, inv_psi
+from csb.math import log, exp, psi, inv_psi, log_sum_exp
 from scipy.special import gammaln
 from numpy import array, fabs, power, sqrt, pi, mean, median, clip
 
@@ -160,6 +160,32 @@ class MultivariateGaussianMLEstimator(AbstractEstimator):
     def estimate(self, data):
         return MultivariateGaussian(numpy.mean(data, 0), numpy.cov(data.T))
     
+
+class DirichletEstimator(AbstractEstimator):
+
+    def __init__(self):
+        super(DirichletEstimator, self).__init__()
+        self.n_iter = 1000
+        self.tol = 1e-5
+
+    def estimate(self, data):
+
+        log_p = numpy.mean(log(data),0)
+        
+        e = numpy.mean(data,0)
+        v = numpy.mean(data**2,0)
+        q = (e[0] - v[0]) / (v[0] - e[0]**2)
+
+        a = e * q
+        y = a * 0
+        k = 0
+        while(sum(abs(y-a)) > self.tol and k < self.n_iter):
+            y = psi(sum(a)) + log_p
+            a = numpy.array(map(inv_psi,y))
+            k +=1 
+
+        return Dirichlet(a)
+        
             
 class AbstractDensity(object):
     """
@@ -546,4 +572,40 @@ class MultivariateGaussian(Normal):
         mu = mu1 + dot(C, dot(inv(B), x2 - mu2))
         Sigma = A - dot(C, dot(inv(B), C.T))
         
-        return MultivariateGaussian((mu, Sigma))
+        return MultivariateGaussian((mu,Sigma))
+
+
+class Dirichlet(AbstractDensity):
+
+    def __init__(self, alpha):
+        super(Dirichlet, self).__init__()
+
+        self._register('alpha')
+
+        self.set_params(alpha=alpha)
+        self.estimator = DirichletEstimator()
+
+
+    @property
+    def alpha(self):
+        return self['alpha']
+
+    @alpha.setter
+    def alpha(self,value):
+        self['alpha'] = value
+
+
+    def log_prob(self, x):
+        #TODO check wether x is in the probability simplex
+
+        alpha = self.alpha
+        return gammaln(sum(alpha)) - sum(gammaln(alpha)) \
+              + numpy.dot((alpha - 1).T,log(x).T) 
+        
+        
+        
+    def random(self, size = None):
+
+        return numpy.random.mtrand.dirichlet(self.alpha, size)
+
+

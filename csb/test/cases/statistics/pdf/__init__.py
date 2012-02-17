@@ -4,7 +4,7 @@ import numpy.random
 
 import csb.test as test
 
-from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, MultivariateGaussian
+from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, MultivariateGaussian, Dirichlet
 
 
 @test.functional
@@ -86,7 +86,54 @@ class TestParameterEstimation(test.Case):
                 self.assertAlmostEqual(pdf.sigma[i,j], sigma[i,j], delta=1e-1)
 
         
+    def testDirichlet(self):
 
+        alpha = numpy.array([1.,1.,1.])
+        pdf = Dirichlet(alpha)
+
+        self.assertAlmostEqual(pdf(numpy.array([1.,0.,0])),
+                               pdf(numpy.array([0.,1.,0])),
+                               delta = 1e-1)
+        
+        self.assertAlmostEqual(pdf(numpy.array([1./3.,1./3.,1./3])),
+                               pdf(numpy.array([0.,1.,0])),
+                               delta = 1e-1)
+
+        alpha = numpy.array([16.,16.,16.])
+        pdf = Dirichlet(alpha)
+        
+
+        self.assertAlmostEqual(pdf(numpy.array([1.,0.,0])),
+                               pdf(numpy.array([0.,1.,0])),
+                               delta = 1e-1)
+
+        self.assertAlmostEqual(pdf(numpy.array([1.,0.,0])),
+                               pdf(numpy.array([0.,0.,1])),
+                               delta = 1e-1)
+        
+        self.assertNotEqual(pdf(numpy.array([1./3.,1./3.,1./3])),
+                            pdf(numpy.array([0.,1.,0])))
+        
+        alpha = numpy.array([1.,1.,1.])
+        pdf = Dirichlet(alpha)
+
+        samples = pdf.random(100000)
+        pdf.estimate(samples)
+ 
+        for i in range(len(alpha)):
+            self.assertAlmostEqual(pdf.alpha[i], alpha[i], delta = 1e-1)
+
+
+        alpha = numpy.array([200.,60.,20.])
+        pdf = Dirichlet(alpha)
+
+        samples = pdf.random(100000)
+        pdf.estimate(samples)
+ 
+        for i in range(len(alpha)):
+            self.assertAlmostEqual(pdf.alpha[i], alpha[i], delta = 1e1)
+
+            
 if __name__ == '__main__':
     
     test.Console()
