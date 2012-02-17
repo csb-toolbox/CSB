@@ -96,7 +96,7 @@ def sample_dirichlet(alpha, n_samples = 1):
     return transpose(transpose(X) / sum(X,-1))
 
 
-def sample_sphere3d(radius = 1. ,n_samples = 1 ):
+def sample_sphere3d(radius = 1., n_samples = 1 ):
     """
     sample points from 3D sphere
 
@@ -185,29 +185,12 @@ def test_truncated_normal(mu = 2., sigma  = 1., x_min = 0.1, x_max = 5.):
     
 
 
-
-def _sample_beta(kappa, n=1):
-    from numpy import arccos,clip
-    from csb.math import log, exp
-    from numpy.random import random
-    
-    u = random(n)
-
-    if kappa != 0.:
-        x = clip(1 + 2 * log(u + (1-u) * exp(-kappa)) / kappa,-1.,1.)
-    else:
-        x = 2*u - 1
-
-    if n == 1:
-        return arccos(x)[0]
-    else:
-        return arccos(x)
-
-
 def random_rotation(A, n_iter=10, initial_values = None):
     """
-    generate random rotation R from
+    implementation of:
+    Generation of three-dimensional random rotations in fitting and matching problems
 
+    generate random rotation R from
     exp(trace(dot(transpose(A),R)))
     
     """
@@ -215,6 +198,25 @@ def random_rotation(A, n_iter=10, initial_values = None):
     from numpy.linalg import svd, det    
     from random import vonmisesvariate, randint
     from csb.math import euler
+
+
+    def sample_beta(kappa, n=1):
+        from numpy import arccos,clip
+        from utils import log, exp
+        from numpy.random import random
+
+        u = random(n)
+
+        if kappa <> 0.:
+            x = clip(1 + 2 * log(u + (1-u) * exp(-kappa)) / kappa,-1.,1.)
+        else:
+            x = 2*u - 1
+
+        if n == 1:
+            return arccos(x)[0]
+        else:
+            return arccos(x)
+
 
     U, L, V = svd(A)
 
@@ -242,6 +244,6 @@ def random_rotation(A, n_iter=10, initial_values = None):
 
         ## sample beta
         kappa = cos(phi) * (L[0]+L[1]) + cos(psi) * (L[0]-L[1]) + 2 * L[2]
-        beta  = _sample_beta(kappa)
+        beta  = sample_beta(kappa)
 
     return dot(U, dot(euler(alpha, beta, gamma), V))
