@@ -98,9 +98,7 @@ class Backend(Thread):
 
     @staticmethod
     def query(backend):
-        """
-        Backend factory, ensures one instance per subclass. 
-        
+        """        
         @param backend: one of the L{Backend} subclasses
         @type backend: type
         

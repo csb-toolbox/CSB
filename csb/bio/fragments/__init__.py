@@ -389,7 +389,30 @@ class Target(csb.pyutils.AbstractNIContainer):
     def assignall(self, fragments):
         
         for frag in fragments:
-            self.assign(frag)         
+            self.assign(frag)
+            
+    def filter(self, threshold=1.5, extend=False):
+        
+        target = self.clone()
+        
+        for residue in self.residues:
+            rep = residue.filter(threshold=threshold, extend=extend)
+            
+            if rep is not None:
+                target.assign(rep.centroid)
+                
+        return target
+    
+    def clone(self):
+
+        segments = [self.segments[start] for start in self.segments]
+        segments = [TargetSegment(s.start, s.end, s.count) for s in segments]
+
+        target = self._factory.target(self.id, self.length, [r.native for r in self.residues],
+                                      overlap=self._overlap, segments=segments)
+        
+        return target        
+         
     
 class TargetResidue(object):
     
@@ -446,7 +469,7 @@ class TargetResidue(object):
                 center.exchange()
             return center
         
-        except ClusterExhaustedError:
+        except (ClusterExhaustedError, ClusterDivergingError):
             return None
     
     def longest(self):
@@ -457,7 +480,17 @@ class TargetResidue(object):
             if best is None or (q.fragment.length > best.length):
                 best = q.fragment
                 
-        return best     
+        return best
+    
+    def precision(self, threshold=1.5):
+        
+        if self.assignments.length < 1:
+            return None
+        else:
+            positive = [a for a in self.assignments if a.fragment.rmsd <= threshold]
+            pos = len(positive) * 100.0 / self.assignments.length
+            
+            return pos
     
 class TargetSegment(object):
     
@@ -1542,8 +1575,8 @@ class BenchmarkAdapter(object):
             if source is None or source.accession != src_accession:
                 try:
                     source = self.structure(src_accession, src_chain)
-                except IOError as ioe:
-                    target.errors.append(ioe)
+                except (IOError, csb.bio.structure.Broken3DStructureError) as ex:
+                    target.errors.append(ex)
                     continue
             
             if src_chain == '_':
