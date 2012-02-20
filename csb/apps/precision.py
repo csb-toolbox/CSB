@@ -67,6 +67,7 @@ class PrecisionApp(csb.apps.Application):
             
             try:
                 native = wwpdb.RegularStructureParser(self.args.native).parse_structure()
+                native.accession = native.accession[:4]
                 if self.args.chain:
                     native = native.chains[self.args.chain]
                 else:
@@ -109,6 +110,12 @@ class GlobalInfo(object):
     def __init__(self, precision, coverage):
         self.precision = precision
         self.coverage = coverage
+        
+    def __str__(self):
+        return '{0.precision:6.2f} {0.coverage:6.2f}'.format(self)
+    
+    def __sub__(self, rhs):
+        return GlobalInfo(self.precision - rhs.precision, self.coverage - rhs.coverage)
         
 class LibrarySuperimposer(object):
     
@@ -183,6 +190,7 @@ class LibrarySuperimposer(object):
         
         residues = range(1, self._native.length + 1)
         precision = []
+        precision2 = []
         background = []
         covered = set()
         
@@ -205,10 +213,12 @@ class LibrarySuperimposer(object):
         
         for rank in residues:
             if all[rank] == 0:
-                precision.append(0)
+                precision2.append(0)
                 background.append(0)
             else:
-                precision.append((positive[rank] * 100.0 / all[rank]))
+                p = positive[rank] * 100.0 / all[rank]
+                precision.append(p)
+                precision2.append(p)
                 background.append(100)
                 
         coverage = len(covered) * 100.0 / len(residues)
@@ -217,7 +227,7 @@ class LibrarySuperimposer(object):
         with csb.io.plotting.Chart() as chart:
                         
             chart.plot.bar(residues, background, color='#FFB0B0', linewidth=None, edgecolor='#FFB0B0')
-            chart.plot.bar(residues, precision, color='#50A6DA', linewidth=None, edgecolor='#50A6DA')            
+            chart.plot.bar(residues, precision2, color='#50A6DA', linewidth=None, edgecolor='#50A6DA')            
 
             chart.plot.set_title(self._native.entry_id)
             chart.plot.set_xlabel('Residue')
