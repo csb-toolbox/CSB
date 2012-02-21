@@ -372,7 +372,7 @@ class HHProfileParser(object):
                 rank = int(emprobs[1])
                 residue = structure.ProteinResidue(
                     rank=rank, type=emprobs[0], sequence_number=rank, insertion_code=None)
-                if residue.type == SequenceAlphabets.Protein.GAP:                  #@UndefinedVariable
+                if residue.type == SequenceAlphabets.Protein.GAP:                  
                     raise HHProfileFormatError("Layer {0} can't be represented by a gap".format(rank))
 
                 new_layer = hmm.layers.append(HMMLayer(rank, residue))
@@ -595,7 +595,7 @@ class HHProfileParser(object):
                         
                     except EnumMemberError as ee:
                         if element in ('D', 'X'):
-                            element = structure.ChemElements.x              #@UndefinedVariable
+                            element = structure.ChemElements.x              
                         else:
                             raise ee
                         

@@ -115,6 +115,9 @@ class RandomCoil(object):
                         residue = pu.Enum.parse(SequenceAlphabets.Protein, residue)
                     else:
                         residue = pu.Enum.parsename(SequenceAlphabets.Protein, residue)
+                else:
+                    if residue.enum is not SequenceAlphabets.Protein:
+                        raise TypeError(residue)
                                                   
                 return value - self._reference[residue][nucleus]
             

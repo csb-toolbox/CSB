@@ -10,7 +10,7 @@ class TestSequence(test.Case):
         super(TestSequence, self).setUp()
         
         self.data = '>id desc\nAB-CD'
-        self.sequence = sequence.Sequence('id', '>id desc', 'AB-CD', sequence.SequenceTypes.Protein)     #@UndefinedVariable
+        self.sequence = sequence.Sequence('id', '>id desc', 'AB-CD', sequence.SequenceTypes.Protein)     
         assert str(self.sequence) == self.data
         
     def testLength(self):
@@ -27,7 +27,7 @@ class TestSequence(test.Case):
         self.assertEqual(self.sequence.sequence, 'AB-CD')
         
     def testType(self):        
-        self.assertEqual(self.sequence.type, sequence.SequenceTypes.Protein)                            #@UndefinedVariable
+        self.assertEqual(self.sequence.type, sequence.SequenceTypes.Protein)                            
     
     def testToFASTA(self):
         
@@ -89,7 +89,7 @@ class TestPDBSequence(test.Case):
                     '3bx6A', 
                     '>3bx6_A mol:protein length:192 ALPHA-1-ACID GLYCOPROTE', 
                     'AB-CD', 
-                    sequence.SequenceTypes.Protein)     #@UndefinedVariable
+                    sequence.SequenceTypes.Protein)     
            
     def testAccession(self):
         self.assertEqual(self.sequence.accession, '3bx6')
@@ -112,7 +112,7 @@ class TestPDBSequence(test.Case):
         self.assertEqual(s.id, '3bx6A')
         self.assertEqual(s.header, '>3bx6_A mol:na length:192 ALPHA-1-ACID GLYCOPROTE')
         self.assertEqual(s.sequence, 'AB-CD')
-        self.assertEqual(s.type, sequence.SequenceTypes.NucleicAcid)      #@UndefinedVariable  
+        self.assertEqual(s.type, sequence.SequenceTypes.NucleicAcid)        
         
         # junk
         self.assertRaises(ValueError, sequence.PDBSequence.from_string, '>junk')   

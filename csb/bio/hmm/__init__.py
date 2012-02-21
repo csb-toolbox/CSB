@@ -33,17 +33,18 @@ class HMMArgumentError(ValueError):
     pass
 
 
-States = csb.pyutils.enum(Match='M', Insertion='I', Deletion='D',
-                          Start='S', End='E')
-"""
-Enumeration of HMM state types
-"""
+class States(csb.pyutils.enum):
+    """
+    Enumeration of HMM state types
+    """
+    Match='M'; Insertion='I'; Deletion='D'; Start='S'; End='E'
 
-ScoreUnits = csb.pyutils.enum(LogScales='LogScales', Probability='Probability')
-"""
-Enumeration of HMM emission and transition score units
-"""
-
+class ScoreUnits(csb.pyutils.enum):
+    """
+    Enumeration of HMM emission and transition score units
+    """
+    LogScales='LogScales'; Probability='Probability'
+    
 BACKGROUND = [ 0.076627178753322270, 0.018866884241976509, 0.053996136712517316,
                0.059788009880742142, 0.034939432842683173, 0.075415244982547675, 
                0.036829356494115069, 0.050485048600600511, 0.059581159080509941, 
@@ -683,7 +684,7 @@ PCT   {0.pseudocounts}'''.format(hmm))
                 chain_id = self.id.rstrip()[-1]
             else:
                 chain_id = '_'
-        chain = structure.Chain(chain_id, type=sequence.SequenceTypes.Protein, residues=self.residues)      #@UndefinedVariable
+        chain = structure.Chain(chain_id, type=sequence.SequenceTypes.Protein, residues=self.residues)     
 
         return chain
 
@@ -1176,7 +1177,7 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
         return self._residue
     @residue.setter
     def residue(self, residue):
-        if residue.type == sequence.SequenceAlphabets.Protein.GAP:          #@UndefinedVariable
+        if residue.type == sequence.SequenceAlphabets.Protein.GAP:          
             raise HMMArgumentError('HMM match states cannot be gaps')
         self._residue = residue
     
@@ -1226,8 +1227,8 @@ class State(object):
     
     def __init__(self, type, emit=None):
 
-        if type not in csb.pyutils.Enum.members(States):
-            raise ValueError('Unknown state type {0}. Did you use the fragments.hmm.States enum?'.format(type)) 
+        if type.enum is not States:
+            raise TypeError(type) 
         
         self.type = type
         self.rank = None      

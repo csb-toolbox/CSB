@@ -21,7 +21,7 @@ class TestRandomCoil(test.Case):
         
         raw = 200.0
         
-        for r in ['A', 'ALA', sequence.SequenceAlphabets.Protein.ALA]:          #@UndefinedVariable
+        for r in ['A', 'ALA', sequence.SequenceAlphabets.Protein.ALA]:          
             
             self.assertEqual(
                     self.rc.simple_secondary_shift(r, 'N', raw),

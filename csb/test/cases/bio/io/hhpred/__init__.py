@@ -76,7 +76,7 @@ class TestHHProfileParser(test.Case):
         self.assertAlmostEqual(layer.effective_deletions, 0)
         self.assertEqual(set(layer), set([States.Match]))
         
-        self.assertEqual(layer.residue.type, SequenceAlphabets.Protein.ARG)             #@UndefinedVariable
+        self.assertEqual(layer.residue.type, SequenceAlphabets.Protein.ARG)             
         self.assertEqual(layer.residue.has_structure, True)
         self.assertEqual(layer.residue.secondary_structure.type, SecStructures.Coil)                            
         self.assertEqual(layer.residue.secondary_structure.end, 4)
@@ -84,8 +84,8 @@ class TestHHProfileParser(test.Case):
         match = layer[States.Match]
         self.assertEqual(match.type, States.Match)        
         self.assertEqual(match.rank, 2)
-        self.assertEqual(match.background[SequenceAlphabets.Protein.ALA], 3706.0)       #@UndefinedVariable                                        
-        self.assertEqual(match.emission[SequenceAlphabets.Protein.LYS], 3316.0)         #@UndefinedVariable
+        self.assertEqual(match.background[SequenceAlphabets.Protein.ALA], 3706.0)                                               
+        self.assertEqual(match.emission[SequenceAlphabets.Protein.LYS], 3316.0)         
         self.assertEqual(set(match.transitions), set([States.Match]))
         self.assertEqual(match.transitions[States.Match].predecessor, match)
         self.assertEqual(match.transitions[States.Match].successor.rank, 3)                
@@ -104,8 +104,8 @@ class TestHHProfileParser(test.Case):
         self.assertAlmostEqual(layer.effective_deletions, 0.0)
                 
         match = layer[States.Match]
-        self.assertAlmostEqual(match.background[SequenceAlphabets.Protein.ALA], 0.07662, places=4)       #@UndefinedVariable                                        
-        self.assertAlmostEqual(match.emission[SequenceAlphabets.Protein.LYS], 0.10041, places=4)         #@UndefinedVariable        
+        self.assertAlmostEqual(match.background[SequenceAlphabets.Protein.ALA], 0.07662, places=4)                                               
+        self.assertAlmostEqual(match.emission[SequenceAlphabets.Protein.LYS], 0.10041, places=4)                 
         self.assertAlmostEqual(match.transitions[States.Match].probability, 1.0)           
         
 @test.unit

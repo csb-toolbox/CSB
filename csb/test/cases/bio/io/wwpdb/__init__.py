@@ -112,14 +112,14 @@ class TestLegacyStructureParser(test.Case):
 
         # Residue level 
         self.assertEqual(len(structure['A'][1:10]), 9)
-        self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)             #@UndefinedVariable
+        self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)             
         self.assertEqual(structure['A'][0]._pdb_name, 'MSE')
         self.assertEqual(structure['A'][1]._pdb_name, 'GLN')        
         
         # Atom level
         self.assertEqual(structure['A'][1].atoms['CA'].element, None)
         self.assertNotEqual(structure['A'][2].atoms['CA'].element, None)
-        self.assertEqual(structure['A'][2].atoms['CA'].element, ChemElements.C)             #@UndefinedVariable
+        self.assertEqual(structure['A'][2].atoms['CA'].element, ChemElements.C)             
 
         vector = [51.653, -89.304, 8.833]
         self.assertEqual(structure['A'][0]['CA'].vector.tolist(), vector)        
@@ -128,7 +128,7 @@ class TestLegacyStructureParser(test.Case):
         
         self.assertEqual(self.parser.parse_residue('AGM'), SequenceAlphabets.Protein.ARG.name)                                  #@UndefinedVariable
         self.assertEqual(self.parser.parse_residue('AGM', as_type=SequenceTypes.Protein), SequenceAlphabets.Protein.ARG.name)   #@UndefinedVariable        
-        self.assertRaises(UnknownPDBResidueError, self.parser.parse_residue, 'AGM', as_type=SequenceTypes.NucleicAcid)          #@UndefinedVariable                
+        self.assertRaises(UnknownPDBResidueError, self.parser.parse_residue, 'AGM', as_type=SequenceTypes.NucleicAcid)                          
     
     def testParseResidueSafe(self):
         
@@ -139,8 +139,8 @@ class TestLegacyStructureParser(test.Case):
     
     def testGuessSequenceType(self):
         
-        self.assertEquals(self.parser.guess_sequence_type('AGM'), SequenceTypes.Protein)                                        #@UndefinedVariable
-        self.assertEquals(self.parser.guess_sequence_type('DOC'), SequenceTypes.NucleicAcid)                                    #@UndefinedVariable  
+        self.assertEquals(self.parser.guess_sequence_type('AGM'), SequenceTypes.Protein)                                        
+        self.assertEquals(self.parser.guess_sequence_type('DOC'), SequenceTypes.NucleicAcid)                                      
         self.assertRaises(UnknownPDBResidueError, self.parser.guess_sequence_type, 'junk')
         
     def testFileName(self):
@@ -192,7 +192,7 @@ class TestRegularStructureParser(test.Case):
 
         # Residue level 
         self.assertEqual(len(structure['A'][1:10]), 9)
-        self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)                                                 #@UndefinedVariable
+        self.assertEqual(structure['A'][0].type, SequenceAlphabets.Protein.MET)                                                 
         self.assertEqual(structure['A'][0]._pdb_name, 'MSE')
         self.assertEqual(structure['A'][1]._pdb_name, 'GLN')
         
@@ -205,7 +205,7 @@ class TestRegularStructureParser(test.Case):
         
         self.assertEqual(self.parser.parse_residue('AGM'), SequenceAlphabets.Protein.ARG.name)                                  #@UndefinedVariable
         self.assertEqual(self.parser.parse_residue('AGM', as_type=SequenceTypes.Protein), SequenceAlphabets.Protein.ARG.name)   #@UndefinedVariable        
-        self.assertRaises(UnknownPDBResidueError, self.parser.parse_residue, 'AGM', as_type=SequenceTypes.NucleicAcid)          #@UndefinedVariable                
+        self.assertRaises(UnknownPDBResidueError, self.parser.parse_residue, 'AGM', as_type=SequenceTypes.NucleicAcid)                          
     
     def testParseResidueSafe(self):
         
@@ -216,8 +216,8 @@ class TestRegularStructureParser(test.Case):
     
     def testGuessSequenceType(self):
         
-        self.assertEquals(self.parser.guess_sequence_type('AGM'), SequenceTypes.Protein)                                        #@UndefinedVariable
-        self.assertEquals(self.parser.guess_sequence_type('DOC'), SequenceTypes.NucleicAcid)                                    #@UndefinedVariable  
+        self.assertEquals(self.parser.guess_sequence_type('AGM'), SequenceTypes.Protein)                                        
+        self.assertEquals(self.parser.guess_sequence_type('DOC'), SequenceTypes.NucleicAcid)                                      
         self.assertRaises(UnknownPDBResidueError, self.parser.guess_sequence_type, 'junk')
         
     def testFileName(self):
@@ -244,7 +244,7 @@ class TestGet(test.Case):
 
         # Residue level 
         self.assertEqual(len(structure['A'][1:10]), 9)
-        self.assertEqual(structure['A'][0].type,SequenceAlphabets.Protein.MET)              #@UndefinedVariable        
+        self.assertEqual(structure['A'][0].type,SequenceAlphabets.Protein.MET)                      
        
        
 @test.custom
