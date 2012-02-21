@@ -528,7 +528,7 @@ class Chart(object):
         self._canvas = FigureCanvasAgg(self._figure)
         
         formats = [ (f.upper(), f) for f in self._canvas.get_supported_filetypes() ]
-        self._formats = csb.pyutils.enum(**dict(formats))
+        self._formats = csb.pyutils.Enum.create('OutputFormats', **dict(formats))
     
     def __getitem__(self, i):
         if i in self._plots:

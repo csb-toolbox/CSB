@@ -1,5 +1,7 @@
 import sys
 import operator
+import copy
+import cPickle
 import csb.test as test
 import csb.pyutils as utils 
 
@@ -32,20 +34,35 @@ class TestDeepCopy(test.Case):
         
         self.assertEquals(obj, copy)
         self.assertNotEquals(id(obj), id(copy))
-
+    
 @test.unit
 class TestEnum(test.Case):
     
     def setUp(self):
-    
+        
+        class SampleEnum(utils.enum):
+            A=0; B=1; C=66                 
+            
         super(TestEnum, self).setUp()
-        self.enum = utils.enum('A', 'B', C=66)
+        self.enum = SampleEnum
     
     def testConstructor(self):
-        self.assertRaises(AttributeError, utils.enum, '3')
-        self.assertRaises(ValueError, utils.enum, 'A', 'A')
-        self.assertRaises(ValueError, utils.enum, A=1, B=1)                
         
+        def test():
+            class FaultyEnum(utils.enum):
+                A=1; B=1
+                
+        self.assertRaises(utils.EnumValueError, test)
+        self.assertEqual(self.enum.__name__, 'SampleEnum')
+
+    def testMutability(self):
+        
+        def test():
+            self.enum.NEW = 1
+                
+        self.assertRaises(AttributeError, test)
+        self.assertRaises(TypeError, self.enum)
+                
     def testComparison(self):
         self.assertEqual(self.enum.A, 0)
         self.assertEqual(self.enum.C, 66)
@@ -65,6 +82,11 @@ class TestEnum(test.Case):
         result = utils.Enum.members(self.enum)
         members = [self.enum.A, self.enum.B, self.enum.C]
         self.assertEquals(set(result), set(members))
+        
+    def testCreate(self):
+        new = utils.Enum.create('NewEnum', A=11, B=22)
+        self.assertEqual(new.__name__, 'NewEnum')
+        self.assertEqual(new.B, 22)
 
     def testNames(self):
         result = utils.Enum.names(self.enum)
@@ -93,6 +115,19 @@ class TestEnum(test.Case):
 
     def testIsMember(self):
         self.assertTrue(utils.Enum.ismember(self.enum.A, self.enum))
+        
+    def testSerialization(self):
+        
+        from csb.bio.sequence import SequenceTypes
+        
+        self.assertTrue(copy.copy(SequenceTypes.Protein) is SequenceTypes.Protein)
+        self.assertTrue(copy.deepcopy(SequenceTypes.Protein) is SequenceTypes.Protein)
+        self.assertTrue(utils.deepcopy(SequenceTypes.Protein) is SequenceTypes.Protein)
+        self.assertTrue(cPickle.loads(cPickle.dumps(SequenceTypes.Protein)) is SequenceTypes.Protein)
+        
+        self.assertTrue(copy.deepcopy(SequenceTypes) is SequenceTypes)
+        self.assertTrue(copy.deepcopy(SequenceTypes) is SequenceTypes)
+        self.assertTrue(cPickle.loads(cPickle.dumps(SequenceTypes)) is SequenceTypes)
         
 @test.unit
 class TestDictionaryContainer(test.Case):

@@ -196,9 +196,9 @@ class AbstractStructureParser(object):
                                        into the catalog tables
         """
         if residue_name in PDB_AMINOACIDS:
-            return SequenceTypes.Protein                                #@UndefinedVariable
+            return SequenceTypes.Protein                                
         elif residue_name in PDB_NUCLEOTIDES:
-            return SequenceTypes.NucleicAcid                            #@UndefinedVariable
+            return SequenceTypes.NucleicAcid                            
         else:
             raise UnknownPDBResidueError(residue_name)
 
@@ -224,9 +224,9 @@ class AbstractStructureParser(object):
             as_type = self.guess_sequence_type(residue_name)         
 
         try:
-            if as_type == SequenceTypes.Protein:                            #@UndefinedVariable
+            if as_type == SequenceTypes.Protein:                            
                 return PDB_AMINOACIDS[residue_name]
-            elif as_type == SequenceTypes.NucleicAcid:                      #@UndefinedVariable
+            elif as_type == SequenceTypes.NucleicAcid:                      
                 return PDB_NUCLEOTIDES[residue_name]
             else:
                 raise UnknownPDBResidueError(residue_name)
@@ -249,12 +249,12 @@ class AbstractStructureParser(object):
         try:
             return self.parse_residue(residue_name, as_type)
         except UnknownPDBResidueError:
-            if as_type == SequenceTypes.Protein:                        #@UndefinedVariable
-                return repr(SequenceAlphabets.Protein.UNK)              #@UndefinedVariable
-            elif as_type == SequenceTypes.NucleicAcid:                  #@UndefinedVariable
-                return repr(SequenceAlphabets.Nucleic.Any)              #@UndefinedVariable
+            if as_type == SequenceTypes.Protein:                        
+                return repr(SequenceAlphabets.Protein.UNK)              
+            elif as_type == SequenceTypes.NucleicAcid:                  
+                return repr(SequenceAlphabets.Nucleic.Any)              
             else:
-                return repr(SequenceAlphabets.Unknown.UNK)              #@UndefinedVariable
+                return repr(SequenceAlphabets.Unknown.UNK)              
 
     def parse(self, filename=None, model=None):
 
@@ -367,9 +367,9 @@ class AbstractStructureParser(object):
                 
                 if het_chain in structure:
                     chain = structure.chains[het_chain]
-                    if chain.type == SequenceTypes.Protein and het_residue in PDB_AMINOACIDS:              #@UndefinedVariable
+                    if chain.type == SequenceTypes.Protein and het_residue in PDB_AMINOACIDS:              
                         het_residues[het_chain].add(het_residue_id)
-                    elif chain.type == SequenceTypes.NucleicAcid and het_residue in PDB_NUCLEOTIDES:       #@UndefinedVariable
+                    elif chain.type == SequenceTypes.NucleicAcid and het_residue in PDB_NUCLEOTIDES:       
                         het_residues[het_chain].add(het_residue_id)              
                 
             elif line.startswith('MODEL'):
@@ -395,7 +395,7 @@ class AbstractStructureParser(object):
                             element = csb.pyutils.Enum.parsename(ChemElements, element)
                         except csb.pyutils.EnumMemberError as ee:
                             if element in ('D', 'X'):
-                                element = ChemElements.x                            #@UndefinedVariable
+                                element = ChemElements.x                            
                             else:
                                 raise ee
                     else:
@@ -424,7 +424,7 @@ class AbstractStructureParser(object):
                     chains.add(atom._chain)
                     residue_name = line[17:20].strip()
                     residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[atom._chain].type)
-                    if structure.chains[atom._chain].type == SequenceTypes.NucleicAcid:                               #@UndefinedVariable
+                    if structure.chains[atom._chain].type == SequenceTypes.NucleicAcid:                               
                         atom._residue_name = csb.pyutils.Enum.parsename(SequenceAlphabets.Nucleic, residue_name)
                     else:
                         atom._residue_name = csb.pyutils.Enum.parsename(SequenceAlphabets.Protein, residue_name)
@@ -589,7 +589,7 @@ class AbstractStructureParser(object):
                         raise PDBParseError('Helix {0} is out of range'.format(line[7:10]))
                     else:
                         continue                    
-                helix = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Helix)        #@UndefinedVariable
+                helix = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Helix)        
                 elements[chain.id].append(helix)
             
             if line.startswith('SHEET'):
@@ -615,7 +615,7 @@ class AbstractStructureParser(object):
                         raise PDBParseError('Sheet {0} is out of range'.format(line[7:10]))
                     else:
                         continue
-                strand = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Strand)      #@UndefinedVariable
+                strand = csb.bio.structure.SecondaryStructureElement(startres.rank, endres.rank, SecStructures.Strand)      
                 elements[chain.id].append(strand)         
             
             elif line.startswith('MODEL') or line.startswith('ATOM'):
@@ -858,13 +858,13 @@ def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
     """
     import urllib2
 
-    pdb = csb.io.TempFile()
+    with csb.io.TempFile() as pdb:
 
-    browser = urllib2.urlopen(prefix + accession.lower() + '.ent')
-    pdb.write(browser.read())
-    pdb.flush()
-
-    return StructureParser(pdb.name).parse_structure(model)
+        browser = urllib2.urlopen(prefix + accession.lower() + '.ent')
+        pdb.write(browser.read())
+        pdb.flush()
+    
+        return StructureParser(pdb.name).parse_structure(model)
 
 
 def find(id, paths):

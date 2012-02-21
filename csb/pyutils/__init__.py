@@ -233,6 +233,7 @@ class REMatchProxy(object):
     
 class EnumValueError(ValueError):
     pass
+
 class EnumMemberError(AttributeError):
     pass
 
@@ -257,99 +258,18 @@ def deepcopy(obj, recursion=100000):
     sys.setrecursionlimit(current)
     return copy    
 
-class enum(object):
-    """
-    Extended enumeration type. Supports both string and integer enumeration
-    values. Examples:
+def _deserialize_enum(enum, name):
+    return getattr(enum, name)
     
-        1. Implicit values:
-        
-            >>> MolTypes = enum('DNA', 'RNA'...)
-            DNA=1, RNA=2...
-            >>> MolTypes.DNA
-            1
-            >>> MolTypes.DNA == 1
-            True
-            >>> int(MolTypes.DNA)
-            1
-            >>> repr(MolTypes.DNA)
-            'DNA'
-            >>> type(MolTypes.DNA)
-            EnumItem instance
-            
-        2. Explicit values:
-        
-            >>> MolTypes = enum(DNA='d', RNA='r'...)
-            DNA='d', RNA='r'...
-            >>> MolTypes.DNA
-            'd'
-    """
-
-    def __init__(self, *items, **kitems):
-
-        object.__setattr__(self, '_uq_names', { })
-        object.__setattr__(self, '_uq_namesci', { })
-        object.__setattr__(self, '_uq_values', { })
-        object.__setattr__(self, '_uq_valuesci', { })
-
-        count = 0
-
-        for v, i in enumerate(items):
-            i = str(i).strip()
-            self.__check(i, v)
-            self.__dict__[i] = EnumItem(i, v, self)
-            count += 1
-
-        for i in kitems:
-            v = kitems[i]
-            ii = i
-            i = str(i).strip()
-            self.__check(i, v)
-            self.__dict__[ii] = EnumItem(i, v, self)
-            count += 1
-
-        if count < 1:
-            raise ValueError('Empty enum.')
-        
-    def __deepcopy__(self, memo):
-        return self
-    
-    def __copy__(self):
-        return self    
-
-    def __check(self, i, v):
-
-            if not (isinstance(i, basestring) and re.match('^[a-zA-Z_]', i)):
-                raise AttributeError('Enum items must be valid Python identifiers.')
-
-            if i in self._uq_names:
-                raise ValueError('Duplicate item {0} in enum.'.format(i))
-            if v in self._uq_values:
-                raise ValueError('Duplicate value {0} in enum.'.format(v))
-
-            self._uq_names[i] = i
-            self._uq_namesci[i.lower()] = i
-            self._uq_values[v] = i
-            if isinstance(v, basestring):
-                self._uq_valuesci[v.lower()] = i
-
-    def __setattr__(self, name, value):
-        raise NotImplementedError()
-
-    def __repr__(self):
-        n = ''
-        if len(self._uq_names) > 1:
-            n = ', ...'
-        i = iter(Enum.members(self)).next()
-        return '<enum: {0!r}={0!s}{1}>'.format(i, n)
-
 class EnumItem(object):
     
-    def __init__(self, name, value, container):
+    def __init__(self, name, value, enum):
         self.__name = name
         self.__value = value
-        self.__container = container
-        
+        self.__container = enum
+    
+    def __reduce__(self):
+        return (_deserialize_enum, (self.enum, self.name))
     def __deepcopy__(self, memo):
         return self
     def __copy__(self):
@@ -381,108 +301,214 @@ class EnumItem(object):
     @property
     def enum(self):
         return self.__container
+    
+    def _attach(self, enum):
+        self.__container = enum
+        
+class EnumMeta(type):
+    """
+    Metaclass for enum types.
+    """
+
+    def __new__(cls, name, bases, items):
+        
+        enumdict = {}
+        
+        enumdict['_name'] = name
+        enumdict['_names'] = {}
+        enumdict['_namesci'] = {}
+        enumdict['_values'] = {}
+        enumdict['_valuesci'] = {}    
+
+        for attribute in items:
+            value = items[attribute]
+                                        
+            if attribute.startswith('_'):
+                enumdict[attribute] = value
+            else:            
+                if value in enumdict['_values']:
+                    raise EnumValueError('Duplicate value {0} in enum {1}.'.format(value, name))
+    
+                enumdict['_names'][attribute] = attribute
+                enumdict['_namesci'][attribute.lower()] = attribute
+                enumdict['_values'][value] = attribute
+                if isinstance(value, basestring):
+                    enumdict['_valuesci'][value.lower()] = attribute   
+                
+                enumdict[attribute] = EnumItem(attribute, value, None)      
+            
+        enum = super(EnumMeta, cls).__new__(cls, name, bases, enumdict)     
+
+        for attribute in items:
+            if not attribute.startswith('_'):            
+                value = items[attribute]
+                enum.__dict__[attribute]._attach(enum)
+            
+        return enum
+                
+    def __setattr__(self, attribute, value):
+        raise AttributeError("enum types are immutable")
+    
+    def __repr__(self):
+        items = list(self._names)[:2]
+        preview = [ '{0}={1}'.format(i, getattr(self, i)) for i in items ]
+        if len(preview) < len(self._names):
+            preview.append('...')         
+        return '<{0}: {1}>'.format(self._name, ', '.join(preview))
+    
+    def __str__(self):
+        return repr(self)
+    
+class enum(object):
+    """
+    Base class for all enumeration types. Supports both string and integer
+    enumeration values. Examples:
+
+        >>> class MolTypes(enum): DNA, RNA = range(2)
+        <MolTypes: RNA=1, DNA=0>        
+        >>> class MolTypes(enum): DNA=1; RNA=2
+        <MolTypes: RNA=2, DNA=1>        
+        >>> MolTypes.DNA
+        1
+        >>> MolTypes.DNA == 1
+        True
+        >>> int(MolTypes.DNA)
+        1
+        >>> repr(MolTypes.DNA)
+        'DNA'
+        >>> type(MolTypes.DNA)
+        L{EnumItem} instance
+        
+    @note: The recommended way to create an enum is to define a public
+           subclass of L{enum} in the global namespace of your module. Nesting
+           the enum in another class for example will break pickling.
+    """
+        
+    __metaclass__ = EnumMeta
+    
+    def __init__(self):
+        raise TypeError("Can't instantiate static enum type {0}".format(self.__class__))
 
 class Enum(object):
     """
-    A collection of static methods for working with L{enum}s.
+    A collection of efficient static methods for working with L{enum}
+    classes.
     """
 
     @staticmethod
-    def members(enum):
+    def create(classname, **members):
         """
-        Return all member items of the C{enum}.
+        Dynamically create a new enum from a list of key:value pairs.
+        Note that each key must be a valid python identifier, and the
+        values must be unique.
         
-        @param enum: the enumeration object to traverse
-        @type enum: L{enum}
+        @param classname: class name for the new enum
+        @type classname: str
         
-        @return: a set of all enum members
+        @note: The recommended way to create an enum is to define a public
+               subclass of L{enum} in the global namespace of your module.
+               You should avoid creating enums dynamically if static
+               construction is possible, because dynamically created enums
+               cannot be pickled.
+        """
+        
+        return type(classname, (enum,), members)        
+                
+    @staticmethod
+    def members(enumclass):
+        """
+        Return all member items of the C{enumclass}.
+        
+        @param enumclass: the enumeration class to traverse
+        @type enumclass: type
+        
+        @return: a set of all enumclass members
         @rtype: frozenset
         """
-        return frozenset([enum.__dict__[i] for i in enum._uq_names])
+        return frozenset([enumclass.__dict__[i] for i in enumclass._names])
 
     @staticmethod
-    def names(enum):
+    def names(enumclass):
         """
-        Return the names of all items in the C{enum}.
+        Return the names of all items in the C{enumclass}.
         
-        @param enum: the enumeration object to traverse
-        @type enum: L{enum}
+        @param enumclass: the enumeration class to traverse
+        @type enumclass: type
         
-        @return: a set of all enum member names
+        @return: a set of all enumclass member names
         @rtype: frozenset        
         """
-        return frozenset(enum._uq_names)
+        return frozenset(enumclass._names)
 
     @staticmethod
-    def values(enum):
+    def values(enumclass):
         """
-        Return all values of the C{enum}.
+        Return all values of the C{enumclass}.
         
-        @param enum: the enumeration object to traverse
-        @type enum: L{enum}
+        @param enumclass: the enumeration class to traverse
+        @type enumclass: type
         
         @return: a set of all enum values
         @rtype: frozenset        
         """
-        return frozenset(enum._uq_values)
+        return frozenset(enumclass._values)
 
     @staticmethod
-    def parse(enum, value, ignore_case=True):
+    def parse(enumclass, value, ignore_case=True):
         """
-        Parse as C{enum} value and convert it to a member of the L{enum} type.
+        Parse C{value} as an C{enumclass} member value.
         
-        @param enum: an instance of the target enumeration type
-        @type enum: L{enum}
-        @param value: the value to be parsed as an enum item
-        @type value: str, int
+        @param enumclass: target L{enum} subclass
+        @type enumclass: type        
+        @type value: str, int, float
         @param ignore_case: if set to True, triggers case insensitive parsing
         @type ignore_case: bool
         
-        @return: a member of the enum which has that value
-        @rtype: EnumItem
+        @return: a member of enumclass, having such value
+        @rtype: L{EnumItem}
         
-        @raise EnumValueError: when value is not found in enum
+        @raise EnumValueError: when such value is not found in enumclass
         """
 
         if isinstance(value, basestring) and ignore_case:
-            values = enum._uq_valuesci
+            values = enumclass._valuesci
             value = value.lower()
         else:
-            values = enum._uq_values
+            values = enumclass._values
 
         if value in values:
-            return enum.__dict__[ values[value] ]
+            return enumclass.__dict__[ values[value] ]
         else:
-            raise EnumValueError('No such value {0} in {1}'.format(value, enum))
+            raise EnumValueError('No such value {0} in {1}'.format(value, enumclass))
 
     @staticmethod
-    def parsename(enum, name, ignore_case=True):
+    def parsename(enumclass, name, ignore_case=True):
         """
-        Parse as C{enum} item name and convert it to a member of the L{enum} type.
+        Parse C{name} as a member of C{enumclass}.
         
-        @param enum: an instance of the target enumeration type
-        @type enum: L{enum}
-        @param name: the value to be parsed as an enum item
+        @param enumclass: target L{enum} subclass
+        @type enumclass: type
+        @param name: enumclass member name to parse
         @type name: str
         @param ignore_case: if set to True, triggers case insensitive parsing
         @type ignore_case: bool
         
-        @return: a member of the enum having that name
+        @return: a member of enumclass, having such name
         @rtype: L{EnumItem}
         
-        @raise EnumValueError: when name is not found in enum's members        
+        @raise EnumValueError: when such name is not found in enumclass's members  
         """
 
         if isinstance(name, basestring) and ignore_case:
-            names = enum._uq_namesci
+            names = enumclass._namesci
             name = name.lower()
         else:
-            names = enum._uq_names
+            names = enumclass._names
 
         if name in names:
-            return enum.__dict__[ names[name] ]
+            return enumclass.__dict__[ names[name] ]
         else:
-            raise EnumMemberError('No such item {0} in {1}'.format(name, enum))
+            raise EnumMemberError('No such item {0} in {1}'.format(name, enumclass))
 
     @staticmethod
     def tostring(item):
@@ -498,18 +524,20 @@ class Enum(object):
         return item.name
 
     @staticmethod
-    def ismember(item, enum):
+    def ismember(item, enumclass):
         """
-        Return True if item is a member of enum.
+        Return True if item is a member of enumclass.
         
-        @param enum: an instance of the target enumeration type
-        @type enum: L{enum}
+        @param enumclass: target enumeration type
+        @type enumclass: type
         @param item: the enum item to be tested
         @type item: L{EnumItem}
         @rtype: bool        
         """
-        return item.enum is enum
-
+        if not issubclass(enumclass, enum):
+            raise TypeError(enumclass)
+        return item.enum is enumclass
+    
 class ItemNotFoundError(KeyError):
     pass
 class InvalidKeyError(KeyError):

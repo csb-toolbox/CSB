@@ -21,49 +21,61 @@ from itertools import izip
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentTypes
 
 
-AngleUnits = csb.pyutils.enum( Degrees='deg', Radians='rad' )
-"""
-Torsion angle unit types
-"""
+class AngleUnits(csb.pyutils.enum):
+    """
+    Torsion angle unit types
+    """
+    Degrees='deg'; Radians='rad'
+    
+class SecStructures(csb.pyutils.enum):
+    """
+    Secondary structure types
+    """
+    Helix='H'; Strand='E'; Coil='C'; Turn='T'; Bend='S';
+    Helix3='G'; PiHelix='I'; BetaBridge='B'; Gap='-'
+    
+class ChemElements(csb.pyutils.enum):
+    """
+    Periodic table elements
+    """
+    H=1; He=2; Li=3; Be=4; B=5; C=6; N=7; O=8; F=9; Ne=10; Na=11; Mg=12; Al=13; Si=14; P=15; 
+    S=16; Cl=17; Ar=18; K=19; Ca=20; Sc=21; Ti=22; V=23; Cr=24; Mn=25; Fe=26; Co=27; Ni=28; 
+    Cu=29; Zn=30; Ga=31; Ge=32; As=33; Se=34; Br=35; Kr=36; Rb=37; Sr=38; Y=39; Zr=40; Nb=41; 
+    Mo=42; Tc=43; Ru=44; Rh=45; Pd=46; Ag=47; Cd=48; In=49; Sn=50; Sb=51; Te=52; I=53; Xe=54;
+    Cs=55; Ba=56; Hf=72; Ta=73; W=74; Re=75; Os=76; Ir=77; Pt=78; Au=79; Hg=80; Tl=81; Pb=82; 
+    Bi=83; Po=84; At=85; Rn=86; Fr=87; Ra=88; Rf=104; Db=105; Sg=106; Bh=107; Hs=108; Mt=109; 
+    Ds=110; Rg=111; La=57; Ce=58; Pr=59; Nd=60; Pm=61; Sm=62; Eu=63; Gd=64; Tb=65; Dy=66; 
+    Ho=67; Er=68; Tm=69; Yb=70; Lu=71; Ac=89; Th=90; Pa=91; U=92; Np=93; Pu=94; Am=95; Cm=96; 
+    Bk=97; Cf=98; Es=99; Fm=100; Md=101; No=102; Lr=103; x=-1 
 
-SecStructures = csb.pyutils.enum( Helix='H', Strand='E', Coil='C', Turn='T',
-                                  Bend='S', Helix3='G', PiHelix='I', BetaBridge='B', Gap='-' )
-"""
-Secondary structure types
-"""
-
-ChemElements = csb.pyutils.enum( H=1, He=2, Li=3, Be=4, B=5, C=6, N=7, O=8, F=9, Ne=10, Na=11, Mg=12, Al=13, Si=14, P=15, 
-                                 S=16, Cl=17, Ar=18, K=19, Ca=20, Sc=21, Ti=22, V=23, Cr=24, Mn=25, Fe=26, Co=27, Ni=28, 
-                                 Cu=29, Zn=30, Ga=31, Ge=32, As=33, Se=34, Br=35, Kr=36, Rb=37, Sr=38, Y=39, Zr=40, Nb=41, 
-                                 Mo=42, Tc=43, Ru=44, Rh=45, Pd=46, Ag=47, Cd=48, In=49, Sn=50, Sb=51, Te=52, I=53, Xe=54,
-                                 Cs=55, Ba=56, Hf=72, Ta=73, W=74, Re=75, Os=76, Ir=77, Pt=78, Au=79, Hg=80, Tl=81, Pb=82, 
-                                 Bi=83, Po=84, At=85, Rn=86, Fr=87, Ra=88, Rf=104, Db=105, Sg=106, Bh=107, Hs=108, Mt=109, 
-                                 Ds=110, Rg=111, La=57, Ce=58, Pr=59, Nd=60, Pm=61, Sm=62, Eu=63, Gd=64, Tb=65, Dy=66, 
-                                 Ho=67, Er=68, Tm=69, Yb=70, Lu=71, Ac=89, Th=90, Pa=91, U=92, Np=93, Pu=94, Am=95, Cm=96, 
-                                 Bk=97, Cf=98, Es=99, Fm=100, Md=101, No=102, Lr=103,
-                                 x=-1 ) 
-"""
-Periodic table elements
-"""
 
 class Broken3DStructureError(ValueError):
     pass
+
 class Missing3DStructureError(Broken3DStructureError):
-    pass       
+    pass   
+    
 class InvalidOperation(Exception):
     pass
+
 class DuplicateModelIDError(csb.pyutils.DuplicateKeyError):
     pass
+
 class DuplicateChainIDError(csb.pyutils.DuplicateKeyError):
     pass
+
 class DuplicateResidueIDError(csb.pyutils.DuplicateKeyError):
     pass
+
 class DuplicateAtomIDError(csb.pyutils.DuplicateKeyError):
     pass
+
 class AlignmentArgumentLengthError(ValueError):
     pass
+
 class BrokenSecStructureError(ValueError):
     pass
+
 class UnknownSecStructureError(BrokenSecStructureError):
     pass
 
@@ -369,7 +381,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
     @param molecule_id: MOL ID of the chain, if part of a polymer
     
     """
-    def __init__(self, chain_id, type=SequenceTypes.Protein, name='',           #@UndefinedVariable
+    def __init__(self, chain_id, type=SequenceTypes.Protein, name='',           
                  residues=None, accession=None, molecule_id=None):       
 
         self._id = str(chain_id).strip()
@@ -425,7 +437,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         return self._type
     @type.setter
     def type(self, type):
-        if not isinstance(type, csb.pyutils.EnumItem):
+        if type.enum is not SequenceTypes:
             raise TypeError(type)
         self._type = type
 
@@ -479,9 +491,9 @@ class Chain(csb.pyutils.AbstractNIContainer):
     
     @property
     def alphabet(self):
-        if self._type == SequenceTypes.Protein:                                                 #@UndefinedVariable
+        if self._type == SequenceTypes.Protein:                                                 
             return SequenceAlphabets.Protein
-        elif self._type in (SequenceTypes.NucleicAcid, SequenceTypes.DNA, SequenceTypes.RNA):   #@UndefinedVariable
+        elif self._type in (SequenceTypes.NucleicAcid, SequenceTypes.DNA, SequenceTypes.RNA):   
             return SequenceAlphabets.Nucleic            
         else:
             raise NotImplementedError()
@@ -560,7 +572,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         @return: PDB-friendly string representation of the residue type
         @rtype: str
         """
-        if self.type == SequenceTypes.NucleicAcid:                                  #@UndefinedVariable
+        if self.type == SequenceTypes.NucleicAcid:                                  
             return str(residue.type)
         else:
             return repr(residue.type)        
@@ -594,7 +606,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         @raise Missing3DStructureError: when a 3D structure is absent
         @raise Broken3DStructureError: when a given atom cannot be retrieved from any residue
         """
-        if self.type != SequenceTypes.Protein:                          #@UndefinedVariable
+        if self.type != SequenceTypes.Protein:                          
             raise NotImplementedError()
                
         for i, residue in enumerate(self.residues, start=self.residues.start_index):
@@ -649,7 +661,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
             
         return numpy.array(coords)
     
-    def superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):                       #@UndefinedVariable
+    def superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):                       
         """
         Find the optimal fit between C{self} and C{other}. Return L{SuperimposeInfo}
         (RotationMatrix, translation Vector and RMSD), such that:
@@ -678,7 +690,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         y = other.list_coordinates(what) 
         assert len(x) == len(y)
 
-        if how == AlignmentTypes.Global:                                    #@UndefinedVariable
+        if how == AlignmentTypes.Global:                                    
             r, t = csb.bio.utils.fit(x, y)
         else:
             r, t = csb.bio.utils.fit_wellordered(x, y)
@@ -687,7 +699,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         
         return SuperimposeInfo(r, t, rmsd=rmsd)
                               
-    def align(self, other, what=['CA'], how=AlignmentTypes.Global):         #@UndefinedVariable
+    def align(self, other, what=['CA'], how=AlignmentTypes.Global):         
         """
         Align C{other}'s alpha carbons over self in space and return L{SuperimposeInfo}. 
         Coordinates of C{other} are overwritten in place using the rotation matrix
@@ -736,7 +748,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
 
         return csb.bio.utils.rmsd(x, y) 
     
-    def tm_superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):                    #@UndefinedVariable
+    def tm_superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):                    
         """
         Find the optimal fit between C{self} and C{other}. Return L{SuperimposeInfo}
         (RotationMatrix, translation Vector and TM-score), such that:
@@ -766,7 +778,7 @@ class Chain(csb.pyutils.AbstractNIContainer):
         y = other.list_coordinates(what)
         assert len(x) == len(y)
         
-        if how == AlignmentTypes.Global:                                            #@UndefinedVariable
+        if how == AlignmentTypes.Global:                                            
             fit = csb.bio.utils.fit
         else:
             fit = csb.bio.utils.fit_wellordered
@@ -898,7 +910,7 @@ class Residue(csb.pyutils.AbstractNIContainer):
         return self._type
     @type.setter
     def type(self, type):
-        if not isinstance(type, csb.pyutils.EnumItem):
+        if type.enum not in (SequenceAlphabets.Protein, SequenceAlphabets.Nucleic, SequenceAlphabets.Unknown):
             raise TypeError(type)
         self._type = type
         
@@ -1001,9 +1013,9 @@ class Residue(csb.pyutils.AbstractNIContainer):
         
         @raise ValueError: if the sequence type is not known
         """        
-        if sequence_type == SequenceTypes.Protein:                                      #@UndefinedVariable
+        if sequence_type == SequenceTypes.Protein:                                      
             return ProteinResidue(*arguments, **keyword_arguments)
-        elif sequence_type == SequenceTypes.NucleicAcid:                                #@UndefinedVariable
+        elif sequence_type == SequenceTypes.NucleicAcid:                                
             return NucleicResidue(*arguments, **keyword_arguments)
         elif sequence_type == SequenceTypes.Unknown:
             return UnknownResidue(*arguments, **keyword_arguments)
@@ -1035,7 +1047,7 @@ class ProteinResidue(Residue):
                     type = csb.pyutils.Enum.parse(SequenceAlphabets.Protein, type)          
             except (csb.pyutils.EnumMemberError, csb.pyutils.EnumValueError):
                 raise ValueError("What is '{0}'?".format(type))
-        elif not csb.pyutils.Enum.ismember(type, SequenceAlphabets.Protein):
+        elif type.enum is not SequenceAlphabets.Protein:
             raise TypeError(type)
             
         super(ProteinResidue, self).__init__(rank, type, sequence_number, insertion_code)  
@@ -1125,7 +1137,7 @@ class NucleicResidue(Residue):
                     type = csb.pyutils.Enum.parse(SequenceAlphabets.Nucleic, type)
             except (csb.pyutils.EnumMemberError, csb.pyutils.EnumValueError):
                 raise ValueError("What is '{0}'?".format(type))
-        elif not csb.pyutils.Enum.ismember(type, SequenceAlphabets.Nucleic):
+        elif type.enum is not SequenceAlphabets.Nucleic:
             raise TypeError(type)
             
         super(NucleicResidue, self).__init__(rank, type, sequence_number, insertion_code)  
@@ -1134,7 +1146,7 @@ class NucleicResidue(Residue):
 class UnknownResidue(Residue):
     
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
-        super(UnknownResidue, self).__init__(rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)          #@UndefinedVariable
+        super(UnknownResidue, self).__init__(rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)          
 
 class ResidueAtomsCollection(csb.pyutils.AbstractContainer):
     
@@ -1262,7 +1274,7 @@ class Atom(object):
             element = csb.pyutils.Enum.parsename(ChemElements, element)
         elif element is None:
             pass
-        elif not csb.pyutils.Enum.ismember(element, ChemElements):
+        elif element.enum is not ChemElements:
             raise TypeError(element)
         self._element = element
 
@@ -1585,11 +1597,11 @@ class SecondaryStructureElement(object):
         
         if not (0 < start <= end):
             raise IndexError('Element coordinates are out of range: 0 < start <= end.')
-        if type not in csb.pyutils.Enum.members(SecStructures):
-            raise TypeError(type)
         if isinstance(type, basestring):
             type = csb.pyutils.Enum.parse(SecStructures, type)
-        
+        if type.enum is not SecStructures:
+            raise TypeError(type)
+                
         self.start = start
         self.end = end
         self.type = type
@@ -2052,8 +2064,12 @@ class TorsionAngles(object):
     def __init__(self, phi, psi, omega, units=AngleUnits.Degrees):
         
         try:
-            if not isinstance(units, csb.pyutils.EnumItem):
+            if isinstance(units, basestring):
                 units = csb.pyutils.Enum.parse(AngleUnits, units, ignore_case=True)
+            else:
+                if units.enum is not AngleUnits:
+                    raise TypeError(units)
+                
         except ValueError:
             raise ValueError('Unknown angle unit type {0}'.format(units))                              
 

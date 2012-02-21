@@ -15,10 +15,11 @@ import csb.bio.sequence
 import csb.bio.hmm as hmm
  
     
-FragmentMatching = csb.pyutils.enum('Sequence', 'Bystroff', 'CrossEntropy', 'Soeding', 'Baker')
-"""
-Enumeration of fragment assignment methods
-"""
+class FragmentMatching(csb.pyutils.enum):
+    """
+    Enumeration of fragment assignment methods
+    """
+    Sequence=0; Bystroff=1; CrossEntropy=2; Soeding=3; Baker=4
 
 class InternalISitesError(ValueError):
     pass
@@ -1022,7 +1023,7 @@ class Cluster(object):
         if rep_chain is None:
             rep_chain = source.id[5].upper()
 
-        chain = structure.Chain(rep_chain, structure.SequenceTypes.Protein,             #@UndefinedVariable
+        chain = structure.Chain(rep_chain, structure.SequenceTypes.Protein,             
                                 None, residues, rep_accession)
         chain.compute_torsion()
 

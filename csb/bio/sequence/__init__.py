@@ -6,50 +6,64 @@ import re
 import csb.pyutils
 import csb.io
 
-AlignmentFormats = csb.pyutils.enum(A3M='a3m', FASTA='fa', PIR='pir')
-"""
-Enumeration of multiple sequence alignment formats
-"""
+class AlignmentFormats(csb.pyutils.enum):
+    """
+    Enumeration of multiple sequence alignment formats
+    """
+    A3M='a3m'; FASTA='fa'; PIR='pir'
 
-SequenceTypes = csb.pyutils.enum(NucleicAcid='NA', DNA='DNA', RNA='RNA', Protein='Protein', Unknown='Unknown')
-"""
-Enumeration of sequence types
-"""
+class SequenceTypes(csb.pyutils.enum):
+    """
+    Enumeration of sequence types
+    """
+    NucleicAcid='NA'; DNA='DNA'; RNA='RNA'; Protein='Protein'; Unknown='Unknown'    
 
-AlignmentTypes = csb.pyutils.enum(Global='global', Local='local')
-"""
-Enumeration of alignment strategies
-"""
+class AlignmentTypes(csb.pyutils.enum):
+    """
+    Enumeration of alignment strategies
+    """
+    Global='global'; Local='local'
+
+class NucleicAlphabet(csb.pyutils.enum):
+    """
+    Nucleic sequence alphabet
+    """
+    Adenine='A'; Cytosine='C'; Guanine='G'; Thymine='T'; Uracil='U'; Purine='R'; Pyrimidine='Y'; Ketone='K';
+    Amino='M'; Strong='S'; Weak='W'; NotA='B'; NotC='D'; NotG='H'; NotT='V'; Any='N'; Masked='X'; Gap='-'
+    
+class ProteinAlphabet(csb.pyutils.enum):
+    """
+    Protein sequence alphabet
+    """
+    ALA='A'; ASX='B'; CYS='C'; ASP='D'; GLU='E'; PHE='F'; GLY='G'; HIS='H'; ILE='I'; LYS='K'; LEU='L'; MET='M'; ASN='N';
+    PYL='O'; PRO='P'; GLN='Q'; ARG='R'; SER='S'; THR='T'; SEC='U'; VAL='V'; TRP='W'; TYR='Y'; GLX='Z'; UNK='X'; GAP='-';
+    STOP='*'
+                                    
+class StdProteinAlphabet(csb.pyutils.enum):
+    """
+    Standard protein sequence alphabet
+    """      
+    ALA='A'; CYS='C'; ASP='D'; GLU='E'; PHE='F'; GLY='G'; HIS='H'; ILE='I'; LYS='K'; LEU='L'; MET='M'; ASN='N';
+    PRO='P'; GLN='Q'; ARG='R'; SER='S'; THR='T';  VAL='V'; TRP='W'; TYR='Y'
+    
+class UnknownAlphabet(csb.pyutils.enum):
+    """
+    Unknown sequence alphabet
+    """  
+    UNK='X'
 
 class SequenceAlphabets(object):
     """
-    Sequence alphabet enumerations
-    """
+    Sequence alphabet enumerations.
 
-    Nucleic = csb.pyutils.enum(Adenine='A', Cytosine='C', Guanine='G', Thymine='T', Uracil='U', Purine='R', Pyrimidine='Y', Ketone='K', Amino='M',
-                                Strong='S', Weak='W', NotA='B', NotC='D', NotG='H', NotT='V', Any='N', Masked='X', Gap='-')
+    @note: This class is kept for backwards compatibility. The individual
+           alphabet classes must be defined in the top level namespace,
+           otherwise the new enum types cannot be pickled properly. 
     """
-    @cvar: Nucleic sequence alphabet
-    """
-
-    Protein = csb.pyutils.enum(ALA='A', ASX='B', CYS='C', ASP='D', GLU='E', PHE='F', GLY='G', HIS='H', ILE='I', LYS='K', LEU='L', MET='M', ASN='N',
-                                PYL='O', PRO='P', GLN='Q', ARG='R', SER='S', THR='T', SEC='U', VAL='V', TRP='W', TYR='Y', GLX='Z', UNK='X', GAP='-',
-                                STOP='*')
-    """
-    @cvar: Protein sequence alphabet
-    """
-
-    Std_Protein = csb.pyutils.enum(ALA='A', CYS='C', ASP='D', GLU='E', PHE='F', GLY='G', HIS='H', ILE='I', LYS='K', LEU='L', MET='M', ASN='N',
-                                PRO='P', GLN='Q', ARG='R', SER='S', THR='T',  VAL='V', TRP='W', TYR='Y', )
-    """
-    @cvar: Standard protein sequence alphabet
-    """
-
-
-    Unknown = csb.pyutils.enum(UNK='X')
-    """
-    @cvar: Unknown sequence alphabet
-    """
+    Nucleic = NucleicAlphabet
+    Protein = ProteinAlphabet
+    StdProtein = StdProteinAlphabet
+    Unknown = UnknownAlphabet
 
 class StopTraversal(StopIteration):
     pass
