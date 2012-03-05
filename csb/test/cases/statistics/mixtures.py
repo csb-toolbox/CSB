@@ -48,6 +48,8 @@ class TestMixtures(test.Case):
 
         self.assertEqual(X.shape, (16, 211, 3))
 
+        self._ake_ensemble_coords = lambda: X
+
         return X
     
     def testSegmentMixture(self):
@@ -70,18 +72,23 @@ class TestMixtures(test.Case):
             # fit parameters
             m.em(X)
 
-            # positions of maxima in membership matrix
-            w = argmax(m.Z, 1)
-
-            # position numbers might be permutated, so count equal pairs
-            ww = zip(w, self.w_ref_segments)
-            same = sum(sorted(ww.count(i) for i in set(ww))[-m.K:])
-
             # we want at least 90% overlap
-            if float(same) / X.shape[1] >= 0.9:
+            same = m.overlap(self.w_ref_segments)
+            if same >= 0.9:
                 break
         else:
             self.assertTrue(False, 'segmentation not reproduced within 5 iterations')
+
+        self._testHeuristic(cls, self.w_ref_segments)
+
+    def _testHeuristic(self, cls, w_ref):
+
+        X = self._ake_ensemble_coords()
+
+        m = cls.from_coords(X)
+        same = m.overlap(w_ref)
+
+        self.assertTrue(same > 0.8, 'mixture not reproduced')
 
     def testConformerMixture(self):
 
@@ -95,18 +102,14 @@ class TestMixtures(test.Case):
             # fit parameters
             m.em(X)
 
-            # positions of maxima in membership matrix
-            w = argmax(m.Z, 1)
-
-            # position numbers might be permutated, so count equal pairs
-            ww = zip(w, self.w_ref_conformers)
-            same = sum(sorted(ww.count(i) for i in set(ww))[-m.K:])
-
             # we want at least 14 out of 16
-            if X.shape[0] - same < 3:
+            same = m.overlap(self.w_ref_conformers)
+            if same >= 14./16.:
                 break
         else:
             self.assertTrue(False, 'conformers not reproduced within 10 iterations')
+
+        self._testHeuristic(mixtures.ConformerMixture, self.w_ref_conformers)
 
 if __name__ == '__main__':
 
