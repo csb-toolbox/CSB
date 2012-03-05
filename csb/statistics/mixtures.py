@@ -17,6 +17,7 @@ class GaussianMixture(object):
 
     alpha_sigma = 0.0001  ## prior for variance (inverse Gamma
     beta_sigma  = 0.01    ## distribution)
+    min_sigma   = 0.0     ##
 
     use_cache = True      ## cache for distance matrix
 
@@ -135,7 +136,7 @@ class GaussianMixture(object):
         alpha = N * sum(Z, 0) + self.alpha_sigma
         beta  = sum(Z*D, 0) + self.beta_sigma
 
-        self.sigma = sqrt(beta / alpha)
+        self.sigma = sqrt(beta / alpha).clip(self.min_sigma)
 
     @abstractmethod
     def estimate_Y(self, X, Z):
@@ -180,11 +181,19 @@ class GaussianMixture(object):
         self.estimate_sigma(X, Z)
 
     @abstractmethod
-    def initialize(self, X):
+    def initialize(self, X, randomize=True):
+        """
+        @param X: MxNx3 input vector (M: #structures, N: #atoms)
+        @type X: numpy array
+
+        @param randomize: Randomize segment sizes. If False, all components will
+        be equal sized and continuous.
+        @type randomize: bool
+        """
         pass
 
     def em(self, X, n_iter=100, verbose=0, initialize=True,
-            store_loglikelihood=False, eps=1e-9):
+            store_loglikelihood=False, eps=1e-30):
         """
         Expectation maximization
 
@@ -256,6 +265,156 @@ class GaussianMixture(object):
 
             i += 1
 
+    def increment_K(self, X):
+        """
+        Split component with largest sigma
+
+        @returns: new instance of mixture with incremented K
+        @rtype: L{GaussianMixture} subclass
+        """
+        from numpy import argmax, hstack
+
+        i = argmax(self.sigma)
+
+        # duplicate column
+        Z = hstack([self.Z, self.Z[:,i].reshape((-1, 1))])
+
+        # mask disjoint equal sized parts
+        mask = Z[:,i].cumsum() / Z[:,i].sum() > 0.5
+        Z[mask,i] *= 0.0
+        Z[mask == False,-1] *= 0.0
+
+        new = type(self)(self.N, self.M, self.K + 1, self.beta)
+        new.Z = Z
+        new.m_step(X, new.Z)
+
+        return new
+
+    @classmethod
+    def series(cls, X, n_iter=100, verbose=0, start=1, stop=9, eps=1e-30):
+        """
+        For param description, see L{GaussianMixture.em}.
+
+        @return: Iterator with mixture instances for C{K in range(start, stop)}
+        @rtype: generator
+        """
+        m = cls(X.shape[1], X.shape[0], start)
+        m.initialize(X, False)
+
+        for K in range(start+1, stop):
+            m.em(X, n_iter, verbose, False, False, eps)
+            yield m
+
+            m = m.increment_K(X)
+
+        yield m
+
+    @classmethod
+    def from_coords(cls, X, K=0, n_iter=100, verbose=0, randomize=False, eps=1e-30):
+        """
+        Factory method with coodinate array.
+
+        @param X: MxNx3 input vector (M: #structures, N: #atoms)
+        @type X: numpy array
+
+        @param K: Number of components. If zero, then find best C{K} with
+        non-random initialization and sequential splitting of component with
+        largest sigma. Best C{K} is judged heuristically as mixture with
+        smallest L{BIC<GaussianMixture.BIC>}.
+        @type K: int 
+
+        @param n_iter: maximum number of iteration steps
+        @type n_iter: int
+
+        @param verbose: if non-zero, print out log likelihood every C{verbose} step.
+        @type verbose: int
+
+        @param randomize: if non-zero, do random initialization of components
+        C{randomize} times and take mixture with maximum log(likelihood).
+        @type randomize: int
+
+        @return: Mixture instance
+        @rtype: L{GaussianMixture} subclass
+        """
+        if isinstance(K, int):
+            if K > 0:
+                if randomize > 1:
+                    return max([cls.from_coords(X, K, n_iter, verbose, 1, eps)
+                        for _ in range(randomize)],
+                        key = lambda mixture: mixture.log_likelihood_reduced(X))
+
+                mixture = cls(X.shape[1], X.shape[0], K)
+                mixture.initialize(X, randomize)
+                mixture.em(X, n_iter, verbose, False, False, eps)
+
+                return mixture
+
+            K = (1, 9)
+
+        if randomize:
+            raise ValueError("randomize=True and K=0 are exclusive")
+
+        try:
+            start, stop = K
+        except:
+            raise TypeError("K must be integer or sequence of 2 integers")
+
+        mixture_it = cls.series(X, n_iter, verbose, start, stop, eps)
+        mixture = mixture_it.next()
+
+        # increase K as long as next candidate looks better
+        for candidate in mixture_it:
+            if candidate.BIC >= mixture.BIC:
+                break
+            mixture = candidate
+
+        return mixture
+
+    @property
+    def BIC(self):
+        """
+        Bayesian information criterion, calculated as
+        BIC = M * ln(sigma_e^2) + K * ln(M)
+        """
+        from numpy import log
+
+        n = self.M
+        k = self.K
+        error_variance = sum(self.sigma**2 * self.w)
+
+        return n * log(error_variance) + k * log(n)
+
+    def overlap(self, other):
+        """
+        Similarity of two mixtures measured in membership overlap
+
+        @param other: Mixture with C{len(self.Z) == len(other.Z)} or a
+        segmentation array with C{len(self.Z) == len(other)}.
+        @type other: L{GaussianMixture} or sequence
+
+        @return: segmentation overlap
+        @rtype: float in interval [0.0, 1.0]
+        """
+        from numpy import argmax, ndarray
+
+        if isinstance(other, GaussianMixture):
+            other_w = argmax(other.Z, 1)
+            K = min(self.K, other.K)
+        elif isinstance(other, (list, tuple, ndarray)):
+            other_w = other
+            K = min(self.K, len(set(other)))
+        else:
+            raise TypeError
+
+        self_w = argmax(self.Z, 1)
+        assert len(self_w) == len(other_w)
+
+        # position numbers might be permutated, so count equal pairs
+        ww = zip(self_w, other_w)
+        same = sum(sorted(ww.count(i) for i in set(ww))[-K:])
+
+        return float(same) / len(ww)
+
 
 class SegmentMixture(GaussianMixture):
     """
@@ -265,8 +424,7 @@ class SegmentMixture(GaussianMixture):
     If C{X} is the coordinate array of a protein structure ensemble which
     can be decomposed into 2 rigid segments, the segmentation will be found by:
 
-    >>> mixture = SegmentMixture(X.shape[1], X.shape[0], 2)
-    >>> mixture.em(X)
+    >>> mixture = SegmentMixture.from_coords(X, 2)
     >>> membership = numpy.argmax(mixture.Z, 1)
 
     Superposition on first segment:
@@ -305,15 +463,19 @@ class SegmentMixture(GaussianMixture):
             for k in range(self.K):
                 self.R[m,k,:,:], self.t[m,k,:] = wfit(X[m], self.Y[k], Z[:,k])
 
-    def initialize(self, X):
+    def initialize(self, X, randomize=True):
 
         from numpy.random import random, multinomial
-        from numpy import repeat, equal, arange
+        from numpy import repeat, equal, arange, linspace
 
-        w = random(self.K)
-        w/= sum(w)
+        if randomize:
+            w = random(self.K)
+            w/= sum(w)
 
-        c = repeat(arange(self.K), multinomial(self.N, w))
+            c = repeat(arange(self.K), multinomial(self.N, w))
+        else:
+            c = linspace(0, self.K, self.N, False).astype(int)
+
         self.Z = 1. * equal.outer(c, arange(self.K))
 
         self.m_step(X, self.Z)
@@ -417,11 +579,16 @@ class ConformerMixture(GaussianMixture):
             for k in range(self.K):
                 self.R[m,k,:,:], self.t[m,k,:] = fit(X[m], self.Y[k])
 
-    def initialize(self, X):
+    def initialize(self, X, randomize=True):
 
         from numpy.random import permutation
+        from numpy import linspace
 
-        self.Y = X[permutation(self.M)[:self.K]]
+        if randomize:
+            self.Y = X[permutation(self.M)[:self.K]]
+        else:
+            self.Y = X[linspace(0, self.M-1, self.K).astype(int)]
+
         self.estimate_T(X, None)
         Z = self.e_step(X)
         self.estimate_w(Z)
