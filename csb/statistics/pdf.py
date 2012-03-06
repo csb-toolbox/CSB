@@ -7,7 +7,7 @@ import numpy.random
 from abc import ABCMeta, abstractmethod
 from csb.pyutils import OrderedDict
 
-from csb.math import log, exp, psi, inv_psi, log_sum_exp
+from csb.math import log, exp, psi, inv_psi
 from scipy.special import gammaln
 from numpy import array, fabs, power, sqrt, pi, mean, median, clip
 
@@ -36,10 +36,12 @@ class AbstractEstimator(object):
     __metaclass__ = ABCMeta
     
     @abstractmethod
-    def estimate(self, data):
+    def estimate(self, context, data):
         """
         Estimate the parameters of the distribution from same {data}.
         
+        @param context: context distribution
+        @type context: L{AbstractDensity}
         @param data: sample values
         @type data: array
         
@@ -52,12 +54,12 @@ class NullEstimator(AbstractEstimator):
     """
     Does not estimate anything.
     """
-    def estimate(self, data):
+    def estimate(self, context, data):
         raise NotImplementedError()
 
 class LaplaceMLEstimator(AbstractEstimator):
     
-    def estimate(self, data):
+    def estimate(self, context, data):
          
         x = array(data)
         
@@ -68,7 +70,7 @@ class LaplaceMLEstimator(AbstractEstimator):
     
 class GaussianMLEstimator(AbstractEstimator):
     
-    def estimate(self, data):
+    def estimate(self, context, data):
          
         x = array(data)
         
@@ -90,7 +92,7 @@ class GammaMLEstimator(AbstractEstimator):
         self.n_iter = 1000
         
 
-    def estimate(self, data):
+    def estimate(self, context, data):
         
         mu = mean(data)
         logmean = mean(log(data))
@@ -113,7 +115,7 @@ class GenNormalBruteForceEstimator(AbstractEstimator):
         
         super(GenNormalBruteForceEstimator, self).__init__()
         
-    def estimate(self, data):
+    def estimate(self, context, data):
         
         pdf = GeneralizedNormal(1, 1, 1)
         data = array(data)
@@ -157,7 +159,7 @@ class MultivariateGaussianMLEstimator(AbstractEstimator):
     def __init__(self):
         super(MultivariateGaussianMLEstimator, self).__init__()
 
-    def estimate(self, data):
+    def estimate(self, context, data):
         return MultivariateGaussian(numpy.mean(data, 0), numpy.cov(data.T))
     
 
@@ -168,7 +170,7 @@ class DirichletEstimator(AbstractEstimator):
         self.n_iter = 1000
         self.tol = 1e-5
 
-    def estimate(self, data):
+    def estimate(self, context, data):
 
         log_p = numpy.mean(log(data),0)
         
@@ -312,7 +314,7 @@ class AbstractDensity(object):
         @raise NotImplementedError: when no estimator is available for this
                                     distribution
         """
-        pdf = self.estimator.estimate(data)
+        pdf = self.estimator.estimate(self, data)
 
         try:
             for param in pdf.parameters:
