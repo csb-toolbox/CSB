@@ -14,7 +14,7 @@ from csb.pyutils import Enum, CollectionIndexError, ItemNotFoundError, EnumMembe
 
 from csb.bio.sequence import Sequence, SequenceAlphabets, A3MAlignment
 
-from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, StateExistsError, ProfileLength
+from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, ProfileLength
 from csb.bio.hmm import HHpredHitList, HHpredHit, ScoreUnits, States, EVDParameters
 
 
@@ -256,13 +256,12 @@ class HHProfileParser(object):
         assert self._chopped
 
         psipred = None
-        consensus = None
         msa_entries = []
 
         for entry in self._sequences:
 
             header_token = entry[:8]
-            if header_token in ['>ss_dssp', '>sa_dssp', '>ss_pred', '>ss_conf']:
+            if header_token in ['>ss_dssp', '>sa_dssp', '>ss_pred', '>ss_conf', '>Consens']:
 
                 lines = entry.strip().splitlines()
                 seq = re.sub('\s+', '', ''.join(lines[1:]))
@@ -276,15 +275,14 @@ class HHProfileParser(object):
                 elif header_token == '>ss_conf':
                     conf = seq
                     hmm.psipred = structure.SecondaryStructure(psipred, conf)
+                elif header_token == '>Consens':
+                    hmm.consensus = Sequence('Consensus', 'Consensus', seq)                    
             else:
-                entry = Sequence.from_string(entry)
-                if entry.id == 'Consensus':
-                    consensus = entry
-                else:
-                    msa_entries.append(entry)
+                msa_entries.append(entry)
 
         if msa_entries:
-            hmm.alignment = A3MAlignment(msa_entries, consensus)
+            msa = '\n'.join(msa_entries)
+            hmm.alignment = A3MAlignment.parse(msa)
 
         return hmm
 
