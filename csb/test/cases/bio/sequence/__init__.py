@@ -1,4 +1,7 @@
+
 import csb.bio.sequence as sequence
+import csb.bio.io.fasta
+
 import csb.test as test
 
 
@@ -21,102 +24,252 @@ class TestSequence(test.Case):
         self.assertEqual(self.sequence.id, 'id')        
     
     def testHeader(self):
-        self.assertEqual(self.sequence.header, '>id desc')
+        self.assertEqual(self.sequence.header, 'id desc')
         
     def testSequence(self):
         self.assertEqual(self.sequence.sequence, 'AB-CD')
         
-    def testType(self):        
-        self.assertEqual(self.sequence.type, sequence.SequenceTypes.Protein)                            
-    
-    def testToFASTA(self):
+    def testType(self):                
         
-        # in memory
-        self.assertEqual(self.sequence.to_fasta(), self.data)
+        def test(v):
+            self.sequence.type = v
+            
+        self.assertRaises(TypeError, test, sequence.ProteinAlphabet.ALA)
+        self.assertEqual(self.sequence.type, sequence.SequenceTypes.Protein)
+        
+    def testAlphabet(self):        
+        self.assertEqual(self.sequence.alphabet, sequence.ProteinAlphabet)
+                
+    def testStrip(self):
+        self.assertEqual(self.sequence.strip().sequence, 'ABCD')
+
+    def testSubregion(self):
+        
+        s = self.sequence
+        
+        self.assertEqual(s.subregion(2, 3).sequence,  'B-')        
+        self.assertRaises(sequence.SequencePositionError, s.subregion, -1, 2)
+        self.assertRaises(sequence.SequencePositionError, s.subregion, 1, 6)
+        
+    def testExtract(self):
+        
+        s = self.sequence
+        self.assertEqual(s.extract((2, 3, 5)).sequence, 'B-D')
+        
+        self.assertRaises(sequence.SequencePositionError, s.extract, [-1])
+        self.assertRaises(sequence.SequencePositionError, s.extract, [6])
+        
+    def testIndexeres(self):
+        
+        s = self.sequence
+        
+        self.assertEqual(s.residues[2].type, sequence.ProteinAlphabet.ASX)
+        self.assertEqual(s.residues[1].type, s[0].type)
+        
+        for rank in [-1, 0, 6]:
+            self.assertRaises(sequence.SequencePositionError, lambda i: s.residues[i], rank)
+
+        for index in [-1, 5]:
+            self.assertRaises(IndexError, lambda i: s[i], index)
+            
+    def testIterator(self):
+        
+        chars = [ str(r.type) for r in self.sequence ]
+        seq = ''.join(chars)
+        
+        self.assertEqual(self.sequence.sequence.upper(), seq)
+                    
+    def testToString(self):
+        
         self.assertEqual(str(self.sequence), self.data)
-        
-        # to stream
-        temp = self.config.getTempStream()
-        self.sequence.to_fasta(temp)
-        temp.flush()
-        self.assertEqual(open(temp.name).read(), self.data + '\n')
-        
-        # to file
-        temp = self.config.getTempStream().name
-        self.sequence.to_fasta(temp)
-        self.assertEqual(open(temp).read(), self.data + '\n')
-        
-    def testExpand(self):
-        self.assertEqual(self.sequence.expand(), [0, 1, 3, 4])   
-
-    def testIsGap(self):
-        self.assertEqual(self.sequence.is_gap(2), True)
-        for i in [0, 1, 3, 4]:
-            self.assertEqual(self.sequence.is_gap(i), False)
-
-    def testSequenceIndex(self):
-        for c, s in [(0, 0), (1, 1), (2, 2), (3, 2), (4, 3)]:
-            self.assertEqual(self.sequence.sequence_index(c), s)        
-    
-    def testFromString(self):
-        
-        # normal FASTA
-        s = sequence.Sequence.from_string('\n ' + self.data.replace('-', '\n\n -  \n') + ' \n\n')
-        
-        self.assertEqual(s.id, 'id')
-        self.assertEqual(s.header, '>id desc')
-        self.assertEqual(s.sequence, 'AB-CD')
-        
-        # plain text sequence
-        s = sequence.Sequence.from_string('\n AB \n CD  \n')
-        
-        self.assertEqual(s.id, 'sequence')
-        self.assertEqual(s.header, '>sequence')
-        self.assertEqual(s.sequence, 'ABCD')
-        
+        self.assertEqual(str(self.sequence), self.data)
 
 @test.unit
-class TestPDBSequence(test.Case):
+class TestRichSequence(TestSequence):
     
     def setUp(self):
         
-        super(TestPDBSequence, self).setUp()
-        
-        self.protein = '>3bx6_A mol:protein length:192 ALPHA-1-ACID GLYCOPROTE\nAB-CD'
-        self.nucleic = '>3bx6_A mol:na length:192 ALPHA-1-ACID GLYCOPROTE\nAB-CD'
-        
-        self.sequence = sequence.PDBSequence(
-                    '3bx6A', 
-                    '>3bx6_A mol:protein length:192 ALPHA-1-ACID GLYCOPROTE', 
-                    'AB-CD', 
-                    sequence.SequenceTypes.Protein)     
-           
-    def testAccession(self):
-        self.assertEqual(self.sequence.accession, '3bx6')
+        super(TestRichSequence, self).setUp()
+        self.sequence = sequence.RichSequence.create(self.sequence)
+                                              
+@test.unit
+class TestChainSequence(TestSequence):
 
-    def testChain(self):
-        self.assertEqual(self.sequence.chain, 'A')
+    def setUp(self):
         
-    def testFromString(self):
+        super(TestChainSequence, self).setUp()
+        
+        from csb.bio.structure import ProteinResidue, Chain
+        chain = Chain('A', name='desc', accession='accn')
+        
+        for rank, char in enumerate('AB-CD', start=1):
+            chain.residues.append(ProteinResidue(rank, char))
+         
+        self.sequence = sequence.ChainSequence.create(chain)
+        self.sequence.header = '>id desc'
+        self.sequence.id = 'id'
 
-        # protein
-        s = sequence.PDBSequence.from_string('\n ' + self.protein + ' \n\n')
-        
-        self.assertEqual(s.id, '3bx6A')
-        self.assertEqual(s.header, '>3bx6_A mol:protein length:192 ALPHA-1-ACID GLYCOPROTE')
-        self.assertEqual(s.sequence, 'AB-CD')                       
 
-        # nucleic
-        s = sequence.PDBSequence.from_string('\n ' + self.nucleic + ' \n\n')
+@test.unit
+class TestSequenceCollection(test.Case):
+
+    def setUp(self):
         
-        self.assertEqual(s.id, '3bx6A')
-        self.assertEqual(s.header, '>3bx6_A mol:na length:192 ALPHA-1-ACID GLYCOPROTE')
-        self.assertEqual(s.sequence, 'AB-CD')
-        self.assertEqual(s.type, sequence.SequenceTypes.NucleicAcid)        
+        super(TestSequenceCollection, self).setUp()
         
-        # junk
-        self.assertRaises(ValueError, sequence.PDBSequence.from_string, '>junk')   
+        s1 = sequence.Sequence('id1', '>id1 desc', 'AB-CD', sequence.SequenceTypes.Protein)
+        s2 = sequence.Sequence('id2', '>id2 desc', 'ABCDE', sequence.SequenceTypes.Protein)
         
+        self.collection = sequence.SequenceCollection([s1, s2])
+        self.data = '>id1 desc\nAB-CD\n>id2 desc\nABCDE' 
+         
+    def testToFASTA(self):
+        
+        with self.config.getTempStream() as tmp:
+            self.collection.to_fasta(tmp.name)
+            tmp.flush()
+            
+            self.assertEqual(open(tmp.name).read().strip(), self.data)
+            
+        with self.config.getTempStream() as tmp:
+            self.collection.to_fasta(tmp)
+            tmp.flush()
+            
+            self.assertEqual(open(tmp.name).read().strip(), self.data)        
+
+    
+@test.unit
+class TestSequenceAlignment(test.Case):
+    
+    
+    def _factory(self, sequences):
+        return sequence.SequenceAlignment(sequences)
+    
+    def setUp(self):
+        
+        super(TestSequenceAlignment, self).setUp()
+        
+        seq1 = sequence.Sequence('s1', 's1 desc1',          'AB-CD', sequence.SequenceTypes.Protein)
+        seq2 = sequence.RichSequence('s2', 's2 desc2', list('ABX-D'), sequence.SequenceTypes.Protein)
+            
+        self.ali = self._factory([seq1, seq2])
+
+    def testAdd(self):
+        
+        def add(s):
+            self.ali.add(s)
+            
+        self.assertRaises(sequence.SequenceError, add, sequence.Sequence('sn', 'sn','AB'))
+        self.assertRaises(sequence.DuplicateSequenceError, add, sequence.Sequence('s1', 's1','AB-CD'))
+        
+    def testLength(self):
+        self.assertEqual(self.ali.length, 5)
+
+    def testSize(self):
+        self.assertEqual(self.ali.size, 2)
+
+    def testSubregion(self):
+        
+        sub = self.ali.subregion(2, 4)
+        
+        self.assertEqual(sub.length, 3)
+        self.assertEqual(sub.size, 2)
+        self.assertEqual(sub.rows[1].sequence, 'B-C')
+        self.assertEqual(sub.rows[2].sequence, 'BX-')
+        
+        self.assertRaises(sequence.ColumnPositionError, self.ali.subregion, -1, 2)
+        self.assertRaises(sequence.ColumnPositionError, self.ali.subregion, 1, 6)
+        
+    def testFormat(self):
+        
+        self.assertEqual(self.ali.format(headers=False).strip(), 'AB-CD\nABX-D')
+        self.assertEqual(self.ali.format(headers=True).strip(), '>s1 desc1\nAB-CD\n>s2 desc2\nABX-D')
+        
+    def testRows(self):
+        
+        a = self.ali
+
+        self.assertEqual(a.rows[2].id, 's2')
+        self.assertRaises(sequence.SequenceNotFoundError, lambda i: a.rows[i], -1)
+        self.assertRaises(sequence.SequenceNotFoundError, lambda i: a.rows[i], 3)
+
+    def testColumns(self):
+        
+        a = self.ali
+                
+        self.assertEqual(a.columns[4][0].id, 's1')
+        self.assertEqual(a.columns[4][0].column, 4)
+        self.assertEqual(a.columns[4][0].residue.type, sequence.ProteinAlphabet.CYS)
+        self.assertEqual(len(a.columns[4]), a.size)
+        self.assertEqual(len(a.columns[4]), len(a.columns[3]))
+
+    def testRowColumns(self):
+        
+        a = self.ali
+        
+        self.assertEqual(a.rows[1].columns[4].id, a.columns[4][0].id)
+        self.assertEqual(a.rows[1].columns[4].column, a.columns[4][0].column)
+        self.assertEqual(a.rows[1].columns[4].residue.type, a.columns[4][0].residue.type)       
+
+    def testRowResidues(self):
+        
+        a = self.ali
+        
+        self.assertEqual(a.rows[1].residues[4].type, sequence.ProteinAlphabet.ASP)
+        self.assertEqual(a.rows[1].residues[3].type, sequence.ProteinAlphabet.CYS)
+        
+        self.assertEqual(a.rows[2].residues[4].type, sequence.ProteinAlphabet.ASP)
+        self.assertEqual(a.rows[2].residues[3].type, sequence.ProteinAlphabet.UNK)
+
+    def testRowMap(self):
+        
+        a = self.ali
+        
+        self.assertEqual(a.rows[1].map_column(4), 3)
+        self.assertEqual(a.rows[1].map_residue(3), 4)
+
+    def testIndexer(self):
+        
+        a = self.ali
+
+        self.assertEqual(a[0, 0].rows['s1'].id, 's1')
+        self.assertEqual(a[1, 4].rows['s2'].columns[1].residue.type, sequence.ProteinAlphabet.ASP)
+                
+        self.assertEqual(a[0, 0].size, 1)
+        self.assertEqual(a[0, 0].length, 1)
+
+        self.assertEqual(a[:, 0].size, 2)
+        self.assertEqual(a[:, 0].length, 1)
+
+        self.assertEqual(a[0, :].size, 1)
+        self.assertEqual(a[0, :].length, 5)
+
+        self.assertEqual(a[0:2, 0:2].size, 2)
+        self.assertEqual(a[0:2, 0:2].length, 2)
+
+        self.assertEqual(a[(0, 1), (0, 1, 3)].size, 2)
+        self.assertEqual(a[(0, 1), (0, 1, 3)].length, 3)
+
+        self.assertRaises(IndexError, lambda: a[-1, :])
+        self.assertRaises(IndexError, lambda: a[:, -1])
+
+        self.assertRaises(TypeError, lambda: a['', :])
+        self.assertRaises(TypeError, lambda: a[:, ''])
+
+        self.assertRaises(ValueError, lambda: a[[], :])
+        self.assertRaises(ValueError, lambda: a[:, []])
+
+    def testGapAt(self):
+        
+        self.assertFalse(self.ali.gap_at(1))
+        self.assertTrue(self.ali.gap_at(3))
+        
+
+@test.unit
+class TestA3MAlignmentSimple(TestSequenceAlignment):
+    
+    def _factory(self, sequences):
+        return sequence.A3MAlignment(sequences)
         
 @test.unit
 class TestA3MAlignment(test.Case):
@@ -128,60 +281,62 @@ class TestA3MAlignment(test.Case):
         self.file = self.config.getTestFile('d1nz0a_.a3m')
         self.a3m = open(self.file).read()
         self.ali = sequence.A3MAlignment.parse(self.a3m)
-        
-    def testConsensus(self):        
-        self.assertEqual(self.ali.consensus.sequence, 'eRLkxxxdFxxvxxxgxxxxxxxxxlxxxxxxxxxxRxGxxvsKKvgxAVxRNriKRxlRexxrxxxxxlxxxxdivvixrxxxxxxxxxxxxxxlxxxlxxlxkkixg')
 
-    def testMatchesCount(self):
-        self.assertEqual(self.ali.matches_count, 109)
+    def testMatches(self):
+        self.assertEqual(self.ali.matches, 109)
 
-    def testColumnsCount(self):
-        self.assertEqual(self.ali.cols_count, 135)
+    def testLength(self):
+        self.assertEqual(self.ali.length, 135)
         
-    def testRowsCount(self):
-        self.assertEqual(self.ali.rows_count, 9)            
+    def testSize(self):
+        self.assertEqual(self.ali.size, 9)            
 
     def testRows(self):
         
         # row 1 (master)
-        seqInfo, seq = self.ali.rows[1][0], self.ali.rows[1][1:]
-        #  - sequence info: row[1][0]
-        self.assertTrue(isinstance(seqInfo, sequence.Sequence))
-        self.assertEqual(seqInfo.id, 'd1nz0a_')
+        row = self.ali.rows[1]
+        self.assertEqual(row.id, 'd1nz0a_')
 
-        self.assertEqual(len(seq), 135)
-        self.assertEqual(len(''.join(seq)), 109)        
-        self.assertEqual(''.join(seq), 'ERLRLRRDFLLIFKEGKSLQNEYFVVLFRKNGMDYSRLGIVVKRKFGKATRRNKLKRWVREIFRRNKGVIPKGFDIVVIPRKKLSEEFERVDFWTVREKLLNLLKRIEG')
-        self.assertEqual(seqInfo.sequence, ''.join(seq))
+        self.assertEqual(row.length, 135)
+        self.assertEqual(row.strip().length, 109)        
+        self.assertEqual(row.strip().sequence, 'ERLRLRRDFLLIFKEGKSLQNEYFVVLFRKNGMDYSRLGIVVKRKFGKATRRNKLKRWVREIFRRNKGVIPKGFDIVVIPRKKLSEEFERVDFWTVREKLLNLLKRIEG')
         
     def testToString(self):
- 
-        a3m = '{0}\n{1}'.format(self.ali.consensus.to_fasta(), self.ali.to_string())          
-        self.assertEqual(self.a3m, a3m)
+         
+        self.assertEqual(self.a3m.strip(), self.ali.format().strip())
         
-    def testToFASTA(self):
+    def testFormat(self):
         
-        fasta = self.ali.to_fasta(headers=False).splitlines()
+        fasta = self.ali.format(sequence.AlignmentFormats.FASTA, headers=False).splitlines()
         self.assertEqual(len(fasta), 9)
         
         for line in fasta:
             self.assertEqual(len(line), 135)
             
         ref = open(self.config.getTestFile('d1nz0a_.mfasta')).read()
-        self.assertEqual(ref, self.ali.to_fasta())
+        self.assertEqual(ref.strip(), self.ali.format(sequence.AlignmentFormats.FASTA, headers=True).strip())
     
-    def testSubregion(self):
+    def testHMMSubregion(self):
         
-        sub = self.ali.subregion(2, 8)
-        self.assertEqual(sub.rows[1][0].sequence, 'RLRLRRD')
-        self.assertEqual(sub.rows_count, self.ali.rows_count)
-        self.assertEqual(sub.matches_count, 8 - 2 + 1)                
+        sub = self.ali.hmm_subregion(2, 30)
+        self.assertEqual(sub.rows['d1nz0a_'].strip().sequence, 'RLRLRRDFLLIFKEGKSLQNEYFVVLFRK')
+        self.assertEqual(sub.size, self.ali.size)
+        self.assertEqual(sub.matches, 30 - 2 + 1)                
+
         
+        fasta = self.ali.hmm_subregion(1, 109).format(sequence.AlignmentFormats.FASTA, headers=True)       
         ref = open(self.config.getTestFile('d1nz0a_.mfasta')).read()
-        self.assertEqual(ref, self.ali.subregion(1, 109).to_fasta())   
+        self.assertEqual(ref, fasta.strip())   
         
-        self.assertRaises(IndexError, self.ali.subregion, -1, 2)
-        self.assertRaises(IndexError, self.ali.subregion, 1, 110)                  
+        self.assertRaises(sequence.ColumnPositionError, self.ali.subregion, -1, 2)
+        self.assertRaises(sequence.ColumnPositionError, self.ali.hmm_subregion, -1, 2)
+        self.assertRaises(sequence.ColumnPositionError, self.ali.subregion, 1, 111110)
+        self.assertRaises(sequence.ColumnPositionError, self.ali.hmm_subregion, 1, 110)
+         
+    def testInsertionAt(self):
+        
+        self.assertFalse(self.ali.insertion_at(1))
+        self.assertTrue(self.ali.insertion_at(17))              
         
         
 if __name__ == '__main__':

@@ -303,6 +303,7 @@ class EnumItem(object):
         return self.__container
     
     def _attach(self, enum):
+        assert getattr(enum, self.__name) is self
         self.__container = enum
         
 class EnumMeta(type):
@@ -1017,39 +1018,3 @@ except ImportError:
         def __ne__(self, other):
             return not self == other
 
-
-class ordered_dict(dict):
-
-    def __init__(self, *args, **keywords):
-
-        dict.__init__(self, *args, **keywords)
-        self.__keys = dict.keys(self)
-
-    def __setitem__(self, key, value):
-
-        dict.__setitem__(self, key, value)
-
-        if key not in self.__keys: self.__keys.append(key)
-        
-    def __iter__(self):
-        return iter(self.__keys) 
-
-    def keys(self):
-        return list(self.__keys)
-
-    def values(self):
-        return [self[key] for key in self.keys()]
-
-    def items(self):
-        return [(key, self[key]) for key in self.keys()]
-
-    def sort_keys(self, sort_function = None):
-        if sort_function is not None:
-            self.__keys.sort(sort_function)
-        else:
-            self.__keys.sort()
-    
-    def __delitem__(self, key):
-
-        dict.__delitem__(self, key)
-        self.__keys.remove(key)

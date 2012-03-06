@@ -84,6 +84,7 @@ class ProfileHMM(object):
         self.family = None
         self.length = ProfileLength(None, None)
         self.alignment = None
+        self.consensus = None
         self.dssp = None
         self.dssp_solvent = None
         self.psipred = None
@@ -141,10 +142,6 @@ class ProfileHMM(object):
     @property
     def score_units(self):
         return self._score_units
-
-    @property
-    def known_issues(self):
-        return list(self._issues)
 
     def serialize(self, file_name):
         """
@@ -233,9 +230,9 @@ PCT   {0.pseudocounts}'''.format(hmm))
             stream.writeline(''.join(confidence))
 
         if hmm.alignment:
-            if hmm.alignment.consensus:
-                stream.writeline(hmm.alignment.consensus.to_fasta())
-            stream.writeline(hmm.alignment.to_string())
+            if hmm.consensus:
+                stream.writeline(str(hmm.consensus))
+            stream.writeline(hmm.alignment.format())
 
         stream.writeline('#')
 
@@ -890,7 +887,8 @@ class ProfileHMMSegment(ProfileHMM):
         self.source_start = start
         self.source_end = end
         
-        self.alignment = hmm.alignment.subregion(start, end)
+        self.alignment = hmm.alignment.hmm_subregion(start, end)
+        self.consensus = hmm.consensus.subregion(start, end)
 
         layers = csb.pyutils.deepcopy(hmm.layers[start : end + 1])
         max_score = 1.0
@@ -905,7 +903,7 @@ class ProfileHMMSegment(ProfileHMM):
             self.psipred = hmm.psipred.subregion(start, end)            
             
         self.length.layers = self.layers.length
-        self.length.matches = self.alignment.matches_count
+        self.length.matches = self.alignment.matches
         self.effective_matches = sum([(l.effective_matches or 0.0) for l in self.layers]) / self.layers.length   
         
     def _build_graph(self, source_layers, max_score):
