@@ -316,7 +316,7 @@ class AbstractSequence(object):
         @return: a new sequence
         @rtype: L{AbstractSequence}
         
-        @raise L{SequencePositionError}: if start/end positions are out of range
+        @raise SequencePositionError: if start/end positions are out of range
         """
         positions = range(start, end + 1)
         return self.extract(positions)
@@ -331,7 +331,7 @@ class AbstractSequence(object):
         @return: a new sequence
         @rtype: L{AbstractSequence}
         
-        @raise L{SequencePositionError}: if any position is out of range        
+        @raise SequencePositionError: if any position is out of range
         """
 
         end = self.length
