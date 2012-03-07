@@ -249,8 +249,8 @@ def torsion_rmsd(x, y):
     
     @param x: query phi/psi angles (Nx2 array, in radians)
     @type x: array
-    @param x: subject phi/psi angles (Nx2 array, in radians)
-    @type x: array
+    @param y: subject phi/psi angles (Nx2 array, in radians)
+    @type y: array
     
     @rtype: float
     """
