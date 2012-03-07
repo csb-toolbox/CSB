@@ -703,19 +703,55 @@ class TestSecondaryStructure(test.Case):
     
 @test.unit
 class TestTorsionAngles(test.Case):
-    """
-    @todo: implement torsion angle tests
-    """
         
     def setUp(self):
         
-        super(TestSecondaryStructure, self).setUp()
+        super(TestTorsionAngles, self).setUp()
 
         self.structure = self.config.getPickle('1nz9.model1.pickle')        
         self.chain = self.structure['A']
-        self.chain.compute_torsion()      
+        self.chain.compute_torsion()
+        
+        self.angles1 = structure.TorsionAnglesCollection()
+        self.angles2 = structure.TorsionAnglesCollection()
+        self.angles3 = structure.TorsionAnglesCollection()
+        self.angles4 = structure.TorsionAnglesCollection()
+        
+        for dummy in range(10):
+            self.angles1.append(structure.TorsionAngles(20, 30, 180))
+            self.angles2.append(structure.TorsionAngles(20, 30, 180))
+            self.angles3.append(structure.TorsionAngles(20, 30, 180))
+            self.angles4.append(structure.TorsionAngles(20, 30, 180))
+            
+        self.angles2[5].phi = 40
+        self.angles2[7].psi = 10
+        self.angles3[4].phi = None
+        self.angles4[1].phi = None
 
-    # TODO
+    def testRMSD(self):
+        
+        self.assertEqual(self.chain.torsion.rmsd(self.chain.torsion), 0.0)
+        self.assertNotEqual(self.angles1.rmsd(self.angles2), 0.0)
+        self.assertEqual(self.angles1.rmsd(self.angles4), 0.0)
+        self.assertAlmostEqual(self.angles1.rmsd(self.angles2), 0.005442, places=5)
+        
+        self.assertRaises(structure.Broken3DStructureError, self.angles1.rmsd, self.angles3)
+        self.assertRaises(ValueError, self.angles1.rmsd, structure.TorsionAnglesCollection())
+
+    def testConversion(self):
+        
+        ta = structure.TorsionAngles(0, 90, 180)
+        
+        ta.to_radians()
+        self.assertEqual(ta.phi, 0)
+        self.assertAlmostEqual(ta.psi, 1.57, places=2)
+        self.assertAlmostEqual(ta.omega, 3.14, places=2)
+
+        ta.to_degrees()
+        self.assertEqual(ta.phi, 0)
+        self.assertEqual(ta.psi, 90)
+        self.assertEqual(ta.omega, 180)
+
 
 
 if __name__ == '__main__':

@@ -16,7 +16,6 @@ import csb.math
 import csb.bio.utils
 
 from abc import ABCMeta, abstractmethod
-from itertools import izip
 
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentTypes
 
@@ -2001,46 +2000,40 @@ class TorsionAnglesCollection(csb.pyutils.CollectionContainer):
         @return: RMSD based on torsion angles
         @rtype: float
         
-        @raise Broken3DStructureError: on discontinuous torsion angle collections 
+        @raise Broken3DStructureError: on discontinuous torsion angle collections
+        (phi and psi values are still allowed to be absent at the termini)
         @raise ValueError: on mismatching torsion angles collection lengths
-        """           
+        """                   
         if len(self) != len(other) or len(self) < 1:
-            raise ValueError('Both collections must be of the same and positive length (got {0} and {1})'.format(len(self), len(other)))
+            raise ValueError('Both collections must be of the same and positive length')
+        
+        length = len(self)
+        query, subject = [], []
                 
-        from numpy import array, sin, cos, sqrt
-        
-        query = TorsionAnglesCollection()
-        subject = TorsionAnglesCollection()
-        
-        for q, s in izip(iter(self), iter(other)):
-            if q.phi is None or q.psi is None or s.phi is None or s.psi is None:
-                raise Broken3DStructureError('Should we compute RMSD if the structure is discontinuous?')
-            else:
-                q = copy.copy(q)
-                q.to_radians()
+        for n, (q, s) in enumerate(zip(self, other), start=1):
+            
+            q = q.copy()
+            q.to_radians()
+            
+            s = s.copy()
+            s.to_radians()
+            
+            if q.phi is None or s.phi is None:
+                if n == 1:
+                    q.phi = s.phi = 0.0
+                else:
+                    raise Broken3DStructureError('Discontinuous torsion angles collection at {0}'.format(n))
+                    
+            if q.psi is None or s.psi is None:
+                if n == length:
+                    q.psi = s.psi = 0.0
+                else:
+                    raise Broken3DStructureError('Discontinuous torsion angles collection at {0}'.format(n))
                 
-                s = copy.copy(s)
-                s.to_radians()
-                
-                query.append(q)
-                subject.append(s)
-                
-        phi_diff = array(query.phi) - array(subject.phi)
-        psi_diff = array(query.psi) - array(subject.psi)
-
-        window = min([len(self), len(other)])
-        if window == 0:
-            raise Missing3DStructureError("Cannot compute RMSD with/against an empty TorsionAnglesCollection.")    
-        elif len(phi_diff) < int(0.95 * window):                                                                             # useless now since exception is thrown near izip?
-            raise Broken3DStructureError("Got {0} out of {1} phi-psi pairs - less than 95%.".format(len(phi_diff), window))
-
-        assert len(phi_diff) == len(psi_diff)
-        
-        r = sin(phi_diff).sum()**2 + cos(phi_diff).sum()**2 + sin(psi_diff).sum()**2 + cos(psi_diff).sum()**2
-        
-        rmsd = 1 - (1.0/len(phi_diff)) * sqrt(r/2.0)
-        
-        return rmsd    
+            query.append([q.phi, q.psi])
+            subject.append([s.phi, s.psi])
+            
+        return csb.bio.utils.torsion_rmsd(numpy.array(query), numpy.array(subject))
            
 class TorsionAngles(object):
     """
@@ -2089,7 +2082,7 @@ class TorsionAngles(object):
     def __nonzero__(self):
         return  self.phi is not None \
                 or self.psi is not None \
-                or self.omega is not None           
+                or self.omega is not None
 
     @property
     def units(self):

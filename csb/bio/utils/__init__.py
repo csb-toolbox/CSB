@@ -243,6 +243,25 @@ def wrmsd(X, Y, w):
 
     return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300))
 
+def torsion_rmsd(x, y):
+    """
+    Compute the circular RMSD of two phi/psi angle sets.
+    
+    @param x: query phi/psi angles (Nx2 array, in radians)
+    @type x: array
+    @param x: subject phi/psi angles (Nx2 array, in radians)
+    @type x: array
+    
+    @rtype: float
+    """
+    from numpy import array, sin, cos, sqrt
+    
+    phi, psi = (x - y).T
+    assert len(phi) == len(psi)
+    
+    r = sin(phi).sum()**2 + cos(phi).sum()**2 + sin(psi).sum()**2 + cos(psi).sum()**2
+    return 1 - (1.0 / len(phi)) * sqrt(r / 2.0)
+
 def _tm_d0(Lmin):
     
     from numpy import power
