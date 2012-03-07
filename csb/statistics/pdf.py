@@ -256,7 +256,10 @@ class AbstractDensity(object):
         Parameter value validation hook.
         """
         pass
-            
+
+    def get_params(self):
+        return [self._params[name] for name in  self.parameters]
+    
     def set_params(self, *values, **named_params):
         
         for p, v in zip(self.parameters, values):
@@ -594,12 +597,11 @@ class Dirichlet(AbstractDensity):
 
     @alpha.setter
     def alpha(self,value):
-        self['alpha'] = value
+        self['alpha'] = numpy.ravel(value)
 
 
     def log_prob(self, x):
         #TODO check wether x is in the probability simplex
-
         alpha = self.alpha
         return gammaln(sum(alpha)) - sum(gammaln(alpha)) \
               + numpy.dot((alpha - 1).T,log(x).T) 
@@ -611,3 +613,4 @@ class Dirichlet(AbstractDensity):
         return numpy.random.mtrand.dirichlet(self.alpha, size)
 
 
+    

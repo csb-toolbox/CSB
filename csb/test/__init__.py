@@ -299,6 +299,24 @@ class Case(unittest.TestCase):
         if execution > duration:
             self.fail('{0}s is slower than {1}s)'.format(execution, duration))
 
+
+    def assertWithinDelta(self, value, expected_value, delta = 1e-1, *args, **kargs):
+        """
+        Fail if the difference is larger than delta
+        
+        @param value: input value
+        @type value: float
+
+        @param expected_value: expected value
+        @type expected_value: float
+
+        @param delta: allowed deviation
+        @type delta: float
+        """
+        
+        if abs(value - expected_value) > delta:
+            self.fail('|{0} - {1}| > {2})'.format(value, expected_value, delta))
+
 class InvalidNamespaceError(NameError, ImportError):
     pass
     
