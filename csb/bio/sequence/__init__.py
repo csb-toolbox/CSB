@@ -252,10 +252,15 @@ class AbstractSequence(object):
         for residue in residues:
             self._add(residue)
     
-    def __getitem__(self, index):
-        if not 0 <= index < self.length:
-            raise IndexError(index)
-        return self._get(index + 1)
+    def __getitem__(self, spec):
+        
+        if isinstance(spec, slice):
+            spec = SliceHelper(spec, 0, self.length)
+            return self.subregion(spec.start + 1, spec.stop)
+        else:
+            if not 0 <= spec < self.length:
+                raise IndexError(spec)            
+            return self._get(spec + 1)
     
     def __iter__(self):
         for index in range(self.length):
@@ -281,7 +286,7 @@ class AbstractSequence(object):
         residue indexer.
           
         @rtype: L{ResidueInfo}
-        @raise L{SequencePositionError}: when the supplied rank is out of range
+        @raise SequencePositionError: when the supplied rank is out of range
         """
         pass
     
@@ -705,6 +710,10 @@ class SliceHelper(object):
         if t is None:
             t = 1
             
+        for value in [s, e, t]:
+            if value < 0:
+                raise IndexError(value)
+            
         self.start = s
         self.stop = e
         self.step = t            
@@ -878,8 +887,8 @@ class AbstractAlignment(object):
         Append a new sequence to the alignment.
         
         @type sequence: L{AbstractSequence}
-        @raise L{SequenceError}: if the new sequence is too short/long
-        @raise L{DuplicateSequenceError}: if a sequence with same ID already exists  
+        @raise SequenceError: if the new sequence is too short/long
+        @raise DuplicateSequenceError: if a sequence with same ID already exists  
         """
         
         if self._msa.length == 0:

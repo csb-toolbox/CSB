@@ -33,8 +33,8 @@ class Shell(object):
         @type timeout: float or None
         
         @rtype: L{ShellInfo}
-        @raise L{InvalidCommandError}: on invalid executable
-        @raise L{TimeoutError}: when the timeout is expired
+        @raise InvalidCommandError: on invalid executable
+        @raise TimeoutError: when the timeout is expired
         """
         
         if isinstance(cmd, basestring):
@@ -80,8 +80,8 @@ class Shell(object):
         @type timeout: float or None        
         
         @rtype: L{ShellInfo}
-        @raise L{ProcessError}: on bad exit code
-        @raise L{TimeoutError}: when the timeout is expired        
+        @raise ProcessError: on bad exit code
+        @raise TimeoutError: when the timeout is expired        
         """
         si = Shell.run(cmd, timeout=timeout)
         
