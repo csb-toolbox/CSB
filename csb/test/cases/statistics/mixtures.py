@@ -54,62 +54,36 @@ class TestMixtures(test.Case):
     
     def testSegmentMixture(self):
 
-        self._testSegmentMixture(mixtures.SegmentMixture)
+        self._testMixture(mixtures.SegmentMixture, self.w_ref_segments)
 
     def testSegmentMixture2(self):
         
-        self._testSegmentMixture(mixtures.SegmentMixture2)
-
-    def _testSegmentMixture(self, cls):
-
-        X = self._ake_ensemble_coords()
-
-        m = cls(X.shape[1], X.shape[0], 3)
-
-        # algorithms with randomized initialization, try multiple times
-        for _ in xrange(5):
-
-            # fit parameters
-            m.em(X)
-
-            # we want at least 90% overlap
-            same = m.overlap(self.w_ref_segments)
-            if same >= 0.9:
-                break
-        else:
-            self.assertTrue(False, 'segmentation not reproduced within 5 iterations')
-
-        self._testHeuristic(cls, self.w_ref_segments)
-
-    def _testHeuristic(self, cls, w_ref):
-
-        X = self._ake_ensemble_coords()
-
-        m = cls.from_coords(X)
-        same = m.overlap(w_ref)
-
-        self.assertTrue(same > 0.8, 'mixture not reproduced')
+        self._testMixture(mixtures.SegmentMixture2, self.w_ref_segments)
 
     def testConformerMixture(self):
 
-        X = self._ake_ensemble_coords()
+        self._testMixture(mixtures.ConformerMixture, self.w_ref_conformers, 14./16.)
 
-        m = mixtures.ConformerMixture(X.shape[1], X.shape[0], 3)
+    def _testMixture(self, cls, w_ref, min_overlap=0.9, repeats=5):
+
+        X = self._ake_ensemble_coords()
+        K = len(set(w_ref))
 
         # algorithms with randomized initialization, try multiple times
-        for _ in xrange(10):
+        for _ in xrange(repeats):
+            m = cls.from_coords(X, K, randomize=1)
 
-            # fit parameters
-            m.em(X)
-
-            # we want at least 14 out of 16
-            same = m.overlap(self.w_ref_conformers)
-            if same >= 14./16.:
+            overlap = m.overlap(w_ref)
+            if overlap >= min_overlap:
                 break
         else:
-            self.assertTrue(False, 'conformers not reproduced within 10 iterations')
+            self.assertTrue(False, 'mixture not reproduced within %d iterations' % (repeats))
 
-        self._testHeuristic(mixtures.ConformerMixture, self.w_ref_conformers)
+        # non-randomized heuristic with BIC
+        m = cls.from_coords(X)
+        overlap = m.overlap(w_ref)
+
+        self.assertTrue(overlap >= min_overlap, 'mixture not reproduced with heuristic')
 
 if __name__ == '__main__':
 

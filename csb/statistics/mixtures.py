@@ -469,7 +469,7 @@ class SegmentMixture(GaussianMixture):
         from numpy import repeat, equal, arange, linspace
 
         if randomize:
-            w = random(self.K)
+            w = random(self.K) + (5. * self.K / self.N)
             w/= sum(w)
 
             c = repeat(arange(self.K), multinomial(self.N, w))
