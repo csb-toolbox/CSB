@@ -65,12 +65,17 @@ class TestSequence(test.Case):
         
         self.assertEqual(s.residues[2].type, sequence.ProteinAlphabet.ASX)
         self.assertEqual(s.residues[1].type, s[0].type)
+        self.assertEqual(s[:].sequence, s.sequence)        
+        self.assertEqual(s[2:].sequence, '-CD')
+        self.assertEqual(s[2:3].sequence, '-')
         
         for rank in [-1, 0, 6]:
             self.assertRaises(sequence.SequencePositionError, lambda i: s.residues[i], rank)
 
         for index in [-1, 5]:
             self.assertRaises(IndexError, lambda i: s[i], index)
+        
+        self.assertRaises(IndexError, lambda: s[-1:])
             
     def testIterator(self):
         
@@ -258,6 +263,9 @@ class TestSequenceAlignment(test.Case):
 
         self.assertRaises(ValueError, lambda: a[[], :])
         self.assertRaises(ValueError, lambda: a[:, []])
+
+        self.assertRaises(IndexError, lambda: a[-1:, :])
+        self.assertRaises(IndexError, lambda: a[:, -1:])        
 
     def testGapAt(self):
         
