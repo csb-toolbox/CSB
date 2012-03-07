@@ -6,6 +6,33 @@ import csb.test as test
 
 from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, MultivariateGaussian, Dirichlet
 
+@test.functional
+class TestLogProb(test.Case):
+
+    def testDirichlet(self):
+
+        alpha = numpy.array([2,2])
+        pdf = Dirichlet(alpha)
+
+        x =  numpy.array([0.5,0.5])
+        self.assertAlmostEqual(pdf(x), 1.5 , places=2)
+
+        x =  numpy.array([0.1,0.9])
+        self.assertAlmostEqual(pdf(x), .54 , places=2)
+
+        x =  numpy.array([0.9,0.1])
+        self.assertAlmostEqual(pdf(x), .54 , places=2)
+
+        x =  numpy.array([[0.9,0.1],
+                          [0.1,0.9],
+                          [0.5,0.5]])
+
+        self.assertAlmostEqual(pdf(x)[0], .54 , places=2)
+        self.assertAlmostEqual(pdf(x)[1], .54 , places=2)
+        self.assertAlmostEqual(pdf(x)[2], 1.5 , places=2)
+        
+        
+        
 
 @test.functional
 class TestParameterEstimation(test.Case):
@@ -67,9 +94,9 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(samples)
 
         for i in range(d):
-            self.assertAlmostEqual(pdf.mu[i], mu[i], delta=1e-1)
+            self.assertWithinDelta(pdf.mu[i], mu[i], delta=1e-1)
             for j in range(d):
-                self.assertAlmostEqual(pdf.sigma[i,j], sigma[i,j], delta=1e-1)
+                self.assertWithinDelta(pdf.sigma[i,j], sigma[i,j], delta=1e-1)
                 
 
         d = 3
@@ -81,9 +108,9 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(samples)
 
         for i in range(d):
-            self.assertAlmostEqual(pdf.mu[i], mu[i], delta=1e-1)
+            self.assertWithinDelta(pdf.mu[i], mu[i], delta=1e-1)
             for j in range(d):
-                self.assertAlmostEqual(pdf.sigma[i,j], sigma[i,j], delta=1e-1)
+                self.assertWithinDelta(pdf.sigma[i,j], sigma[i,j], delta=1e-1)
 
         
     def testDirichlet(self):
@@ -91,11 +118,11 @@ class TestParameterEstimation(test.Case):
         alpha = numpy.array([1.,1.,1.])
         pdf = Dirichlet(alpha)
 
-        self.assertAlmostEqual(pdf(numpy.array([1.,0.,0])),
+        self.assertWithinDelta(pdf(numpy.array([1.,0.,0])),
                                pdf(numpy.array([0.,1.,0])),
                                delta = 1e-1)
         
-        self.assertAlmostEqual(pdf(numpy.array([1./3.,1./3.,1./3])),
+        self.assertWithinDelta(pdf(numpy.array([1./3.,1./3.,1./3])),
                                pdf(numpy.array([0.,1.,0])),
                                delta = 1e-1)
 
@@ -103,11 +130,11 @@ class TestParameterEstimation(test.Case):
         pdf = Dirichlet(alpha)
         
 
-        self.assertAlmostEqual(pdf(numpy.array([1.,0.,0])),
+        self.assertWithinDelta(pdf(numpy.array([1.,0.,0])),
                                pdf(numpy.array([0.,1.,0])),
                                delta = 1e-1)
 
-        self.assertAlmostEqual(pdf(numpy.array([1.,0.,0])),
+        self.assertWithinDelta(pdf(numpy.array([1.,0.,0])),
                                pdf(numpy.array([0.,0.,1])),
                                delta = 1e-1)
         
@@ -121,9 +148,9 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(samples)
  
         for i in range(len(alpha)):
-            self.assertAlmostEqual(pdf.alpha[i], alpha[i], delta = 1e-1)
+            self.assertWithinDelta(pdf.alpha[i], alpha[i], delta = 1e-1)
 
-
+ 
         alpha = numpy.array([200.,60.,20.])
         pdf = Dirichlet(alpha)
 
@@ -131,7 +158,7 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(samples)
  
         for i in range(len(alpha)):
-            self.assertAlmostEqual(pdf.alpha[i], alpha[i], delta = 1e1)
+            self.assertWithinDelta(pdf.alpha[i], alpha[i], delta = 1e1)
 
             
 if __name__ == '__main__':
