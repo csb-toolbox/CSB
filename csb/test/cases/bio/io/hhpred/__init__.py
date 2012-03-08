@@ -34,7 +34,7 @@ class TestHHProfileParser(test.Case):
         self.pdb = self.config.getTestFile('d1nz0a_.pdb')        
         #self.profile = HHProfileParser(self.hhm, self.pdb).parse()
 
-    def _testParseLogScales(self):
+    def testParseLogScales(self):
         
         hmm = HHProfileParser(self.hhm, self.pdb).parse()
         self.assertEqual(hmm.score_units, ScoreUnits.LogScales) 
@@ -45,10 +45,10 @@ class TestHHProfileParser(test.Case):
         self.assertEqual(hmm.length.matches, 109)
         self.assertEqual(hmm.length.layers, 109) 
                
-        self.assertEqual(hmm.alignment.rows_count, 9)
-        self.assertEqual(hmm.alignment.consensus.sequence, 'eRLkxxxdFxxvxxxgxxxxxxxxxlxxxxxxxxxxRxGxxvsKKvgxAVxRNriKRxlRexxrxxxxxlxxxxdivvixrxxxxxxxxxxxxxxlxxxlxxlxkkixg')        
+        self.assertEqual(hmm.alignment.size, 9)
+        self.assertEqual(hmm.consensus.sequence, 'eRLkxxxdFxxvxxxgxxxxxxxxxlxxxxxxxxxxRxGxxvsKKvgxAVxRNriKRxlRexxrxxxxxlxxxxdivvixrxxxxxxxxxxxxxxlxxxlxxlxkkixg')        
         self.assertEqual(hmm.alignment.rows[1][0].id, 'd1nz0a_')
-        self.assertEqual(hmm.alignment.rows[1][0].sequence, 'ERLRLRRDFLLIFKEGKSLQNEYFVVLFRKNGMDYSRLGIVVKRKFGKATRRNKLKRWVREIFRRNKGVIPKGFDIVVIPRKKLSEEFERVDFWTVREKLLNLLKRIEG')
+        self.assertEqual(hmm.alignment.rows[1].strip().sequence, 'ERLRLRRDFLLIFKEGKSLQNEYFVVLFRKNGMDYSRLGIVVKRKFGKATRRNKLKRWVREIFRRNKGVIPKGFDIVVIPRKKLSEEFERVDFWTVREKLLNLLKRIEG')
                                         
         self.assertEqual(hmm.dssp[1].type, SecStructures.Coil)
         self.assertEqual(hmm.psipred[1].type, SecStructures.Coil)        
@@ -74,7 +74,7 @@ class TestHHProfileParser(test.Case):
         self.assertAlmostEqual(layer.effective_matches, 6.9939, places=3)
         self.assertAlmostEqual(layer.effective_insertions, 0)
         self.assertAlmostEqual(layer.effective_deletions, 0)
-        self.assertEqual(set(layer), set([States.Match]))
+        self.assertEqual(set(layer), set([States.Match, States.Insertion]))
         
         self.assertEqual(layer.residue.type, SequenceAlphabets.Protein.ARG)             
         self.assertEqual(layer.residue.has_structure, True)
