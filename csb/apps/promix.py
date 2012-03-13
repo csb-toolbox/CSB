@@ -8,9 +8,13 @@ files, each superposed on different components.
 import sys
 import numpy
 import csb.apps
+import csb.pyutils
 import csb.bio.structure
 from csb.bio.io.wwpdb import LegacyStructureParser
 from csb.statistics import mixtures
+
+class ExitCodes(csb.apps.ExitCodes):
+    IO_ERROR = 2
 
 def get_ensemble_coords(ensemble, what=['CA']):
     '''
@@ -55,12 +59,14 @@ class AppRunner(csb.apps.AppRunner):
 class ProMixApp(csb.apps.Application):
 
     def main(self):
-        parser = LegacyStructureParser(self.args.infile)
-        models = parser.models()
+        try:
+            parser = LegacyStructureParser(self.args.infile)
+            models = parser.models()
+        except:
+            self.exit('PDB file parsing failed', ExitCodes.IO_ERROR)
 
         if len(models) < 2:
-            raise csb.apps.AppExit('PDB file contains only one model',
-                    csb.apps.ExitCodes.USAGE_ERROR)
+            self.exit('PDB file contains only one model', ExitCodes.USAGE_ERROR)
 
         ensemble = parser.parse_models(models)
         X = get_ensemble_coords(ensemble)
@@ -75,11 +81,11 @@ class ProMixApp(csb.apps.Application):
     def main_segments(self, ensemble, X):
 
         mixture = mixtures.SegmentMixture.from_coords(X, self.args.components)
-        print 'Number of segments: %d' % (mixture.K)
+        self.log('Number of segments: %d' % (mixture.K))
 
         for k,(sigma,w) in enumerate(zip(mixture.sigma, mixture.w)):
             outfile = 'promix_segment_%d.pdb' % (k+1)
-            print '  %d: sigma = %6.3f, w = %.3f, file = %s' % (k+1, sigma, w, outfile)
+            self.log('  %d: sigma = %6.3f, w = %.3f, file = %s' % (k+1, sigma, w, outfile))
 
             for model, R, t in zip(ensemble, mixture.R, mixture.t):
                 if k > 0:
@@ -93,13 +99,13 @@ class ProMixApp(csb.apps.Application):
     def main_conformers(self, ensemble, X):
 
         mixture = mixtures.ConformerMixture.from_coords(X, self.args.components)
-        print 'Number of conformers: %d' % (mixture.K)
+        self.log('Number of conformers: %d' % (mixture.K))
 
         membership = mixture.Z.argmax(1)
 
         for k,(sigma,w) in enumerate(zip(mixture.sigma, mixture.w)):
             outfile = 'promix_conformer_%d.pdb' % (k+1)
-            print '  %d: sigma = %6.3f, w = %.3f, file = %s' % (k+1, sigma, w, outfile)
+            self.log('  %d: sigma = %6.3f, w = %.3f, file = %s' % (k+1, sigma, w, outfile))
 
             ek = csb.bio.structure.Ensemble()
 
