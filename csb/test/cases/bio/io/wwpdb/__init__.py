@@ -149,6 +149,17 @@ class TestLegacyStructureParser(test.Case):
     def testModels(self):
         self.assertEqual(self.parser.models(), list(range(1, 11)))
         
+    def testParseBiomolecule(self):
+
+        pdbfile = self.config.getTestFile('3p1u.pdb')
+        parser = LegacyStructureParser(pdbfile)
+
+        s2 = parser.parse_biomolecule(2)
+
+        self.assertEqual(len(s2.chains), 1)
+        self.assertEqual(s2.first_chain.id, 'A')
+        self.assertRaises(KeyError, parser.parse_biomolecule, 3)
+
         
 @test.unit
 class TestRegularStructureParser(test.Case):

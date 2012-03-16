@@ -310,6 +310,69 @@ class AbstractStructureParser(object):
         
         return ensemble
 
+    def parse_biomolecule(self, number=1, singleletterchains=True):
+        """
+        Parse and return the L{Structure} of the biological unit (quaternary
+        structure) as annotated by the REMARK 350 BIOMOLECULE record.
+
+        @param number: biomolecule number
+        @type number: int
+
+        @param singleletterchains: if True, assign new single-letter chain
+        identifiers. If False, assign multi-letter chain identifiers whith a
+        number appended to the original identifier, like "A1", "A2", ...
+        @type singleletterchains: bool
+
+        @return: structure of biological unit
+        @rtype: L{Structure}
+        """
+        remarks = self._parse_remarks()
+        if 350 not in remarks:
+            raise PDBParseError('There is no REMARK 350')
+
+        current = 1
+        biomt = {current: {}}
+        chains = tuple()
+
+        for line in remarks[350]:
+            if line.startswith('BIOMOLECULE:'):
+                current = int(line[12:])
+                biomt[current] = {}
+            elif line.startswith('APPLY THE FOLLOWING TO CHAINS:'):
+                chains = tuple(chain.strip() for chain in line[30:].split(','))
+            elif line.startswith('                   AND CHAINS:'):
+                chains += tuple(chain.strip() for chain in line[30:].split(','))
+            elif line.startswith('  BIOMT'):
+                row = int(line[7])
+                num = int(line[8:12])
+                vec = line[12:].split()
+                vec = map(float, vec)
+                biomt[current].setdefault(chains, dict()).setdefault(num, []).extend(vec)
+
+        if number not in biomt or len(biomt[number]) == 0:
+            raise KeyError('no BIOMOLECULE number %d' % (number))
+
+        asu = self.parse_structure()
+        structure = csb.bio.structure.Structure('%s_%d' % (asu.accession, number))
+
+        newchainiditer = iter('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
+
+        for chains, matrices in biomt[number].iteritems():
+            for num in matrices:
+                mat = array(matrices[num][0:12]).reshape((3,4))
+                R, t = mat[:3,:3], mat[:3,3]
+
+                for chain in chains:
+                    copy = asu[chain].clone()
+                    copy.apply_transformation(R, t)
+                    if singleletterchains:
+                        copy.id = newchainiditer.next()
+                    else:
+                        copy.id = '%s%d' % (chain, num)
+                    structure.chains.append(copy)
+
+        return structure
+
     @abstractmethod
     def _parse_header(self, model):
         """
@@ -627,6 +690,27 @@ class AbstractStructureParser(object):
                 ss.append(e)
             structure.chains[chain_id].secondary_structure = ss
         
+    def _parse_remarks(self):
+        """
+        Read REMARK lines from PDB file.
+        
+        @return: dictionary with remark numbers as keys, and lists of lines as values.
+        @rtype: dict
+        """
+        self._stream.seek(0)
+        
+        remarks = {}
+        
+        for line in self._stream:
+            if line.startswith('REMARK'):
+                num = int(line[7:10])
+                lstring = line[11:]
+                remarks.setdefault(num, []).append(lstring)
+            elif line.startswith('DBREF') or line.startswith('ATOM'):
+                break        
+        
+        return remarks
+
 
 class RegularStructureParser(AbstractStructureParser):
     """
