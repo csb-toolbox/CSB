@@ -346,7 +346,6 @@ class AbstractStructureParser(object):
             elif line.startswith('                   AND CHAINS:'):
                 chains += tuple(split(line[30:]))
             elif line.startswith('  BIOMT'):
-                row = int(line[7])
                 num = int(line[8:12])
                 vec = line[12:].split()
                 vec = map(float, vec)

@@ -15,7 +15,7 @@ import csb.pyutils
 import csb.math
 import csb.bio.utils
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentTypes
 
@@ -78,7 +78,159 @@ class BrokenSecStructureError(ValueError):
 class UnknownSecStructureError(BrokenSecStructureError):
     pass
 
-class Ensemble(csb.pyutils.AbstractNIContainer):
+class Abstract3DEntity(object):
+    """
+    Base class for all protein structure entities.
+    
+    This class defines uniform interface of all entities (e.g. L{Structure},
+    L{Chain}, L{Residue}) according to the Composite pattern. 
+    """
+    
+    __metaclass__ = ABCMeta
+
+    @abstractproperty
+    def items(self):
+        """
+        Return an iterator over all immediate children of the entity.
+        """
+        pass
+
+    def components(self, leaf=None):
+        """
+        Return an iterator over all descendants of the entity.
+        
+        @param leaf: traverse the hierarchy down to the specified L{Abstract3DEntity}
+                     subclass. If None, traverse down to the lowest level.
+        @param leaf: class
+        """
+        return CompositeEntityIterator.create(self, leaf)
+        
+    def apply_transformation(self, rotation, translation):
+        """
+        Apply in place RotationMatrix and translation Vector to all atoms.
+        
+        @type rotation: numpy array
+        @type translation: numpy array 
+        """
+        for node in self.items:
+            node.apply_transformation(rotation, translation)
+    
+    def list_coordinates(self, what=None, skip=False):
+        """
+        Extract the coordinates of the specified kind(s) of atoms and return 
+        them as a list.
+        
+        @param what: a list of atom kinds, e.g. ['N', 'CA', 'C']
+        @type what: list or None
+        
+        @return: a list of lists, each internal list corresponding to the coordinates 
+                 of a 3D vector
+        @rtype: list
+        
+        @raise Broken3DStructureError: if a specific atom kind cannot be retrieved from a residue
+        """
+        coords = [ ]
+        
+        for entity in self.components(Residue):
+
+            if isinstance(entity, Residue):
+                
+                if not entity.has_structure:
+                    if skip:
+                        continue
+                    raise Missing3DStructureError('Discontinuous structure at residue {0}'.format(entity))
+                try:
+                    for atom_kind in (what or entity.atoms):
+                        coords.append(entity.atoms[atom_kind].vector)                    
+                except csb.pyutils.ItemNotFoundError:
+                    if skip:
+                        continue
+                    raise Broken3DStructureError('Could not retrieve {0} atom from the structure'.format(atom_kind))
+            
+        return numpy.array(coords)
+    
+class CompositeEntityIterator(object):
+    """
+    Iterates over composite L{Abstract3DEntity} hierarchies.
+    
+    @param node: root entity to traverse
+    @type node: L{Abstract3DEntity}
+    """
+    
+    def __init__(self, node):
+            
+        if not isinstance(node, Abstract3DEntity):
+            raise TypeError(node)
+            
+        self._node = node
+        self._stack = csb.pyutils.Stack()
+        
+        self._inspect(node)
+                
+    def __iter__(self):
+        
+        while True:
+            yield self.next()
+        
+    def next(self):
+
+        while True:
+            if self._stack.empty():
+                raise StopIteration()
+            
+            try:
+                current = self._stack.peek()
+                node = current.next()
+                self._inspect(node)
+                return node
+            
+            except StopIteration:
+                self._stack.pop()
+                
+    def _inspect(self, node):
+        """
+        Push C{node}'s children to the stack.
+        """
+        self._stack.push(node.items)
+        
+    @staticmethod
+    def create(node, leaf=None):
+        """
+        Create a new composite iterator.
+        
+        @param leaf: if not None, return a L{ConfinedEntityIterator}
+        @type leaf: class
+        @rtype: L{CompositeEntityIterator} 
+        """
+        if leaf is None:
+            return CompositeEntityIterator(node)
+        else:
+            return ConfinedEntityIterator(node, leaf)
+                
+class ConfinedEntityIterator(CompositeEntityIterator):
+    """
+    Iterates over composite L{Abstract3DEntity} hierarchies, but terminates
+    the traversal of a branch once a specific node type is encountered.
+    
+    @param node: root entity to traverse
+    @type node: L{Abstract3DEntity}
+    @param leaf: traverse the hierarchy down to the specified L{Abstract3DEntity}
+    @type leaf: class
+    """
+    def __init__(self, node, leaf):
+        
+        if not issubclass(leaf, Abstract3DEntity):
+            raise TypeError(leaf)
+        
+        self._leaf = leaf
+        super(ConfinedEntityIterator, self).__init__(node)              
+    
+    def _inspect(self, node):
+        
+        if not isinstance(node, self._leaf):
+            self._stack.push(node.items)
+            
+class Ensemble(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     """
     Represents an ensemble of multiple L{Structure} models.
     Provides a list-like access to these models::
@@ -102,6 +254,10 @@ class Ensemble(csb.pyutils.AbstractNIContainer):
     @property
     def models(self):
         return self._models
+    
+    @property
+    def items(self):
+        return iter(self._models)
         
     @property
     def first_model(self):
@@ -154,7 +310,7 @@ class EnsembleModelsCollection(csb.pyutils.CollectionContainer):
         else:
             return super(EnsembleModelsCollection, self).append(structure)
 
-class Structure(csb.pyutils.AbstractNIContainer):
+class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     """
     Represents a single model of a PDB 3-Dimensional molecular structure.
     Provides access to the L{Chain} objects, contained in the model::
@@ -173,7 +329,7 @@ class Structure(csb.pyutils.AbstractNIContainer):
                         
         self._accession = None
         self._chains = StructureChainsTable(self)
-        self._chainslist = StructureChainsCollection(self)
+        #self._chainslist = StructureChainsCollection(self)
         self.model_id = None
         
         self.accession = accession
@@ -191,12 +347,13 @@ class Structure(csb.pyutils.AbstractNIContainer):
     
     @property
     def items(self):
-        return self._chainslist
-    
+        for chain in self._chains:
+            yield self._chains[chain]
+                
     @property
     def first_chain(self):
         if len(self._chains) > 0:
-            return self._chainslist[0]
+            return self.items.next()
         return None
         
     @property
@@ -229,16 +386,6 @@ class Structure(csb.pyutils.AbstractNIContainer):
             cs.append(self.chains[c])
         for chain in cs:
             chain.molecule_id = molecule_id
-
-    def apply_transformation(self, rotation, translation):
-        """
-        Apply in place RotationMatrix and translation Vector to all atoms in the structure.
-        
-        @type rotation: numpy array
-        @type translation: numpy array 
-        """
-        for chain_id in self.chains:
-            self.chains[chain_id].apply_transformation(rotation, translation)
                     
     def to_fasta(self):
         """
@@ -280,16 +427,7 @@ class Structure(csb.pyutils.AbstractNIContainer):
             return data
         else:
             with csb.io.EntryWriter(output_file, close=False) as out:
-                out.write(data)                
-
-class StructureChainsCollection(csb.pyutils.AbstractContainer):
-    
-    def __init__(self, container):
-        self.__container = container
-        
-    @property
-    def _children(self):
-        return [self.__container[c] for c in self.__container]
+                out.write(data)
 
 class StructureChainsTable(csb.pyutils.DictionaryContainer):
     
@@ -352,7 +490,7 @@ class StructureChainsTable(csb.pyutils.DictionaryContainer):
         
         super(StructureChainsTable, self).append(new_id, chain)
         
-class Chain(csb.pyutils.AbstractNIContainer):
+class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     """
     Represents a polymeric chain. Provides list-like and rank-based access to
     the residues in the chain::
@@ -443,6 +581,10 @@ class Chain(csb.pyutils.AbstractNIContainer):
     @property
     def residues(self):
         return self._residues
+    
+    @property
+    def items(self):
+        return iter(self._residues)
     
     @property
     def torsion(self):
@@ -620,45 +762,6 @@ class Chain(csb.pyutils.AbstractNIContainer):
             residue.torsion = residue.compute_torsion(prev_residue, next_residue, strict=False)
             
         self._torsion_computed = True
-            
-    def apply_transformation(self, rotation, translation):
-        """
-        Apply in place RotationMatrix and translation Vector to all atoms in the chain.
-        
-        @type rotation: numpy array
-        @type translation: numpy array         
-        """
-        for residue in self.residues:
-            for atom_name in residue.atoms:
-                atom = residue.atoms[atom_name]
-                atom._transform(rotation, translation)
-                
-    def list_coordinates(self, what):
-        """
-        Extract the coordinates of the specified kind(s) of atoms and return 
-        them as a list.
-        
-        @param what: a list of atom kinds, e.g. ['N', 'CA', 'C']
-        @type what: list
-        
-        @return: a list of lists, each internal list corresponding to the coordinates 
-                 of a 3D vector
-        @rtype: list
-        
-        @raise Broken3DStructureError: if a specific atom kind cannot be retrieved from a residue
-        """
-        coords = [ ]
-        
-        for residue in self.residues:
-            if not residue.has_structure:
-                raise Missing3DStructureError('Discontinuous structure at residue {0}'.format(residue))
-            try:
-                for atom_kind in what:
-                    coords.append(residue.atoms[atom_kind].vector)
-            except csb.pyutils.ItemNotFoundError:
-                raise Broken3DStructureError('Could not retrieve {0} atom from the structure'.format(atom_kind))
-            
-        return numpy.array(coords)
     
     def superimpose(self, other, what=['CA'], how=AlignmentTypes.Global):                       
         """
@@ -859,7 +962,7 @@ class ChainResiduesCollection(csb.pyutils.CollectionContainer):
         except KeyError:
             raise csb.pyutils.ItemNotFoundError(id)
         
-class Residue(csb.pyutils.AbstractNIContainer):
+class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     """
     Base class representing a single residue. Provides a dictionary-like
     access to the atoms contained in the residue::
@@ -886,7 +989,7 @@ class Residue(csb.pyutils.AbstractNIContainer):
         self._pdb_name = None
         self._rank = int(rank)
         self._atoms = ResidueAtomsTable(self)   
-        self._atomslist = ResidueAtomsCollection(self) 
+        #self._atomslist = ResidueAtomsCollection(self) 
         self._secondary_structure = None
         self._torsion = None
         self._sequence_number = None
@@ -941,7 +1044,8 @@ class Residue(csb.pyutils.AbstractNIContainer):
     
     @property
     def items(self):
-        return self._atomslist    
+        for atom in self._atoms:
+            yield self._atoms[atom]        
 
     @property
     def sequence_number(self):
@@ -987,6 +1091,9 @@ class Residue(csb.pyutils.AbstractNIContainer):
             return len(self.atoms) > 0
         else:
             return False
+        
+    def list_coordinates(self, what=None, skip=False):
+        raise NotImplementedError()
         
     def clone(self):
         
@@ -1145,16 +1252,7 @@ class NucleicResidue(Residue):
 class UnknownResidue(Residue):
     
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
-        super(UnknownResidue, self).__init__(rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)          
-
-class ResidueAtomsCollection(csb.pyutils.AbstractContainer):
-    
-    def __init__(self, container):
-        self.__container = container
-        
-    @property
-    def _children(self):
-        return [self.__container[an] for an in self.__container]
+        super(UnknownResidue, self).__init__(rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)
             
 class ResidueAtomsTable(csb.pyutils.DictionaryContainer):
     """ 
@@ -1233,7 +1331,7 @@ class ResidueAtomsTable(csb.pyutils.DictionaryContainer):
         
         super(ResidueAtomsTable, self)._update({atom_name: atom})  
     
-class Atom(object):
+class Atom(Abstract3DEntity):
     """
     Represents a single atom in space.
     
@@ -1288,15 +1386,14 @@ class Atom(object):
     def __cmp__(self, other):
         return cmp(self.serial_number, other.serial_number)
     
-    def _transform(self, rotation, translation):
-        """
-        Apply in place rotation matrix and translation vector.
+    def apply_transformation(self, rotation, translation):
         
-        @type rotation: numpy array
-        @type translation: numpy array         
-        """        
-        self.vector = numpy.dot(self.vector, numpy.transpose(rotation)) + translation
-        
+        vector = numpy.dot(self.vector, numpy.transpose(rotation)) + translation
+        self.vector = vector
+    
+    def list_coordinates(self, what=None, skip=False):
+        raise NotImplementedError()
+
     @property
     def serial_number(self):
         return self._serial_number
@@ -1331,8 +1428,12 @@ class Atom(object):
     @vector.setter
     def vector(self, vector):
         if numpy.shape(vector) <> (3,):
-            raise ValueError("Please use three dimensional vectors")
+            raise ValueError("Three dimensional vector expected")
         self._vector = numpy.array(vector)
+    
+    @property
+    def items(self):
+        return iter([])
         
 class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
     """
@@ -1361,11 +1462,11 @@ class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
         """
         self.__update_rep(atom)
         super(DisorderedAtom, self).append(atom)
-        atom._proxy = self
     
-    def _transform(self, rotation, translation):
+    def apply_transformation(self, rotation, translation):
+        
         for atom in self:
-            atom._transform(rotation, translation)
+            atom.apply_transformation(rotation, translation)
         self._vector = self._rep._vector
         
     def __update_rep(self, atom):

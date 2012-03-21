@@ -75,6 +75,97 @@ class ChainRegressions(test.Case):
         for altatom in disatom:
             self.assertEqual(altatom.vector.tolist(), [3, 3, 3])
 
+
+@test.unit
+class TestAbstract3DEntity(test.Case): 
+    
+    def setUp(self):
+        
+        super(TestAbstract3DEntity, self).setUp()
+        
+        self.e = self.config.getPickle('1nz9.full.pickle')
+        self.s = self.e.models[1]
+        self.c = self.s.chains['A']
+        self.r = self.c.residues[1]
+        self.a = self.r.atoms['CA']
+        
+    def testItems(self):
+        
+        self.assertEqual(list(self.e.items), list(self.e.models))
+        self.assertEqual(list(self.s.items), list(self.s.chains[c] for c in self.s.chains))
+        self.assertEqual(list(self.c.items), list(self.c.residues))
+        self.assertEqual(list(self.r.items), list(self.r.atoms[a] for a in self.r.atoms))
+        self.assertEqual(list(self.a.items), list([]))    
+
+    def testComponents(self):
+        
+        # also covers the composite iterators
+        
+        self.assertEqual(list(self.e.components(structure.Structure)), list(self.e.models))
+        self.assertEqual(list(self.e.components(structure.Chain)), [self.e[0], self.e[0]['A'], self.e[1], self.e[1]['A']])
+
+        self.assertEqual(list(self.r.components()), [self.r[a] for a in self.r.atoms])   # CompositeEntityIterator
+        self.assertEqual(list(self.r.components(structure.Atom)), [self.r[a] for a in self.r.atoms])        
+        self.assertEqual(list(self.r.components(structure.Residue)), [])                
+
+        self.assertEqual(list(self.a.components()), [])
+        self.assertEqual(list(self.a.components(structure.Atom)), [])
+      
+    def testApplyTransformation(self):
+        
+        R = numpy.eye(3)
+        t = numpy.array([1, 2, 3])
+        
+        original = self.s['A'].list_coordinates(('CA',))
+        assert len(original) > 0
+
+        self.e.apply_transformation(R, t)
+        translated = self.s['A'].list_coordinates(('CA',))
+        
+        self.e.apply_transformation(R, -t)
+        restored = self.s['A'].list_coordinates(('CA',))                
+        
+        self.assertTrue(len(original) == len(translated) == len(restored))
+        
+        for i in range(len(original)):
+            for j in range(3):
+                self.assertEqual((original[i] + t)[j], translated[i][j])                
+                self.assertAlmostEqual(original[i][j], restored[i][j], places=13)  
+                
+    def testListCoordinates(self):
+        
+        # all atoms
+        original, listed = [], []
+        
+        for s in self.e.items:
+            for c in s.items:
+                for r in c.items:
+                    for a in r.items:
+                        original.append(list(a.vector))
+        
+        for i in self.e.list_coordinates(what=None):
+            listed.append(list(i))
+            
+        self.assertEqual(original, listed)
+        
+        # specific atoms
+        original, listed = [], []
+        
+        for s in self.e.items:
+            for c in s.items:
+                for r in c.items:
+                    original.append(list(r.atoms['CA'].vector))
+        
+        for i in self.e.list_coordinates(what=['CA']):
+            listed.append(list(i))
+            
+        self.assertEqual(original, listed)
+                
+        # other stuff
+        self.assertRaises(structure.Broken3DStructureError, lambda: self.c.list_coordinates(what=['BUG']))
+        self.assertRaises(NotImplementedError, lambda: self.r.list_coordinates())        
+        self.assertRaises(NotImplementedError, lambda: self.a.list_coordinates())
+                    
 @test.unit
 class TestEnsemble(test.Case):
     
@@ -82,7 +173,20 @@ class TestEnsemble(test.Case):
         
         super(TestEnsemble, self).setUp()
         self.ensemble = self.config.getPickle('1nz9.full.pickle')
-    
+
+    def testItems(self):
+        
+        models = list(self.ensemble.items)
+        self.assertEqual(len(models), self.ensemble.models.length)
+        
+    def testComponents(self):
+        
+        models = list(self.ensemble.components(leaf=structure.Structure))
+        self.assertEqual(len(models), self.ensemble.models.length)
+        
+        #residues = list(self.ensemble.components(leaf=structure.Residue))        
+        #self.assertEqual(len(residues), models[0].chains['A'].length * self.ensemble.models.length)
+                    
     def testGetitem(self):
         
         self.assertEqual(self.ensemble.models.length, 2)
@@ -153,7 +257,7 @@ class TestStructure(test.Case):
         
     def testItems(self):
         
-        self.assertEqual(self.structure['A'], self.structure.items[0])          
+        self.assertEqual(self.structure['A'], tuple(self.structure.items)[0])          
         
     def testAppend(self):
         
@@ -193,27 +297,7 @@ class TestStructure(test.Case):
         mol_id = self.structure['A'].molecule_id
         self.structure.define_molecule(999, ['A'])
         self.assertEqual(self.structure['A'].molecule_id, 999)
-        self.structure.define_molecule(mol_id, ['A'])
-        
-    def testApplyTransformation(self):
-        
-        R = numpy.eye(3)
-        t = numpy.array([1, 2, 3])
-        
-        original = self.structure['A'].list_coordinates(('CA',))
-
-        self.structure.apply_transformation(R, t)
-        translated = self.structure['A'].list_coordinates(('CA',))
-        
-        self.structure.apply_transformation(R, -t)
-        restored = self.structure['A'].list_coordinates(('CA',))                
-        
-        self.assertTrue(len(original) == len(translated) == len(restored))
-        
-        for i in range(len(original)):
-            for j in range(3):
-                self.assertEqual((original[i] + t)[j], translated[i][j])                
-                self.assertAlmostEqual(original[i][j], restored[i][j], places=13)    
+        self.structure.define_molecule(mol_id, ['A'])   
                 
     def testToFASTA(self):
         
@@ -288,7 +372,7 @@ class TestChain(test.Case):
         self.assertEqual(self.chain.id, 'A')
         self.chain.id = '$'
         self.assertEqual(self.chain.id, '$')    
-        self.assertEqual(self.structure.items[0].id, '$')
+        self.assertEqual(tuple(self.structure.items)[0].id, '$')
         self.assertTrue('$' in self.structure)        
         self.chain.id = 'A'    
     
@@ -392,11 +476,6 @@ class TestChain(test.Case):
         self.assertAlmostEqual(self.chain.residues[2].torsion.phi, -134.597, places=3)      
         self.assertAlmostEqual(self.chain.residues[2].torsion.psi, 155.738, places=3)        
         self.assertAlmostEqual(self.chain.residues[2].torsion.omega, 179.916, places=3)        
-        
-        
-    def testApplyTransformation(self):
-        # @note: already tested in TestStructure
-        pass
     
     def testListCoordinates(self):
         
@@ -560,14 +639,14 @@ class TestResidue(test.Case):
         self.assertEqual(set(self.residue), set(['C', 'H2', 'CB', 'CA', 'H1', 'O', 'N', 'H3', 'HA', 'HB1', 'HB3', 'HB2']))
         
         self.assertEqual(self.residue['CA'], self.residue.atoms['CA'])
-        self.assertEqual(self.residue['CA'], self.residue.items[1])        
+        self.assertEqual(self.residue['CA'], tuple(self.residue.items)[1])        
         
         self.assertEqual(self.residue['CA'].element, structure.ChemElements.C)              
         self.assertEqual(self.residue['CA'].serial_number, 2)    
         
     def testItems(self):
-        self.assertEqual(self.residue.items[0], self.residue['N'])
-        self.assertEqual(cmp(self.residue.items[0], self.residue.items[1]), -1)   
+        self.assertEqual(tuple(self.residue.items)[0], self.residue['N'])
+        self.assertEqual(cmp(tuple(self.residue.items)[0], tuple(self.residue.items)[1]), -1)   
     
     def testHasStructure(self):
         

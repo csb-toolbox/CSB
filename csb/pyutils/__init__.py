@@ -145,11 +145,11 @@ class ShellInfo(object):
         self.stderr = stderr or ''
         self.cmd = ' '.join(cmd)
 
-class InterruptableThread(threading.Thread):
+class InterruptibleThread(threading.Thread):
     
     def __init__(self, target, name=None, args=[], kwargs={}):
         
-        super(InterruptableThread, self).__init__(target=target, name=name, args=args, kwargs=kwargs)
+        super(InterruptibleThread, self).__init__(target=target, name=name, args=args, kwargs=kwargs)
         self.setDaemon(True)
         self.__result = None
         self.__target = target
@@ -230,7 +230,29 @@ class REMatchProxy(object):
     
     def groups(self):
         return self._groups
+
+class Stack(list):
     
+    def push(self, item):
+        """
+        Push an item onto the top of the stack
+        """
+        self.append(item)
+        
+    def peek(self):
+        """
+        Return the object at the top of the stack without removing it
+        """
+        if self.empty():
+            raise IndexError('peek in empty list')
+        return self[-1]
+    
+    def empty(self):
+        """
+        Return True if the stack is empty
+        """
+        return len(self) == 0
+        
 class EnumValueError(ValueError):
     pass
 
