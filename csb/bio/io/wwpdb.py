@@ -310,7 +310,7 @@ class AbstractStructureParser(object):
         
         return ensemble
 
-    def parse_biomolecule(self, number=1, singleletterchains=True):
+    def parse_biomolecule(self, number=1, single=False):
         """
         Parse and return the L{Structure} of the biological unit (quaternary
         structure) as annotated by the REMARK 350 BIOMOLECULE record.
@@ -318,10 +318,10 @@ class AbstractStructureParser(object):
         @param number: biomolecule number
         @type number: int
 
-        @param singleletterchains: if True, assign new single-letter chain
+        @param single: if True, assign new single-letter chain
         identifiers. If False, assign multi-letter chain identifiers whith a
         number appended to the original identifier, like "A1", "A2", ...
-        @type singleletterchains: bool
+        @type single: bool
 
         @return: structure of biological unit
         @rtype: L{Structure}
@@ -334,14 +334,17 @@ class AbstractStructureParser(object):
         biomt = {current: {}}
         chains = tuple()
 
+        def split(line):
+            return [c.strip() for c in line.split(',') if c.strip() != '']
+
         for line in remarks[350]:
             if line.startswith('BIOMOLECULE:'):
                 current = int(line[12:])
                 biomt[current] = {}
             elif line.startswith('APPLY THE FOLLOWING TO CHAINS:'):
-                chains = tuple(chain.strip() for chain in line[30:].split(','))
+                chains = tuple(split(line[30:]))
             elif line.startswith('                   AND CHAINS:'):
-                chains += tuple(chain.strip() for chain in line[30:].split(','))
+                chains += tuple(split(line[30:]))
             elif line.startswith('  BIOMT'):
                 row = int(line[7])
                 num = int(line[8:12])
@@ -363,9 +366,13 @@ class AbstractStructureParser(object):
                 R, t = mat[:3,:3], mat[:3,3]
 
                 for chain in chains:
+                    if chain not in asu:
+                        raise PDBParseError('chain {0} missing'.format(chain))
                     copy = asu[chain].clone()
                     copy.apply_transformation(R, t)
-                    if singleletterchains:
+                    if single:
+                        if len(structure.chains) == 62:
+                            raise ValueError('too many chains for single=True')
                         copy.id = newchainiditer.next()
                     else:
                         copy.id = '%s%d' % (chain, num)

@@ -6,6 +6,20 @@ from csb.bio.io.wwpdb import StructureParser, RegularStructureParser,\
 from csb.bio.sequence import SequenceAlphabets, SequenceTypes
 from csb.bio.structure import ChemElements, SecStructures
 
+@test.regression
+class TestBiomoleculeRegressions(test.Case):
+
+    def testCommaSplitting(self):
+        """
+        @see [CSB 0000067]
+        """
+        pdbfile = self.config.getTestFile('3shm_ca.pdb')
+        parser = LegacyStructureParser(pdbfile)
+
+        s1 = parser.parse_biomolecule(1, True)
+
+        self.assertEqual(len(s1.chains), 60)
+        self.assertEqual(s1.first_chain.id, 'A')
 
 @test.regression
 class TestSecStructureRegressions(test.Case):
@@ -157,7 +171,7 @@ class TestLegacyStructureParser(test.Case):
         s2 = parser.parse_biomolecule(2)
 
         self.assertEqual(len(s2.chains), 1)
-        self.assertEqual(s2.first_chain.id, 'A')
+        self.assertEqual(s2.first_chain.id, 'B1')
         self.assertRaises(KeyError, parser.parse_biomolecule, 3)
 
         
