@@ -11,7 +11,7 @@ class TestBiomoleculeRegressions(test.Case):
 
     def testCommaSplitting(self):
         """
-        @see [CSB 0000067]
+        @see: [CSB 0000067]
         """
         pdbfile = self.config.getTestFile('3shm_ca.pdb')
         parser = LegacyStructureParser(pdbfile)
