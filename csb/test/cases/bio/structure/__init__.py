@@ -100,11 +100,15 @@ class TestAbstract3DEntity(test.Case):
     def testComponents(self):
         
         # also covers the composite iterators
-        
-        self.assertEqual(list(self.e.components(structure.Structure)), list(self.e.models))
-        self.assertEqual(list(self.e.components(structure.Chain)), [self.e[0], self.e[0]['A'], self.e[1], self.e[1]['A']])
 
-        self.assertEqual(list(self.r.components()), [self.r[a] for a in self.r.atoms])   # CompositeEntityIterator
+        items = list(structure.CompositeEntityIterator.create(self.e, leaf=structure.Chain))
+        self.assertEqual(items, [self.e[0], self.e[0]['A'], self.e[1], self.e[1]['A']])
+        
+        self.assertEqual(list(self.e.components())[:4], [self.s, self.c, self.r, list(self.r.items)[0]])        
+        self.assertEqual(list(self.e.components(structure.Structure)), list(self.e.models))
+        self.assertEqual(list(self.e.components(structure.Chain)), [self.e[0]['A'], self.e[1]['A']])
+
+        self.assertEqual(list(self.r.components()), [self.r[a] for a in self.r.atoms])
         self.assertEqual(list(self.r.components(structure.Atom)), [self.r[a] for a in self.r.atoms])        
         self.assertEqual(list(self.r.components(structure.Residue)), [])                
 
@@ -147,6 +151,8 @@ class TestAbstract3DEntity(test.Case):
             listed.append(list(i))
             
         self.assertEqual(original, listed)
+        self.assertEqual([list(i) for i in self.r.list_coordinates()], [list(a.vector) for a in self.r.items])
+        self.assertEqual(list(self.a.list_coordinates()[0]), list(self.a.vector))
         
         # specific atoms
         original, listed = [], []
@@ -160,11 +166,13 @@ class TestAbstract3DEntity(test.Case):
             listed.append(list(i))
             
         self.assertEqual(original, listed)
-                
+        self.assertEqual([list(i) for i in self.r.list_coordinates(['CA'])], [list(self.r.atoms['CA'].vector)])
+        self.assertEqual(list(self.a.list_coordinates(['CA'])[0]), list(self.a.vector))
+                        
         # other stuff
         self.assertRaises(structure.Broken3DStructureError, lambda: self.c.list_coordinates(what=['BUG']))
-        self.assertRaises(NotImplementedError, lambda: self.r.list_coordinates())        
-        self.assertRaises(NotImplementedError, lambda: self.a.list_coordinates())
+        self.assertRaises(structure.Broken3DStructureError, lambda: self.r.list_coordinates(what=['BUG']))        
+        self.assertRaises(structure.Broken3DStructureError, lambda: self.a.list_coordinates(what=['BUG']))
                     
 @test.unit
 class TestEnsemble(test.Case):
@@ -181,11 +189,8 @@ class TestEnsemble(test.Case):
         
     def testComponents(self):
         
-        models = list(self.ensemble.components(leaf=structure.Structure))
+        models = list(self.ensemble.components(klass=structure.Structure))
         self.assertEqual(len(models), self.ensemble.models.length)
-        
-        #residues = list(self.ensemble.components(leaf=structure.Residue))        
-        #self.assertEqual(len(residues), models[0].chains['A'].length * self.ensemble.models.length)
                     
     def testGetitem(self):
         
