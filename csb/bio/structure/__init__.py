@@ -95,15 +95,17 @@ class Abstract3DEntity(object):
         """
         pass
 
-    def components(self, leaf=None):
+    def components(self, klass=None):
         """
         Return an iterator over all descendants of the entity.
         
-        @param leaf: traverse the hierarchy down to the specified L{Abstract3DEntity}
-                     subclass. If None, traverse down to the lowest level.
-        @param leaf: class
+        @param klass: return entities the specified L{Abstract3DEntity} subclass
+                      only. If None, traverse the hierarchy down to the lowest level.
+        @param klass: class
         """
-        return CompositeEntityIterator.create(self, leaf)
+        for entity in CompositeEntityIterator.create(self, klass):
+            if klass is None or isinstance(entity, klass):
+                yield entity
         
     def apply_transformation(self, rotation, translation):
         """
@@ -131,18 +133,17 @@ class Abstract3DEntity(object):
         """
         coords = [ ]
         
-        for entity in self.components(Residue):
+        for residue in self.components(klass=Residue):
 
-            if isinstance(entity, Residue):
-                
-                if not entity.has_structure:
-                    if skip:
-                        continue
-                    raise Missing3DStructureError('Discontinuous structure at residue {0}'.format(entity))
-                try:
-                    for atom_kind in (what or entity.atoms):
-                        coords.append(entity.atoms[atom_kind].vector)                    
-                except csb.pyutils.ItemNotFoundError:
+            if not residue.has_structure:
+                if skip:
+                    continue
+                raise Missing3DStructureError('Discontinuous structure at residue {0}'.format(residue))
+            
+            for atom_kind in (what or residue.atoms):
+                if atom_kind in residue.atoms:
+                    coords.append(residue.atoms[atom_kind].vector.copy())
+                else:
                     if skip:
                         continue
                     raise Broken3DStructureError('Could not retrieve {0} atom from the structure'.format(atom_kind))
@@ -1093,8 +1094,24 @@ class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
             return False
         
     def list_coordinates(self, what=None, skip=False):
-        raise NotImplementedError()
         
+        coords = []
+        
+        if not self.has_structure:
+            if skip:
+                return numpy.array([])
+            raise Missing3DStructureError(self)
+        
+        for atom_kind in (what or self.atoms):
+            if atom_kind in self.atoms:
+                coords.append(self.atoms[atom_kind].vector.copy())                 
+            else:
+                if skip:
+                    continue
+                raise Broken3DStructureError('Could not retrieve {0} atom'.format(atom_kind))
+
+        return numpy.array(coords)
+                    
     def clone(self):
         
         container = self._container
@@ -1392,7 +1409,16 @@ class Atom(Abstract3DEntity):
         self.vector = vector
     
     def list_coordinates(self, what=None, skip=False):
-        raise NotImplementedError()
+        
+        if what is None:
+            what = [self.name]
+            
+        if self.name in what:
+            return numpy.array([self.vector.copy()])
+        elif skip:
+            return numpy.array([])
+        else:
+            raise Missing3DStructureError()        
 
     @property
     def serial_number(self):
