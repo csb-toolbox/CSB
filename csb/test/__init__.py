@@ -615,6 +615,23 @@ def custom(function):
     setattr(function, Attributes.CUSTOM, True)
     return function
 
+def skip(reason, condition=None):
+    """
+    Mark a test case or method for skipping.
+    
+    @param reason: message
+    @type reason: str
+    @param condition: skip only if the specified condition is True
+    @type condition: bool/expression
+    """
+    if isinstance(reason, types.FunctionType):
+        raise TypeError('skip: no reason specified')
+        
+    if condition is None:
+        return unittest.skip(reason)
+    else:
+        return unittest.skipIf(condition, reason)
+
 class Console(object):
     """
     Build and run all tests of the specified namespace and kind.

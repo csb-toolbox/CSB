@@ -208,19 +208,27 @@ class SequenceAlignmentReader(object):
     
     @param product_type: default L{SequenceTypes} member for the sequence products
     @type product_type: L{EnumItem}
+    @param strict: if True, raise exception on duplicate sequence identifiers.
+                   See L{csb.bio.sequence.AbstractAlignment} for details
+    @type strict: bool    
     """
     
-    def __init__(self, product_type=SequenceTypes.Protein):
+    def __init__(self, product_type=SequenceTypes.Protein, strict=True):
         
         if not product_type.enum is SequenceTypes:
             raise TypeError(product_type)
         
         self._type = product_type
+        self._strict = bool(strict)
 
     @property
     def product_type(self):
         return self._type
-        
+
+    @property
+    def strict(self):
+        return self._strict
+            
     def read_fasta(self, string):
         """
         Parse an alignment in multi-FASTA format.
@@ -234,7 +242,7 @@ class SequenceAlignmentReader(object):
         parser = SequenceParser(RichSequence, self.product_type)
         sequences = parser.parse_string(string)
         
-        return SequenceAlignment(sequences) 
+        return SequenceAlignment(sequences, strict=self.strict) 
     
     def read_a3m(self, string):
         """
@@ -270,7 +278,7 @@ class SequenceAlignmentReader(object):
             sequence = RichSequence(seq.id, seq.header, s[sn], self.product_type)
             aligned_seqs.append(sequence)
             
-        return A3MAlignment(aligned_seqs)
+        return A3MAlignment(aligned_seqs, strict=self.strict)
     
 
 class OutputBuilder(object):

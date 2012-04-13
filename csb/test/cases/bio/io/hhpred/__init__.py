@@ -17,12 +17,39 @@ class TestHHOutputRegressions(test.Case):
         self.hitlist = HHOutputParser().parse_file(filename)
         
     def testLargeHitlist(self):
-        
+        """
+        @see: [CSB 0000056]
+        """
         hit = self.hitlist[-1]
         
         self.assertEqual(hit.rank, 10000)
         self.assertEqual(hit.id, 'd1v8qa_')
 
+@test.regression
+class TestHHProfileRegressions(test.Case):
+        
+    def testParseRedundantA3M(self):
+        """
+        @see: [CSB 0000068]
+        """
+        
+        def strip(s):
+            return s.replace('\t', '').replace(' ', '')
+        
+        filename = self.config.getTestFile('d1b24a2.hhm')
+        content = self.config.getContent('d1b24a2.hhm')
+        
+        hmm = HHProfileParser(filename).parse()
+        
+        with self.config.getTempStream() as tmp:
+            
+            hmm.to_hmm(tmp.name)
+            tmp.flush()
+            generated = open(tmp.name).read()
+
+            self.assertEqual(strip(content), strip(generated))
+
+        
 @test.unit
 class TestHHProfileParser(test.Case):
     

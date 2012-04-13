@@ -282,7 +282,7 @@ class HHProfileParser(object):
 
         if msa_entries:
             msa = '\n'.join(msa_entries)
-            hmm.alignment = A3MAlignment.parse(msa)
+            hmm.alignment = A3MAlignment.parse(msa, strict=False)
 
         return hmm
 
