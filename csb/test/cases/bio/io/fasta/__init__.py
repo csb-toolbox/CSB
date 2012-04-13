@@ -2,7 +2,7 @@ import csb.test as test
 import csb.pyutils
 
 from csb.bio.io.fasta import SequenceParser, PDBSequenceParser, SequenceAlignmentReader, OutputBuilder
-from csb.bio.sequence import AbstractSequence, Sequence, SequenceTypes, AlignmentFormats, SequenceAlignment, A3MAlignment
+from csb.bio.sequence import AbstractSequence, Sequence, SequenceTypes, AlignmentFormats, SequenceAlignment, A3MAlignment, DuplicateSequenceError
          
         
 @test.unit
@@ -97,12 +97,16 @@ class TestSequenceAlignmentReader(test.Case):
         self.reader = SequenceAlignmentReader()
         self.a3m = self.config.getContent('d1nz0a_.a3m')
         self.fasta = self.config.getContent('d1nz0a_.mfasta')
+        
+    @property
+    def size(self):
+        return 9
     
     def testReadFASTA(self):
         
         ali = self.reader.read_fasta(self.fasta)
         
-        self.assertEqual(ali.size, 9)
+        self.assertEqual(ali.size, self.size)
         self.assertEqual(ali.length, 135)
         self.assertEqual(ali.rows[5].id, 'gi|139352214|gb|ECE59672.1|(37-150:150)')
         self.assertEqual(ali.rows[1].sequence, 'ERLRLRRDFLLIFKEG-KSLQNEYF-V---VLFRK--N------GMD---YSRLGIVV-KRK-FGKATRRNKLKRWVR---EIFRRNKGVI---PKGFDIVVIPRK--KLSEEFERVDFWTVREKLLNLLKRIEG')
@@ -114,7 +118,7 @@ class TestSequenceAlignmentReader(test.Case):
         
         ali = self.reader.read_a3m(self.a3m)
         
-        self.assertEqual(ali.size, 9)
+        self.assertEqual(ali.size, self.size)
         self.assertEqual(ali.length, 135)
         self.assertEqual(ali.rows[5].id, 'gi|139352214|gb|ECE59672.1|(37-150:150)')
         self.assertEqual(ali.rows[3].sequence, '-RLTSSKDWKEVRTRG.RCSRSSFA.T...ICVLF..E......GES...E-KFGFAA.AKS.IGSVAKRNRAKRRLR...EAFRQTYKFG...SKPCLVIAIA--..--GPECLTMDFQELKSKL---------')
@@ -126,6 +130,27 @@ class TestSequenceAlignmentReader(test.Case):
         self.assertEqual(string, self.fasta.strip())
 
 
+@test.unit
+class TestNonStrictAlignmentReader(TestSequenceAlignmentReader):
+
+    def setUp(self):
+        
+        super(TestSequenceAlignmentReader, self).setUp()
+        
+        self.reader = SequenceAlignmentReader(strict=False)
+        self.strict = SequenceAlignmentReader(strict=True)
+        
+        self.a3m = '{0}\n{0}'.format(self.config.getContent('d1nz0a_.a3m'))
+        self.fasta = '{0}\n{0}'.format(self.config.getContent('d1nz0a_.mfasta'))
+
+    @property
+    def size(self):
+        return super(TestNonStrictAlignmentReader, self).size * 2
+    
+    def testStrict(self):
+        
+        self.assertRaises(DuplicateSequenceError, self.strict.read_fasta, self.fasta)
+        self.assertRaises(DuplicateSequenceError, self.strict.read_a3m, self.a3m) 
 
 @test.unit
 class TestOutputBuilder(test.Case):

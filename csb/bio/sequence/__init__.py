@@ -91,6 +91,9 @@ class PositionError(IndexError):
     
     def __init__(self, index=None, start=1, end=None):
         
+        if end == 0:
+            start = 0
+            
         self.index = index
         self.start = start
         self.end = end
@@ -350,6 +353,18 @@ class AbstractSequence(object):
             
         return self._factory(self.id, self.header, residues, self.type)
     
+    def dump(self, output_file):
+        """
+        Dump the sequence in FASTA format.
+        
+        @param output_file: write the output to this file or stream
+        @type output_file: str or stream
+        """
+        from csb.bio.io.fasta import FASTAOutputBuilder
+            
+        with csb.io.EntryWriter(output_file, close=False) as out:
+            FASTAOutputBuilder(out.stream, headers=True).add_sequence(self)
+        
     @property
     def length(self):
         return len(self._residues)
@@ -742,8 +757,15 @@ class AlignmentRowsTable(csb.pyutils.BaseDictionaryContainer):
 
     def _append(self, sequence):
 
-        super(AlignmentRowsTable, self)._append_item(sequence.id, sequence)
-        self._map[self.length] = sequence.id
+        n = 0
+        sequence_id = sequence.id
+        
+        while sequence_id in self:
+            n += 1
+            sequence_id = '{0}:A{1}'.format(sequence.id, n)
+
+        super(AlignmentRowsTable, self)._append_item(sequence_id, sequence)
+        self._map[self.length] = sequence_id
     
     def __iter__(self):
         for id in super(AlignmentRowsTable, self).__iter__():
@@ -774,16 +796,27 @@ class AbstractAlignment(object):
         
     @param sequences: alignment entries (must have equal length)
     @type sequences: list of L{AbstractSequence}s
+    @param strict: if True, raise {DuplicateSequenceError} when a duplicate ID
+                   is found (default=True)
+    @type strict: bool
+    
+    @note: if C{strict} is False and there are C{sequences} with redundant identifiers,
+           those sequences will be added to the C{rows} collection with :An suffix,
+           where n is a serial number. Therefore, rows['ID'] will return only one sequence,
+           the first sequence with id=ID. All remaining sequences can be retrieved
+           with C{rows['ID:A1']}, {rows['ID:A2']}, etc. However, the sequence objects will
+           remain intact, e.g. {rows['ID:A1'].id} still returns 'ID' and not 'ID:A1'. 
     """
     
     __metaclass__ = ABCMeta
     
-    def __init__(self, sequences):
+    def __init__(self, sequences, strict=True):
         
         self._length = None
         self._msa = AlignmentRowsTable(self)
         self._colview = ColumnIndexer(self)
         self._map = {}
+        self._strict = bool(strict)
         
         self._construct(sequences)
             
@@ -879,6 +912,9 @@ class AbstractAlignment(object):
         Hook method, which is used to initialize various alignment properties
         (such as length) from the first alignned sequence.
         """
+        if rep_sequence.length == 0:
+            raise SequenceError("Sequence '{0}' is empty".format(rep_sequence.id))
+                
         assert self._length is None
         self._length = rep_sequence.length 
       
@@ -895,9 +931,9 @@ class AbstractAlignment(object):
             self._initialize(sequence)
 
         if sequence.length != self._length:
-            raise SequenceError('Aligned sequence '
-                    '{0.id} is not {1} residues long'.format(sequence, self._length))
-        elif sequence.id in self._msa:
+            raise SequenceError('{0!r} is not of the expected length'.format(sequence))
+        
+        if self._strict and sequence.id in self._msa:
             raise DuplicateSequenceError(sequence.id)
         
         self._msa._append(AlignedSequenceAdapter(sequence))
@@ -1020,17 +1056,19 @@ class SequenceAlignment(AbstractAlignment):
             self.add(sequence)
             
     @staticmethod
-    def parse(string):
+    def parse(string, strict=True):
         """
         Create a new L{SequenceAlignment} from an mFASTA string.
         
         @param string: MSA-formatted string
         @type string: str
+        @param strict: see L{AbstractAlignment}
+        @type strict: bool        
         
         @rtype: L{SequenceAlignment}
         """
         from csb.bio.io.fasta import SequenceAlignmentReader
-        return SequenceAlignmentReader().read_fasta(string)
+        return SequenceAlignmentReader(strict=strict).read_fasta(string)
         
 class ChainAlignment(SequenceAlignment):
     pass
@@ -1041,18 +1079,18 @@ class A3MAlignment(AbstractAlignment):
     relative to a master sequence (the first entry in the alignment). 
     """
     
-    def __init__(self, sequences):
+    def __init__(self, sequences, strict=True):
 
         self._master = None
         self._matches = 0
         self._insertions = set()
                 
-        super(A3MAlignment, self).__init__(sequences)
+        super(A3MAlignment, self).__init__(sequences, strict=strict)
 
     def _initialize(self, rep_sequence):
         
-        self._alphabet = rep_sequence.alphabet
         super(A3MAlignment, self)._initialize(rep_sequence)
+        self._alphabet = rep_sequence.alphabet        
             
     def _construct(self, sequences):
         
@@ -1064,6 +1102,9 @@ class A3MAlignment(AbstractAlignment):
                 if residue.type == self._alphabet.INSERTION:
                     self._insertions.add(rank)
 
+        if self.size == 0:
+            raise SequenceError("At least one sequence is required") 
+        
         self._master = list(self._msa)[0]
         self._matches = self._master.strip().length
     
@@ -1106,15 +1147,17 @@ class A3MAlignment(AbstractAlignment):
         return self._matches
     
     @staticmethod
-    def parse(string):
+    def parse(string, strict=True):
         """
         Create a new L{A3MAlignment} from an A3M string.
         
         @param string: MSA-formatted string
         @type string: str
+        @param strict: see L{AbstractAlignment}
+        @type strict: bool
         
         @rtype: L{A3MAlignment}
         """        
         from csb.bio.io.fasta import SequenceAlignmentReader
-        return SequenceAlignmentReader().read_a3m(string)    
+        return SequenceAlignmentReader(strict=strict).read_a3m(string)    
     

@@ -637,7 +637,7 @@ class BaseDictionaryContainer(AbstractIndexer):
         return iter(self._items)
 
     def __repr__(self):
-        return repr(self._items)
+        return '<{0.__class__.__name__}: {0.length} items>'.format(self)
 
     def _set_items(self, new_items):
         new_items = OrderedDict(new_items)
@@ -818,7 +818,7 @@ class BaseCollectionContainer(AbstractIndexer):
         return iter(self._items)
 
     def __repr__(self):
-        return repr(self._items)
+        return '<{0.__class__.__name__}: {0.length} items>'.format(self)
 
     def _append_item(self, item):
 

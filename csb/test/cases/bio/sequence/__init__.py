@@ -88,6 +88,20 @@ class TestSequence(test.Case):
         
         self.assertEqual(str(self.sequence), self.data)
         self.assertEqual(str(self.sequence), self.data)
+        
+    def testDump(self):
+        
+        with self.config.getTempStream() as tmp:
+            self.sequence.dump(tmp.name)
+            tmp.flush()
+            
+            self.assertEqual(open(tmp.name).read().strip(), self.data)
+            
+        with self.config.getTempStream() as tmp:
+            self.sequence.dump(tmp)
+            tmp.flush()
+            
+            self.assertEqual(open(tmp.name).read().strip(), self.data)           
 
 @test.unit
 class TestRichSequence(TestSequence):
@@ -147,8 +161,8 @@ class TestSequenceCollection(test.Case):
 class TestSequenceAlignment(test.Case):
     
     
-    def _factory(self, sequences):
-        return sequence.SequenceAlignment(sequences)
+    def _factory(self, sequences, strict=True):
+        return sequence.SequenceAlignment(sequences, strict=strict)
     
     def setUp(self):
         
@@ -158,20 +172,20 @@ class TestSequenceAlignment(test.Case):
         seq2 = sequence.RichSequence('s2', 's2 desc2', list('ABX-D'), sequence.SequenceTypes.Protein)
             
         self.ali = self._factory([seq1, seq2])
+        self.ali2 = self._factory([seq1, seq2, seq2, seq2], strict=False)
 
     def testAdd(self):
         
-        def add(s):
-            self.ali.add(s)
-            
-        self.assertRaises(sequence.SequenceError, add, sequence.Sequence('sn', 'sn','AB'))
-        self.assertRaises(sequence.DuplicateSequenceError, add, sequence.Sequence('s1', 's1','AB-CD'))
+        # strict
+        self.assertRaises(sequence.SequenceError, self.ali.add, sequence.Sequence('sn', 'sn','TOO-LONG-SEQ'))
+        self.assertRaises(sequence.DuplicateSequenceError, self.ali.add, sequence.Sequence('s1', 's1','AB-CD'))
         
     def testLength(self):
         self.assertEqual(self.ali.length, 5)
 
     def testSize(self):
         self.assertEqual(self.ali.size, 2)
+        self.assertEqual(self.ali2.size, 4)
 
     def testSubregion(self):
         
@@ -197,6 +211,11 @@ class TestSequenceAlignment(test.Case):
         self.assertEqual(a.rows[2].id, 's2')
         self.assertRaises(sequence.SequenceNotFoundError, lambda i: a.rows[i], -1)
         self.assertRaises(sequence.SequenceNotFoundError, lambda i: a.rows[i], 3)
+        
+        # with duplicates
+        self.assertEqual(self.ali2.rows['s2'].id, 's2')
+        self.assertEqual(self.ali2.rows['s2:A1'].id, 's2')
+        self.assertEqual(self.ali2.rows['s2:A2'].id, 's2')        
 
     def testColumns(self):
         
@@ -276,8 +295,8 @@ class TestSequenceAlignment(test.Case):
 @test.unit
 class TestA3MAlignmentSimple(TestSequenceAlignment):
     
-    def _factory(self, sequences):
-        return sequence.A3MAlignment(sequences)
+    def _factory(self, sequences, strict=True):
+        return sequence.A3MAlignment(sequences, strict=strict)
         
 @test.unit
 class TestA3MAlignment(test.Case):

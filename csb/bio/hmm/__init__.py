@@ -16,18 +16,14 @@ from collections import namedtuple
 class UnobservableStateError(AttributeError):
     pass
 
-
 class StateExistsError(KeyError):
     pass
-
 
 class TransitionExistsError(KeyError):
     pass
 
-
 class EmissionExistsError(KeyError):
     pass
-
 
 class HMMArgumentError(ValueError):
     pass
@@ -106,13 +102,11 @@ class ProfileHMM(object):
         self.scale = scale
         self.logbase = logbase
 
-        self._issues = csb.pyutils.CollectionContainer()
-
     @property
     def residues(self):
         res = [layer.residue for layer in self.layers]
-        return csb.pyutils.CollectionContainer(res, type=structure.Residue,
-                                               start_index=1)
+        return csb.pyutils.ReadOnlyCollectionContainer(
+                            res, type=structure.Residue, start_index=1)
 
     @property
     def all_layers(self):
@@ -232,7 +226,7 @@ PCT   {0.pseudocounts}'''.format(hmm))
         if hmm.alignment:
             if hmm.consensus:
                 stream.writeline(str(hmm.consensus))
-            stream.writeline(hmm.alignment.format())
+            stream.writeline(hmm.alignment.format().rstrip(os.linesep))
 
         stream.writeline('#')
 
@@ -646,8 +640,7 @@ PCT   {0.pseudocounts}'''.format(hmm))
 
         self.transition_pseudocounts = True
         return 
-
-                                    
+                  
     def structure(self, chain_id=None, accession=None):
         """
         Extract the structural information from the HMM.
