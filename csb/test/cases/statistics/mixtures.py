@@ -6,23 +6,6 @@ from csb import test
 from csb.bio.io.wwpdb import LegacyStructureParser
 from csb.statistics import mixtures
 
-def get_coords(chain, what=['CA']):
-    coords = []
-    for residue in chain.residues:
-        if not residue.has_structure:
-            continue
-        try:
-            for atom_kind in what:
-                coords.append(residue.atoms[atom_kind].vector)
-        except csb.pyutils.ItemNotFoundError:
-            continue
-    return coords
-
-def get_ensemble_coords(ensemble, what=['CA']):
-    X = [get_coords(model.first_chain) for model in ensemble.models]
-    return array(X)
-
-
 @test.functional
 class TestMixtures(test.Case):
 
@@ -44,7 +27,7 @@ class TestMixtures(test.Case):
 
         pdbfile = self.config.getTestFile('ake-xray-ensemble-ca.pdb')
         ensemble = LegacyStructureParser(pdbfile).parse_models()
-        X = get_ensemble_coords(ensemble)
+        X = array([model.list_coordinates(['CA'], True) for model in ensemble])
 
         self.assertEqual(X.shape, (16, 211, 3))
 
