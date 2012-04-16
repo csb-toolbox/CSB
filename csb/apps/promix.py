@@ -16,27 +16,6 @@ from csb.statistics import mixtures
 class ExitCodes(csb.apps.ExitCodes):
     IO_ERROR = 2
 
-def get_ensemble_coords(ensemble, what=['CA']):
-    '''
-    Get coordinates for all CA atoms in ensemble over all chains.
-
-    @return: MxNx3 matrix where M is the number of models and N the number of CA atoms
-    @rtype: numpy.array
-    '''
-    X = []
-    for model in ensemble.models:
-        X.append([])
-        for chain in model.items:
-            for residue in chain.residues:
-                if not residue.has_structure:
-                    continue
-                try:
-                    for atom_kind in what:
-                        X[-1].append(residue.atoms[atom_kind].vector)
-                except csb.pyutils.ItemNotFoundError:
-                    continue
-    return numpy.array(X)
-
 class AppRunner(csb.apps.AppRunner):
 
     @property
@@ -69,7 +48,7 @@ class ProMixApp(csb.apps.Application):
             self.exit('PDB file contains only one model', ExitCodes.USAGE_ERROR)
 
         ensemble = parser.parse_models(models)
-        X = get_ensemble_coords(ensemble)
+        X = numpy.array([model.list_coordinates(['CA'], True) for model in ensemble])
 
         if self.args.type == 'segments':
             self.main_segments(ensemble, X)
