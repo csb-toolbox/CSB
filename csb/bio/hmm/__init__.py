@@ -1,5 +1,5 @@
 """
-Objects for working with Hidden Markov Models. 
+HHpred and Hidden Markov Model APIs. 
 """
 
 import os
@@ -114,8 +114,7 @@ class ProfileHMM(object):
         a list of layers including start and start_insertion
         """
         complete_layers = []
-        first_layer = HMMLayer(rank = 0,
-                               residue = None)
+        first_layer = HMMLayer(rank=0, residue=None)
         first_layer.append(self.start)
         if self.start_insertion:
             first_layer.append(self.start_insertion)
@@ -863,9 +862,9 @@ class ProfileHMMSegment(ProfileHMM):
     def __init__(self, hmm, start, end):
 
         if start < hmm.layers.start_index or start > hmm.layers.last_index:
-            raise ValueError('Start position {0} is out of range {1.start_index} .. {1.last_index}'.format(start, hmm.layers))
+            raise IndexError('Start position {0} is out of range {1.start_index} .. {1.last_index}'.format(start, hmm.layers))
         if end < hmm.layers.start_index or end > hmm.layers.last_index:
-            raise ValueError('End position {0} is out of range {1.start_index} .. {1.last_index}'.format(end, hmm.layers))
+            raise IndexError('End position {0} is out of range {1.start_index} .. {1.last_index}'.format(end, hmm.layers))
         
         #hmm = csb.pyutils.deepcopy(hmm)       
                 
@@ -880,8 +879,9 @@ class ProfileHMMSegment(ProfileHMM):
         self.source_start = start
         self.source_end = end
         
-        self.alignment = hmm.alignment.hmm_subregion(start, end)
-        self.consensus = hmm.consensus.subregion(start, end)
+        if hmm.alignment:
+            self.alignment = hmm.alignment.hmm_subregion(start, end)
+            self.consensus = hmm.consensus.subregion(start, end)
 
         layers = csb.pyutils.deepcopy(hmm.layers[start : end + 1])
         max_score = 1.0
@@ -896,7 +896,7 @@ class ProfileHMMSegment(ProfileHMM):
             self.psipred = hmm.psipred.subregion(start, end)            
             
         self.length.layers = self.layers.length
-        self.length.matches = self.alignment.matches
+        self.length.matches = self.layers.length
         self.effective_matches = sum([(l.effective_matches or 0.0) for l in self.layers]) / self.layers.length   
         
     def _build_graph(self, source_layers, max_score):
@@ -932,14 +932,14 @@ class EmissionProfileSegment(ProfileHMMSegment):
     
     def _build_graph(self, source_layers):
         
-        match_factory = State.Factory(States.Match)
+        factory = StateFactory()
         
         for rank, source_layer in enumerate(source_layers, start=1):
             
             emission = source_layer[States.Match].emission         
             background = source_layer[States.Match].background
             
-            match = match_factory(emission, background)
+            match = factory.create_match(emission, background)
             match.rank = rank
             
             layer = HMMLayer(rank, source_layer.residue)            
@@ -973,9 +973,9 @@ class ProfileHMMRegion(ProfileHMM):
     def __init__(self, hmm, start, end):        
         
         if start < hmm.layers.start_index or start > hmm.layers.last_index:
-            raise ValueError('Start position {0} is out of range {1.start_index} .. {1.last_index}'.format(start, hmm.layers))
+            raise IndexError('Start position {0} is out of range {1.start_index} .. {1.last_index}'.format(start, hmm.layers))
         if end < hmm.layers.start_index or end > hmm.layers.last_index:
-            raise ValueError('End position {0} is out of range {1.start_index} .. {1.last_index}'.format(end, hmm.layers))
+            raise IndexError('End position {0} is out of range {1.start_index} .. {1.last_index}'.format(end, hmm.layers))
         if hmm.score_units != ScoreUnits.Probability:
             raise ValueError('Scores must be converted to probabilities first.')
                 
@@ -1168,7 +1168,7 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
         return self._residue
     @residue.setter
     def residue(self, residue):
-        if residue.type == sequence.SequenceAlphabets.Protein.GAP:          
+        if residue and residue.type == sequence.SequenceAlphabets.Protein.GAP:          
             raise HMMArgumentError('HMM match states cannot be gaps')
         self._residue = residue
     
@@ -1246,63 +1246,33 @@ class State(object):
             return self.emission is None
         except UnobservableStateError:
             return True     
-        
-    @staticmethod
-    def Factory(state_kind):
-        """
-        Return a callable function that automates and simplifies the construction 
-        of states of the specified kind.
-        
-        @param state_kind: type of the states, produced by the factory (a L{States} member)
-        @type state_kind: L{csb.pyutils.EnumItem}
-        
-        @return: a callable factory function
-        @rtype: function
-        
-        @raise ValueError: if state_kind is not a member of the States enum
-        """
-        
-        def match_factory(emission, background):
-            state = State(States.Match, emit=csb.pyutils.Enum.members(sequence.SequenceAlphabets.Protein))
-            state.emission.set(emission)
-            state.background.set(background)
-            return state
+                    
 
-        def insertion_factory(background):
-            state = State(States.Insertion, emit=csb.pyutils.Enum.members(sequence.SequenceAlphabets.Protein))
-            state.emission.set(background)
-            state.background.set(background)
-            return state     
-        
-        def deletion_factory(): 
-            return State(States.Deletion)               
+class StateFactory(object):
+    """
+    Simplifies the construction protein profile HMM states.
+    """
             
-        if state_kind == States.Match:
-            return match_factory
-        elif state_kind == States.Insertion:
-            return insertion_factory
-        elif state_kind == States.Deletion:
-            return deletion_factory
-        else:
-            raise ValueError(state_kind)               
-        
-class MatchState(State):
+    def __init__(self):
+        self._aa = csb.pyutils.Enum.members(sequence.ProteinAlphabet)        
     
-    def __init__(self, emission, background):
+    def create_match(self, emission, background):
         
-        super(MatchState, self).__init__(emit=csb.pyutils.Enum.members(sequence.SequenceAlphabets.Protein))
+        state = State(States.Match, emit=self._aa)
+        state.emission.set(emission)
+        state.background.set(background)
+        return state
+
+    def create_insertion(self, background):
         
-        self.emission.set(emission)
-        self.background.set(background)      
-        
-class InsertionState(State):
+        state = State(States.Insertion, emit=self._aa)
+        state.emission.set(background)
+        state.background.set(background)
+        return state     
     
-    def __init__(self, background):
-        
-        super(InsertionState, self).__init__(emit=csb.pyutils.Enum.members(sequence.SequenceAlphabets.Protein))
-        
-        self.emission.set(background)
-        self.background.set(background)               
+    def create_deletion(self): 
+        return State(States.Deletion)
+                
 
 class TransitionType(object):
 

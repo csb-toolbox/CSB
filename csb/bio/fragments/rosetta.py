@@ -1,8 +1,24 @@
+"""
+Rosetta fragments and libraries.
+"""
+
 from csb.bio.structure import TorsionAnglesCollection, TorsionAngles
 from csb.pyutils import AbstractContainer
 
 
 class ResidueInfo(object):
+    """
+    Container struct for a single rosetta fragment residue.
+    
+    @param rank: residue position (in the source chain, 1-based)
+    @type rank: int
+    @param aa: amino acid
+    @type aa: str
+    @param ss: secondary structure
+    @type ss: str
+    @param torsion: torsion angles
+    @type torsion: L{csb.bio.structure.TorsionAngles} 
+    """
     
     def __init__(self, rank, aa, ss, torsion, calpha=[]):
         
@@ -25,9 +41,31 @@ class ResidueInfo(object):
         return self.torsion.omega or 0.
     
     def copy(self):
+        """
+        @return: a deep copy of the struct
+        @rtype: L{ResidueInfo}
+        """
         return ResidueInfo(self.rank, self.aa, self.ss, self.torsion.copy(), self.calpha)
     
 class RosettaFragment(object):
+    """
+    Represents a single Rosetta fragment match.
+
+    @param source_id: entry ID of the source PDB chain (in accnC format)
+    @type source_id: str
+    @param qstart: start position in target (rank)
+    @type qstart: int
+    @param qend: end position in target (rank)
+    @type qend: int
+    @param start: start position in C{source} (rank)
+    @type start: int
+    @param end: end position in C{source} (rank)
+    @type end: int    
+    @param score: score of the fragment
+    @type score: float
+    @param residues: fragment residue structs
+    @type residues: iterable of L{ResidueInfo}    
+    """
     
     def __init__(self, source_id, qstart, qend, start, end, score, residues):
         
@@ -45,6 +83,17 @@ class RosettaFragment(object):
         self._residues = list(residues)
         
     def subregion(self, qstart, qend):
+        """
+        Extract a subregion from the fragment.
+        
+        @param qstart: start position in target
+        @type qstart: int 
+        @param qend: end position in target
+        @type qend: int  
+        
+        @return: a new fragment (deep copy)
+        @rtype: L{RosettaFragment}      
+        """
         
         if not self.qstart <= qstart <= qend <= self.qend:
             raise ValueError('Invalid subregion')
@@ -83,7 +132,14 @@ class RosettaFragment(object):
     
     @staticmethod
     def from_object(assignment):
+        """
+        Factory method: build a rosetta fragment from an assignment object.
         
+        @param assignment: source assignment
+        @type assignment: L{Assignment} 
+        
+        @rtype: L{RosettaFragment}
+        """
         residues = []        
         a = assignment
         
@@ -138,9 +194,15 @@ class RosettaFragment(object):
     
     @property
     def torsion(self):
-        return TorsionAnglesCollection(r.torsion for r in self._residues)    
+        return TorsionAnglesCollection([r.torsion for r in self._residues], start=0)    
         
 class OutputBuilder(object):
+    """
+    Rosetta fragment file formatter.
+    
+    @param output: destination stream
+    @type output: file
+    """
     
     def __init__(self, output):
         self._out = output
@@ -150,10 +212,21 @@ class OutputBuilder(object):
         return self._out
         
     def add_position(self, qstart, frags):
+        """
+        Write a new assignment origin.
+        
+        @param qstart: target position
+        @type qstart: float
+        @param frags: number of fragments, starting at that position
+        @type frags: int 
+        """
         self.output.write(' position: {0:>12} neighbors: {1:>12}\n\n'.format(qstart, len(frags)))
     
     def add_fragment(self, fragment):
-        
+        """
+        Write a new fragment.
+        @type fragment: L{RosettaFragment} 
+        """
         for residue in fragment.residues:
             self.add_residue(fragment, residue)
             self.output.write('\n')
@@ -161,11 +234,19 @@ class OutputBuilder(object):
         self.output.write('\n')
         
     def add_residue(self, fragment, residue):
-        
+        """
+        Write a new fragment residue.
+        @type fragment: L{RosettaFragment}
+        @type residue: L{ResidueInfo}
+        """        
         line = ' {0.accession:4} {0.chain:1} {1.rank:>5} {1.aa:1} {1.ss:1} {1.phi:>8.3f} {1.psi:>8.3f} {1.omega:>8.3f} {0.score:>8.3f}'
         self.output.write(line.format(fragment, residue))
     
 class ExtendedOutputBuilder(OutputBuilder):
+    """
+    Builds non-standard fragment files, which contain the CA coordinates of
+    each residue at the end of each line.
+    """
     
     def add_residue(self, fragment, residue):        
         
@@ -179,6 +260,15 @@ class ExtendedOutputBuilder(OutputBuilder):
         self.output.write('        {0:>7.3f} {1:>7.3f} {2:>7.3f}'.format(*calpha))            
         
 class RosettaFragmentMap(AbstractContainer):
+    """
+    Represents a Rosetta fragment library.
+    
+    @param fragments: library fragments
+    @type fragments: iterable of L{RosettaFragment}
+    @param length: target sequence's length. If not defined, the qend of the
+                   last fragment will be used instead.
+    @type length: int
+    """
     
     def __init__(self, fragments, length=None):
         
@@ -204,6 +294,9 @@ class RosettaFragmentMap(AbstractContainer):
         return max(self._ends or [0])
             
     def append(self, fragment):
+        """
+        Append a new L{RosettaFragment}
+        """
         
         if self._length and fragment.qend > self._length:
             raise ValueError('fragment out of range')
@@ -237,23 +330,51 @@ class RosettaFragmentMap(AbstractContainer):
         return tuple(sorted(self._starts))    
 
     def fromsource(self, accession):
+        """
+        @return: a tuple of all fragments, extracted from the specified C{source}.
+        
+        @param accession: source entry ID
+        @type accession: str
+        """
         return tuple(f for f in self._fragments if f.accession == accession)
     
     def starting_at(self, qrank):
+        """
+        @return: a tuple of all fragments, starting at the specified target position.
+        
+        @param qrank: fragment origin (in target, rank)
+        @type qrank: int
+        """        
         return tuple(f for f in self._fragments if f.qstart == qrank)
     
     def at(self, qrank):
+        """
+        @return: a tuple of all fragments, covering the specified position.
+        
+        @param qrank: position in target, rank
+        @type qrank: int
+        """            
         return tuple(f for f in self._fragments if f.qstart <= qrank <= f.qend)
     
     def mark_unconfident(self, rank):
-        
+        """
+        Mark the specified position in the target as a low-confidence one.
+
+        @param rank: position in target        
+        @type rank: int 
+        """
         if not 1 <= rank <= self._length:
             raise ValueError(rank)
         
         self._unconf.add(rank)
         
     def complement(self, fragment):
+        """
+        Append C{fragment} to the library, if the fragment is anchored
+        around a low-confidence position.
         
+        @type fragment: L{RosettaFragment} 
+        """        
         if not self._unconf:
             raise ValueError('no unconfident regions to complement')
         
@@ -265,10 +386,19 @@ class RosettaFragmentMap(AbstractContainer):
                     break
     
     def sort(self, field='score', reverse=False):
+        """
+        Sort the fragments in the library.
+        """
         
         self._fragments.sort(key=lambda i:getattr(i, field), reverse=reverse)
         
     def dump(self, file, builder=OutputBuilder):
+        """
+        Write the library to a Rosetta fragment file.
+        
+        @param file: destination file name
+        @type file: str
+        """
                        
         with open(file, 'w') as out:
             builder = builder(out)
@@ -283,6 +413,18 @@ class RosettaFragmentMap(AbstractContainer):
     
     @staticmethod
     def read(file, top=None):
+        """
+        Read a standard fragment file.
+        
+        @param file: file name
+        @type file: str
+        @param top: if defined, read only C{top} fragments per start position
+                    (default=all)
+        @type top: int or None
+        
+        @return: parsed fragment library
+        @rtype: L{RosettaFragmentMap}
+        """
         # This is the format (rosetta_fragments/nnmake/makeoutput.f):
         # source chain rank residue ss phi psi omega    score dme dme_f best_nn_ss_type     dipolar+noe 'P' position 'F' fragment#
         

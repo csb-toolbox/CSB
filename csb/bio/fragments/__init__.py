@@ -1,3 +1,9 @@
+"""
+APIs for working with protein structure fragments and libraries.
+
+@note: internal or legacy objects are left intentionally undocumented. 
+"""
+
 import os
 import cPickle
 import numpy
@@ -33,6 +39,9 @@ RANDOM_RMSD = {  5: 1.8749005857255376,  6: 2.4314283686276261,  7: 2.9021135267
                 53: 11.831245255954073, 54: 11.918975893263905 }     
     
 class FragmentMatch(object):
+    """
+    Base class, representing a match between a fragment and its target.
+    """
     
     def __init__(self, id, qstart, qend, probability, rmsd, tm_score, qlength):
         
@@ -278,6 +287,17 @@ class AssignmentFactory(object):
         return Assignment(*a, **k)
             
 class Target(csb.pyutils.AbstractNIContainer):
+    """
+    Represents a protein structure prediction target.
+    
+    @param id: target sequence ID, in PDB accnC format
+    @type id: str
+    @param length: total target sequence length
+    @type length: int
+    @param residues: a list, containing target's residues. See also
+                     L{Target.from_sequence}
+    @type residues: iterable of L{csb.bio.structure.ProteinResidue}s
+    """
     
     def __init__(self, id, length, residues, overlap=None, segments=None, factory=AssignmentFactory()):
     
@@ -301,6 +321,14 @@ class Target(csb.pyutils.AbstractNIContainer):
         
     @staticmethod
     def from_sequence(id, sequence):
+        """
+        Factory, which builds L{Target} objects from a bare sequence.
+        
+        @param sequence: target's sequence
+        @type sequence: L{csb.bio.sequence.AbstractSequence}, str or iterable
+        
+        @rtype: L{Target}
+        """
         
         if isinstance(sequence, csb.bio.sequence.Sequence):
             sequence = sequence.sequence
@@ -315,7 +343,15 @@ class Target(csb.pyutils.AbstractNIContainer):
     
     @staticmethod
     def from_profile(hmm):
+        """
+        Factory, which builds L{Target} objects from an HMM profile.
         
+        @param hmm: target's HMM
+        @type hmm: L{csb.bio.hmm.ProfileHMM}
+        
+        @rtype: L{Target}
+        """
+                
         residues = [ r.clone() for r in hmm.residues ]
         return Target(hmm.id, hmm.layers.length, residues)
     
@@ -370,6 +406,11 @@ class Target(csb.pyutils.AbstractNIContainer):
         return self._segments
         
     def assign(self, fragment):
+        """
+        Add a new fragment match.
+        @param fragment: fragment to assign
+        @type fragment: L{Assignment}
+        """
 
         if not 1 <= fragment.qstart <= fragment.qend <= len(self._residues):
             raise ValueError("Fragment out of range")
@@ -378,8 +419,8 @@ class Target(csb.pyutils.AbstractNIContainer):
                     
         for rank in range(fragment.qstart, fragment.qend + 1):
             ai = ResidueAssignmentInfo(fragment, rank)
-            self._residues[rank].assign(ai) 
-            
+            self._residues[rank].assign(ai)
+         
         if fragment.segment is not None:
             try:
                 self._segments[fragment.segment].assign(fragment)
@@ -387,11 +428,25 @@ class Target(csb.pyutils.AbstractNIContainer):
                 raise ValueError("Undefined segment starting at {0}".format(fragment.segment))
             
     def assignall(self, fragments):
-        
+        """
+        Assign a bunch of fragments at once.
+        @type fragments: iterable of L{Assignment}s
+        """
         for frag in fragments:
             self.assign(frag)
             
     def filter(self, threshold=1.5, extend=False):
+        """
+        Filter the current fragment map using a L{FragmentCluster}.
+        
+        @param threshold: cluster RMSD threshold (see L{FragmentCluster})
+        @type threshold: float
+        @param extend: pick extended alternatives where possible (default=False)
+        @type extend: bool
+        
+        @return: a new target, containing only cluster centroids/reps
+        @rtype: L{Target}
+        """
         
         target = self.clone()
         
@@ -404,6 +459,10 @@ class Target(csb.pyutils.AbstractNIContainer):
         return target
     
     def clone(self):
+        """
+        @return: a deep copy of the target
+        @rtype: L{Target}
+        """
 
         segments = [self.segments[start] for start in self.segments]
         segments = [TargetSegment(s.start, s.end, s.count) for s in segments]
@@ -415,6 +474,12 @@ class Target(csb.pyutils.AbstractNIContainer):
          
     
 class TargetResidue(object):
+    """
+    Wrapper around L{Target}'s native residues. Decorates them with additional,
+    fragment-related methods.
+    
+    @type native_residue: L{csb.bio.structure.ProteinResidue} 
+    """
     
     def __init__(self, native_residue):
         
@@ -438,6 +503,10 @@ class TargetResidue(object):
         self._assignments._append_item(assignment_info)
         
     def verybest(self):
+        """
+        @return: the fragment with the lowest RMSD at this position in the L{Target}
+        @rtype: L{Assignment}
+        """
         
         best = None
         
@@ -453,6 +522,20 @@ class TargetResidue(object):
         return best
                 
     def filter(self, method=Metrics.RMSD, threshold=1.5, extend=False):
+        """
+        Filter all fragments, covering this position in the L{Target} using a 
+        L{FragmentCluster}.
+        
+        @param method: one of the L{Metrics} members (default=L{Metrics.RMSD})
+        @type method: str
+        @param threshold: cluster RMSD threshold (see L{FragmentCluster})
+        @type threshold: float
+        @param extend: pick extended alternative where possible (default=False)
+        @type extend: bool
+                
+        @return: cluster's representative (if converged) or None
+        @rtype: L{ClusterRep} or None
+        """
         
         try:
             nodes = []
@@ -473,7 +556,10 @@ class TargetResidue(object):
             return None
     
     def longest(self):
-    
+        """
+        @return: the longest fragment, covering the current position
+        @rtype: L{Assignment}
+        """
         best = None        
         
         for q in self.assignments:
@@ -483,6 +569,14 @@ class TargetResidue(object):
         return best
     
     def precision(self, threshold=1.5):
+        """
+        @return: the residue-wise precision of the fragment library at the
+                 current position (percentage).
+                 
+        @param threshold: true-positive RMSD cutoff (default=1.5)
+        @type threshold: float                                  
+        @rtype: float 
+        """
         
         if self.assignments.length < 1:
             return None
@@ -736,8 +830,28 @@ class ResidueAssignmentInfo(object):
         return self._assignment    
 
 class Assignment(FragmentMatch):
+    """
+    Represents a match between a fragment and its target.
     
-    def __init__(self, source, start, end, id, qstart, qend, probability, rmsd, tm_score,
+    @param source: source structure (must have torsion angles precomputed)
+    @type source: L{csb.bio.structure.Chain}
+    @param start: start position in C{source} (rank)
+    @type start: int
+    @param end: end position in C{source} (rank)
+    @type end: int
+    @param id: fragment ID
+    @type id: str
+    @param qstart: start position in target (rank)
+    @type qstart: int
+    @param qend: end position in target (rank)
+    @type qend: int
+    @param probability: probability of assignment
+    @type probability: float
+    @param rmsd: RMSD of the fragment, compared to target's native structure
+    @type rmsd: float
+    """
+    
+    def __init__(self, source, start, end, id, qstart, qend, probability, rmsd, tm_score=None,
                  score=None, neff=None, segment=None, internal_id=None):
 
         assert source.has_torsion
@@ -801,6 +915,9 @@ class Assignment(FragmentMatch):
         return self._segment_start    
     
     def transform(self, rotation, translation):
+        """
+        Apply rotation/translation to fragment's coordinates in place.
+        """
         
         for ca in self.backbone:
             newca = numpy.dot(ca, numpy.transpose(rotation)) + translation
@@ -813,6 +930,10 @@ class Assignment(FragmentMatch):
             raise ValueError('Region {0}..{1} is out of range {2.qstart}..{2.qend}'.format(qstart, qend, self))
         
     def anchored_around(self, rank):
+        """
+        @return: True if the fragment is centered around position=C{rank}.
+        @rtype: bool
+        """
         
         if self.qstart < rank < self.qend:
             if (rank - self.qstart + 1) > 0.4 * (self.qend - self.qstart + 1):
@@ -821,6 +942,10 @@ class Assignment(FragmentMatch):
         return False
                                 
     def backbone_at(self, qstart, qend):
+        """
+        @return: the CA coordinates of the fragment at the specified subregion.
+        @rtype: list
+        """
         
         self._check_range(qstart, qend)
         
@@ -830,7 +955,11 @@ class Assignment(FragmentMatch):
         return self.backbone[relstart : relend]
     
     def torsion_at(self, qstart, qend):
-        
+        """
+        @return: the torsion angles of the fragment at the specified subregion.
+        @rtype: list
+        """
+                
         self._check_range(qstart, qend)
         
         relstart = qstart - self.qstart
@@ -869,6 +998,11 @@ class Assignment(FragmentMatch):
         return source.subregion(start, end)
     
     def overlap(self, other):
+        """
+        @type other: L{Assignment} 
+        @return: target positions, covered by both C{self} and C{other}
+        @rtype: set of int
+        """
 
         qranks = set(range(self.qstart, self.qend + 1))
         sranks = set(range(other.qstart, other.qend + 1))
@@ -876,6 +1010,17 @@ class Assignment(FragmentMatch):
         return qranks.intersection(sranks)
             
     def rmsd_to(self, other, min_overlap=5):
+        """
+        @return: the CA RMSD between C{self} and C{other}.
+        
+        @param other: another fragment
+        @type other: L{Assignment}
+        @param min_overlap: require at least that number of overlapping residues
+                            (return None if not satisfied)
+        @type min_overlap: int
+        
+        @rtype: float
+        """
 
         common = self.overlap(other)
         
@@ -928,6 +1073,10 @@ class Assignment(FragmentMatch):
         return None  
     
     def to_rosetta(self, source, qstart=None, qend=None, weight=None):
+        """
+        @deprecated: this method will be deleted soon. Use
+        L{csb.bio.fragments.rosetta.OutputBuilder} instead.
+        """
         
         from cStringIO import StringIO
         stream = StringIO()
@@ -964,12 +1113,33 @@ class Assignment(FragmentMatch):
 
 class ClusterExhaustedError(ValueError):
     pass    
+
 class ClusterEmptyError(ClusterExhaustedError):
     pass
+
 class ClusterDivergingError(RuntimeError):
     pass
     
 class FragmentCluster(object):
+    """
+    Provides clustering/filtering of the fragments, covering a common residue
+    in the target. Clustering is done via iterative shrinking of the cluster.
+    At each iteration, node rejection (deletion) is attempted for each node. The
+    node rejection, causing the most significant drop in the average pairwise
+    distance (RMSD) in the cluster, is retained. This procedure is repeated
+    until: 1) the average pairwise RMSD drops below the C{threshold} (converged),
+    2) the cluster gets exhausted or 3) node rejection no longer
+    causes a drop in the average distance (not converging).
+    
+    @param items: cluster members
+    @type items: iterable of L{ClusterNode}s
+    @param threshold: RMSD threshold; continue shrinking until the mean distance
+                      drops below this value (default=1.5) 
+    @type threshold: float
+    @param connectedness: use only nodes which are connected to at least c% of all
+                          initial nodes (default=0.5, that means 50%)
+    @type connectedness: float
+    """
     
     MIN_LENGTH = 6
 
@@ -1037,6 +1207,10 @@ class FragmentCluster(object):
             return None
 
     def mean(self, skip=None):
+        """
+        @return: the current mean distance in the cluster
+        @rtype: float
+        """
         
         d = self._distances(skip=skip) 
             
@@ -1046,6 +1220,15 @@ class FragmentCluster(object):
             raise ClusterExhaustedError()
 
     def centroid(self):
+        """
+        @return: the current representative fragment
+        @rtype: L{ClusterRep}
+        
+        @note: the cluster rep is the node with the lowest average distance
+               to all other nodes. If a fixed fragment exists, structurally similar
+               to the rep, but longer, this fragment may be suggested as an alternative
+               (see also L{ClusterRep}).
+        """
 
         alt = None
         cen = None
@@ -1077,6 +1260,12 @@ class FragmentCluster(object):
                             rejections=(self._initcount - self.count))
 
     def reject(self, item):
+        """
+        Remove C{item} from the cluster.
+        
+        @type item: L{ClusterNode}
+        @raise ClusterExhaustedError: if this is the last remaining item
+        """
         
         if self.count == 1:
             raise ClusterExhaustedError()
@@ -1091,6 +1280,15 @@ class FragmentCluster(object):
         self._items.remove(item)
 
     def shrinkone(self):
+        """
+        Shrink the cluster by a single node.
+        
+        @return: True on successful shrink, False otherwise (e.g. if
+                 already converged)
+        @rtype: bool
+        @raise ClusterExhaustedError: if exhausted
+        @raise ClusterDivergingError: if not converging
+        """
         
         mean = self.mean()
         if mean <= self.threshold or self.count == 1:
@@ -1118,6 +1316,19 @@ class FragmentCluster(object):
             return False                  # converged
         
     def shrink(self, minitems=2):
+        """
+        Start automatic shrinking.
+        
+        @param minitems: absolute minimum of the number of nodes in the cluster
+        @type minitems: int
+
+        @return: cluster's representative: the node with the lowest average
+                 distance to all other nodes in the cluster
+        @rtype: L{ClusterRep}
+        
+        @raise ClusterExhaustedError: if C{self.count} < C{minitems} and
+                                      still not converged
+        """
 
         if self.count > minitems:
 
@@ -1130,6 +1341,16 @@ class FragmentCluster(object):
         return self.centroid()
     
 class ClusterNode(object):
+    """
+    Cluster node.
+    
+    @param fragment: fragment 
+    @type fragment: L{Assignment}
+    @param distance: distance metric (a L{Metrics} member, default is RMSD)
+    @type distance: str
+    @param fixed: mark this node as fixed (cannot be rejected)
+    @type fixed: bool    
+    """
     
     def __init__(self, fragment, distance=Metrics.RMSD, fixed=False):
         
@@ -1142,9 +1363,32 @@ class ClusterNode(object):
         self._distance = getattr(self.fragment, distance)
         
     def distance(self, other):
+        """
+        @return: the distance between self and another node
+        @type other: L{ClusterNode}
+        @rtype: float
+        """
         return self._distance(other.fragment)
     
 class ClusterRep(object):
+    """
+    Cluster's representative (centroid) node. This object carries the
+    result of shrinking itself.
+    
+    @param centroid: rep node
+    @type centroid: L{ClusterNode}
+    @param mean: current mean distance in the cluster
+    @type mean: float
+    @param consistency: percentage of pairwise distances below the RMSD C{threshold}
+    @type consistency: float
+    @param count: current number of nodes in the cluster
+    @type count: int
+    @param rejections: total number of rejections
+    @type rejections: int
+    @param alternative: suggested cluster rep alternative (e.g. structurally
+                        similar to the centroid, but longer)
+    @type param:  
+    """
     
     def __init__(self, centroid, mean, consistency, count, rejections=0, alternative=None):
         
@@ -1162,6 +1406,9 @@ class ClusterRep(object):
     
     @property
     def confidence(self):
+        """
+        Confidence of assignment: log10(count) * consistency
+        """
         if self.count <= 0 or self.count is None or self.consistency is None:
             return 0
         else:
@@ -1196,6 +1443,9 @@ class ClusterRep(object):
         return self._rejections
     
     def exchange(self):
+        """
+        If an alternative is available, swap the centroid and the alternative. 
+        """
         
         if self._alternative is not None:
 
@@ -1204,6 +1454,9 @@ class ClusterRep(object):
             self._alternative = centroid
 
     def to_rosetta(self, source):
+        """
+        @deprecated: this method is obsolete and will be deleted soon
+        """
         return self.centroid.to_rosetta(source, weight=self.confidence)
             
 class AdaptedAssignment(object):
@@ -1332,12 +1585,23 @@ class ResidueEventInfo(object):
         self.rep = rep
     
 class RosettaFragsetFactory(object):
+    """
+    Simplifies the construction of fragment libraries.
+    """
     
     def __init__(self):
         import csb.bio.fragments.rosetta as rosetta
         self.rosetta = rosetta
     
     def make_fragset(self, target):
+        """
+        Build a fragment library given a L{Target} and its L{Assignment}s.
+        
+        @param target: target protein
+        @type target: L{Target}
+        
+        @rtype: L{RosettaFragmentMap}
+        """
         
         frag_factory = self.rosetta.RosettaFragment
         fragments = map(frag_factory.from_object, target.matches)
@@ -1347,7 +1611,19 @@ class RosettaFragsetFactory(object):
         return self.rosetta.RosettaFragmentMap(fragments, target.length) 
     
     def make_chopped(self, fragments, window):
+        """
+        Build a fixed-length fragment library from a list of
+        variable-length L{Assignment}s.
         
+        @param fragments: source fragments
+        @type fragments: iterable of L{RosettaFragment}s
+        @param window: fixed-length fragment size (for classic Rosetta: choose 9)
+        @type window: int
+
+        @return: fixed-length fragment library        
+        @rtype: L{RosettaFragmentMap}
+        """
+                
         frags = []
         
         for f in fragments:
@@ -1357,6 +1633,22 @@ class RosettaFragsetFactory(object):
         return self.rosetta.RosettaFragmentMap(frags)
     
     def make_combined(self, target, filling, threshold=0.5, callback=None):
+        """
+        Complement C{target}'s assignments with C{filling} (e.g. rosetta fragments).
+        The regions to be complemented are determined by calculating the confidence
+        at each residue (by filtering). 
+        
+        
+        @param target: target protein
+        @type target: L{Target}
+        @param filling: additional fragments to place in the low-conf regions
+        @type filling: L{RosettaFragmentMap} or iterable of L{RosettaFragment}
+        @param threshold: confidence threshold
+        @type threshold: float
+        
+        @return: complemented fragment library
+        @rtype: L{RosettaFragmentMap}        
+        """
         
         fragmap = self.make_fragset(target)
         covered = set()
@@ -1389,7 +1681,19 @@ class RosettaFragsetFactory(object):
         return fragmap
     
     def make_filtered(self, target, extend=False, callback=None):
+        """
+        Builed a filtered fragment library (by clustering), containing only 
+        representative fragments (cluster centroids).
         
+        @param target: target protein
+        @type target: L{Target}
+        @param extend: if True, pick alternative reps if available
+        @type extend: bool
+
+        @return: filtered fragment library        
+        @rtype: L{RosettaFragmentMap}        
+        """
+                
         fragments = []
         
         for r in target.residues:
@@ -1414,7 +1718,14 @@ class RosettaFragsetFactory(object):
         return self.rosetta.RosettaFragmentMap(fragments, target.length)
     
     def mix(self, *fragsets):
+        """
+        Mix fragments from multiple libraries.
         
+        @type fragsets: L{RosettaFragmentMap}
+        @return: mixed fragment library        
+        @rtype: L{RosettaFragmentMap}        
+        """
+                
         fragments = []
         length = 0
         
@@ -1605,26 +1916,3 @@ class BenchmarkAdapter(object):
         
         return target
 
-
-    
-if __name__ == '__main__':
-    
-    class A(object):
-        
-        def __init__(self, r):
-            self.r = r
-            self.length = 8
-        
-        def __repr__(self):
-            return 'A' + str(self.r)
-        
-        def rmsd_to(self, other):
-            return abs(self.r - other.r)
-        
-    c = FragmentCluster([ ClusterNode(A(0.4)), ClusterNode(A(1.3)), ClusterNode(A(1.2)), ClusterNode(A(1.2)), ClusterNode(A(0.1), fixed=0), ClusterNode(A(0.09), fixed=1) ], threshold=0.1)
-    print c.mean()
-    ci = c.shrink(minitems=0)
-    print '==============='
-    print ci.mean, ci.rejections, ci.centroid
-    print c.fragments
-    
