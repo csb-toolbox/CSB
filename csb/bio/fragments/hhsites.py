@@ -1,5 +1,7 @@
 """
-HMM fragments derived from HHpred HMM profiles. 
+HMM fragments derived from HHpred HMM profiles.
+
+@deprecated: This module may be removed in the future.
 """
 import re
 import csb.bio.fragments

@@ -2093,8 +2093,8 @@ class TorsionAnglesCollection(csb.pyutils.CollectionContainer):
     @param items: an initialization list of L{TorsionAngles}
     @type items: list
     """  
-    def __init__(self, items=None):
-        super(TorsionAnglesCollection, self).__init__(items, type=TorsionAngles, start_index=1)
+    def __init__(self, items=None, start=1):
+        super(TorsionAnglesCollection, self).__init__(items, type=TorsionAngles, start_index=start)
 
     def __repr__(self):
         if len(self) > 0:

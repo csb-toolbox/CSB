@@ -1,5 +1,7 @@
 """
-Object representation of the I-Sites fragment library. 
+I-Sites fragment library APIs. 
+
+@warning: This module is no longer developed and provided as is. 
 """
 
 import sys
@@ -898,7 +900,7 @@ class Cluster(object):
         @rtype: L{hmm.ProfileHMM}
         """
         
-        match_factory = hmm.State.Factory(hmm.States.Match)
+        factory = hmm.StateFactory()
 
         p = hmm.ProfileHMM(hmm.ScoreUnits.Probability)
         p.family = 'is' + str(self.id)
@@ -915,7 +917,7 @@ class Cluster(object):
             row = dict([ (aa, row[aa]) for aa in 'ACDEFGHIKLMNPQRSTVWY' ]) 
             residue = self.representative.structure.residues[i]
             
-            match = match_factory(row, background)
+            match = factory.create_match(row, background)
             match.rank = i
             
             layer = hmm.HMMLayer(i, residue)
@@ -943,7 +945,8 @@ class Cluster(object):
         p.effective_matches = 10
         
         rep_sequence = ''.join([ str(l.residue.type) for l in p.layers ])
-        seq = csb.bio.sequence.Sequence('dummy', '>dummy', rep_sequence)
+        seq = csb.bio.sequence.Sequence('dummy', '>dummy', rep_sequence,
+                            type=csb.bio.sequence.SequenceTypes.Protein)
         p.alignment = csb.bio.sequence.A3MAlignment([seq])
     
         return p        
