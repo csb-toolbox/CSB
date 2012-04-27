@@ -537,6 +537,25 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         if accession is not None:
             self.accession = accession
             
+    @staticmethod
+    def from_sequence(sequence, id="_"):
+        """
+        Create a new chain from an existing sequence.
+        
+        @param sequence: source sequence
+        @type sequence: L{csb.bio.sequence.AbstractSequence}
+        
+        @rtype: L{Chain}
+        """
+        
+        chain = Chain(id, type=sequence.type)
+        
+        for ri in sequence.residues:
+            residue = Residue.create(sequence.type, ri.rank, ri.type, sequence_number=ri.rank)
+            chain.residues.append(residue)
+            
+        return chain
+            
     @property
     def _children(self):
         return self._residues
