@@ -1,7 +1,10 @@
+import numpy
+
 import csb.test as test
 import csb.bio.structure as structure
 import csb.pyutils
-import numpy
+
+import csb.bio.sequence as sequence
 
 
 def update_test_files():
@@ -371,6 +374,17 @@ class TestChain(test.Case):
 
         self.structure = self.config.getPickle('1nz9.model1.pickle')        
         self.chain = self.structure['A']
+        
+    def testFromSequence(self):
+        
+        seq = sequence.Sequence('testA', 'test seq', 'ABCDE', type=sequence.SequenceTypes.Protein)
+        chain = structure.Chain.from_sequence(seq, 'Z')
+        
+        self.assertEqual(chain.sequence, 'ABCDE')
+        self.assertEqual(chain.id, 'Z')
+        self.assertEqual(chain.residues[2].sequence_number, 2)
+        self.assertEqual(chain.residues[2].rank, 2)
+        self.assertEqual(chain.residues[2].type, sequence.ProteinAlphabet.ASX)
     
     def testId(self):
         
