@@ -154,8 +154,8 @@ Options:
         
         self._init()        
         self._revision()
-        self._test() 
         self._doc()
+        self._test()
         vn = self._package()     
         
         self.log('\n# Done ({0}).\n'.format(vn))         
