@@ -1,5 +1,8 @@
-EXP_MIN = -1e308
-EXP_MAX = +709
+import sys
+
+EXP_MIN = -308
+EXP_MAX = 308
+    
 LOG_MIN = 1e-308
 LOG_MAX = 1e+308
 
@@ -291,6 +294,7 @@ def psi(x):
         res  = logx - 0.5/x
         res += sum([coef[i] * exp(-2*(i+1)*logx) for i in range(7)])
         return res
+
 
 def approx_psi(x):
     from numpy import log, clip, where
