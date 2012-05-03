@@ -134,16 +134,10 @@ class Abstract3DEntity(object):
         coords = [ ]
         
         for residue in self.components(klass=Residue):
-
-            if not residue.has_structure:
-                if skip:
-                    continue
-                raise Missing3DStructureError('Discontinuous structure at residue {0}'.format(residue))
-            
             for atom_kind in (what or residue.atoms):
-                if atom_kind in residue.atoms:
-                    coords.append(residue.atoms[atom_kind].vector.copy())
-                else:
+                try:
+                    coords.append(residue.atoms[atom_kind].vector)
+                except csb.pyutils.ItemNotFoundError:
                     if skip:
                         continue
                     raise Broken3DStructureError('Could not retrieve {0} atom from the structure'.format(atom_kind))
@@ -169,9 +163,7 @@ class CompositeEntityIterator(object):
         self._inspect(node)
                 
     def __iter__(self):
-        
-        while True:
-            yield self.next()
+        return self
         
     def next(self):
 
@@ -1107,10 +1099,7 @@ class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def has_structure(self):
-        if hasattr(self, 'atoms') and self.atoms is not None:
-            return len(self.atoms) > 0
-        else:
-            return False
+        return len(self.atoms) > 0
         
     def list_coordinates(self, what=None, skip=False):
         
@@ -1123,7 +1112,7 @@ class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         
         for atom_kind in (what or self.atoms):
             if atom_kind in self.atoms:
-                coords.append(self.atoms[atom_kind].vector.copy())                 
+                coords.append(self.atoms[atom_kind].vector)                 
             else:
                 if skip:
                     continue

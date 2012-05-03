@@ -77,6 +77,17 @@ class ChainRegressions(test.Case):
         # now the regression itself
         for altatom in disatom:
             self.assertEqual(altatom.vector.tolist(), [3, 3, 3])
+            
+    def testListCoordinates(self):
+        """
+        Performance tweaks in Abstract3DEntity.list_coordinates()
+        """
+        
+        def test():
+            for dummy in range(1000):
+                self.structure.list_coordinates(what=['CA'])
+                
+        self.assertFasterThan(0.50, test)
 
 
 @test.unit
