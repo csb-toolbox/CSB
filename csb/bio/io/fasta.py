@@ -198,9 +198,7 @@ class A3MSequenceIterator(object):
         return column  
     
     def __iter__(self):
-        
-        while True:
-            yield self.next()      
+        return self    
     
 class SequenceAlignmentReader(object):
     """
@@ -446,6 +444,13 @@ class A3MOutputBuilder(OutputBuilder):
         
     def add_alignment(self, alignment):
 
+        if isinstance(alignment, A3MAlignment):
+            self._add_a3m(alignment)
+        else:
+            self._add_proper(alignment)
+            
+    def _add_a3m(self, alignment):
+        
         for s in alignment.rows:
             
             if self.headers:
@@ -459,7 +464,7 @@ class A3MOutputBuilder(OutputBuilder):
                 if ci.residue.type != s.alphabet.INSERTION:
                     char = str(ci.residue.type)
                     
-                    if hasattr(alignment, 'insertion_at') and alignment.insertion_at(ci.column):
+                    if alignment.insertion_at(ci.column):
                         sequence.append(char.lower())
                     else:
                         sequence.append(char)
@@ -467,7 +472,31 @@ class A3MOutputBuilder(OutputBuilder):
                     continue
                         
             self.writeline(''.join(sequence))
-
+            
+    def _add_proper(self, alignment):
+        
+        for s in alignment.rows:
+            
+            if self.headers:
+                self.write(AbstractSequence.DELIMITER)
+                self.writeline(s.header)
+                
+            master = alignment.rows[1]
+            sequence = []
+            
+            for ci in s.columns:
+                char = str(ci.residue.type)
+                
+                if master.columns[ci.column].residue.type == master.alphabet.GAP:
+                    if ci.residue.type == s.alphabet.GAP:
+                        continue
+                    else:
+                        sequence.append(char.lower())
+                else:
+                    sequence.append(char)
+                        
+            self.writeline(''.join(sequence))            
+            
 class PIROutputBuilder(OutputBuilder):
     """
     Formats sequences as PIR FASTA strings, recognized by Modeller.

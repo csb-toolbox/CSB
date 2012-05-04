@@ -1,17 +1,14 @@
-"""
-@note: HHpredHitList and HHpredHit are pretty much data containers rather than
-       API objects. They are already covered quite well by csb.test.cases.bio.io.hhpred.
-"""
-
 import csb.test as test
 
 from csb.pyutils import Enum
 
-from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, ProfileLength, StateFactory, ProfileHMMSegment,\
-    StateExistsError, UnobservableStateError, EmissionExistsError
+from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, ProfileLength, StateFactory, ProfileHMMSegment
+from csb.bio.hmm import StateExistsError, UnobservableStateError, EmissionExistsError
 from csb.bio.hmm import HHpredHitList, HHpredHit, ScoreUnits, States, EVDParameters, BACKGROUND
 from csb.bio.sequence import ProteinAlphabet
 from csb.bio.structure import ProteinResidue
+
+from csb.bio.io import HHProfileParser
 
 
 
@@ -166,6 +163,19 @@ class TestProfileHMM(test.Case):
         self.hmm2.convert_scores(units=ScoreUnits.LogScales)
         self.assertEqual(self.string, self.hmm2.to_hmm().strip())
     
+@test.functional
+class TestPseudocountBuilder(test.Case):
+    
+    def setUp(self):
+        
+        super(TestPseudocountBuilder, self).setUp()
+        self.hmm = HHProfileParser(self.config.getTestFile('d1nz0a_.hhm')).parse()
+        
+    def runTest(self):
+        
+        self.hmm.add_emission_pseudocounts()
+        self.hmm.add_transition_pseudocounts()
+        # TODO: some checks here... 
 
 @test.unit
 class TestProfileHMMSegment(test.Case):
@@ -295,6 +305,92 @@ class TestState(test.Case):
         self.assertRaises(KeyError, lambda:self.m.background.append('BUG', 0))
 
 
+@test.unit
+class TestHit(test.Case):
+
+    def setUp(self):
+        
+        super(TestHit, self).setUp()
+                
+        self.h1 = HHpredHit(1, 'hit1', 2, 5, 3, 6, 0.5, 10)
+        self.h2 = HHpredHit(2, 'hit2', 3, 5, 4, 6, 0.2, 10)
+    
+    def testEquals(self):
+        hit = HHpredHit(1, 'hit1', 2, 5, 3, 6, 0.5, 10)
+        self.assertTrue(self.h1.equals(hit))
+        
+    def testSurpasses(self):
+        self.assertTrue(self.h1.surpasses(HHpredHit(5, 'hitX', 2, 3, 3, 4, 0.5, 10)))
+        self.assertTrue(self.h1.surpasses(HHpredHit(5, 'hitX', 2, 5, 3, 6, 0.3, 10)))
+        
+    def testIncludes(self):
+        self.assertTrue(self.h1.includes(HHpredHit(5, 'hit1', 2, 3, 3, 4, 0.5, 10)))
+        self.assertTrue(self.h1.includes(HHpredHit(5, 'hit1', 2, 4, 3, 5, 0.3, 10)))
+        self.assertTrue(self.h1.includes(HHpredHit(5, 'hit1', 2, 8, 3, 9, 0.3, 10), tolerance=3))
+        self.assertFalse(self.h1.includes(HHpredHit(5, 'hit1', 2, 8, 3, 9, 0.3, 10), tolerance=2))        
+        self.assertTrue(self.h1.includes(HHpredHit(5, 'hit1', 1, 5, 2, 6, 0.3, 10), tolerance=1))
+        self.assertFalse(self.h1.includes(HHpredHit(5, 'hit1', 1, 5, 2, 6, 0.3, 10), tolerance=0))
+        
+    def testLength(self):
+        self.assertEqual(self.h1.length, 4)
+        
+    def testAlignment(self):
+        
+        q, s = 'AB-D', 'A-CD'
+        self.h1.add_alignment(q, s)
+        
+        # query, subject
+        self.assertEqual(self.h1.alignment.query, q)
+        self.assertEqual(self.h1.alignment.subject, s)
+        
+        # segments
+        segments = list(self.h1.alignment.segments)
+
+        self.assertEqual(len(segments), 2)
+        self.assertEqual(segments[0].qstart, 3)
+        self.assertEqual(segments[0].qend, 3)
+        self.assertEqual(segments[0].start, 2)
+        self.assertEqual(segments[0].end, 2)        
+        self.assertEqual(segments[1].qstart, 5)
+        self.assertEqual(segments[1].qend, 5)
+        self.assertEqual(segments[1].start, 4)
+        self.assertEqual(segments[1].end, 4)
+                        
+        # to_a3m
+        a3m = self.h1.alignment.to_a3m().format(headers=False)
+        self.assertEqual(a3m.strip(), 'ABD\nA-cD')
+                
+
+@test.unit
+class TestHitList(test.Case):
+
+    def setUp(self):
+        
+        super(TestHitList, self).setUp()
+                
+        self.h1 = HHpredHit(1, 'hit1', 2, 5, 3, 6, 0.5, 10)
+        self.h2 = HHpredHit(2, 'hit2', 3, 5, 4, 6, 0.2, 10)
+
+        self.h1.add_alignment('A-CD', 'A-CD')        
+        self.h2.add_alignment('BCD', 'BCD')
+        
+        self.hits = HHpredHitList([self.h1, self.h2])
+        
+    def testLength(self):
+        self.assertEqual(len(self.hits), 2)
+        
+    def testSort(self):
+        hits = HHpredHitList([self.h2, self.h1])
+
+        self.assertEqual(hits[0], self.h2)
+        self.assertEqual(hits[1], self.h1)
+        hits.sort()
+        self.assertEqual(hits[0], self.h1)
+        self.assertEqual(hits[1], self.h2)
+        
+    def testIterator(self):
+        self.assertEqual(list(self.hits), [self.h1, self.h2])
+        
 
 if __name__ == '__main__':
     

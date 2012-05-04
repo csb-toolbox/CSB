@@ -252,7 +252,39 @@ structure:s2:.:A:.:A::::
 ABCD*
         '''.strip()
 
-
+@test.unit
+class TestCrossAlignmentBuilding(test.Case):
+    
+    def setUp(self):
+        super(TestCrossAlignmentBuilding, self).setUp()
+        
+        self.s1s = Sequence('s1A', 's1A desc', 'A-CD', SequenceTypes.Protein)
+        self.s1a = Sequence('s1A', 's1A desc', 'A.CD', SequenceTypes.Protein)        
+        self.s2  = Sequence('s2A', 's2A desc', 'AB-D', SequenceTypes.Protein)
+        
+        self.seq = SequenceAlignment([self.s1s, self.s2])
+        self.a3m = A3MAlignment([self.s1a, self.s2])
+        
+    def testFastaToA3m(self):
+        
+        with self.config.getTempStream() as tmp:
+            
+            builder = OutputBuilder.create(AlignmentFormats.A3M, tmp, headers=False)
+            builder.add_alignment(self.seq)
+            
+            tmp.flush()
+            self.assertEqual(open(tmp.name).read().strip(), 'ACD\nAb-D')
+            
+    def testA3mToFasta(self):
+        
+        with self.config.getTempStream() as tmp:
+            
+            builder = OutputBuilder.create(AlignmentFormats.FASTA, tmp, headers=False)
+            builder.add_alignment(self.a3m)
+            
+            tmp.flush()
+            self.assertEqual(open(tmp.name).read().strip(), 'A-CD\nAB-D')
+                        
             
 if __name__ == '__main__':
     

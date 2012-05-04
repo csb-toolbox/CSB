@@ -444,20 +444,21 @@ class Sequence(AbstractSequence):
 
         self._id = None
         self._header = None
-        self._residues = None
+        self._residues = ''
         self._type = None
           
         self.id = id
         self.header = header
-        self.type = type
+        self.type = type        
 
+        self._append(residues)
+    
+    def _append(self, string):
         # this seems to be the fastest method for sanitization and storage        
-        self._residues = re.sub('([^\w\-\.])+', '', residues)
+        self._residues += re.sub('([^\w\-\.])+', '', string)
         
     def _add(self, char):
-        
-        if char.isalpha() or char in (self.alphabet.GAP, self.alphabet.INSERTION):
-            self._residues.append(char)
+        self._append(char)
             
     def _get(self, rank):        
         

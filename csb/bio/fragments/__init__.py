@@ -1148,8 +1148,8 @@ class FragmentCluster(object):
         items = set(i for i in items if i.fragment.length >= FragmentCluster.MIN_LENGTH)
         
         self._matrix = {}        
-        self.threshold = float(threshold)
-        self.connectedness = float(connectedness)
+        self._threshold = float(threshold)
+        self._connectedness = float(connectedness)
            
         for i in items:
             
@@ -1184,6 +1184,17 @@ class FragmentCluster(object):
     @property    
     def fragments(self):
         return [i.fragment for i in self._items]
+    
+    @property
+    def threshold(self):
+        return self._threshold
+    @threshold.setter
+    def threshold(self, value):
+        self._threshold = float(value)
+    
+    @property
+    def connectedness(self):
+        return self._connectedness
     
     def _distances(self, skip=None):
 

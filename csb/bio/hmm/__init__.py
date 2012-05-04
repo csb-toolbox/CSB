@@ -2,15 +2,14 @@
 HHpred and Hidden Markov Model APIs. 
 """
 
-import os
 import sys
 import math
+import cStringIO
+
 import csb.pyutils
+import csb.io
 import csb.bio.structure as structure
 import csb.bio.sequence as sequence
-
-from itertools import izip
-from collections import namedtuple
 
 
 class UnobservableStateError(AttributeError):
@@ -75,33 +74,195 @@ class ProfileHMM(object):
 
     def __init__(self, units=ScoreUnits.LogScales, scale=-1000., logbase=2):
 
-        self.name = None
-        self.id = None
-        self.family = None
-        self.length = ProfileLength(None, None)
-        self.alignment = None
-        self.consensus = None
-        self.dssp = None
-        self.dssp_solvent = None
-        self.psipred = None
-        self.effective_matches = None
-        self.evd = EVDParameters(None, None) 
-        self.version = None
-        self.pseudocounts = False
-        self.emission_pseudocounts = False
-        self.transition_pseudocounts = False
-        self.layers = HMMLayersCollection()
-        self.start = State(States.Start)
-        self.start_insertion = None
-        self.end = State(States.End)
+        self._name = None
+        self._id = None
+        self._family = None
+        self._length = ProfileLength(0, 0)
+        self._alignment = None
+        self._consensus = None
+        self._dssp = None
+        self._dssp_solvent = None
+        self._psipred = None
+        self._effective_matches = None
+        self._evd = EVDParameters(None, None) 
+        self._version = None
+        self._pseudocounts = False
+        self._emission_pseudocounts = False
+        self._transition_pseudocounts = False
+        self._layers = HMMLayersCollection()
+        self._start = State(States.Start)
+        self._start_insertion = None
+        self._end = State(States.End)
+        self._scale = scale
+        self._logbase = logbase
         if units is None:
             self._score_units = ScoreUnits.LogScales
         else:
-            self._score_units = units
+            self._score_units = units        
 
-        self.scale = scale
-        self.logbase = logbase
-
+    @property
+    def name(self):
+        return self._name
+    @name.setter
+    def name(self, value):
+        self._name = str(value)
+    
+    @property
+    def id(self):
+        return self._id
+    @id.setter
+    def id(self, value):
+        self._id = str(value)
+    
+    @property
+    def family(self):
+        return self._family
+    @family.setter
+    def family(self, value):
+        self._family = str(value)
+    
+    @property
+    def length(self):
+        return self._length
+    @length.setter
+    def length(self, value):
+        if not isinstance(value, ProfileLength):
+            raise TypeError(value)
+        self._length = value
+    
+    @property
+    def alignment(self):
+        return self._alignment
+    @alignment.setter
+    def alignment(self, value):
+        if not isinstance(value, sequence.A3MAlignment):
+            raise TypeError(value)        
+        self._alignment = value
+    
+    @property
+    def consensus(self):
+        return self._consensus
+    @consensus.setter
+    def consensus(self, value):
+        if not isinstance(value, sequence.AbstractSequence):
+            raise TypeError(value)         
+        self._consensus = value
+    
+    @property
+    def dssp(self):
+        return self._dssp
+    @dssp.setter
+    def dssp(self, value):
+        if not isinstance(value, structure.SecondaryStructure):
+            raise TypeError(value) 
+        self._dssp = value
+    
+    @property
+    def dssp_solvent(self):
+        return self._dssp_solvent
+    @dssp_solvent.setter
+    def dssp_solvent(self, value):
+        self._dssp_solvent = str(value)
+    
+    @property
+    def psipred(self):
+        return self._psipred
+    @psipred.setter
+    def psipred(self, value):
+        if not isinstance(value, structure.SecondaryStructure):
+            raise TypeError(value)         
+        self._psipred = value
+    
+    @property
+    def effective_matches(self):
+        return self._effective_matches
+    @effective_matches.setter
+    def effective_matches(self, value):
+        self._effective_matches = value
+    
+    @property
+    def evd(self):
+        return self._evd
+    @evd.setter
+    def evd(self, value):
+        if not isinstance(value, EVDParameters):
+            raise TypeError(value) 
+        self._evd = value
+    
+    @property
+    def version(self):
+        return self._version
+    @version.setter
+    def version(self, value):
+        self._version = str(value)
+    
+    @property
+    def pseudocounts(self):
+        return self._pseudocounts
+    @pseudocounts.setter
+    def pseudocounts(self, value):
+        self._pseudocounts = bool(value)
+    
+    @property
+    def emission_pseudocounts(self):
+        return self._emission_pseudocounts
+    @emission_pseudocounts.setter
+    def emission_pseudocounts(self, value):
+        self._emission_pseudocounts = bool(value)
+    
+    @property
+    def transition_pseudocounts(self):
+        return self._transition_pseudocounts
+    @transition_pseudocounts.setter
+    def transition_pseudocounts(self, value):
+        self._transition_pseudocounts = bool(value)
+    
+    @property
+    def layers(self):
+        return self._layers
+    
+    @property
+    def start(self):
+        return self._start
+    @start.setter
+    def start(self, value):
+        if value is None or (isinstance(value, State) and value.type == States.Start):
+            self._start = value
+        else:
+            raise TypeError(value)
+    
+    @property
+    def start_insertion(self):
+        return self._start_insertion
+    @start_insertion.setter
+    def start_insertion(self, value):
+        if value is None or (isinstance(value, State) and value.type == States.Insertion):        
+            self._start_insertion = value
+        else:
+            raise TypeError(value)    
+    
+    @property
+    def end(self):
+        return self._end
+    @end.setter
+    def end(self, value):
+        if value is None or (isinstance(value, State) and value.type == States.End):        
+            self._end = value
+        else:
+            raise TypeError(value)      
+    
+    @property
+    def scale(self):
+        return self._scale
+    
+    @property
+    def logbase(self):
+        return self._logbase
+    
+    @property
+    def score_units(self):
+        return self._score_units
+    
     @property
     def residues(self):
         res = [layer.residue for layer in self.layers]
@@ -111,7 +272,7 @@ class ProfileHMM(object):
     @property
     def all_layers(self):
         """
-        a list of layers including start and start_insertion
+        A list of layers including start and start_insertion
         """
         complete_layers = []
         first_layer = HMMLayer(rank=0, residue=None)
@@ -132,10 +293,6 @@ class ProfileHMM(object):
                 return True
         return has
 
-    @property
-    def score_units(self):
-        return self._score_units
-
     def serialize(self, file_name):
         """
         Serialize this HMM to a file.
@@ -144,24 +301,27 @@ class ProfileHMM(object):
         @type file_name: str
         """
         import cPickle
+        rec = sys.getrecursionlimit()        
         sys.setrecursionlimit(10000)
         cPickle.dump(self, open(file_name, 'w'))
-        sys.setrecursionlimit(1000)
+        sys.setrecursionlimit(rec)
 
     @staticmethod
     def deserialize(file_name):
         """
         De-serialize an HMM from a file.
 
-        @param file_name: source file name
+        @param file_name: source file name (pickle)
         @type file_name: str
         """
         import cPickle
+        rec = sys.getrecursionlimit()
         sys.setrecursionlimit(10000)
         return cPickle.load(open(file_name, 'r'))
-        sys.setrecursionlimit(1000)
+        sys.setrecursionlimit(rec)
 
     def _convert(self, units, score, scale, logbase):
+        
         if units == ScoreUnits.Probability:
             return logbase ** (score / scale)
         elif units == ScoreUnits.LogScales:
@@ -183,125 +343,22 @@ class ProfileHMM(object):
                               by the output file format
         @type convert_scores: bool
         """
-        import StringIO
-
-        class MyStringIO(StringIO.StringIO):
-
-            def writeline(self, data):
-                self.write(data)
-                self.write(os.linesep)
-
-        stream = MyStringIO()
-        hmm = self
-
         if convert_scores:
-            hmm.convert_scores(ScoreUnits.LogScales)
-        elif hmm.score_units != ScoreUnits.LogScales:
-            raise ValueError('Scores must be converted to LogScales first.')
-
-        stream.writeline('''HHsearch {0.version}
-NAME  {0.name}
-FAM   {0.family}
-LENG  {0.length.matches} match states, {0.length.layers} columns in multiple alignment
-NEFF  {0.effective_matches}
-PCT   {0.pseudocounts}'''.format(hmm))
-        if hmm.evd:
-            stream.writeline('EVD   {0.lamda}  {0.mu}'.format(hmm.evd))            
-
-        stream.writeline('SEQ')
-        if hmm.dssp:
-            stream.writeline('>ss_dssp')
-            stream.writeline(hmm.dssp.to_string())
-            if hmm.dssp_solvent:
-                stream.writeline('>sa_dssp')
-                stream.writeline(hmm.dssp_solvent)                
-        if hmm.psipred:
-            stream.writeline('>ss_pred')
-            stream.writeline(hmm.psipred.to_string())
-            stream.writeline('>ss_conf')
-            confidence = [''.join(map(str, m.score)) for m in hmm.psipred]
-            stream.writeline(''.join(confidence))
-
-        if hmm.alignment:
-            if hmm.consensus:
-                stream.writeline(str(hmm.consensus))
-            stream.writeline(hmm.alignment.format().rstrip(os.linesep))
-
-        stream.writeline('#')
-
-        first_match = hmm.layers[1][States.Match]
-        null = [int(first_match.background[aa])
-                for aa in sorted(map(str, first_match.background))]
-        stream.writeline('NULL   {0}'.format('\t'.join(map(str, null))))
-        stream.writeline('HMM    {0}'.format(
-            '\t'.join(sorted(map(str, first_match.emission)))))
-
-        tran_types = 'M->M    M->I    M->D    I->M    I->I    D->M    D->D'.split()
-        stream.writeline('       {0}'.format(
-            '\t'.join(tran_types + 'Neff    Neff_I    Neff_D'.split())))
-
-        stream.write("       ")
-        for tran_type in tran_types:
-            source_statekind = csb.pyutils.Enum.parse(States, tran_type[0])
-            target_statekind = csb.pyutils.Enum.parse(States, tran_type[3])
-            if source_statekind == States.Match:
-                try:
-                    stream.write("{0:<7}\t".format(
-                        int(hmm.start.transitions[target_statekind].probability)))
-                except csb.pyutils.ItemNotFoundError:
-                    stream.write("*\t")
-            else:
-                stream.write("*\t")
-        stream.writeline('*\t' * 3)
-
-        for layer in hmm.layers:
-
-            stream.write("{0} {1:<5}".format(layer.residue.type, layer.rank))
-            for aa in sorted(layer[States.Match].emission):
-                emission = layer[States.Match].emission[aa]
-                if emission is None:
-                    emission = '*'
-                else:
-                    emission = int(emission)
-                stream.write("{0:<7}\t".format(emission))
-            stream.writeline("{0}".format(layer.rank))
-
-            stream.write("       ")
-            for tran_type in tran_types:
-                source_statekind = csb.pyutils.Enum.parse(States, tran_type[0])
-                target_statekind = csb.pyutils.Enum.parse(States, tran_type[3])
-
-                if target_statekind == States.Match and \
-                       layer.rank == hmm.layers.last_index:
-                    target_statekind = States.End
-
-                try:
-                    state = layer[source_statekind]
-                    stream.write("{0:<7}\t".format(
-                        int(state.transitions[target_statekind].probability)))
-                except csb.pyutils.ItemNotFoundError:
-                    stream.write("*\t")
-
-            for data in (layer.effective_matches, layer.effective_insertions,
-                         layer.effective_deletions):
-                if data is None:
-                    data = '*'
-                else:
-                    data = int(data * abs(hmm.scale))
-                stream.write("{0:<7}\t".format(data))
-
-            stream.writeline("\n")
-
-        stream.writeline('//')
-
-        data = stream.getvalue()
-        stream.close()
-
+            self.convert_scores(ScoreUnits.LogScales)
+                        
+        temp = cStringIO.StringIO()
+        
+        builder = HHMFileBuilder(temp)
+        builder.add_hmm(self)
+        
+        data = temp.getvalue()        
+        temp.close()
+        
         if not output_file:
             return data
         else:
-            with open(output_file, 'w') as out:
-                out.write(data)
+            with csb.io.EntryWriter(output_file, close=False) as out:
+                out.write(data)                
 
     def segment(self, start, end):
         """
@@ -321,325 +378,20 @@ PCT   {0.pseudocounts}'''.format(hmm))
         
         return ProfileHMMRegion(self, start, end) 
 
-
-    def add_emission_pseudocounts(self, tau=0.1, pca=2.5, pcb=0.5, pcc=1.0 ):
+    def add_emission_pseudocounts(self, *a, **k):
         """
-        Port from HHpred, it uses the conditional background probabilities infered from the gonnet matrix.
-
-        @param tau: admission weight, i.e how much of the final score is dertermined by the background probabilities. 0.0 no pseudocounts 
-        @type tau: float
+        See L{csb.bio.hmm.pseudocounts.PseudocountBuilder}
         """
-        from numpy import array, zeros, exp, dot, transpose, clip
-        import operator
+        from csb.bio.hmm.pseudocounts import PseudocountBuilder
+        PseudocountBuilder(self).add_emission_pseudocounts(*a, **k)
 
-        if self.pseudocounts or self.emission_pseudocounts:
-            return
-        if abs(tau)< 1e-6:
-            return
-        
-        # Assume probabilities
-        if not self._score_units == ScoreUnits.Probability:
-            self.convert(units=ScoreUnits.Probability)
-            
-        ##  gonnet matrix frequencies taken from HHpred
-        gonnet =[ 10227, 3430, 2875, 3869, 1625, 2393, 4590, 6500, 2352, 3225, 5819, 4172, 1435,
-                  1579, 3728, 4610, 6264,  418, 1824, 5709, 3430, 7780, 2209, 2589,  584, 2369,
-                  3368, 3080, 2173, 1493, 3093, 5701,  763,  859, 1893, 2287, 3487,  444, 1338, 2356,
-                  2875, 2209, 3868, 3601,  501, 1541, 2956, 3325, 1951, 1065, 2012, 2879,  532,  688,
-                  1480, 2304, 3204,  219, 1148, 1759,  3869, 2589, 3601, 8618,  488, 2172, 6021, 4176,
-                  2184, 1139, 2151, 3616,  595,  670, 2086, 2828, 3843,  204, 1119, 2015,  1625,  584,
-                  501,  488, 5034,  355,  566,  900,  516,  741, 1336,  591,  337,  549,  419,  901,
-                  1197,  187,  664, 1373,   2393, 2369, 1541, 2172,  355, 1987, 2891, 1959, 1587, 1066,
-                  2260, 2751,  570,  628, 1415, 1595, 2323,  219,  871, 1682,  4590, 3368, 2956, 6021,
-                  566, 2891, 8201, 3758, 2418, 1624, 3140, 4704,  830,  852, 2418, 2923, 4159,  278, 1268, 2809,
-                  6500, 3080, 3325, 4176,  900, 1959, 3758, 26066, 2016, 1354, 2741, 3496,  741,  797, 2369,
-                  3863, 4169,  375, 1186, 2569,  2352, 2173, 1951, 2184,  516, 1587, 2418, 2016, 5409,
-                  1123, 2380, 2524,  600, 1259, 1298, 1642, 2446,  383,  876, 1691, 3225, 1493, 1065,
-                  1139,  741, 1066, 1624, 1354, 1123, 6417, 9630, 1858, 1975, 2225, 1260, 1558, 3131,
-                  417, 1697, 7504,  5819, 3093, 2012, 2151, 1336, 2260, 3140, 2741, 2380, 9630,25113,
-                  3677, 4187, 5540, 2670, 2876, 5272, 1063, 3945,11005, 4172, 5701, 2879, 3616,  591,
-                  2751, 4704, 3496, 2524, 1858, 3677, 7430,  949,  975, 2355, 2847, 4340,  333, 1451, 2932,
-                  1435,  763,  532,  595,  337,  570,  830,  741,  600, 1975, 4187,  949, 1300, 1111,  573,
-                  743, 1361,  218,  828, 2310,  1579,  859,  688,  670,  549,  628,  852,  797, 1259, 2225,
-                  5540,  975, 1111, 6126,  661,  856, 1498, 1000, 4464, 2602,  3728, 1893, 1480, 2086,  419,
-                  1415, 2418, 2369, 1298, 1260, 2670, 2355,  573,  661,11834, 2320, 3300,  179,  876, 2179,
-                  4610, 2287, 2304, 2828,  901, 1595, 2923, 3863, 1642, 1558, 2876, 2847,  743,  856, 2320,
-                  3611, 4686,  272, 1188, 2695,  6264, 3487, 3204, 3843, 1197, 2323, 4159, 4169, 2446, 3131,
-                  5272, 4340, 1361, 1498, 3300, 4686, 8995,  397, 1812, 5172, 418,  444,  219,  204,  187,
-                  219,  278,  375,  383,  417, 1063,  333,  218, 1000,  179,  272,  397, 4101, 1266,  499,
-                  1824, 1338, 1148, 1119,  664,  871, 1268, 1186,  876, 1697, 3945, 1451,  828, 4464,  876,
-                  1188, 1812, 1266, 9380, 2227, 5709, 2356, 1759, 2015, 1373, 1682, 2809, 2569, 1691, 7504,
-                  11005, 2932, 2310, 2602, 2179, 2695, 5172,  499, 2227.0,11569.0]
-
-        alphabet = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V']
-        
-        ## S = SubstitutionMatrix(substitution_matrix)
-        s_mat = array(gonnet)
-        #Normalize
-        s_mat /= s_mat.sum()
-        s_mat = s_mat.reshape((len(alphabet),len(alphabet)))
-        # Marginalize matrix
-        s_marginal = s_mat.sum(-1)
-        s_conditional = s_mat/s_marginal
-        # Get data and info from hmm 
-        em = array([ [layer[States.Match].emission[aa] or 0.0 for aa in alphabet]
-                    for layer in self.layers])
-
-        em = clip(em, sys.float_info.min,1.)
-        
-        neff_m = array([l.effective_matches for l in self.layers])
-
-        g = dot(em, transpose(s_conditional))
-
-        if neff_m is not None:
-            tau = clip(pca/(1.+ (neff_m/pcb)**pcc),0.0, pcc)
-            e =  transpose((1. - tau) * transpose(em) + tau * transpose(g))
-        else:
-            e =  (1. - tau) * em + tau * g
-            
-        # Renormalize e
-        e = transpose(transpose(e)/e.sum(-1))
-
-        for i,layer in enumerate(self.layers):
-            layer[States.Match].emission.set(dict(zip(alphabet,e[i])))
-
-        self.emission_pseudocounts = True
-        return 
-        
-
-        
-    def add_transition_pseudocounts(self, gapb = 1., gapd = 0.15, gape = 1.0,
-                                    gapf = 0.6, gapg = 0.6, gapi = 0.6):
+    def add_transition_pseudocounts(self, *a, **k):
         """
-        Adds pseudocounts to the transitions a port from hhsearch
-        -gapb 1.0 -gapd 0.15 -gape 1.0 -gapf 0.6 -gapg 0.6 -gapi 0.6 
-        I try to use a consistent nameing scheme
-        """
-
-        from numpy import sum, array
-
-        if not self._score_units == ScoreUnits.Probability:
-            self.convert(units=ScoreUnits.Probability) 
-
-        if self.pseudocounts or self.transition_pseudocounts:
-            return
-
-        # We need a fully populated HMM so first add all missing states
-        states = [States.Match, States.Insertion, States.Deletion] 
-        background = self.layers[1][States.Match].background
-        for layer in self.layers:
-            rank = layer.rank
-            for state in states:
-                if state not in layer:
-
-                    if state is States.Deletion:
-                        # Add a new Deletion state
-                        deletion = State(States.Deletion)
-                        deletion.rank = rank 
-                        layer.append(deletion)
-                        
-                    elif state is States.Insertion:
-                        # Add a new Deletion state
-                        insertion = State(States.Insertion,
-                                          emit=csb.pyutils.Enum.members(
-                                          sequence.SequenceAlphabets.Protein))
-                        insertion.background = background 
-                        insertion.emission = insertion.background
-                        insertion.rank = rank
-                        layer.append(insertion)
-
-        if not self.start_insertion:
-            insertion = State(States.Insertion,
-                                          emit=csb.pyutils.Enum.members(
-                                          sequence.SequenceAlphabets.Protein))
-            insertion.background = background 
-            insertion.emission = insertion.background
-            insertion.rank = 0
-            self.start_insertion = insertion
-
-        # make hmm completly connected
-        for i in range(1,self.layers.length):
-            layer = self.layers[i]
-            #Start with match state
-            state = layer[States.Match]
-            if not States.Insertion in state.transitions:
-                state.transitions.append(Transition(state,
-                                                    self.layers[i][States.Insertion],
-                                                    0.0))
-            if not States.Deletion in state.transitions:
-                state.transitions.append(Transition(state,
-                                                    self.layers[i+1][States.Deletion],
-                                                    0.0))
-            state = layer[States.Insertion]
-            if not States.Insertion in state.transitions:
-                state.transitions.append(Transition(state,
-                                                    self.layers[i][States.Insertion],
-                                                    0.0))
-            if not States.Match in state.transitions:
-                state.transitions.append(Transition(state,
-                                                    self.layers[i+1][States.Match],
-                                                    0.0))
-            state = layer[States.Deletion]
-            if not States.Deletion in state.transitions:
-                state.transitions.append(Transition(state,
-                                                    self.layers[i+1][States.Deletion],
-                                                    0.0))
-            if not States.Match in state.transitions:
-                state.transitions.append(Transition(state,
-                                                    self.layers[i+1][States.Match],
-                                                    0.0))
-        # start layer
-        state = self.start
-        if not States.Insertion in self.start.transitions:
-            state.transitions.append(Transition(self.start,
-                                                self.start_insertion,
-                                                0.0))
-        if not States.Deletion in self.start.transitions:
-            state.transitions.append(Transition(self.start,
-                                                self.layers[1][States.Deletion],
-                                                0.0))
-
-        state = self.start_insertion
-        if not States.Insertion in self.start_insertion.transitions:
-            state.transitions.append(Transition(self.start_insertion,
-                                                self.start_insertion,
-                                                0.0))
-        if not States.Match in self.start_insertion.transitions:
-            state.transitions.append(Transition(self.start_insertion,
-                                                self.layers[1][States.Match],
-                                                0.0))
-
-        # last layer
-        state = self.layers[-1][States.Match]
-        if not States.Insertion in state.transitions:
-            state.transitions.append(Transition(state,
-                                                self.layers[-1][States.Insertion],
-                                                0.0))
-        state = self.layers[-1][States.Insertion]
-        if not States.Insertion in state.transitions:
-            state.transitions.append(Transition(state,
-                                                self.layers[-1][States.Insertion],
-                                                0.0))
-
-        if not States.End in state.transitions:
-            state.transitions.append(Transition(state,
-                                                self.end,
-                                                0.0))
-        state = self.layers[-1][States.Deletion]
-        if not States.End in state.transitions:
-            state.transitions.append(Transition(state,
-                                                self.end,
-                                                0.0))
-        
-
-        
-        # Now we have created a fully connected HMM
-        # Lates add pseuod counts
-        # Calculate pseudo counts
-
-        # to be honest I really do not know how they came up with this
-        pc_MD = pc_MI = 0.0286 * gapd
-        pc_MM = 1. - 2 * pc_MD
-        pc_DD = pc_II = gape/(gape - 1 + 1/0.75)
-        pc_DM = pc_IM = 1. - pc_II
-
-        
-        # Get current transtion probabilities
-        t_mm = self.start.transitions[States.Match].probability 
-        t_mi = self.start.transitions[States.Insertion].probability 
-        t_md = self.start.transitions[States.Deletion].probability 
-
-        # Transitions from Match state
-        n_eff = self.effective_matches
-        
-        t = array([(n_eff -1)*t_mm + gapb * pc_MM,
-                   (n_eff -1)*t_mi + gapb * pc_MI,
-                   (n_eff -1)*t_md + gapb * pc_MD])
-        # normalize to one
-        t /= t.sum()
-        # Set 
-        self.start.transitions[States.Match].probability  = t[0]
-        self.start.transitions[States.Insertion].probability = t[1]
-        self.start.transitions[States.Deletion].probability = t[2]
-        
-        # Rinse and repeat
-        t_im = self.start_insertion.transitions[States.Match].probability 
-        t_ii = self.start_insertion.transitions[States.Insertion].probability  
-        
-        t =  array([t_im + gapb * pc_IM,t_ii +  gapb * pc_II])
-        t /= t.sum()
-
-        self.start_insertion.transitions[States.Match].probability  = t[0]
-        t_ii = self.start_insertion.transitions[States.Insertion].probability  = t[1]
-
-        # And now for all layers
-        for layer in self.layers[:-1]:
-            # Get current transtion probabilities
-            t_mm = layer[States.Match].transitions[States.Match].probability 
-            t_mi = layer[States.Match].transitions[States.Insertion].probability 
-            t_md = layer[States.Match].transitions[States.Deletion].probability 
-            n_eff = layer.effective_matches
-            t = array([(n_eff -1)*t_mm + gapb * pc_MM,
-                       (n_eff -1)*t_mi + gapb * pc_MI,
-                       (n_eff -1)*t_md + gapb * pc_MD])
-            # normalize to one
-            t /= t.sum()
-            layer[States.Match].transitions[States.Match].probability  = t[0]
-            layer[States.Match].transitions[States.Insertion].probability = t[1]
-            layer[States.Match].transitions[States.Deletion].probability = t[2]
-            
-            # Transitions from insert state
-            t_im = layer[States.Insertion].transitions[States.Match].probability 
-            t_ii = layer[States.Insertion].transitions[States.Insertion].probability
-            n_eff = layer.effective_insertions
-            t = array([t_im * n_eff + gapb * pc_IM,
-                       t_im * n_eff + gapb * pc_II])
-            # normalize to one
-            t /= t.sum()
-            layer[States.Insertion].transitions[States.Match].probability  = t[0]
-            layer[States.Insertion].transitions[States.Insertion].probability = t[1]
-
-            # Transitions form deletion state
-            t_dm = layer[States.Deletion].transitions[States.Match].probability 
-            t_dd = layer[States.Deletion].transitions[States.Deletion].probability
-            n_eff = layer.effective_deletions
-            t = array([t_dm * n_eff + gapb * pc_DM,
-                       t_dd * n_eff + gapb * pc_DD])
-            # normalize to one
-            t /= t.sum()
-            layer[States.Deletion].transitions[States.Match].probability  = t[0]
-            layer[States.Deletion].transitions[States.Deletion].probability = t[1]
-
-        #Last layer
-
-        layer = self.layers[-1]
-        t_mm = layer[States.Match].transitions[States.End].probability 
-        t_mi = layer[States.Match].transitions[States.Insertion].probability 
-        n_eff = layer.effective_matches
-        # No deletion
-        t = array([(n_eff -1)*t_mm + gapb * pc_MM,
-                   (n_eff -1)*t_mi + gapb * pc_MI])
-        # normalize to one
-        t /= t.sum()
-        layer[States.Match].transitions[States.End].probability  = t[0]
-        layer[States.Match].transitions[States.Insertion].probability = t[1]
-        
-        # Transitions from insert state
-        t_im = layer[States.Insertion].transitions[States.End].probability 
-        t_ii = layer[States.Insertion].transitions[States.Insertion].probability
-        n_eff = layer.effective_insertions
-        t = array([t_im * n_eff + gapb * pc_IM,
-                   t_im * n_eff + gapb * pc_II])
-        # normalize to one
-        t /= t.sum()
-        layer[States.Insertion].transitions[States.End].probability  = t[0]
-        layer[States.Insertion].transitions[States.Insertion].probability = t[1]
-
-        layer[States.Deletion].transitions[States.End].probability = 1.
-
-        self.transition_pseudocounts = True
-        return 
-                  
+        See L{csb.bio.hmm.pseudocounts.PseudocountBuilder}
+        """        
+        from csb.bio.hmm.pseudocounts import PseudocountBuilder
+        PseudocountBuilder(self).add_transition_pseudocounts(*a, **k)
+                                  
     def structure(self, chain_id=None, accession=None):
         """
         Extract the structural information from the HMM.
@@ -795,7 +547,7 @@ PCT   {0.pseudocounts}'''.format(hmm))
             raise ValueError(
                 'Scores must be converted to probabilities first.')
 
-        for q_layer, s_layer in izip(iter(self.layers), iter(other.layers)):
+        for q_layer, s_layer in zip(self.layers, other.layers):
 
             try:
                 if States.Match in q_layer and \
@@ -845,6 +597,7 @@ PCT   {0.pseudocounts}'''.format(hmm))
             for i in range(motif.start, motif.end + 1):
                 self.layers[i].residue.secondary_structure = motif    
 
+
 class ProfileHMMSegment(ProfileHMM):
     """
     Represents a segment (fragment) of a ProfileHMM.
@@ -876,8 +629,8 @@ class ProfileHMMSegment(ProfileHMM):
         self.evd = hmm.evd
         self.version = hmm.version       
         self.source = hmm.id
-        self.source_start = start
-        self.source_end = end
+        self._source_start = start
+        self._source_end = end
         
         if hmm.alignment:
             self.alignment = hmm.alignment.hmm_subregion(start, end)
@@ -886,7 +639,7 @@ class ProfileHMMSegment(ProfileHMM):
         layers = csb.pyutils.deepcopy(hmm.layers[start : end + 1])
         max_score = 1.0
         if hmm.score_units != ScoreUnits.Probability:
-            max_score = hmm._convert(hmm.score_units, max_score, hmm.scale, hmm.logbase)
+            max_score = hmm._convert_scores(hmm.score_units, max_score, hmm.scale, hmm.logbase)
         self._build_graph(layers, max_score)
                         
         if hmm.dssp:
@@ -898,7 +651,15 @@ class ProfileHMMSegment(ProfileHMM):
         self.length.layers = self.layers.length
         self.length.matches = self.layers.length
         self.effective_matches = sum([(l.effective_matches or 0.0) for l in self.layers]) / self.layers.length   
-        
+
+    @property
+    def source_start(self):
+        return self._source_start
+
+    @property
+    def source_end(self):
+        return self._source_end
+            
     def _build_graph(self, source_layers, max_score):
 
         for rank, layer in enumerate(source_layers, start=1):
@@ -923,6 +684,7 @@ class ProfileHMMSegment(ProfileHMM):
                     else:
                         end_tran = Transition(state, self.end, max_score)
                         state.transitions.set({States.End: end_tran}) # TODO: I->I ?                      
+
 
 class EmissionProfileSegment(ProfileHMMSegment):
     """
@@ -955,7 +717,8 @@ class EmissionProfileSegment(ProfileHMMSegment):
                 match.transitions.append(Transition(match, self.end, 1.0))
             else:
                 assert False
-        
+
+
 class ProfileHMMRegion(ProfileHMM):
     """
     A shallow proxy referring to a sub-region of a given Profile HMM.
@@ -979,20 +742,30 @@ class ProfileHMMRegion(ProfileHMM):
         if hmm.score_units != ScoreUnits.Probability:
             raise ValueError('Scores must be converted to probabilities first.')
                 
-        self.layers = HMMLayersCollection(hmm.layers[start : end + 1])
+        self._layers = HMMLayersCollection(hmm.layers[start : end + 1])
         self._score_units = hmm.score_units
         self.id = hmm.id
         self.name = hmm.name
         self.family = hmm.family
-        self.start = start
-        self.end = end
-                
+        self._source_start = start
+        self._source_end = end
+
+    @property
+    def source_start(self):
+        return self._source_start
+    
+    @property
+    def source_end(self):
+        return self._source_end
+
+            
 class ProfileLength(object):
     
     def __init__(self, matches, layers):
         self.matches = matches
         self.layers = layers
-        
+
+
 class EVDParameters(object):
     
     def __init__(self, lamda, mu):
@@ -1001,6 +774,7 @@ class EVDParameters(object):
     
     def __nonzero__(self):
         return (self.lamda is not None or self.mu is not None)
+
 
 class EmissionTable(csb.pyutils.DictionaryContainer):        
     """ 
@@ -1012,11 +786,11 @@ class EmissionTable(csb.pyutils.DictionaryContainer):
     @param emission: an initialization dictionary of emission probabilities
     @type emission: dict
     @param restrict: a list of residue types allowed for this emission table. 
-                     Defaults to the members of I{SequenceAlphabets.Protein}
+                     Defaults to the members of L{csb.bio.sequence.ProteinAlphabet}
     @type restrict: list
     """
 
-    def __init__(self, emission=None, restrict=csb.pyutils.Enum.members(sequence.SequenceAlphabets.Protein)):
+    def __init__(self, emission=None, restrict=csb.pyutils.Enum.members(sequence.ProteinAlphabet)):
         super(EmissionTable, self).__init__(emission, restrict)
             
     def append(self, residue, probability):
@@ -1054,7 +828,8 @@ class EmissionTable(csb.pyutils.DictionaryContainer):
         @type probability: float
         """                
         super(EmissionTable, self)._update({residue: probability})
-        
+
+
 class TransitionTable(csb.pyutils.DictionaryContainer):        
     """ 
     Represents a lookup table of transitions that are possible from within a given state. 
@@ -1076,8 +851,7 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
     @type restrict: list
     """
     
-    def __init__(self, transitions=None, restrict=csb.pyutils.Enum.members(States)):
-        
+    def __init__(self, transitions=None, restrict=csb.pyutils.Enum.members(States)): 
         super(TransitionTable, self).__init__(transitions, restrict)
     
     def append(self, transition):
@@ -1090,9 +864,10 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
         @raise TransitionExistsError: when a transition to the same target state
                                       already exists for the current state
         """
+        
         if transition.successor.type in self:
-            raise TransitionExistsError('A transition to a state of type {0} is already defined.'.format(transition.successor.type))
-
+            raise TransitionExistsError('Transition to a {0} state is already defined.'.format(
+                                                                        transition.successor.type))
         super(TransitionTable, self).append(transition.successor.type, transition)
     
     def set(self, table):
@@ -1117,10 +892,11 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
         @raise ValueError: if I{transition.successor.type} differs from C{target_statekind}
         """
         if transition.successor.type != target_statekind:
-            raise ValueError('Transition successor\'type differs from the specified target_statekind.')
+            raise ValueError("Transition successor'type differs from the specified target_statekind.")
                 
         super(TransitionTable, self)._update({target_statekind: transition})  
-        
+
+
 class HMMLayersCollection(csb.pyutils.CollectionContainer):
     """
     Provides consecutive, 1-based access to all of the layers in the profile.
@@ -1153,16 +929,24 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
     @type states: dict 
     """        
     def __init__(self, rank, residue, states=None):
-        
-        self.rank = int(rank)
-        self._residue = None
-        self.residue = residue        
-        self.effective_matches = None
-        self.effective_insertions = None
-        self.effective_deletions = None
-        
+
         super(HMMLayer, self).__init__(states, restrict=csb.pyutils.Enum.members(States))
+                
+        self._rank = int(rank)
+        self._residue = None   
+        self._effective_matches = None
+        self._effective_insertions = None
+        self._effective_deletions = None
         
+        self.residue = residue
+
+    @property
+    def rank(self):
+        return self._rank
+    @rank.setter
+    def rank(self, value):
+        self._rank = int(value)
+
     @property
     def residue(self):
         return self._residue
@@ -1171,6 +955,27 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
         if residue and residue.type == sequence.SequenceAlphabets.Protein.GAP:          
             raise HMMArgumentError('HMM match states cannot be gaps')
         self._residue = residue
+        
+    @property
+    def effective_matches(self):
+        return self._effective_matches
+    @effective_matches.setter
+    def effective_matches(self, value):
+        self._effective_matches = value
+    
+    @property
+    def effective_insertions(self):
+        return self._effective_insertions
+    @effective_insertions.setter
+    def effective_insertions(self, value):
+        self._effective_insertions = value
+    
+    @property
+    def effective_deletions(self):
+        return self._effective_deletions
+    @effective_deletions.setter
+    def effective_deletions(self, value):
+        self._effective_deletions = value
     
     def append(self, state):
         """
@@ -1198,10 +1003,11 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
         @raise ValueError: if state.type differs from state_kind
         """
         if state.type != state_kind:
-            raise ValueError('State\'type differs from the specified state_kind.')
+            raise ValueError("State's type differs from the specified state_kind")
                 
         super(HMMLayer, self)._update({state_kind: state})        
-        
+
+   
 class State(object):
     """ 
     Describes a Hidden Markov Model hidden state.
@@ -1217,28 +1023,51 @@ class State(object):
     """
     
     def __init__(self, type, emit=None):
-
-        if type.enum is not States:
-            raise TypeError(type) 
+        
+        self._type = None
+        self._rank = None      
+        self._transitions = TransitionTable()
+        self._emission = None
+        self._background = None
         
         self.type = type
-        self.rank = None      
-        self.transitions = TransitionTable()
-        self.emission = None
-        self.background = None
         
         if emit is not None:
-            self.emission = EmissionTable(restrict=emit)
-            self.background = EmissionTable(restrict=emit)    
+            self._emission = EmissionTable(restrict=emit)
+            self._background = EmissionTable(restrict=emit)    
     
     def __repr__(self):
-        return "<HMM {0.type.name} State>".format(self)
-        
-    def __getattribute__(self, name):
-        if name == 'emission' and object.__getattribute__(self, name) is None:
-            raise UnobservableStateError('{0.name} state is not exposing any observations.'.format(self.type))
-        else:
-            return object.__getattribute__(self, name)   
+        return "<HMM {0.type!r} State>".format(self)
+
+    @property
+    def type(self):
+        return self._type
+    @type.setter
+    def type(self, value):
+        if value.enum is not States:
+            raise TypeError(value)         
+        self._type = value
+    
+    @property
+    def rank(self):
+        return self._rank
+    @rank.setter
+    def rank(self, value):
+        self._rank = int(value)
+    
+    @property
+    def transitions(self):
+        return self._transitions
+    
+    @property
+    def emission(self):
+        if self._emission is None:
+            raise UnobservableStateError('Silent {0!r} state'.format(self.type))
+        return self._emission
+    
+    @property
+    def background(self):
+        return self._background
         
     @property
     def silent(self):
@@ -1247,7 +1076,6 @@ class State(object):
         except UnobservableStateError:
             return True     
                     
-
 class StateFactory(object):
     """
     Simplifies the construction protein profile HMM states.
@@ -1293,145 +1121,204 @@ class Transition(object):
     @type successor: L{State}
     @param probability: transition score
     @type probability: float
-    
-    @raise ValueError: if probability is not >= 0
     """
     
     def __init__(self, predecessor, successor, probability):
         
         if not (isinstance(predecessor, State) or isinstance(successor, State)):
             raise TypeError('Transition predecessor and successor states must be State instances.')
-        if not (probability >=0):
-            raise ValueError('Transition probability must be a positive number.')
-         
-        assert all([predecessor.type, successor.type])
                 
-        self.predecessor = predecessor
-        self.successor = successor
-        self.probability = float(probability)    
-        self.type = TransitionType(predecessor, successor)
+        self._predecessor = predecessor
+        self._successor = successor
+        self._probability = None    
+        self._type = TransitionType(predecessor, successor)
+        
+        self.probability = probability
         
     def __str__(self):
         return '<HMM Transition: {0.type} {0.probability}>'.format(self)
-                
-_AlignedPair = namedtuple('AlignedPair', 'query subject insertions')
+    
+    @property
+    def predecessor(self):
+        return self._predecessor
+    
+    @property
+    def successor(self):
+        return self._successor
+    
+    @property
+    def probability(self):
+        return self._probability
+    @probability.setter
+    def probability(self, value):
+        if not (value >=0):
+            raise ValueError('Transition probability must be a positive number.')        
+        self._probability = float(value)
+
+    @property
+    def type(self):
+        return self._type
 
 
-class HHpredHitAlignment(object):
+class HHMFileBuilder(object):
     """
-    Represents a query-template alignment in a HHpred result. Provides indexed
-    access to the columns in the query-centric alignment. 
+    Builder for HHpred's hhm files.
     
-    Each column in the alignment is represented in A3M style: without any query
-    gaps. If the alignment contains gaps in the query, they are represented
-    as insertions in the subject. The subject may contain gaps, however. The
-    total length of the alignment equals the length of the query segment in the
-    alignment, without the gaps in the query, that means: (qend - qstart + 1).
-    However, indexed access is also allowed outside of [qstart; qend]. If the
-    requested column is in the [1; qlength] range, then a space is returned for
-    the query and for the subject since the sequence of the query is not known 
-    outside of the aligned region, but such a sequence definitely exists in 
-    principle. 
+    @param output: destination stream
+    @type output: file
+    """
     
-    For example consider the following alignment::
-    
-        3   ABC--F   6
-        1   A-CDEF   4
+    def __init__(self, output):
 
-    then the behaviour of the indexer will be:
-     
-        >>> ali[0]
-        IndexError
-        >>> ali[1]
-        AlignedPair: query: ' ', subject: ' ', subject_insertions: []
-        >>> ali[3]
-        query: 'A', subject: 'A', subject_insertions: []
-        >>> ali[4]
-        query: 'B', subject: '-', subject_insertions: []
-        >>> ali[6]
-        query: 'F', subject: 'F', subject_insertions: []
-        >>> ali[5]
-        query: 'C', subject: 'C', subject_insertions: ['d', 'e']
+        if not hasattr(output, 'write'):
+            raise TypeError(output)    
+
+        self._out = output
+        
+    @property
+    def output(self):
+        return self._out    
+
+    def write(self, data):
+        self._out.write(data)
+        
+    def writeline(self, data):
+        self.write(data)
+        self.write('\n')
+
+    def add_hmm(self, hmm):
+
+        if hmm.score_units != ScoreUnits.LogScales:
+            raise ValueError('Scores must be converted to LogScales first.')
                 
+        self.writeline('''HHsearch {0.version}
+NAME  {0.name}
+FAM   {0.family}
+LENG  {0.length.matches} match states, {0.length.layers} columns in multiple alignment
+NEFF  {0.effective_matches}
+PCT   {0.pseudocounts}'''.format(hmm))
+        if hmm.evd:
+            self.writeline('EVD   {0.lamda}  {0.mu}'.format(hmm.evd))            
+
+        self.writeline('SEQ')
+        if hmm.dssp:
+            self.writeline('>ss_dssp')
+            self.writeline(hmm.dssp.to_string())
+            if hmm.dssp_solvent:
+                self.writeline('>sa_dssp')
+                self.writeline(hmm.dssp_solvent)                
+        if hmm.psipred:
+            self.writeline('>ss_pred')
+            self.writeline(hmm.psipred.to_string())
+            self.writeline('>ss_conf')
+            confidence = [''.join(map(str, m.score)) for m in hmm.psipred]
+            self.writeline(''.join(confidence))
+
+        if hmm.alignment:
+            if hmm.consensus:
+                self.writeline(str(hmm.consensus))
+            self.writeline(hmm.alignment.format().rstrip('\r\n'))
+
+        self.writeline('#')
+
+        first_match = hmm.layers[1][States.Match]
+        null = [int(first_match.background[aa])
+                for aa in sorted(map(str, first_match.background))]
+        self.writeline('NULL   {0}'.format('\t'.join(map(str, null))))
+        self.writeline('HMM    {0}'.format(
+            '\t'.join(sorted(map(str, first_match.emission)))))
+
+        tran_types = 'M->M    M->I    M->D    I->M    I->I    D->M    D->D'.split()
+        self.writeline('       {0}'.format(
+            '\t'.join(tran_types + 'Neff    Neff_I    Neff_D'.split())))
+
+        self.write("       ")
+        for tran_type in tran_types:
+            source_statekind = csb.pyutils.Enum.parse(States, tran_type[0])
+            target_statekind = csb.pyutils.Enum.parse(States, tran_type[3])
+            if source_statekind == States.Match:
+                try:
+                    self.write("{0:<7}\t".format(
+                        int(hmm.start.transitions[target_statekind].probability)))
+                except csb.pyutils.ItemNotFoundError:
+                    self.write("*\t")
+            else:
+                self.write("*\t")
+        self.writeline('*\t' * 3)
+
+        for layer in hmm.layers:
+
+            self.write("{0} {1:<5}".format(layer.residue.type, layer.rank))
+            for aa in sorted(layer[States.Match].emission):
+                emission = layer[States.Match].emission[aa]
+                if emission is None:
+                    emission = '*'
+                else:
+                    emission = int(emission)
+                self.write("{0:<7}\t".format(emission))
+            self.writeline("{0}".format(layer.rank))
+
+            self.write("       ")
+            for tran_type in tran_types:
+                source_statekind = csb.pyutils.Enum.parse(States, tran_type[0])
+                target_statekind = csb.pyutils.Enum.parse(States, tran_type[3])
+
+                if target_statekind == States.Match and layer.rank == hmm.layers.last_index:
+                    target_statekind = States.End
+
+                try:
+                    state = layer[source_statekind]
+                    self.write("{0:<7}\t".format(
+                        int(state.transitions[target_statekind].probability)))
+                except csb.pyutils.ItemNotFoundError:
+                    self.write("*\t")
+
+            for data in (layer.effective_matches, layer.effective_insertions,
+                         layer.effective_deletions):
+                if data is None:
+                    data = '*'
+                else:
+                    data = int(data * abs(hmm.scale))
+                self.write("{0:<7}\t".format(data))
+
+            self.writeline("\n")
+
+        self.writeline('//')
+    
+                
+class HHpredHitAlignment(sequence.SequenceAlignment):
+    """
+    Represents a query-template alignment in an HHpred result.
+    
+    @param hit: relevant hit object
+    @type param: L{HHpredHit}
     @param query: the query sequence in the alignment region, with gaps
     @type query: str
     @param subject: the subject sequence in the alignment region, with gaps
     @type subject: str
-
-    @raise ValueError: if query and subject differ in their lengths; or when
-                       they contain invalid characters
     """
 
-    GAP = '-'
+    GAP = sequence.ProteinAlphabet.GAP
     
     def __init__(self, hit, query, subject):
-
-        try:
-            query = list(query)
-            subject = list(subject)
-        except:
-            raise TypeError('query and subject must be iterable')
-
+        
         if not isinstance(hit, HHpredHit):
             raise TypeError(hit)
-
-        if not (len(query) == len(subject)) or not len(query) > 0:
-            raise ValueError(
-                'query and subject must be of the same and positive length (got {0} and {1})'.format(
-                    len(query), len(subject)))
-            
-        if HHpredHitAlignment.GAP in (query[0], query[-1], subject[0], subject[-1]):
-            raise ValueError("An alignment can't start or end with a gap")
-
-        self._query = []
-        self._subject = []
+        
         self._hit = hit
-
-        for q, s in izip(query, subject):
-
-            q, s = str(q), str(s)
-
-            for i in (q, s):
-                if not (i.isalpha() or i == HHpredHitAlignment.GAP):
-                    raise ValueError('Invalid residue: {0}'.format(i))
-
-            if q != HHpredHitAlignment.GAP:
-                self._query.append([q])
-                self._subject.append([s])
-            else:
-                self._query[-1].append(q)
-                self._subject[-1].append(s.lower())
-
-    def __str__(self):
-        return '\n{0.qstart:4} {1} {0.qend:4}\n{0.start:4} {2} {0.end:4}\n'.format(
-            self._hit, self.query, self.subject)
-
-    def __getitem__(self, position):
-
-        if (1 <= position < self._hit.qstart) or \
-               (self._hit.qend < position <= self._hit.qlength):
-            return _AlignedPair(' ', ' ', [])
-
-        i = position - self._hit.qstart
-        try:
-            if i < 0:
-                raise IndexError(position)
-            return _AlignedPair(self._query[i][0], self._subject[i][0],
-                                self._subject[i][1:])
-        except IndexError:
-            raise IndexError(position)
-
-    def __iter__(self):
-        for i in range(1, self._hit.qlength + 1):
-            yield self[i]
+        
+        q = sequence.Sequence('query', '', ''.join(query), type=sequence.SequenceTypes.Protein)
+        s = sequence.Sequence(hit.id, '', ''.join(subject), type=sequence.SequenceTypes.Protein)
+        
+        super(HHpredHitAlignment, self).__init__((q, s))
 
     @property
     def query(self):
-        return ''.join([''.join(pos) for pos in self._query])
+        return self.rows[1].sequence
 
     @property
     def subject(self):
-        return ''.join([''.join(pos) for pos in self._subject])
+        return self.rows[2].sequence
     
     @property
     def segments(self):
@@ -1465,7 +1352,7 @@ class HHpredHitAlignment(object):
         qi, si = qs, ss
         qe, se = qs, ss
         
-        for q, s in izip(self.query, self.subject):
+        for q, s in zip(self.query, self.subject):
 
             if q != HHpredHitAlignment.GAP:
                 qi += 1
@@ -1490,33 +1377,11 @@ class HHpredHitAlignment(object):
                     
     def to_a3m(self):
         """
-        Format the sequences in the alignment as A3M strings.
-
-        @return: an object containing the sequences of the query and the
-                 subject, formatted as A3M strings.
-        @rtype: AlignedPair
+        @return: a query-centric A3M alignment.
+        @rtype: L{csb.bio.sequence.A3MAlignment}
         """
-
-        query = []
-        subject = []
-
-        for i in range(1, self._hit.qlength + 1):
-
-            pos = self[i]
-
-            if pos.query != HHpredHitAlignment.GAP:
-                query.append(pos.query.upper().replace(' ', '-'))
-
-            subject.append(pos.subject.upper().replace(' ', '-'))
-
-            if pos.insertions:
-                subject.append(''.join(pos.insertions).lower())
-
-        query = '>query\n{0}'.format(''.join(query))
-        subject = '>{0}\n{1}'.format(self._hit.id, ''.join(subject))
-
-        return _AlignedPair(query, subject, '')
-
+        a3m = self.format(sequence.AlignmentFormats.A3M)
+        return sequence.A3MAlignment.parse(a3m, strict=False)
 
 class HHpredHit(object):
     """
@@ -1562,6 +1427,7 @@ class HHpredHit(object):
         self.probability = probability
         self.qlength = qlength
 
+        # unmanaged fields, should be encapsulated in the future
         self.slength = None
         self.evalue = None
         self.pvalue = None
@@ -1633,10 +1499,10 @@ class HHpredHit(object):
         """
         if self.id == other.id:
             if other.start >= self.start:
-                if other.end <= self.end or other.start <= (self.end - tolerance):
+                if (other.end - self.end) <= tolerance:
                     return True
             elif other.end <= self.end:
-                if other.end >= (self.start + tolerance):
+                if (self.start - other.start) <= tolerance:
                     return True
         
         return False
@@ -1738,8 +1604,7 @@ class HHpredHit(object):
         try:
             value = float(value)
         except:
-            raise TypeError(
-                'probability must be float, not {0}'.format(type(value)))
+            raise TypeError('probability must be float, not {0}'.format(type(value)))
         self._probability = value
 
     @property
@@ -1783,39 +1648,5 @@ class HHpredHitList(object):
         return len(self._hits)
 
     def sort(self):
-        from operator import attrgetter
-        self._hits.sort(key=attrgetter('rank'))
+        self._hits.sort(key=lambda i: i.rank)
 
-    def align(self, query_sequence):
-        """
-        Build a pseudo-multiple HMM alignment, assuming all hits in the
-        hitlist have been aligned against the same C{query_sequence}.
-
-        @param query_sequence: must be the complete sequence of the
-                               representative in the query HHM file
-        @type query_sequence: str
-
-        @return: a new A3M alignment object
-        @rtype: L{sequence.A3MAlignment}
-
-        @raise ValueError: if any hit does not contain an alignment with the
-                           query; or when the query sequence has a mismatching
-                           length
-        """
-        qseq = ''.join(query_sequence.split()).upper()
-        query = '>query\n{0}'.format(qseq)
-        mha = [query]
-
-        for hit in self:
-
-            if not hit.alignment:
-                raise ValueError(
-                    'Hit {0.id} does not contain an alignment'.format(hit))
-            elif hit.qlength != len(qseq):
-                raise ValueError(
-                    'The query sequence is {0} long, while the query in hit {1.rank}.{1.id} was {2}'.format(
-                        len(qseq), hit, hit.qlength))
-            a3m = hit.alignment.to_a3m()
-            mha.append(a3m.subject)
-
-        return sequence.A3MAlignment.parse('\n'.join(mha))
