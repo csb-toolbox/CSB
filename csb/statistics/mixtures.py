@@ -4,6 +4,8 @@ Mixture models for protein structure ensembles
 Reference: Hirsch M, Habeck M. - Bioinformatics. 2008 Oct 1;24(19):2184-92
 """
 
+import os
+import sys
 from abc import ABCMeta, abstractmethod
 
 class GaussianMixture(object):
@@ -21,7 +23,7 @@ class GaussianMixture(object):
 
     use_cache = True      ## cache for distance matrix
 
-    def __init__(self, N, M, K=1, beta=1.):
+    def __init__(self, N, M, K=1, beta=1., log=sys.stdout):
         """
         @param N: number of atoms
         @type N: int
@@ -36,6 +38,8 @@ class GaussianMixture(object):
         @type beta: float
         """
         from numpy import zeros, ones, identity, array
+
+        self._out = log
 
         self.K = int(K)
         self.N = int(N)
@@ -52,6 +56,12 @@ class GaussianMixture(object):
         self.Z = None
 
         self.del_cache()
+
+    def log(self, *values):
+        for value in values:
+            self._out.write(str(value))
+        self._out.write(os.linesep)
+        self._out.flush()
 
     def del_cache(self):
         self.cache = None
@@ -233,7 +243,7 @@ class GaussianMixture(object):
                 self.LL.append(LL)
 
             if output:
-                print i, LL
+                self.log('%3d %16.5f' % (i, LL))
 
             # convergence criteria
             if abs(LL - LL_prev) < eps:
@@ -261,7 +271,7 @@ class GaussianMixture(object):
 
             if verbose and not (i % verbose):
                 self.LL.append(self.log_likelihood(X, Z))
-                print beta, self.LL[-1]
+                self.log(beta, self.LL[-1])
 
             i += 1
 
