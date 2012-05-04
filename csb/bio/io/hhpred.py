@@ -456,7 +456,7 @@ class HHProfileParser(object):
                         if States.Insertion not in hmm.layers[rank]:
                             insertion = State(States.Insertion, emit=Enum.members(SequenceAlphabets.Protein))
                             insertion.background.set(background)
-                            insertion.emission = insertion.background
+                            insertion.emission.set(background)
                             insertion.rank = rank                        
                             hmm.layers[rank].append(insertion)
                         

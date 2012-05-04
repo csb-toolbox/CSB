@@ -18,8 +18,8 @@ class TestTable(test.Case):
         super(TestTable, self).setUp()
         
         self.tsv = self.config.getTestFile('csb.tsv')
-        self.table = csb.io.Table.from_tsv(self.tsv)
-        self.t = csb.io.Table.from_table(self.table, data=True)
+        self.table = csb.io.tsv.Table.from_tsv(self.tsv)
+        self.t = csb.io.tsv.Table.from_table(self.table, data=True)
         
     def testIteration(self):
         
@@ -101,11 +101,11 @@ class TestTable(test.Case):
         self.assertEquals(self.table[0, 'ID'], 11)
         self.assertEquals(self.table[0, 0], 11)
         
-        self.assertTrue(isinstance(self.table[:, :], csb.io.Table))
-        self.assertTrue(isinstance(self.table[:, ('A',)], csb.io.Table))
-        self.assertTrue(isinstance(self.table[:, 'A':], csb.io.Table))
-        self.assertTrue(isinstance(self.table[1:2, 0], csb.io.Table))
-        self.assertTrue(isinstance(self.table[(1,2), 0], csb.io.Table))                        
+        self.assertTrue(isinstance(self.table[:, :], csb.io.tsv.Table))
+        self.assertTrue(isinstance(self.table[:, ('A',)], csb.io.tsv.Table))
+        self.assertTrue(isinstance(self.table[:, 'A':], csb.io.tsv.Table))
+        self.assertTrue(isinstance(self.table[1:2, 0], csb.io.tsv.Table))
+        self.assertTrue(isinstance(self.table[(1,2), 0], csb.io.tsv.Table))                        
         
     def testSelect(self):
         

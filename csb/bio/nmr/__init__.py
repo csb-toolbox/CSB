@@ -3,7 +3,7 @@ NMR related objects.
 """
 
 import os
-import csb.io
+import csb.io.tsv
 import csb.pyutils as pu
 
 from csb.bio.sequence import SequenceAlphabets
@@ -70,7 +70,7 @@ class RandomCoil(object):
                                 
         header = 'Residue:str Nucleus:str Value:float'
         
-        for row in csb.io.Table.from_tsv(ref, header):
+        for row in csb.io.tsv.Table.from_tsv(ref, header):
             residue = pu.Enum.parsename(SequenceAlphabets.Protein, row[0])
             nucleus, value = row[1:]
             
@@ -81,7 +81,7 @@ class RandomCoil(object):
         
         header = 'Residue:str Nucleus:str CS1:float CS2:float CS3:float CS4:float'
         
-        for row in csb.io.Table.from_tsv(cor, header):   
+        for row in csb.io.tsv.Table.from_tsv(cor, header):   
             residue = pu.Enum.parsename(SequenceAlphabets.Protein, row[0])
             nucleus = row[1]
             values = row[2:]
