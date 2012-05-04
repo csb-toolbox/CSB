@@ -1,5 +1,5 @@
 
-from numpy import array, argmax
+from numpy import array, argmax, linspace
 
 from csb import test
 
@@ -67,6 +67,17 @@ class TestMixtures(test.Case):
         overlap = m.overlap(w_ref)
 
         self.assertTrue(overlap >= min_overlap, 'mixture not reproduced with heuristic')
+
+        # annealing (randomized initialization)
+        m = cls(X.shape[1], X.shape[0], K)
+        for _ in xrange(repeats):
+            m.anneal(X, linspace(2.0, 0.1, 10))
+
+            overlap = m.overlap(w_ref)
+            if overlap >= min_overlap:
+                break
+        else:
+            self.assertTrue(False, 'mixture not reproduced with annealing')
 
 if __name__ == '__main__':
 
