@@ -327,7 +327,8 @@ def tm_superimpose(x, y, fit_method=fit):
         while True:
             
             mask = (d < cutoff).astype('i')
-            if sum(mask) > 3: break
+            if sum(mask) >= 3 or 3 >= len(mask):
+                break
             cutoff += 0.5
 
     R, t = transformations[argmax(scores)]
