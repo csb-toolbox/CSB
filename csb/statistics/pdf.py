@@ -410,6 +410,69 @@ class Normal(AbstractDensity):
         sigma = self.sigma
                 
         return numpy.random.normal(mu, sigma, size)
+
+class InverseGaussian(AbstractDensity):
+
+    def __init__(self, mu = 1., llambda  = 1.):
+
+        super(InverseGaussian, self).__init__()
+
+        self._register('mu')
+        self._register('llambda')
+
+        self.set_params(mu = mu, llambda = llambda)
+        self.estimate = NullEstimator()
+
+        
+    @property
+    def mu(self):
+        return self['mu']
+
+    @mu.setter
+    def mu(self, value):
+        if value <= 0.:
+            raise ValueError("Mean mu should be greater than 0")
+        self['mu'] = value
+
+
+    @property
+    def llambda(self):
+        return self['mu']
+
+    @mu.setter
+    def llambda(self, value):
+        if value <= 0.:
+            raise ValueError("Shape Parameter lambda should be greater than 0")
+        self['llambda'] = value
+            
+    def log_prob(self, x):
+
+        mu = self.mu
+        _lambda = self.llambda
+
+        y = - 0.5 * _lambda * (x - mu)**2 / (mu**2 * x)
+        z = 0.5 *  (log(_lambda) - log( 2 * pi * x**3))
+        return  z + y 
+
+
+    def random(self, size = None):
+        from numpy.random import standard_normal, random
+        from numpy import sqrt, less_equal
+
+        mu = self.mu
+        _lambda = self.llambda
+
+        mu_2l = mu / _lambda / 2.
+        Y = standard_normal(size)
+        Y = mu * Y**2
+        X = mu + mu_2l * (Y - sqrt(4 * _lambda * Y + Y**2))
+        U = random(size)
+
+        m = less_equal(U, mu / (mu + X))
+
+        return m * X + (1 - m) * mu**2 / X
+
+
         
 class GeneralizedNormal(AbstractDensity):
     
@@ -503,6 +566,7 @@ class InverseGamma(AbstractDensity):
     @property
     def alpha(self):
         return self['alpha']
+
     @alpha.setter
     def alpha(self,value):
         self['alpha'] = value
