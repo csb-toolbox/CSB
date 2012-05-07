@@ -4,7 +4,8 @@ import numpy.random
 
 import csb.test as test
 
-from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, MultivariateGaussian, Dirichlet
+from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, InverseGamma
+from csb.statistics.pdf import MultivariateGaussian, Dirichlet, InverseGaussian
 
 @test.functional
 class TestLogProb(test.Case):
@@ -30,10 +31,95 @@ class TestLogProb(test.Case):
         self.assertAlmostEqual(pdf(x)[0], .54 , places=2)
         self.assertAlmostEqual(pdf(x)[1], .54 , places=2)
         self.assertAlmostEqual(pdf(x)[2], 1.5 , places=2)
-        
-        
+
+
+    def testNormal(self):
+        n = Normal(0.,1.)
+
+        self.assertWithinDelta(n(0.), 1./numpy.sqrt( 2 * numpy.pi))
+        self.assertWithinDelta(n(1.), numpy.exp(-0.5)/numpy.sqrt( 2 * numpy.pi) )
         
 
+    def testInverseGaussian(self):
+        ig = InverseGaussian(1.,1.)
+        
+        self.assertWithinDelta(ig(1.), numpy.sqrt(1 / (2 * numpy.pi)), delta=1e-5)
+        self.assertWithinDelta(ig(2.), (numpy.sqrt(1 / (2 * numpy.pi * 2**3)) *
+                                        numpy.exp(- 1. / 4.))
+                               , delta=1e-5)
+
+
+    def testGeneralizedNormal(self):
+        from scipy.special import gamma
+
+        gn = GeneralizedNormal(0.,1.,1.)
+
+        
+        self.assertWithinDelta(gn(5.), 1./2./gamma(1) , delta=1e-5)
+        self.assertWithinDelta(gn(1.), 1./2./gamma(1) * numpy.exp(-1) , delta=1e-5)
+
+
+    def testGamma(self):
+        g = Gamma(1.,1.)
+        self.assertWithinDelta(g(1.), numpy.exp(-1.) , delta=1e-5)
+        self.assertWithinDelta(g(2.), numpy.exp(-2.) , delta=1e-5)
+
+        g = Gamma(2.,1.)
+        self.assertWithinDelta(g(1.),  1. * numpy.exp(-1) , delta=1e-5)
+        self.assertWithinDelta(g(2.),  2. * numpy.exp(-2) , delta=1e-5)
+
+
+    def testInverseGamma(self):
+        ig = InverseGamma(1.,1.)
+        self.assertWithinDelta(ig(1.), numpy.exp(-1.) , delta=1e-5)
+        self.assertWithinDelta(ig(2.), 2**-2  * numpy.exp(-0.5) , delta=1e-5)
+
+        ig = InverseGamma(2.,1.)
+        self.assertWithinDelta(ig(1.), 1. * numpy.exp(-1) , delta=1e-5)
+        self.assertWithinDelta(ig(2.), 2.**-3 * numpy.exp(-0.5) , delta=1e-5)
+        
+
+    def testMultivariateGaussian(self):
+        mg = MultivariateGaussian(numpy.zeros(2),numpy.eye(2))
+
+        self.assertWithinDelta(mg(numpy.zeros(2)), 1./( 2 * numpy.pi))
+        self.assertWithinDelta(mg(numpy.ones(2)), 1./( 2 * numpy.pi) * numpy.exp(-0.5) )
+    
+
+        
+        
+@test.functional
+class TestRandom(test.Case):
+
+    def testInverseGaussian(self):
+
+        ig = InverseGaussian(1.,1.)
+        samples = ig.random(1000000)
+        mu = numpy.mean(samples)
+        var = numpy.var(samples)
+        
+        self.assertWithinDelta(ig.mu, mu, delta=1e-1)
+        self.assertWithinDelta(ig.mu**3/ig.llambda, var, delta=1e-1)
+
+        ig = InverseGaussian(3.,6.)
+
+        samples = ig.random(1000000)
+        mu = numpy.mean(samples)
+        var = numpy.var(samples)
+        
+        self.assertWithinDelta(ig.mu, mu, delta=1e-1)
+        self.assertWithinDelta(ig.mu**3/ig.llambda, var, delta=5e-1)
+
+    def testGamma(self):
+
+        gamma = Gamma(1., 1.)
+        samples = gamma.random(10000)
+        mu = numpy.mean(samples)
+        var = numpy.var(samples)
+        
+        self.assertWithinDelta(gamma.alpha/gamma.beta, mu, delta=1e-1)
+        self.assertWithinDelta(gamma.alpha/gamma.beta**2, var, delta=1e-1)
+        
 @test.functional
 class TestParameterEstimation(test.Case):
         
