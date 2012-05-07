@@ -332,6 +332,8 @@ def running_average(x, w, axis=None):
     from numpy import array, mean
 
     return array([mean(x[i:i+w],axis) for i in range(len(x)-w)])
+
+
     
 
 

@@ -1,4 +1,3 @@
-
 import numpy
 import numpy.random
 
@@ -355,8 +354,6 @@ class GammaPrior(Gamma,ScaleMixturePrior):
 
     def log_prob(self, x):
 
-        from scipy.special import gammaln
-        
         a, b = self['alpha'], self['beta']
 
         l_a = self._hyper_alpha(a)
@@ -412,8 +409,6 @@ class InvGammaPrior(InverseGamma,ScaleMixturePrior):
 
     def log_prob(self, x):
 
-        from scipy.special import gammaln
-        
         a, b = self['alpha'], self['beta']
 
         l_a = self._hyper_alpha(a)
