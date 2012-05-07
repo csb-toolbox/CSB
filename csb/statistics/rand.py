@@ -1,4 +1,5 @@
 # TODO test sampling non-visually
+import scipy
 
 def probability_transform(shape, inv_cum, cum_min=0., cum_max=1.):
     """
@@ -45,7 +46,6 @@ def truncated_gamma(shape=None, alpha=1., beta=1., x_min=None, x_max=None):
     return probability_transform(shape,
                                  lambda x,alpha=alpha: gammaincinv(alpha, x),
                                  a, b) / beta
-
 
     
 def truncated_normal(shape=None, mu=0., sigma=1., x_min=None, x_max=None):
@@ -145,50 +145,59 @@ def sample_from_histogram(p, n_samples = 1):
     return indices[add.reduce(less.outer(c, random(n_samples)),0)]
 
 
-def test_truncated_gamma(alpha = 2., beta  = 1., x_min = 0.1, x_max = 5.):
+def gen_inv_gaussian(a, b, p, burnin=10):
+    """
+    sampler based on Gibbs sampling
 
-    from numpy import histogram, linspace
+    assumes scalar p
+    """
+    from numpy.random import gamma
+    from numpy import ones, sqrt, argmax,clip,where
 
-    from csb.math import exp, log_sum_exp, log
+    s = a*0. + 1.
+
+    if p < 0:
+        a,b = b,a
+
+    for i in range(burnin):
+
+        l = b + 2*s
+        m = sqrt(l / a)
+
+        x = inv_gaussian(m,l,shape=m.shape)
+        
+        if  x.min() < 0:
+            from numpy import argmin
+            print m[argmin(x)], l[argmin(x)], x.min()
+        s = gamma(abs(p)+0.5, x)
+
+    if p >= 0:
+        return x
+    else:
+        return 1 / x
+
+def inv_gaussian(mu=1., _lambda=1., shape=None):
+    """
+    generate random sample from inverse Gaussian
+    """
+    from numpy.random import standard_normal, random
+    from numpy import sqrt, less_equal, clip
     
-    x = truncated_gamma(10000, alpha, beta, x_min, x_max)
+    mu_2l = mu / _lambda / 2.
+    Y = mu * standard_normal(shape)**2
+    X = mu + mu_2l * (Y - sqrt(4 * _lambda * Y + Y**2))
+    U = random(shape)
 
-    hy, hx = histogram(x, 100)
-    hx = 0.5*(hx[1:]+hx[:-1])
-    hy = hy.astype('d')
-    hy /= (hx[1]-hx[0]) * hy.sum()
-    
-    x = linspace(x_min, x_max, 1000)
-    p = (alpha - 1) * log(x) - beta * x
-    p -= log_sum_exp(p)
-    p = exp(p) / (x[1]-x[0])
-    
+    m = less_equal(U, mu / (mu + X))
 
+    return clip(m * X + (1 - m) * mu**2 / X ,1e-308,1e308)
 
-def test_truncated_normal(mu = 2., sigma  = 1., x_min = 0.1, x_max = 5.):
-
-    from numpy import histogram, linspace
-
-    from csb.math import exp, log_sum_exp
-    
-    x = truncated_normal(10000, mu, sigma, x_min, x_max)
-
-    hy, hx = histogram(x, 100)
-    hx = 0.5*(hx[1:]+hx[:-1])
-    hy = hy.astype('d')
-    hy /= (hx[1]-hx[0]) * hy.sum()
-    
-    x = linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
-    p = - 0.5 * (x-mu)**2 / sigma**2
-    p -= log_sum_exp(p)
-    p = exp(p) / (x[1]-x[0])
-    
 
 
 def random_rotation(A, n_iter=10, initial_values = None):
     """
-    implementation of:
-    Generation of three-dimensional random rotations in fitting and matching problems
+    Generation of three-dimensional random rotations in
+    fitting and matching problems, Habeck 2009
 
     generate random rotation R from
     exp(trace(dot(transpose(A),R)))

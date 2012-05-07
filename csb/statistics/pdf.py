@@ -439,7 +439,7 @@ class InverseGaussian(AbstractDensity):
     def llambda(self):
         return self['mu']
 
-    @mu.setter
+    @llambda.setter
     def llambda(self, value):
         if value <= 0.:
             raise ValueError("Shape Parameter lambda should be greater than 0")
@@ -516,6 +516,129 @@ class GeneralizedNormal(AbstractDensity):
              
         return log(beta / (2.0 * alpha)) - gammaln(1. / beta) - power(fabs(x - mu) / alpha, beta)
 
+
+class GeneralizedInverseGaussian(AbstractDensity):
+
+    def __init__(self, a = 1., b = 1., p = 1.):
+        super(GeneralizedInveresGaussian, self).__init__()
+
+        self._register('a')
+        self._register('b')
+        self._register('p')
+        self.set_parapms(a=a, b=b, p=p)
+
+        self.estimator = NullEstimator()
+
+    @property
+    def a(self):
+        return self['a']
+
+    @a.setter
+    def a(self, value):
+        if a <= 0:
+            raise ValueError("Parameter a is nonnegative")
+        else:
+            self['a'] = value
+
+    @property
+    def b(self):
+        return self['b']
+
+    @a.setter
+    def b(self, value):
+        if b <= 0:
+            raise ValueError("Parameter b is nonnegative")
+        else:
+            self['b'] = value
+
+    @property
+    def p(self):
+        return self['p']
+
+    @a.setter
+    def p(self, value):
+        if p <= 0:
+            raise ValueError("Parameter p is nonnegative")
+        else:
+            self['p'] = value
+
+    def log_prob(x):
+        from scipy.special import iv
+        from numpy import log, sqrt
+
+        a = self['a']
+        b = self['b']
+        p = self['p']
+
+        lz = 0.5 * p * (log(a) - log(b)) - log(2 * iv(p,sqrt(a * b)))
+
+        return lz + (p - 1) * log(x) - 0.5 * (a * x  + b / x)
+        
+
+    def random(x, shape):
+        from numpy import exp, log, sqrt, isreal, real
+        from numpy.random import random
+
+        a = self['a']
+        b = self['b']
+        p = self['p']
+        
+        p     -= 1.
+        beta  = sqrt(a*b)
+        alpha = sqrt(b/a)
+        m     = (p + sqrt(p**2 + beta**2)) / beta
+
+        A = beta / 2
+        B = - (2 + p + m * A)
+        C = m * p - A
+        D = m * A
+
+        ## find real roots of cubic equation
+        
+        roots = [real(r) for r in scipy.roots([A, B, C, D]) if isreal(r)]
+        roots.sort()
+
+
+        y_m = [r for r in roots if r > 0 and r < m]
+        y_p = [r for r in roots if r > m]
+
+        if len(y_m) != 1:
+            raise Exception('no single real root in ]0,m[')
+        else:
+            y_m = y_m[0]
+
+        if len(y_p) != 1:
+            raise Exception('no single real root in ]m,\infy]')
+        else:
+            y_p = y_p[0]
+
+        p /= 2
+        beta /= 4
+
+        a = (y_p-m) * (y_p/m)**p * exp(-beta*(y_p + 1/y_p - m - 1/m))
+        b = (y_m-m) * (y_m/m)**p * exp(-beta*(y_m + 1/y_m - m - 1/m))
+        c = - beta * (m + 1/m) + p * log(m)
+
+        rvs = []
+        for x in xrange(shape):
+
+            while 1:
+
+                R1,R2 = random(2)
+
+                Y = m + a* R2/R1 - b*(R2-1)/R1
+
+                if Y <= 0.:
+                    continue
+
+                if -log(R1) >= - p*log(Y) + beta*(Y+1/Y) + c:
+                    break
+
+            rvs.append(alpha * Y)
+
+        return numpy.array(rvs)
+        
+    
 class Gamma(AbstractDensity):
 
     def __init__(self, alpha=1, beta=1):
