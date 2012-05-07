@@ -54,8 +54,8 @@ class TestLogProb(test.Case):
 
         gn = GeneralizedNormal(0.,1.,1.)
 
-        
-        self.assertWithinDelta(gn(5.), 1./2./gamma(1) , delta=1e-5)
+        self.assertWithinDelta(gn(0.), 1./2./gamma(1) , delta=1e-5)
+
         self.assertWithinDelta(gn(1.), 1./2./gamma(1) * numpy.exp(-1) , delta=1e-5)
 
 
