@@ -117,7 +117,7 @@ class MaxentModel(AbstractDensity):
         @param y: y-coordinates for evaluation
         @type y: array-like
         """
-        return self.energy(x,y)
+        return -self.energy(x,y)
         
 
     def set(self, coef):

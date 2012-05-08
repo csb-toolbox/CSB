@@ -332,7 +332,7 @@ def inv_psi(y, tol=1e-10, n_iter=100, psi=psi):
     inverse digamma function
     """
     from numpy import exp
-    
+    from scipy.special import digamma
     ## initial value
 
     if y < - 5/3. - EULER_MASCHERONI:
@@ -344,7 +344,7 @@ def inv_psi(y, tol=1e-10, n_iter=100, psi=psi):
 
     for dummy in range(n_iter):
 
-        z = psi(x) - y
+        z = digamma(x) - y
 
         if abs(z) < tol: break
         

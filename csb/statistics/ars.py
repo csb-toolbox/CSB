@@ -119,8 +119,8 @@ class Envelope(object):
     def sample(self):
 
         from numpy.random import random
-        from numpy import add 
-        from csb.math import log_sum_exp
+        from numpy import add, exp, log
+        from mulch.math import log_sum_exp
         
         log_m = self.log_masses()
         log_M = log_sum_exp(log_m)
@@ -139,29 +139,6 @@ class Envelope(object):
 
         return (log_M + log(a*u*exp(-b) + exp(a*z-log_M))) / a
 
-    def sample(self):
-
-        from numpy.random import random
-        from numpy import add
-        from csb.math import log_sum_exp
-        
-        log_m = self.log_masses()
-        log_M = log_sum_exp(log_m)
-        c = add.accumulate(exp(log_m - log_M))
-        u = random()
-        j = (u > c).sum()
-
-        a = self.dh[j]
-        z = self.z()
-        
-        xmin, xmax = z[j],z[j+1]
-
-        u = random()
-
-        if a > 0:
-            return xmax + log(u + (1-u)*exp(-a*(xmax-xmin))) / a
-        else:
-            return xmin + log(u + (1-u)*exp(a*(xmax-xmin))) / a
 
 class LogProb(object):
 

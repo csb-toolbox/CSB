@@ -2,6 +2,10 @@
 Computational utility functions. 
 """
 
+import numpy
+import numpy.random
+
+
 def fit(X, Y):
     """
     returns the translation vector and the rotation matrix
@@ -93,6 +97,43 @@ def wfit(X, Y, w):
     t = x - dot(R, y)
 
     return R, t
+
+def probabilistic_fit(X,Y, w = None, niter = 10):
+    from csb.statistics.rand import random_rotation
+    from numpy import dot, transpose, average
+    
+    """
+    Generates a superposition of X,Y where
+    R ~ exp(trace(dot(transpose(dot(transpose(X-t),Y)),R)))
+    t ~ N(t_opt, 1/sqrt(N))
+    """
+    if w is None:
+        R, t = fit(X,Y)
+    else:
+        R, t = wfit(X,Y,w)
+            
+    N = len(X)
+
+    for i in range(niter):
+        ## sample rotation
+        if w is None:
+            A = dot(transpose(X-t),Y)
+        else:
+            A = dot(transpose(X-t)*w,Y)
+
+        R = random_rotation(A)
+
+        ## sample translation (without prior so far)
+        if w is None:
+            mu = average(X - dot(Y, transpose(R)),0)
+            t = numpy.random.standard_normal(len(mu)) / numpy.sqrt(N) + mu
+        else:
+            mu = dot(w, X - dot(Y, transpose(R))) / numpy.sum(w)
+            t = numpy.random.standard_normal(len(mu)) / numpy.sqrt(numpy.sum(w)) + mu
+
+    return R,t
+    
+    
 
 def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
                     tol_stdv=0.05, full_output=False):
