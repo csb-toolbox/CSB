@@ -32,8 +32,9 @@ class TestMath(test.Case):
         from csb.math import exp, EXP_MAX, EXP_MIN
         from numpy import exp as ref_exp
         
-        x = np.linspace(EXP_MIN, EXP_MAX, 1000000)
-
+        x = np.linspace(EXP_MIN,
+                        EXP_MAX, 100000)
+        
         self.assertTrue((exp(x) == ref_exp(x)).all() )
         self.assertEqual(exp(EXP_MAX + 10.), exp(EXP_MAX))
         self.assertEqual(exp(10. * EXP_MIN), exp(EXP_MIN))
