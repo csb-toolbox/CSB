@@ -3,6 +3,7 @@ Probability density functions.
 """
 
 import numpy.random
+import scipy
 
 from abc import ABCMeta, abstractmethod
 from csb.pyutils import OrderedDict
@@ -520,12 +521,12 @@ class GeneralizedNormal(AbstractDensity):
 class GeneralizedInverseGaussian(AbstractDensity):
 
     def __init__(self, a = 1., b = 1., p = 1.):
-        super(GeneralizedInveresGaussian, self).__init__()
+        super(GeneralizedInverseGaussian, self).__init__()
 
         self._register('a')
         self._register('b')
         self._register('p')
-        self.set_parapms(a=a, b=b, p=p)
+        self.set_params(a=a, b=b, p=p)
 
         self.estimator = NullEstimator()
 
@@ -546,7 +547,7 @@ class GeneralizedInverseGaussian(AbstractDensity):
 
     @a.setter
     def b(self, value):
-        if b <= 0:
+        if value <= 0:
             raise ValueError("Parameter b is nonnegative")
         else:
             self['b'] = value
@@ -557,84 +558,64 @@ class GeneralizedInverseGaussian(AbstractDensity):
 
     @a.setter
     def p(self, value):
-        if p <= 0:
+        if value <= 0:
             raise ValueError("Parameter p is nonnegative")
         else:
             self['p'] = value
 
-    def log_prob(x):
-        from scipy.special import iv
-        from numpy import log, sqrt
+    def log_prob(self, x):
+        from scipy.special import kv
+        from csb.math import log
+        from numpy import sqrt
 
         a = self['a']
         b = self['b']
         p = self['p']
 
-        lz = 0.5 * p * (log(a) - log(b)) - log(2 * iv(p,sqrt(a * b)))
+        lz = 0.5 * p * (log(a) - log(b)) - log(2 * kv(p,sqrt(a * b)))
 
         return lz + (p - 1) * log(x) - 0.5 * (a * x  + b / x)
         
 
-    def random(x, shape):
+    def random(self, size = None):
         from numpy import exp, log, sqrt, isreal, real
         from numpy.random import random
-
+        from csb.statistics.rand import inv_gaussian
+        
+        rvs = []
+        burnin = 10
         a = self['a']
         b = self['b']
         p = self['p']
-        
-        p     -= 1.
-        beta  = sqrt(a*b)
-        alpha = sqrt(b/a)
-        m     = (p + sqrt(p**2 + beta**2)) / beta
 
-        A = beta / 2
-        B = - (2 + p + m * A)
-        C = m * p - A
-        D = m * A
+        from numpy.random import gamma
+        from numpy import ones, sqrt, argmax,clip,where
 
-        ## find real roots of cubic equation
-        
-        roots = [real(r) for r in scipy.roots([A, B, C, D]) if isreal(r)]
-        roots.sort()
+        s = a*0. + 1.
 
+        if p < 0:
+            a,b = b,a
 
-        y_m = [r for r in roots if r > 0 and r < m]
-        y_p = [r for r in roots if r > m]
+        if size == None:
+            size = 1
+        for i in xrange(int(size)):
+            for j in range(burnin):
 
-        if len(y_m) != 1:
-            raise Exception('no single real root in ]0,m[')
-        else:
-            y_m = y_m[0]
+                l = b + 2*s
+                m = sqrt(l / a)
 
-        if len(y_p) != 1:
-            raise Exception('no single real root in ]m,\infy]')
-        else:
-            y_p = y_p[0]
+                x = inv_gaussian(m,l,shape=m.shape)
 
-        p /= 2
-        beta /= 4
+                if  x.min() < 0:
+                    from numpy import argmin
+                    print m[argmin(x)], l[argmin(x)], x.min()
 
-        a = (y_p-m) * (y_p/m)**p * exp(-beta*(y_p + 1/y_p - m - 1/m))
-        b = (y_m-m) * (y_m/m)**p * exp(-beta*(y_m + 1/y_m - m - 1/m))
-        c = - beta * (m + 1/m) + p * log(m)
+                s = gamma(abs(p)+0.5, x)
 
-        rvs = []
-        for x in xrange(shape):
-
-            while 1:
-
-                R1,R2 = random(2)
-
-                Y = m + a* R2/R1 - b*(R2-1)/R1
-
-                if Y <= 0.:
-                    continue
-
-                if -log(R1) >= - p*log(Y) + beta*(Y+1/Y) + c:
-                    break
-
-            rvs.append(alpha * Y)
+            if p >= 0:
+                rvs.append(x)
+            else:
+                rvs.append(1 / x)
 
         return numpy.array(rvs)
         
