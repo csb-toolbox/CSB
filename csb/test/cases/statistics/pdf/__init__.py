@@ -5,7 +5,7 @@ import numpy.random
 import csb.test as test
 
 from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, InverseGamma
-from csb.statistics.pdf import MultivariateGaussian, Dirichlet, InverseGaussian
+from csb.statistics.pdf import MultivariateGaussian, Dirichlet, InverseGaussian, GeneralizedInverseGaussian
 
 @test.functional
 class TestLogProb(test.Case):
@@ -86,6 +86,30 @@ class TestLogProb(test.Case):
         self.assertWithinDelta(mg(numpy.ones(2)), 1./( 2 * numpy.pi) * numpy.exp(-0.5) )
     
 
+    def testGeneralizedInveresseGaussian(self):
+
+        fx = [2.7939e-24, 1.5305e-03, 2.3028e-02, 6.6302e-02, 1.1759e-01, 1.6810e-01,
+              2.1365e-01, 2.5255e-01, 2.8438e-01, 3.0937e-01, 3.2806e-01, 3.4111e-01,
+              3.4922e-01, 3.5307e-01, 3.5329e-01, 3.5048e-01, 3.4515e-01, 3.3778e-01,
+              3.2878e-01, 3.1850e-01, 3.0726e-01, 2.9531e-01, 2.8289e-01, 2.7018e-01,
+              2.5736e-01, 2.4454e-01, 2.3185e-01, 2.1937e-01, 2.0717e-01, 1.9532e-01,
+              1.8385e-01, 1.7280e-01, 1.6220e-01, 1.5205e-01, 1.4236e-01, 1.3315e-01,
+              1.2440e-01, 1.1611e-01, 1.0828e-01, 1.0088e-01, 9.3917e-02, 8.7363e-02,
+              8.1207e-02, 7.5432e-02, 7.0021e-02, 6.4958e-02, 6.0224e-02, 5.5804e-02]
+        
+        x = numpy.arange(0.01, 5. , 0.1)
+
+        a = 2.
+        b = 1.
+        p = 2
+        gig = GeneralizedInverseGaussian(a,b,p)
+        fx2 = gig(x)
+
+        for i in range(len(fx)):
+            self.assertWithinDelta(fx[i], fx2[i], delta=1e-1)
+
+        
+
         
         
 @test.functional
@@ -119,6 +143,29 @@ class TestRandom(test.Case):
         
         self.assertWithinDelta(gamma.alpha/gamma.beta, mu, delta=1e-1)
         self.assertWithinDelta(gamma.alpha/gamma.beta**2, var, delta=1e-1)
+
+    def testGeneralizedInveresseGaussian(self):
+        from scipy.special import kv
+        from numpy import sqrt
+
+        a = 2.
+        b = 1.
+        p = -1
+        gig = GeneralizedInverseGaussian(a,b,p)
+        samples = gig.random(10000)
+
+        mu_analytical = sqrt(b) * kv(p + 1, sqrt(a*b)) / (sqrt(a) * kv(p, sqrt(a*b)))
+
+        var_analytical =  b  * kv(p + 2, sqrt(a*b)) / a / kv(p , sqrt(a*b)) - mu_analytical**2
+        
+        mu = numpy.mean(samples)
+        var = numpy.var(samples)
+        
+        self.assertWithinDelta(mu_analytical, mu, delta=1e-1)
+        self.assertWithinDelta(var_analytical, var, delta=1e-1)
+        
+
+        
         
 @test.functional
 class TestParameterEstimation(test.Case):
