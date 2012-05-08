@@ -23,7 +23,7 @@ class ScaleMixturePrior(object):
 
 class ScaleMixture(AbstractDensity):
 
-    def __init__(self, scales = numpy.array([1.]), prior = None, d = 3):
+    def __init__(self, scales = numpy.array([1.,2.]), prior = None, d = 3):
         
         super(ScaleMixture, self).__init__()
 
@@ -57,7 +57,7 @@ class ScaleMixture(AbstractDensity):
         if not isinstance(value, ScaleMixturePrior):
             raise TypeError(value)
         self._prior = value
-
+        self.estimator = self._prior.get_estimator()
 
 
     def log_prob(self, x):
@@ -80,14 +80,14 @@ class ScaleMixture(AbstractDensity):
 
         if shape is None:
 
-            return numpy.random.normal() * s[numpy.random.sample(xrange(len(s)))]
+            return numpy.random.normal() * s[numpy.random.randint(len(s))]
         
         else:
             n = s.shape[0]
 
-            nrv = numpy.random.normal(shape)
+            nrv = numpy.random.normal(size = shape)
         
-            indices = numpy.random.sample(xrange(n), shape)
+            indices = numpy.random.randint(len(s), size = shape)
              
             return s[indices] * nrv 
 
@@ -317,8 +317,8 @@ class GammaPrior(Gamma,ScaleMixturePrior):
     Gamma prior on mixture weights including a weak gamma prior on its parameter
     """
 
-    def __init__(self, alpha = 1. , beta = 1., hyper_alpha=(1e-3, 1e-3),
-                 hyper_beta = (1e-3, 1e-3)):
+    def __init__(self, alpha = 1. , beta = 1., hyper_alpha=(4., 1.),
+                 hyper_beta = (2., 1.)):
 
         super(GammaPrior, self).__init__(alpha,beta)
 
