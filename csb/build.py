@@ -224,7 +224,7 @@ Options:
         builder = csb.test.AnyTestBuilder()
         suite = builder.loadTests(ROOT + '.test.cases.*')
 
-        runner = unittest.TextTestRunner(verbosity=self.verbosity)
+        runner = unittest.TextTestRunner(stream=sys.stderr, verbosity=self.verbosity)
         result = runner.run(suite)
         if result.wasSuccessful():
             self.log('\n  Passed all unit tests')
