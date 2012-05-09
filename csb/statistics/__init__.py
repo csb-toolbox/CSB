@@ -3,7 +3,7 @@
 
 """
 
-class Cumulative:
+class Cumulative(object):
 
     total_mem = 1e8
 
@@ -335,21 +335,5 @@ def running_average(x, w, axis=None):
 
 
     
-
-
-if __name__ == '__main__':
-
-    from numpy import array
-
-    raise
-
-    for f in [probabilistic_and, probabilistic_or, probabilistic_xor]:
-
-        print f
-
-        for i in range(2):
-            for j in range(2):
-                p = array([i,j])
-                print i, j, f(p)
 
 

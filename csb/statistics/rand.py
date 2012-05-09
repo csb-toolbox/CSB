@@ -1,4 +1,3 @@
-# TODO test sampling non-visually
 import scipy
 
 def probability_transform(shape, inv_cum, cum_min=0., cum_max=1.):
@@ -84,6 +83,9 @@ def truncated_normal(shape=None, mu=0., sigma=1., x_min=None, x_max=None):
 def sample_dirichlet(alpha, n_samples = 1):
     """
     sample points from a dirichlet distribution with parameter alpha
+
+    @param alpha: alpha parameter of a dirichlet distribution
+    @type alpha:
     """
     from numpy import array, sum, transpose, ones
     from numpy.random import gamma
@@ -178,7 +180,7 @@ def gen_inv_gaussian(a, b, p, burnin=10):
 
 def inv_gaussian(mu=1., _lambda=1., shape=None):
     """
-    generate random sample from inverse Gaussian
+    generate random samples from inverse gaussian
     """
     from numpy.random import standard_normal, random
     from numpy import sqrt, less_equal, clip
@@ -201,7 +203,17 @@ def random_rotation(A, n_iter=10, initial_values = None):
 
     generate random rotation R from
     exp(trace(dot(transpose(A),R)))
-    
+
+    @param A: generating parameter
+    @type R: 3 x 3 numpy array
+
+    @param n_iter: number of gibbs sampling steps
+    @type n_iter: integer
+
+    @param initial_values: initial euler angles alpha, beta and gamma
+    @type initial_values: tuple
+
+    @rtype: 3 x 3 numpy array
     """
     from numpy import cos, sin, dot, pi, clip
     from numpy.linalg import svd, det    

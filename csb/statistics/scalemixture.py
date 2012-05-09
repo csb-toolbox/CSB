@@ -11,7 +11,11 @@ from csb.statistics import harmonic_mean, geometric_mean
 from csb.statistics.pdf import AbstractEstimator, AbstractDensity, Gamma, InverseGamma
 
 class ScaleMixturePrior(object):
-
+    """
+    Prior on the scales of a L{ScaleMixture}, which determines how the scales 
+    are estimated.
+    """
+    
     def get_estimator(self):
         """
         Returns an appropriate estimator for the scales of the mixture distribution
@@ -22,8 +26,21 @@ class ScaleMixturePrior(object):
         
 
 class ScaleMixture(AbstractDensity):
+    """
+    Robust probabilistic superposition and comparison of protein structures
+    Martin Mechelke and Michael Habeck
 
-    def __init__(self, scales = numpy.array([1.,2.]), prior = None, d = 3):
+    Represenation of a distribution as a mixture of gaussians with a mean of 
+    zero and different inverse variances/scales. The number of scales equals 
+    the number of datapoints.
+
+    The underlying family is determined by a prior L{ScaleMixturePrior} on the
+    scales. Choosing a L{GammaPrior} results in Stundent-t posterior, wheras a 
+    L{InvGammaPrior} leads to a K-Distribution as posterior.
+
+    """
+
+    def __init__(self, scales = numpy.array([1.,1.]), prior = None, d = 3):
         
         super(ScaleMixture, self).__init__()
 
@@ -95,8 +112,9 @@ class ScaleMixture(AbstractDensity):
 
 class ARSPosteriorAlpha(csb.statistics.ars.LogProb):
     """
-    Posterior of alpha using a gamma distribution as
-    prior for alpha
+    This class represents the posterior distribution of the alpha parameter
+    of the Gamma and Inverse Gamma prior, and allows sampling using adaptive
+    rejection sampling L{ARS}
     """
 
     def __init__(self, a, b, n):
@@ -317,7 +335,7 @@ class GammaPrior(Gamma,ScaleMixturePrior):
     Gamma prior on mixture weights including a weak gamma prior on its parameter
     """
 
-    def __init__(self, alpha = 1. , beta = 1., hyper_alpha=(4., 1.),
+    def __init__(self, alpha = 1., beta = 1., hyper_alpha=(4., 1.),
                  hyper_beta = (2., 1.)):
 
         super(GammaPrior, self).__init__(alpha,beta)
@@ -372,7 +390,7 @@ class InvGammaPrior(InverseGamma,ScaleMixturePrior):
     Inverse Gamma prior on mixture weights including a weak gamma prior on its parameter
     """
 
-    def __init__(self, alpha = 1. , beta = 1., hyper_alpha=(4., 1.),
+    def __init__(self, alpha = 1., beta = 1., hyper_alpha=(4., 1.),
                  hyper_beta = (2.,1.)):
 
         super(InvGammaPrior, self).__init__(alpha,beta)
