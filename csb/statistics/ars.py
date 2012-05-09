@@ -119,8 +119,8 @@ class Envelope(object):
     def sample(self):
 
         from numpy.random import random
-        from numpy import add, exp, log
-        from mulch.math import log_sum_exp
+        from numpy import add
+        from csb.math import log_sum_exp
         
         log_m = self.log_masses()
         log_M = log_sum_exp(log_m)

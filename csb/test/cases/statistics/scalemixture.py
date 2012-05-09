@@ -1,4 +1,3 @@
-import numpy
 import numpy.random
 
 import csb.test as test
@@ -63,7 +62,7 @@ class TestScaleMixture(test.Case):
         from csb.bio.utils import rmsd, fit
 
         R,t = fit(X,Y)
-        numpy.random.seed(100)
+        #numpy.random.seed(100)
         # gibbs sampling cycle
         for i in range(200):
             # apply rotation
@@ -103,7 +102,7 @@ class TestScaleMixture(test.Case):
         from csb.bio.utils import rmsd, fit
 
         R,t = fit(X,Y)
-        numpy.random.seed(100)
+        #numpy.random.seed(100)
         # gibbs sampling cycle
         for i in range(200):
             # apply rotation
