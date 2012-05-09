@@ -3,7 +3,11 @@ PDB structure parsers.
 """
 
 import re
+import os
+import numpy
+import urllib2
 import multiprocessing
+
 import csb.bio.structure
 import csb.pyutils
 import csb.io
@@ -11,7 +15,6 @@ import csb.io
 from abc import ABCMeta, abstractmethod
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets
 from csb.bio.structure import ChemElements, SecStructures
-from numpy import array
 
 
 PDB_AMINOACIDS = {
@@ -70,9 +73,124 @@ Dictionary of non-standard nucleotides, which could be found in PDB.
 class PDBParseError(ValueError):
     pass
 
-
 class UnknownPDBResidueError(PDBParseError):
     pass
+
+class StructureNotFoundError(KeyError):
+    pass
+
+class InvalidEntryIDError(PDBParseError):
+    pass
+
+
+class EntryID(object):
+    """
+    Represents a PDB Chain identifier. Implementing classes must define
+    how the original ID is split into accession number and chain ID.
+    
+    @param id: identifier
+    @type id: str
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self, id):
+        
+        self._accession = ''
+        self._chain = ''
+        
+        id = id.strip()        
+        self._accession, self._chain = self.parse(id)
+    
+    @staticmethod
+    def create(id):
+        """
+        Guess the format of C{id} and parse it. 
+        
+        @return: a new PDB ID of the appropriate type
+        @rtype: L{EntryID}
+        """
+        
+        if len(id) in (4, 5):
+            return StandardID(id)
+        elif len(id) == 6 and id[4] == '_':
+            return SeqResID(id)
+        else:
+            return DegenerateID(id)
+    
+    @abstractmethod
+    def parse(self, id):
+        """
+        Split C{id} into accession number and chain ID.
+        
+        @param id: PDB identifier
+        @type id: str
+        @return: (accession, chain)
+        @rtype: tuple of str
+        
+        @raise InvalidEntryIDError: when C{id} is in an inappropriate format
+        """
+        pass
+    
+    def format(self):
+        """
+        @return: the identifier in its original format
+        @rtype: str
+        """
+        return self.entry_id
+        
+    @property
+    def accession(self):
+        return self._accession
+
+    @property
+    def chain(self):
+        return self._chain
+    
+    @property
+    def entry_id(self):
+        return "{0.accession}{0.chain}".format(self)
+    
+    def __str__(self):
+        return self.entry_id
+    
+class StandardID(EntryID):
+    """
+    Standard PDB ID in the following form: xxxxY, where xxxx is the accession
+    number (lower case) and Y is an optional chain identifier.
+    """    
+    def parse(self, id):
+        
+        if len(id) not in (4, 5):
+            raise InvalidEntryIDError(id)
+        
+        return (id[:4].lower(), id[4:])
+        
+class DegenerateID(EntryID):
+    """
+    Looks like a L{StandardID}, except that the accession number may have
+    arbitrary length.
+    """    
+    def parse(self, id):
+
+        if len(id) < 2:
+            raise InvalidEntryIDError(id)
+        
+        return (id[:-1].lower(), id[-1])
+        
+class SeqResID(EntryID):
+    """
+    Same as a L{StandardID}, but contains an additional underscore between
+    te accession number and the chain identifier.
+    """      
+    def parse(self, id):
+        
+        if not (len(id) == 6 and id[4] == '_'):
+            raise InvalidEntryIDError(id)
+        
+        return (id[:4].lower(), id[5:])
+    
+    def format(self):
+        return "{0.accession}_{0.chain}".format(self)
 
 
 class AbstractStructureParser(object):
@@ -361,7 +479,7 @@ class AbstractStructureParser(object):
 
         for chains, matrices in biomt[number].iteritems():
             for num in matrices:
-                mat = array(matrices[num][0:12]).reshape((3,4))
+                mat = numpy.array(matrices[num][0:12]).reshape((3,4))
                 R, t = mat[:3,:3], mat[:3,3]
 
                 for chain in chains:
@@ -457,7 +575,7 @@ class AbstractStructureParser(object):
                     serial_number = int(line[6:11])
                     name = line[12:16]
                     x, y, z = line[30:38], line[38:46], line[46:54]
-                    vector = array([float(x), float(y), float(z)])
+                    vector = numpy.array([float(x), float(y), float(z)])
                     element = line[76:78].strip()
                     if element:
                         try:
@@ -932,6 +1050,263 @@ class LegacyStructureParser(AbstractStructureParser):
 StructureParser = AbstractStructureParser.create_parser
 
 
+class StructureProvider(object):
+    """
+    Base class for all PDB data source providers.
+    
+    Concrete classes need to implement the C{find} method, which abstracts the
+    retrieval of a PDB structure file by a structure identifier. This is a hook
+    method called internally by C{get}, but subclasses can safely override both
+    C{find} and {get} to in order to achieve completely custom behavior. 
+    """
+    
+    __metaclass__ = ABCMeta
+    
+    def __getitem__(self, id):
+        return self.get(id)
+    
+    @abstractmethod
+    def find(self, id):
+        """
+        Attempt to discover a PDB file, given a specific PDB C{id}.
+            
+        @param id: structure identifier (e.g. 1x80)
+        @type id: str
+        @return: path and file name on success, None otherwise
+        @rtype: str or None
+        """
+        pass
+    
+    def get(self, id, model=None):
+        """
+        Discover, parse and return the PDB structure, corresponding to the
+        specified C{id}.
+        
+        @param id: structure identifier (e.g. 1x80)
+        @type id: str
+        @param model: optional model identifier
+        @type model: str
+                
+        @rtype: L{csb.bio.Structure}
+        
+        @raise StructureNotFoundError: when C{id} could not be found
+        """
+        pdb = self.find(id)
+        
+        if pdb is None:
+            raise StructureNotFoundError(id)
+        else:
+            return StructureParser(pdb).parse_structure(model=model)
+    
+class FileSystemStructureProvider(StructureProvider):
+    """
+    Simple file system based PDB data source. Scans a list of local directories
+    using pre-defined file name templates.
+    
+    @param paths: a list of paths
+    @type paths: iterable or str 
+    """
+    
+    def __init__(self, paths=None):
+        
+        self._templates = ['pdb{id}.ent', 'pdb{id}.pdb', '{id}.pdb', '{id}.ent']
+        self._paths = csb.pyutils.OrderedDict()
+        
+        if paths is not None:
+            if isinstance(paths, basestring):
+                paths = [paths]
+                            
+            for path in paths:
+                self.add(path)
+                
+    @property
+    def paths(self):
+        return tuple(self._paths)
+    
+    @property
+    def templates(self):
+        return tuple(self._templates)
+        
+    def add(self, path):
+        """
+        Register a new local C{path}.
+        
+        @param path: directory name
+        @type path: str
+        
+        @raise IOError: if C{path} is not a valid directory
+        """
+        if os.path.isdir(path):
+            self._paths[path] = path
+        else:
+            raise IOError(path)
+        
+    def add_template(self, template):
+        """
+        Register a custom file name name C{template}. The template must contain
+        an E{lb}idE{rb} macro, e.g. pdbE{lb}idE{rb}.ent 
+        
+        @param template: pattern
+        @type template: str 
+        """
+        
+        if '{id}' not in template:
+            raise ValueError('Template does not contain an "{id}" macro')
+        
+        if template not in self._templates:
+            self._templates.append(template)
+            
+    def remove(self, path):
+        """
+        Unregister an existing local C{path}.
+        
+        @param path: directory name
+        @type path: str
+        
+        @raise ValueError: if C{path} had not been registered
+        """        
+        if path not in self._paths:
+            raise ValueError('path not found: {0}'.format(path))
+        
+        del self._paths[path]
+            
+    def find(self, id):
+        
+        for path in self._paths:
+            for token in self.templates:
+                fn = os.path.join(path, token.format(id=id))
+                if os.path.exists(fn):
+                    return fn
+            
+        return None
+    
+class RemoteStructureProvider(StructureProvider):
+    """
+    Retrieves PDB structures from a specified remote URL.
+    The URL requested from remote server takes the form: <prefix>/<ID><suffix>
+    
+    @param prefix: URL prefix, including protocol
+    @type prefix: str
+    @param suffix: optional URL suffix (.ent by default)
+    @type suffix: str
+    """
+    
+    def __init__(self, prefix='http://www.rcsb.org/pdb/files/pdb', suffix='.ent'):
+        
+        self._prefix = None
+        self._suffix = None
+        
+        self.prefix = prefix
+        self.suffix = suffix
+        
+    @property
+    def prefix(self):
+        return self._prefix
+    @prefix.setter
+    def prefix(self, value):
+        self._prefix = value
+        
+    @property
+    def suffix(self):
+        return self._suffix
+    @suffix.setter
+    def suffix(self, value):
+        self._suffix = value        
+    
+    def _find(self, id):
+        
+        try:
+            return urllib2.urlopen(self.prefix + id + self.suffix)
+        except:
+            raise StructureNotFoundError(id)
+        
+    def find(self, id):
+        
+        stream = self._find(id)
+        
+        try:
+            tmp = csb.io.TempFile(dispose=False)
+            tmp.write(stream.read())
+            tmp.flush()
+            return tmp.name
+                
+        except StructureNotFoundError:
+            return None            
+        finally:
+            stream.close()         
+        
+    def get(self, id, model=None):
+        
+        stream = self._find(id)
+        
+        try:
+            with csb.io.TempFile() as tmp:
+                tmp.write(stream.read())
+                tmp.flush()
+                return StructureParser(tmp.name).parse_structure(model=model)
+        finally:
+            stream.close()
+        
+class CustomStructureProvider(StructureProvider): 
+    """
+    A custom PDB data source. Functions as a user-defined map of structure
+    identifiers and their corresponding local file names. 
+    
+    @param files: initialization dictionary of id:file pairs
+    @type files: dict-like
+    """
+        
+    def __init__(self, files={}):
+        
+        self._files = {}        
+        for id in files:
+            self.add(id, files[id])
+            
+    @property
+    def paths(self):
+        return tuple(self._files.values())            
+
+    @property
+    def identifiers(self):
+        return tuple(self._files)
+            
+    def add(self, id, path):
+        """
+        Register a new local C{id}:C{path} pair.
+
+        @param id: structure identifier
+        @type id: str        
+        @param path: path and file name
+        @type path: str
+        
+        @raise IOError: if C{path} is not a valid file name
+        """
+        if os.path.isfile(path):
+            self._files[id] = path
+        else:
+            raise IOError(path)
+        
+    def remove(self, id):
+        """
+        Unregister an existing structure C{id}.
+        
+        @param id: structure identifier
+        @type id: str
+        
+        @raise ValueError: if C{id} had not been registered
+        """
+        if id not in self._files:
+            raise ValueError(id)
+        else:
+            del self._files[id]
+        
+    def find(self, id):
+        
+        if id in self._files:
+            return self._files[id]
+        else:
+            return None
+    
 def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
     """
     Download and parse a PDB entry.
@@ -946,16 +1321,7 @@ def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
     @return: object representation of the selected model
     @rtype: L{Structure}
     """
-    import urllib2
-
-    with csb.io.TempFile() as pdb:
-
-        browser = urllib2.urlopen(prefix + accession.lower() + '.ent')
-        pdb.write(browser.read())
-        pdb.flush()
-    
-        return StructureParser(pdb.name).parse_structure(model)
-
+    return RemoteStructureProvider(prefix).get(accession, model=model)
 
 def find(id, paths):
     """
@@ -969,20 +1335,9 @@ def find(id, paths):
     @return: path and file name on success, None otherwise
     @rtype: str
     """
-    import os
+    return FileSystemStructureProvider(paths).find(id)
     
-    if isinstance(paths, basestring):
-        paths = [paths]
-        
-    for path in paths:
-        for token in ['pdb{id}.ent', 'pdb{id}.pdb', '{id}.pdb', '{id}.ent']:
-            fn = os.path.join(path, token.format(id=id))
-            if os.path.exists(fn):
-                return fn
-        
-    return None 
-
-
+    
 class AsyncParseResult(object):
     
     def __init__(self, result, exception):

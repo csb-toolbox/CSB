@@ -1,8 +1,10 @@
 import csb.test as test
 import csb.pyutils
 
-from csb.bio.io.fasta import SequenceParser, PDBSequenceParser, SequenceAlignmentReader, OutputBuilder
-from csb.bio.sequence import AbstractSequence, Sequence, SequenceTypes, AlignmentFormats, SequenceAlignment, A3MAlignment, DuplicateSequenceError
+from csb.bio.io.wwpdb import FileSystemStructureProvider
+from csb.bio.io.fasta import SequenceParser, PDBSequenceParser, SequenceAlignmentReader, StructureAlignmentFactory, OutputBuilder
+from csb.bio.sequence import AbstractSequence, Sequence, SequenceTypes, ProteinAlphabet, DuplicateSequenceError, SequenceError
+from csb.bio.sequence import AlignmentFormats, SequenceAlignment, A3MAlignment
          
         
 @test.unit
@@ -151,6 +153,42 @@ class TestNonStrictAlignmentReader(TestSequenceAlignmentReader):
         
         self.assertRaises(DuplicateSequenceError, self.strict.read_fasta, self.fasta)
         self.assertRaises(DuplicateSequenceError, self.strict.read_a3m, self.a3m) 
+
+
+@test.unit
+class TestStructureAlignmentFactory(test.Case):
+
+    def setUp(self):
+        
+        super(TestStructureAlignmentFactory, self).setUp()
+        
+        self.provider = FileSystemStructureProvider(self.config.data)
+        self.provider.add_template('{id}.regular.pdb')
+        self.factory = StructureAlignmentFactory(self.provider)
+
+        self.fasta = self.config.getContent('struct.ali.mfasta')
+     
+    def testMakeAlignment(self):
+        
+        ali = self.factory.make_alignment(self.fasta)
+        
+        self.assertEqual(ali.format().strip(), self.fasta.strip())
+        self.assertEqual(ali.rows[1].columns[1].residue.type, ProteinAlphabet.GLU)
+        self.assertEqual(ali.rows[2].columns[12].residue.atoms['CA'].vector[0], 58.911000000000001)
+        
+    def testMakeEntry(self):
+        
+        row = Sequence('1d3zA', '', 'DTI--ENVK', SequenceTypes.Protein)
+        chain = self.provider.get('1d3z').chains['A']
+        
+        entry = self.factory.make_entry(row, chain)
+        self.assertEqual(row.sequence, entry.sequence)
+        self.assertEqual(row.residues[4].type, ProteinAlphabet.GAP)
+        self.assertEqual(row.residues[5].type, ProteinAlphabet.GAP)
+        
+        row = Sequence('1d3zA', '', 'DBUG-ENVK', SequenceTypes.Protein)
+        self.assertRaises(SequenceError, self.factory.make_entry, row, chain)
+        
 
 @test.unit
 class TestOutputBuilder(test.Case):

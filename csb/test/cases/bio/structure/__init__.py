@@ -44,12 +44,9 @@ class ChainRegressions(test.Case):
     def testClone(self):
         """
         @see: [CSB 0000029]
-        """      
-        from csb.bio.io.wwpdb import get
-        chain = get('1s72').chains['T']
-                
-        self.assertFasterThan(0.01, chain.subregion, 1, 1, clone=True)
-        self.assertFasterThan(0.5, chain.clone)
+        """
+        self.assertEqual(self.chain.residues[1].clone()._container, None)
+        self.assertFasterThan(0.1, self.chain.clone)
         
     def testApplyTransformation(self):
         """
@@ -77,7 +74,8 @@ class ChainRegressions(test.Case):
         # now the regression itself
         for altatom in disatom:
             self.assertEqual(altatom.vector.tolist(), [3, 3, 3])
-            
+    
+    @test.skip("may fail on slower machines")
     def testListCoordinates(self):
         """
         Performance tweaks in Abstract3DEntity.list_coordinates()

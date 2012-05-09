@@ -205,7 +205,7 @@ def random_rotation(A, n_iter=10, initial_values = None):
     exp(trace(dot(transpose(A),R)))
 
     @param A: generating parameter
-    @type R: 3 x 3 numpy array
+    @type A: 3 x 3 numpy array
 
     @param n_iter: number of gibbs sampling steps
     @type n_iter: integer

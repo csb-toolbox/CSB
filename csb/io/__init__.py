@@ -32,21 +32,24 @@ class TempFile(csb.pyutils.Proxy):
     the case with tempfile.NamedTemporaryFile (does not work on Windows).
     """
 
-    def __init__(self):
+    def __init__(self, dispose=True):
         
         fd, file = tempfile.mkstemp()
         
         self.__file = file
         self.__fd = fd
         self.__fh = open(self.__file, 'w')
+        self.__dispose = bool(dispose)
         
         super(TempFile, self).__init__(self.__fh)
         
     def __del__(self):
-        try:
-            self.close()
-        except:
-            pass
+        
+        if self.__dispose:
+            try:
+                self.close()
+            except:
+                pass
         
     def __enter__(self):
         return self
