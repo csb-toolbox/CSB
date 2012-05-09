@@ -937,7 +937,9 @@ class AbstractNIContainer(AbstractContainer):
         return self._children._getinternal(i)
                 
 try:        
-    from collections import OrderedDict
+    from collections import OrderedDict as _dict
+    class OrderedDict(_dict):
+        pass
 except ImportError:
     import UserDict
     
