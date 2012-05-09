@@ -1,7 +1,7 @@
 import sys
 
 EXP_MIN = -308
-EXP_MAX = 308
+EXP_MAX = +709
     
 LOG_MIN = 1e-308
 LOG_MAX = 1e+308
