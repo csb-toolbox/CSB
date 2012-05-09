@@ -1,5 +1,4 @@
 import os
-import unittest
 import csb.test as test
 
 from csb.bio.io.wwpdb import EntryID, StandardID, DegenerateID, SeqResID, InvalidEntryIDError
@@ -458,7 +457,7 @@ def TestPDB():
     import glob
 
     mask = raw_input('PDB file(s) (enter file name or mask): ')
-    suite = unittest.TestSuite()    
+    suite = test.unittest.TestSuite()    
     
     class PDBTestCase(test.Case):
         

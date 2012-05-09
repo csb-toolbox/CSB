@@ -20,6 +20,7 @@ by the Console itself, belong to the same CSB package.
 
 import os
 import sys
+import traceback
 
 if os.path.basename(__file__) == '__init__.py':
     PARENT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -215,9 +216,10 @@ Options:
         Run tests. Also make sure the current environment loads all modules from
         the input folder.
         """
-        import unittest
         import csb.test
         assert csb.test.__file__.startswith(self._input), 'csb.test not loaded from the input!'     #@UndefinedVariable
+        
+        from csb.test import unittest
         
         self.log('\n# Running the Test Console...')
                 
@@ -389,7 +391,8 @@ Options:
             try:
                 Console(output, verbosity=verb, buildtype=buildtype).build()
             except Exception as ex:
-                Console.exit(message='Unexpected Error: ' + str(ex), code=99, usage=False)
+                msg = 'Unexpected Error: {0}\n\n{1}'.format(ex, traceback.format_exc())
+                Console.exit(message=msg, code=99, usage=False)
                 
             
 class RevisionError(RuntimeError):

@@ -155,20 +155,31 @@ decorators you need in order to write tests for CSB.
              we implement. One possible approach is to write a test case first and
              make sure it fails; when the new feature is ready, run the test again
              to make sure it passes
-        
+
+@warning: for compatibility reasons do NOT import and use the unittest module
+          directly. Always import unittest from csb.test, which is guaranteed
+          to be python 2.7+ compatible. The standard unittest under python 2.6
+          is missing some features, that's why csb.test will take care of
+          replacing it with unittest2 instead. 
 """
 
 import os
 import sys
 import imp
 import types
+import time
 import cPickle
 import tempfile
 import csb.io
-import unittest
-import time
+
+try:
+    from unittest import skip, skipIf
+    import unittest
+except ImportError:
+    import unittest2 as unittest
 
 from abc import ABCMeta, abstractproperty
+
 
 class Attributes(object):
     
