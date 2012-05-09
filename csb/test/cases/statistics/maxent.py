@@ -16,13 +16,13 @@ class TestMaxent(test.Case):
         super(TestMaxent, self).setUp()
         self.data_fn = self.config.getTestFile('maxent.pickle')
         
-
+    @test.skip("slow")
     def testMaxent(self):
         k = 2
         data = csb.io.load(self.data_fn)
         model = MaxentModel(k)
         model.sample_weights()
-        posterior = MaxentPosterior(model, data[:100000]/ 180. * numpy.pi  )
+        posterior = MaxentPosterior(model, data[:1000]/ 180. * numpy.pi  )
 
         x = model.get() * 1.
 
@@ -39,6 +39,10 @@ class TestMaxent(test.Case):
         xx = numpy.linspace(0 ,2 * numpy.pi, 500)
         fx = posterior.model.log_prob(xx,xx)
 
+        self.assertAlmostEqual(posterior.model.log_z(integration = 'simpson'),
+                               posterior.model.log_z(integration = 'trapezoidal'),
+                               places = 2)
+        
         self.assertTrue(fx != None)
         z = numpy.exp(log_sum_exp(numpy.ravel(fx))) 
         self.assertAlmostEqual(z * xx[1]**2, 1., places = 1)
