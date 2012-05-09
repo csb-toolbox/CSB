@@ -46,7 +46,6 @@ class ChainRegressions(test.Case):
         @see: [CSB 0000029]
         """
         self.assertEqual(self.chain.residues[1].clone()._container, None)
-        self.assertFasterThan(0.1, self.chain.clone)
         
     def testApplyTransformation(self):
         """
