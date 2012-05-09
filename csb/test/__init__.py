@@ -459,8 +459,9 @@ class AbstractTestBuilder(object):
                that for every call to imp.load_source(mn, src.py) the mn parameter
                is a string that uniquely identifies the source file src.py.
         """
-        #name = hashlib.sha1(path).hexdigest()
         name = os.path.splitext(os.path.abspath(path))[0]
+        name = name.replace('.', '-').rstrip('__init__').strip(os.path.sep)
+        
         return imp.load_source(name, path)        
     
     def _recurse(self, obj):
