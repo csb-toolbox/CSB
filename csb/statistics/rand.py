@@ -210,8 +210,8 @@ def random_rotation(A, n_iter=10, initial_values = None):
 
 
     def sample_beta(kappa, n=1):
-        from numpy import arccos,clip
-        from utils import log, exp
+        from numpy import arccos
+        from csb.math import log, exp
         from numpy.random import random
 
         u = random(n)
