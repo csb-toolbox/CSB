@@ -1050,6 +1050,9 @@ class AbstractAlignment(object):
             temp.close()          
 
 class SequenceAlignment(AbstractAlignment):
+    """
+    Multiple sequence alignment. See L{AbstractAlignment} for details.
+    """
         
     def _construct(self, sequences):
         
@@ -1071,12 +1074,47 @@ class SequenceAlignment(AbstractAlignment):
         from csb.bio.io.fasta import SequenceAlignmentReader
         return SequenceAlignmentReader(strict=strict).read_fasta(string)
         
-class ChainAlignment(SequenceAlignment):
-    pass
-
+class StructureAlignment(AbstractAlignment):
+    """
+    Multiple structure alignment. Similar to a L{SequenceAlignment}, but
+    the alignment holds the actual L{csb.bio.structure.ProteinResidue} objects,
+    taken from the corresponding source L{csb.bio.structure.Chain}s.
+    
+    See L{AbstractAlignment} for details.
+    """
+        
+    def _construct(self, sequences):
+        
+        for sequence in sequences:
+            self.add(sequence)
+            
+    @staticmethod
+    def parse(string, provider, id_factory=None, strict=True):
+        """
+        Create a new L{StructureAlignment} from an mFASTA string. See 
+        L{csb.bio.io.fasta.StructureAlignmentFactory} for details. 
+        
+        @param string: MSA-formatted string
+        @type string: str
+        @param provider: data source for all structures found in the alignment
+        @type provider: L{csb.bio.io.wwpdb.StructureProvider}
+        @param strict: see L{AbstractAlignment}
+        @type strict: bool
+        @param id_factory: callable factory, which transforms a sequence ID into
+                           a L{csb.bio.io.wwpdb.EntryID} object. By default
+                           this is L{csb.bio.io.wwpdb.EntryID.create}. 
+        @type id_factory: callable        
+        @rtype: L{StructureAlignment}
+        """
+        from csb.bio.io.fasta import StructureAlignmentFactory
+        
+        factory = StructureAlignmentFactory(
+                        provider, id_factory=id_factory, strict=strict)
+        return factory.make_alignment(string)
+    
 class A3MAlignment(AbstractAlignment):
     """
-    A specific type of multiple alignment, which provides column-indexing
+    A specific type of multiple alignment, which provides some operations
     relative to a master sequence (the first entry in the alignment). 
     """
     

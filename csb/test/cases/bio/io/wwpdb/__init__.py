@@ -1,10 +1,12 @@
+import os
 import unittest
 import csb.test as test
 
-from csb.bio.io.wwpdb import StructureParser, RegularStructureParser,\
-                             LegacyStructureParser, get, UnknownPDBResidueError
+from csb.bio.io.wwpdb import EntryID, StandardID, DegenerateID, SeqResID, InvalidEntryIDError
+from csb.bio.io.wwpdb import StructureParser, RegularStructureParser, LegacyStructureParser, UnknownPDBResidueError
+from csb.bio.io.wwpdb import get, find, FileSystemStructureProvider, RemoteStructureProvider, CustomStructureProvider, StructureNotFoundError
 from csb.bio.sequence import SequenceAlphabets, SequenceTypes
-from csb.bio.structure import ChemElements, SecStructures
+from csb.bio.structure import ChemElements, SecStructures, Structure
 
 @test.regression
 class TestBiomoleculeRegressions(test.Case):
@@ -252,6 +254,112 @@ class TestRegularStructureParser(test.Case):
         self.assertEqual(self.parser.models(), list(range(1, 11)))
 
 
+@test.unit
+class TestFileSystemProvider(test.Case):
+    
+    def setUp(self):
+        
+        super(TestFileSystemProvider, self).setUp()
+        
+        self.path = self.config.data
+        self.provider = FileSystemStructureProvider()
+        self.provider.add(self.path)
+    
+    def testAdd(self):
+        
+        self.assertEqual(len(self.provider.paths), 1)
+        
+        self.provider.add('.')
+        self.assertEqual(self.provider.paths[1], '.')
+        self.assertEqual(len(self.provider.paths), 2)
+        
+        self.assertRaises(IOError, self.provider.add, 'non-exi$ting path')
+    
+    def testRemove(self):
+        
+        self.assertEqual(len(self.provider.paths), 1)
+        self.provider.remove(self.path)
+        self.assertEqual(len(self.provider.paths), 0)
+        
+        self.assertRaises(ValueError, self.provider.remove, 'non-exi$ting path')
+    
+    def testFind(self):
+        
+        f1 = self.provider.find('3p1u')
+        f2 = self.config.getTestFile('3p1u.pdb')
+        
+        self.assertEqual(os.path.abspath(f1), os.path.abspath(f2))
+        self.assertEqual(None, self.provider.find('$'))
+        
+    def testGet(self):
+        
+        s = self.provider.get('3p1u')
+        self.assertEqual(s.accession, '3p1u')
+        self.assertTrue(isinstance(s, Structure))
+        self.assertRaises(StructureNotFoundError, self.provider.get, '$')
+
+
+@test.unit
+class TestCustomProvider(test.Case):
+    
+    def setUp(self):
+        
+        super(TestCustomProvider, self).setUp()
+        
+        self.path = self.config.getTestFile('3p1u.pdb')
+        self.provider = CustomStructureProvider({'3p1u': self.path})
+    
+    def testAdd(self):
+        
+        self.assertEqual(len(self.provider.paths), 1)
+        self.assertEqual(self.provider.paths[0], self.path)
+                
+        self.provider.add('test', self.config.getTestFile('d1nz0a_.pdb'))
+        self.assertEqual(len(self.provider.paths), 2)
+        
+        self.assertRaises(IOError, self.provider.add, 'test', 'non-exi$ting path')
+    
+    def testRemove(self):
+        
+        self.assertEqual(len(self.provider.paths), 1)
+        self.provider.remove('3p1u')
+        self.assertEqual(len(self.provider.paths), 0)
+        
+        self.assertRaises(ValueError, self.provider.remove, '$')
+    
+    def testFind(self):
+        
+        f1 = self.provider.find('3p1u')
+        f2 = self.config.getTestFile('3p1u.pdb')
+        
+        self.assertEqual(os.path.abspath(f1), os.path.abspath(f2))
+        self.assertEqual(None, self.provider.find('$'))
+        
+    def testGet(self):
+        
+        s = self.provider.get('3p1u')
+        self.assertEqual(s.accession, '3p1u')
+        self.assertTrue(isinstance(s, Structure))
+        self.assertRaises(StructureNotFoundError, self.provider.get, '$')
+        
+@test.unit
+class TestRemoteProvider(test.Case):
+    
+    def setUp(self):
+        
+        super(TestRemoteProvider, self).setUp()
+        self.provider = RemoteStructureProvider()
+        
+    def testGet(self):
+        
+        s = self.provider.get('3p1u')
+        self.assertEqual(s.accession, '3p1u')
+        self.assertTrue(isinstance(s, Structure))
+        
+        self.provider.prefix = 'http://NoSuchURL.test'
+        self.assertRaises(StructureNotFoundError, self.provider.get, 'NoSuchFile')    
+                
+
 @test.functional
 class TestGet(test.Case):
     
@@ -270,8 +378,80 @@ class TestGet(test.Case):
         # Residue level 
         self.assertEqual(len(structure['A'][1:10]), 9)
         self.assertEqual(structure['A'][0].type,SequenceAlphabets.Protein.MET)                      
-       
-       
+
+
+@test.functional
+class TestFind(test.Case):
+    
+    def runTest(self):
+        
+        f2 = find('3p1u', [self.config.data])
+        f1 = self.config.getTestFile('3p1u.pdb')
+        
+        self.assertEqual(os.path.abspath(f1), os.path.abspath(f2))
+        self.assertEqual(None, find('$', self.config.data))       
+
+
+@test.unit
+class TestEntryID(test.Case):
+
+    def setUp(self):
+        super(TestEntryID, self).setUp()
+        
+    def testFactory(self):
+        self.assertTrue(isinstance(EntryID.create('abcdE'), StandardID))
+        self.assertTrue(isinstance(EntryID.create('abcdddE'), DegenerateID))
+        self.assertTrue(isinstance(EntryID.create('abcd_E'), SeqResID))
+        
+@test.unit
+class TestStandardID(test.Case):
+
+    def setUp(self):
+        super(TestStandardID, self).setUp()
+        
+        self.id = StandardID('abCdE')
+        self.accession = 'abcd'
+        self.chain = 'E'
+    
+    def testAccession(self):
+        self.assertEqual(self.id.accession, self.accession)
+
+    def testChain(self):
+        self.assertEqual(self.id.chain, self.chain)
+
+    def testEntryID(self):
+        self.assertEqual(self.id.entry_id, self.accession + self.chain)                       
+
+    def testFormat(self):
+        self.assertEqual(self.id.format(), self.accession + self.chain)
+        
+    def testConstructor(self):
+        self.assertRaises(InvalidEntryIDError, StandardID, 'aE')
+
+@test.unit
+class TestDegenerateID(TestStandardID):
+
+    def setUp(self):
+        super(TestDegenerateID, self).setUp()
+        
+        self.id = DegenerateID('abCdddE')
+        self.accession = 'abcddd'
+        self.chain = 'E'  
+        
+@test.unit
+class TestSeqResID(TestStandardID):
+
+    def setUp(self):
+        super(TestSeqResID, self).setUp()
+        self.id = SeqResID('abCd_E')
+
+    def testFormat(self):
+        self.assertEqual(self.id.format(), 'abcd_E')
+        
+    def testConstructor(self):
+        self.assertRaises(InvalidEntryIDError, SeqResID, 'abcdE')
+                
+                               
 @test.custom
 def TestPDB():
     

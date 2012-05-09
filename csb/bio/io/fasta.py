@@ -9,9 +9,9 @@ import csb.pyutils
 
 from abc import ABCMeta, abstractmethod
 
-from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentFormats
-from csb.bio.sequence import SequenceAlignment, A3MAlignment
-from csb.bio.sequence import SequenceCollection, AbstractSequence, Sequence, RichSequence
+from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentFormats, SequenceError
+from csb.bio.sequence import SequenceAlignment, StructureAlignment, A3MAlignment
+from csb.bio.sequence import SequenceCollection, AbstractSequence, Sequence, RichSequence, ChainSequence
 
 
 class BaseSequenceParser(object):
@@ -278,7 +278,132 @@ class SequenceAlignmentReader(object):
             
         return A3MAlignment(aligned_seqs, strict=self.strict)
     
+class StructureAlignmentFactory(object):
+    """
+    Protein structure alignment parser.
+    
+    In order to construct the structural alignment, this factory needs a PDB
+    structure provider: an object, whose C{provider.get} method returns a 
+    L{csb.bio.structute.Structure} for a given sequence identifier. Sequence
+    identifiers on the other hand need to be split into 'accession number'
+    and 'chain ID'. By default this is done using a standard PDB Entry ID
+    factory, but clients are free to provide custom factories. An C{id_factory}
+    must be a callable, which accepts a single string identifier and returns
+    an EntryID object.
+    
+    @param provider: data source for all structures found in the alignment
+    @type provider: L{csb.bio.io.wwpdb.StructureProvider}
+    @param id_factory: callable factory, which transforms a sequence ID into
+                       a L{csb.bio.io.wwpdb.EntryID} object. By default
+                       this is L{csb.bio.io.wwpdb.EntryID.create}.
+    @type id_factory: callable
+    @param strict: if True, raise exception on duplicate sequence identifiers.
+                   See L{csb.bio.sequence.AbstractAlignment} for details
+    @type strict: bool    
+    """
+    
+    def __init__(self, provider, id_factory=None, strict=True):
 
+        from csb.bio.io.wwpdb import EntryID
+        
+        if id_factory is None:
+            id_factory = EntryID.create
+        if not hasattr(id_factory, '__call__'):
+            raise TypeError(id_factory)
+        
+        if not hasattr(provider, 'get'):
+            raise TypeError(provider)        
+                
+        self._type = SequenceTypes.Protein
+        self._strict = bool(strict)
+        self._provider = provider
+        self._id_factory = id_factory
+
+    @property
+    def product_type(self):
+        return self._type
+    
+    @property
+    def provider(self):
+        return self._provider  
+    
+    @property
+    def id_factory(self):
+        return self._id_factory
+
+    @property
+    def strict(self):
+        return self._strict
+            
+    def make_alignment(self, string):
+        """
+        Build a protein structure alignment given a multi-FASTA string
+        and the current structure C{provider}.
+        
+        @param string: alignment string
+        @type string: str
+        
+        @rtype: L{SequenceAlignment}
+        
+        @raise SequenceError: when an aligned sequence is not a proper
+                              subsequence of its respective source PDB chain
+        @raise StructureNotFoundError: if C{provider} can't provide a structure
+                                       for a given sequence ID
+        @raise InvalidEntryIDError: if a given sequence ID cannot be parsed        
+        """
+
+        entries = []
+        parser = SequenceParser(Sequence, self.product_type)
+        sequences = parser.parse_string(string)
+        
+        for row in sequences:
+            id = self.id_factory(row.id)
+            chain = self.provider.get(id.accession).chains[id.chain]
+            
+            entry = self.make_entry(row, chain)
+            entries.append(entry)
+            
+        return StructureAlignment(entries, strict=self.strict)
+    
+    def make_entry(self, row, chain):
+        """
+        Build a protein structure alignment entry, given a sequence alignment
+        entry and its corresponding source PDB chain.
+        
+        @param row: sequence alignment entry (sequence with gaps)
+        @type row: L{AbstractSequence}, L{SequenceAdapter}
+        @param chain: source PDB chain
+        @type chain: L{csb.bio.structure.Chain}
+        
+        @return: gapped chain sequence, containing cloned residues from the
+                 source chain (except for the gaps)
+        @rtype: L{ChainSequence}
+        @raise SequenceError: when C{row} is not a proper subsequence of C{chain}        
+        """
+        offset = 1        
+        residues = []
+        sequence = row.strip().sequence.upper()
+        
+        try:
+            start = chain.sequence.index(sequence) + 1
+        except ValueError:
+            raise SequenceError('{0}: not a subsequence of {1}'.format(row.id, chain.entry_id))
+        
+        for rinfo in row.residues:
+            
+            if rinfo.type == row.alphabet.GAP:
+                residues.append(rinfo)
+                continue
+            else:
+                rank = start + offset - 1
+                assert chain.residues[rank].type == rinfo.type
+                residues.append(chain.residues[rank].clone())
+                offset += 1
+                continue
+            
+        return ChainSequence(row.id, row.header, residues, chain.type)
+        
+    
 class OutputBuilder(object):
     """
     Base sequence/alignment string format builder.

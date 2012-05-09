@@ -322,7 +322,6 @@ class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
                         
         self._accession = None
         self._chains = StructureChainsTable(self)
-        #self._chainslist = StructureChainsCollection(self)
         self.model_id = None
         
         self.accession = accession
@@ -1000,8 +999,7 @@ class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         self._type = None    
         self._pdb_name = None
         self._rank = int(rank)
-        self._atoms = ResidueAtomsTable(self)   
-        #self._atomslist = ResidueAtomsCollection(self) 
+        self._atoms = ResidueAtomsTable(self) 
         self._secondary_structure = None
         self._torsion = None
         self._sequence_number = None

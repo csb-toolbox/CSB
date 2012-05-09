@@ -197,9 +197,21 @@ class Config(object):
     
     def __init__(self):
         
-        self.config = Config
-        self.data = self.config.DATA
-        self.temp = self.config.TEMP
+        self.__config = Config
+        self.__data = self.config.DATA
+        self.__temp = self.config.TEMP
+        
+    @property
+    def config(self):
+        return self.__config
+    
+    @property
+    def data(self):
+        return self.__data
+    
+    @property
+    def temp(self):
+        return self.__temp
         
     def getTestFile(self, fileName, subDir=''):
         """
@@ -263,12 +275,15 @@ class Case(unittest.TestCase):
     Base class, defining a CSB Test Case. Provides a default implementation
     of C{unittest.TestCase.setUp} which grabs a reference to a L{Config}.
     """
+    @property
+    def config(self):
+        return self.__config
     
     def setUp(self):
         """
         Provide a reference to the CSB Test Config in the C{self.config} property.
         """   
-        self.config = Config()
+        self.__config = Config()
         assert hasattr(self.config, 'data'), 'The CSB Test Config must contain the data directory'
         assert self.config.data, 'The CSB Test Config must contain the data directory'
         
@@ -677,18 +692,50 @@ Options:
         if not argv:
             argv = sys.argv
         
-        if hasattr(namespace, '__iter__'):
-            self.namespace = list(namespace)
-        else:
-            self.namespace = [namespace]            
+        self._namespace = None            
+        self._builder = None
+        self._verbosity = 1
+        self._program = os.path.basename(argv[0])
+        
+        self.namespace = namespace
         self.builder = builder
-        self.builders = ', '.join(Console.BUILDERS)
         self.verbosity = verbosity
-        self.program = os.path.basename(argv[0])
         
         self.parseArguments(argv[1:])
         self.run()
         
+    @property
+    def namespace(self):
+        return self._namespace
+    @namespace.setter
+    def namespace(self, value):    
+        if hasattr(value, '__iter__'):
+            self._namespace = list(value)
+        else:
+            self._namespace = [value]
+            
+    @property
+    def builder(self):
+        return self._builder
+    @builder.setter
+    def builder(self, value):
+        self._builder = value
+    
+    @property
+    def verbosity(self):
+        return self._verbosity
+    @verbosity.setter
+    def verbosity(self, value):
+        self._verbosity = value    
+            
+    @property
+    def builders(self):
+        return ', '.join(Console.BUILDERS)
+    
+    @property
+    def program(self):
+        return self._program
+                    
     def run(self):
         
         builder = self.builder()
