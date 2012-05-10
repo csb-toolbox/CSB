@@ -1,16 +1,18 @@
 """
-Mixture models for protein structure ensembles
+Mixture models for protein structure ensembles.
 
 Reference: Hirsch M, Habeck M. - Bioinformatics. 2008 Oct 1;24(19):2184-92
 """
 
 import os
 import sys
+
 from abc import ABCMeta, abstractmethod
+
 
 class GaussianMixture(object):
     """
-    Abstract mixture model for protein structure ensembles
+    Abstract mixture model for protein structure ensembles.
     """
 
     __metaclass__ = ABCMeta
@@ -47,8 +49,8 @@ class GaussianMixture(object):
         self.beta = float(beta)
 
         self.Y = zeros((self.K, self.N, 3))
-        self.R = array([[identity(3) for k in range(self.K)]
-                        for m in range(self.M)])
+        self.R = array([[identity(3) for k in range(self.K)]        #@UnusedVariable
+                        for m in range(self.M)])                    #@UnusedVariable
         self.t = zeros((self.M, self.K, 3))
         self.sigma = ones(self.K)
         self.w = 1./self.K + zeros(self.K)
@@ -311,7 +313,7 @@ class GaussianMixture(object):
         m = cls(X.shape[1], X.shape[0], start)
         m.initialize(X, False)
 
-        for K in range(start+1, stop):
+        for K in range(start+1, stop):                      #@UnusedVariable
             m.em(X, n_iter, verbose, False, False, eps)
             yield m
 
@@ -496,7 +498,7 @@ class SegmentMixture(GaussianMixture):
         on a different segment.
         """
 
-        from numpy import argmax, array, dot
+        from numpy import array, dot
 
         C = [array([dot(X[m] - self.t[m,k], self.R[m,k])
                     for m in range(self.M)])

@@ -7,6 +7,7 @@ import os
 import tempfile
 import subprocess
 
+
 def grep(lines, what):
     for i in range(len(lines)):
         if lines[i].find(what) != -1:
@@ -22,7 +23,7 @@ class WhatCheckParser(object):
     Simple WhatIf/WhatCheck Summary parser
     """
 
-    def __init__(self, binary = '/home/mechelke/install/whatcheck/DO_WHATCHECK.COM'):
+    def __init__(self, binary='/home/mechelke/install/whatcheck/DO_WHATCHECK.COM'):
         self.binary = binary
     
     def parse_summary(self, fn):

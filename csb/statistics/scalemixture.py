@@ -1,14 +1,15 @@
-import numpy
+
 import numpy.random
 
-
-import csb
 import csb.statistics.ars
 import csb.statistics.rand
+
+from abc import abstractmethod, ABCMeta
 
 from csb.math import log, exp
 from csb.statistics import harmonic_mean, geometric_mean
 from csb.statistics.pdf import AbstractEstimator, AbstractDensity, Gamma, InverseGamma
+
 
 class ScaleMixturePrior(object):
     """
@@ -16,14 +17,15 @@ class ScaleMixturePrior(object):
     are estimated.
     """
     
+    __metaclass__ = ABCMeta
+    
+    @abstractmethod
     def get_estimator(self):
         """
-        Returns an appropriate estimator for the scales of the mixture distribution
-        under this prior
+        Return an appropriate estimator for the scales of the mixture distribution
+        under this prior.
         """
-        raise NotImplementedError()
-
-        
+        pass
 
 class ScaleMixture(AbstractDensity):
     """
@@ -37,10 +39,9 @@ class ScaleMixture(AbstractDensity):
     The underlying family is determined by a prior L{ScaleMixturePrior} on the
     scales. Choosing a L{GammaPrior} results in Stundent-t posterior, wheras a 
     L{InvGammaPrior} leads to a K-Distribution as posterior.
-
     """
 
-    def __init__(self, scales = numpy.array([1.,1.]), prior = None, d = 3):
+    def __init__(self, scales=numpy.array([1.,1.]), prior=None, d=3):
         
         super(ScaleMixture, self).__init__()
 
@@ -76,7 +77,6 @@ class ScaleMixture(AbstractDensity):
         self._prior = value
         self.estimator = self._prior.get_estimator()
 
-
     def log_prob(self, x):
         from csb.math import log_sum_exp
 
@@ -91,30 +91,26 @@ class ScaleMixture(AbstractDensity):
         return log_sum_exp(log_p.T, 0)
 
 
-    def random(self, shape = None):
+    def random(self, shape=None):
         
         s = self.scales
 
         if shape is None:
-
             return numpy.random.normal() * s[numpy.random.randint(len(s))]
         
         else:
-            n = s.shape[0]
-
+            #n = s.shape[0]
             nrv = numpy.random.normal(size = shape)
-        
             indices = numpy.random.randint(len(s), size = shape)
              
             return s[indices] * nrv 
-
 
 
 class ARSPosteriorAlpha(csb.statistics.ars.LogProb):
     """
     This class represents the posterior distribution of the alpha parameter
     of the Gamma and Inverse Gamma prior, and allows sampling using adaptive
-    rejection sampling L{ARS}
+    rejection sampling L{ARS}.
     """
 
     def __init__(self, a, b, n):
@@ -167,19 +163,16 @@ class GammaPosteriorSampler(AbstractEstimator):
         super(GammaPosteriorSampler, self).__init__()
         self.n_samples = 2
 
-
     def estimate(self, context, data):
         """
-        Generates samples from the posterior of alpha and beta
+        Generate samples from the posterior of alpha and beta.
 
         For beta the posterior is a gamma distribution and analytically
-        acessible
+        acessible.
 
         The posterior of alpha can not be expressed analytically and is
-        aproximated using adaptive rejection sampling 
+        aproximated using adaptive rejection sampling.
         """
-        from csb.statistics.ars import ARS
-
         pdf = GammaPrior()
 
         ## sufficient statistics
@@ -203,8 +196,8 @@ class GammaPosteriorSampler(AbstractEstimator):
             logp = ARSPosteriorAlpha(n * log(beta * b)\
                                      - context.hyper_alpha.beta,
                                      context.hyper_alpha.alpha-1., n)
-            ars = ARS(logp)
-            ars.initialize(logp.initial_values()[:2], z0 = 0.)
+            ars = csb.statistics.ars.ARS(logp)
+            ars.initialize(logp.initial_values()[:2], z0=0.)
             alpha = ars.sample()
 
             if alpha is None:
@@ -223,19 +216,16 @@ class InvGammaPosteriorSampler(AbstractEstimator):
         super(InvGammaPosteriorSampler, self).__init__()
         self.n_samples = 2
 
-
     def estimate(self, context, data):
         """
-        Generates samples from the posterior of alpha and beta
+        Generate samples from the posterior of alpha and beta.
 
         For beta the posterior is a gamma distribution and analytically
-        acessible
+        acessible.
 
         The posterior of alpha can not be expressed analytically and is
-        aproximated using adaptive rejection sampling 
+        aproximated using adaptive rejection sampling. 
         """
-        from csb.statistics.ars import ARS
-
         pdf = GammaPrior()
 
         ## sufficient statistics
@@ -259,7 +249,7 @@ class InvGammaPosteriorSampler(AbstractEstimator):
 
             logp = ARSPosteriorAlpha(n*(log(beta)-log(g))-context.hyper_alpha.beta,
                                      context.hyper_alpha.alpha-1., n)
-            ars = ARS(logp)
+            ars = csb.statistics.ars.ARS(logp)
             ars.initialize(logp.initial_values()[:2],z0=0.)
 
             alpha = ars.sample()
@@ -280,11 +270,10 @@ class InvGammaPosteriorSampler(AbstractEstimator):
 
 class GammaScaleSampler(AbstractEstimator):
 
-
     def estimate(self, context, data):
         """
         The posterior distribution of the scales if we assume a gamma prior
-        is again a gamma distribution with new parameters
+        is again a gamma distribution with new parameters.
         """
         pdf = ScaleMixture()
         alpha = context.prior.alpha
@@ -304,23 +293,22 @@ class GammaScaleSampler(AbstractEstimator):
 
 class InvGammaScaleSampler(AbstractEstimator):
 
-
     def estimate(self, context, data):
         """
         The posterior distribution of the scales if we assume a gamma prior
-        is again a gamma distribution with new parameters
+        is again a gamma distribution with new parameters.
         """
         pdf = ScaleMixture()
         alpha = context.prior.alpha
         beta = context.prior.beta
-        d = context._d
+        #d = context._d
 
         p = -alpha + 1.5 
         b = 2*  beta 
         a = 1e-5 + data**2 
 
         s = csb.statistics.rand.gen_inv_gaussian(a, b, p)
-        s = numpy.clip(s,1e-300,1e300)
+        s = numpy.clip(s, 1e-300, 1e300)
 
         pdf.scales = s
         context.prior.estimate(s)
@@ -329,21 +317,19 @@ class InvGammaScaleSampler(AbstractEstimator):
         return pdf
     
 
-
-class GammaPrior(Gamma,ScaleMixturePrior):
+class GammaPrior(Gamma, ScaleMixturePrior):
     """
-    Gamma prior on mixture weights including a weak gamma prior on its parameter
+    Gamma prior on mixture weights including a weak gamma prior on its parameter.
     """
 
-    def __init__(self, alpha = 1., beta = 1., hyper_alpha=(4., 1.),
-                 hyper_beta = (2., 1.)):
+    def __init__(self, alpha=1., beta=1., hyper_alpha=(4., 1.),
+                 hyper_beta=(2., 1.)):
 
         super(GammaPrior, self).__init__(alpha,beta)
 
-        self._hyper_alpha = Gamma(hyper_alpha[0],hyper_alpha[0])
-        self._hyper_beta = Gamma(hyper_alpha[0],hyper_alpha[0])
+        self._hyper_alpha = Gamma(hyper_alpha[0], hyper_alpha[0])
+        self._hyper_beta = Gamma(hyper_alpha[0], hyper_alpha[0])
         self.estimator = GammaPosteriorSampler()
-
 
     @property
     def hyper_beta(self):
@@ -356,7 +342,6 @@ class GammaPrior(Gamma,ScaleMixturePrior):
         else:
             raise ValueError(value)
 
-
     @property
     def hyper_alpha(self):
         return self._hyper_alpha
@@ -367,8 +352,6 @@ class GammaPrior(Gamma,ScaleMixturePrior):
             self._hyper_beta = value
         else:
             raise ValueError(value)
-
-
 
     def log_prob(self, x):
 
@@ -379,26 +362,24 @@ class GammaPrior(Gamma,ScaleMixturePrior):
 
         return super(GammaPrior, self).log_prob(x) + l_a + l_b
 
-
     def get_estimator(self):
         return GammaScaleSampler()
 
-
         
-class InvGammaPrior(InverseGamma,ScaleMixturePrior):
+class InvGammaPrior(InverseGamma, ScaleMixturePrior):
     """
-    Inverse Gamma prior on mixture weights including a weak gamma prior on its parameter
+    Inverse Gamma prior on mixture weights including a weak gamma
+    prior on its parameter.
     """
 
-    def __init__(self, alpha = 1., beta = 1., hyper_alpha=(4., 1.),
-                 hyper_beta = (2.,1.)):
+    def __init__(self, alpha=1., beta=1., hyper_alpha=(4., 1.),
+                 hyper_beta=(2.,1.)):
 
         super(InvGammaPrior, self).__init__(alpha,beta)
 
-        self._hyper_alpha = Gamma(hyper_alpha[0],hyper_alpha[0])
-        self._hyper_beta = Gamma(hyper_alpha[0],hyper_alpha[0])
+        self._hyper_alpha = Gamma(hyper_alpha[0], hyper_alpha[0])
+        self._hyper_beta = Gamma(hyper_alpha[0], hyper_alpha[0])
         self.estimator = InvGammaPosteriorSampler()
-
 
     @property
     def hyper_beta(self):
@@ -411,7 +392,6 @@ class InvGammaPrior(InverseGamma,ScaleMixturePrior):
         else:
             raise ValueError(value)
 
-
     @property
     def hyper_alpha(self):
         return self._hyper_alpha
@@ -423,8 +403,6 @@ class InvGammaPrior(InverseGamma,ScaleMixturePrior):
         else:
             raise ValueError(value)
 
-
-
     def log_prob(self, x):
 
         a, b = self['alpha'], self['beta']
@@ -434,8 +412,5 @@ class InvGammaPrior(InverseGamma,ScaleMixturePrior):
 
         return super(InvGammaPrior, self).log_prob(x) + l_a + l_b
 
-
     def get_estimator(self):
         return InvGammaScaleSampler()
-        
-         

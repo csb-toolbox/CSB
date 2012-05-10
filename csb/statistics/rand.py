@@ -15,7 +15,7 @@ def probability_transform(shape, inv_cum, cum_min=0., cum_max=1.):
 
 def truncated_gamma(shape=None, alpha=1., beta=1., x_min=None, x_max=None):
     """
-    Generates random variates from a lower-and upper-bounded gamma distribution
+    Generate random variates from a lower-and upper-bounded gamma distribution.
 
     @param shape: shape of the random sample
     @param alpha: shape parameter (alpha > 0.)
@@ -72,14 +72,14 @@ def truncated_normal(shape=None, mu=0., sigma=1., x_min=None, x_max=None):
     var   = sigma**2 + 1e-300
     sigma = sqrt(2 * var)
     
-    a = erf((x_min-mu)  /sigma)
+    a = erf((x_min-mu) / sigma)
     b = erf((x_max-mu) / sigma)
 
     return probability_transform(shape, erfinv, a, b) * sigma + mu
 
-def sample_dirichlet(alpha, n_samples = 1):
+def sample_dirichlet(alpha, n_samples=1):
     """
-    sample points from a dirichlet distribution with parameter alpha
+    Sample points from a dirichlet distribution with parameter alpha.
 
     @param alpha: alpha parameter of a dirichlet distribution
     @type alpha:
@@ -96,7 +96,7 @@ def sample_dirichlet(alpha, n_samples = 1):
 
 def sample_sphere3d(radius=1., n_samples=1):
     """
-    sample points from 3D sphere
+    Sample points from 3D sphere.
 
     @param radius: radius of the sphere
     @type radius: float
@@ -120,7 +120,7 @@ def sample_sphere3d(radius=1., n_samples=1):
 
     return transpose([x, y, z])
 
-def sample_from_histogram(p, n_samples = 1):
+def sample_from_histogram(p, n_samples=1):
     """
     returns the indice of bin according to the histogram p
 
@@ -134,18 +134,16 @@ def sample_from_histogram(p, n_samples = 1):
     from numpy.random import random
 
     indices = argsort(p)
-    indices = take(indices, arange(len(p)-1, -1, -1))
+    indices = take(indices, arange(len(p) - 1, -1, -1))
 
-    c = add.accumulate(take(p,indices)) / add.reduce(p)
+    c = add.accumulate(take(p, indices)) / add.reduce(p)
 
     return indices[add.reduce(less.outer(c, random(n_samples)), 0)]
 
-
 def gen_inv_gaussian(a, b, p, burnin=10):
     """
-    sampler based on Gibbs sampling
-
-    assumes scalar p
+    Sampler based on Gibbs sampling.
+    Assumes scalar p.
     """
     from numpy.random import gamma
     from numpy import sqrt
@@ -170,7 +168,7 @@ def gen_inv_gaussian(a, b, p, burnin=10):
 
 def inv_gaussian(mu=1., _lambda=1., shape=None):
     """
-    generate random samples from inverse gaussian
+    Generate random samples from inverse gaussian.
     """
     from numpy.random import standard_normal, random
     from numpy import sqrt, less_equal, clip
@@ -187,10 +185,11 @@ def inv_gaussian(mu=1., _lambda=1., shape=None):
 def random_rotation(A, n_iter=10, initial_values=None):
     """
     Generation of three-dimensional random rotations in
-    fitting and matching problems, Habeck 2009
+    fitting and matching problems, Habeck 2009.
 
-    generate random rotation R from
-    exp(trace(dot(transpose(A),R)))
+    Generate random rotation R from::
+
+        exp(trace(dot(transpose(A), R)))
 
     @param A: generating parameter
     @type A: 3 x 3 numpy array
@@ -244,8 +243,8 @@ def random_rotation(A, n_iter=10, initial_values=None):
     for _i in range(n_iter):
 
         ## sample alpha and gamma
-        phi = vonmisesvariate(0., clip(cos(beta/2)**2 * (L[0] + L[1]), 1e-308, 1e10))
-        psi = vonmisesvariate(pi, sin(beta/2)**2 * (L[0] - L[1]))
+        phi = vonmisesvariate(0., clip(cos(beta / 2)**2 * (L[0] + L[1]), 1e-308, 1e10))
+        psi = vonmisesvariate(pi, sin(beta / 2)**2 * (L[0] - L[1]))
         u   = randint(0,1)
         
         alpha = 0.5 * (phi + psi) + pi * u

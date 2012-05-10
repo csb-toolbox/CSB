@@ -1,5 +1,7 @@
 """
-I-Sites fragment library format parser.
+I-Sites fragment library parser.
+
+@deprecated: legacy module.
 """
 
 import os

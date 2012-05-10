@@ -1,9 +1,9 @@
-'''
+"""
 Classes for parsing/manipulating/writing CLANS (by Tancred Frickey) files
 
 Author: Klaus Kopec
 MPI fuer Entwicklungsbiologie, Tuebingen
-'''
+"""
 import os
 import re
 import operator
@@ -11,21 +11,21 @@ from numpy import array, float64, eye, random
 
 
 class MissingBlockError(Exception):
-    '''
+    """
     Raised if an expected tag is not found during parsing of a CLANS file.
-    '''
+    """
     pass
 
 
 class UnknownTagError(ValueError):
-    '''
+    """
     Raised if an unknown tag is encountered while parsing a CLANS file.
-    '''
+    """
     pass
 
 
 class Color(object):
-    '''
+    """
     RGB color handling class.
     Color is stored as r, g, and b attributes.
     Default color is C{r}=C{g}=C{b}=0 (i.e. black)
@@ -38,7 +38,7 @@ class Color(object):
 
     @param b: the blue value
     @type b: int
-    '''
+    """
 
     def __init__(self, r=0, g=0, b=0):
         self._r = None
@@ -55,20 +55,20 @@ class Color(object):
 
     @property
     def r(self):
-        '''
+        """
         the red value of the RGB color.
         
         raises ValueError if C{value} is outside of range(256)
 
         @rtype: int
-        '''
+        """
         return self._r
 
     @r.setter
     def r(self, value):
-        '''
+        """
         Set the red value of the RGB color.
-        '''
+        """
         if value < 0 or value > 255:
             raise ValueError(
                 'valid color values are in range(256), was \'{0}\''.format(
@@ -78,13 +78,13 @@ class Color(object):
 
     @property
     def g(self):
-        '''
+        """
         the green value of the RGB color.
 
         raises ValueError if C{value} is outside of range(256)
 
         @rtype: int
-        '''
+        """
         return self._g
 
     @g.setter
@@ -97,13 +97,13 @@ class Color(object):
 
     @property
     def b(self):
-        '''
+        """
         the blue value of the RGB color.
 
         raises ValueError if C{value} is outside of range(256)
 
         @rtype: int
-        '''
+        """
         return self._b
 
     @b.setter
@@ -115,31 +115,31 @@ class Color(object):
         self._b = value
 
     def parse_clans_color(self, colorString):
-        '''
+        """
         Sets all colors to the values provided in a CLANS color string.
 
         @param colorString: a CLANS color string; format: {r};{g};{b}
         @type colorString: str
 
         @raises ValueError: if any value in color is outside of range(256)
-        '''
+        """
 
         self.r, self.g, self.b = map(int, colorString.split(';'))
 
     def to_clans_color(self):
-        '''
+        """
         Formats the color for use in CLANS files.
 
         @return: the color formatted for use in CLANS files; format: r;g;b
         @rtype: str
-        '''
+        """
         return '{0.r};{0.g};{0.b}'.format(self)
 
 
 class ClansParser(object):
-    '''
+    """
     CLANS file format aware parser.
-    '''
+    """
 
     def __init__(self):
         self._clans_instance = None
@@ -152,20 +152,20 @@ class ClansParser(object):
 
     @property
     def clans_instance(self):
-        '''
+        """
         the L{Clans} instance that resulted from parsing a CLANS file.
 
         raises a ValueError if no CLANS file has been parsed yet
 
         @rtype: L{Clans} instance
-        '''
+        """
         if self._clans_instance is None:
             raise ValueError('you need to parse a CLANS file first')
 
         return self._clans_instance
 
     def parse_file(self, filename, permissive=True):
-        '''
+        """
         Create a L{Clans} instance by parsing the CLANS format file C{filename}
 
         @param filename: name of the CLANS file.
@@ -182,7 +182,7 @@ class ClansParser(object):
         block is missing. if C{permissive == False} and any block is missing
         @raise UnknownTagError: if C{permissive == False} and an unknown tag/
         data block is encountered
-        '''
+        """
         self._clans_instance = Clans()
         self._clans_instance._filename = filename
 
@@ -278,13 +278,13 @@ class ClansParser(object):
         return self._clans_instance
 
     def _read_block_dict(self):
-        '''
+        """
         Extracts all <tag>DATA</tag> blocks from file
         self.clans_instance.filename.
 
         @rtype: dict
         @return: data in the form: dict[tag] = DATA.
-        '''
+        """
         # read file and remove the first line, i.e. sequence=SEQUENCE_COUNT
         data_blocks = open(os.path.expanduser(
             self._clans_instance.filename)).read().split('\n', 1)[1]
@@ -296,13 +296,13 @@ class ClansParser(object):
                                      for _tag_plus_data, tag, datum in data])
 
     def _parse_param(self):
-        '''
+        """
         Parse a list of lines in the CLANS <param> format:
 
         parameter1=data1\n
         parameter2=data2\n
         ...
-        '''
+        """
         if 'param' not in self._data_block_dict:
             raise MissingBlockError('file contains no <param> block.')
 
@@ -330,12 +330,12 @@ class ClansParser(object):
         self._clans_instance._params = ClansParams(**tmp_params)
 
     def _parse_rotmtx(self):
-        '''
+        """
         Parse a list of lines in the CLANS <rotmtx> format. The data is stored
         in the clans_instance as a 3x3 numpy.array.
 
         @raise ValueError: if the rotmtx block does not contain exactly 3 lines
-        '''
+        """
         if 'rotmtx' not in self._data_block_dict:
             raise MissingBlockError('file contains no <rotmtx> block.')
 
@@ -347,14 +347,14 @@ class ClansParser(object):
             [[float64(val) for val in line.split(';')[:3]] for line in block])
 
     def _parse_seq(self):
-        '''
+        """
         Parse a list of lines in the CLANS <seq> format, which are in FASTA
         format.
 
         @rtype: dict
         @return: dict with running numbers as key and 2-tuples (id, sequence)
                  as values
-        '''
+        """
         if 'seq' not in self._data_block_dict:
             raise MissingBlockError(
                 'file contains no <seq> block. This is OK if the file does '
@@ -368,7 +368,7 @@ class ClansParser(object):
                      for i in range(len(block) / 2)])
 
     def _parse_seqgroups(self):
-        '''
+        """
         Parse a list of lines in the CLANS <seqgroup> format:
 
         name=name of the group\n
@@ -383,7 +383,7 @@ class ClansParser(object):
         @return: list of dicts (one for each group) with the tags (name, type,
                  size, hide, ...) as keys and their typecasted data as values
                  (i.e. name will be a string, size will be an integer, etc)
-        '''
+        """
         if 'seqgroups' not in self._data_block_dict:
             return []
 
@@ -401,14 +401,14 @@ class ClansParser(object):
         return groups
 
     def _parse_pos(self):
-        '''
+        """
         Parse a list of lines in the CLANS <pos> format \'INT FLOAT FLOAT
         FLOAT\'.
 
         @rtype: dict
         @return: a dict using the integers as keys and a (3,1)-array created
                  from the three floats as values.
-        '''
+        """
         if 'pos' not in self._data_block_dict:
             raise MissingBlockError(
                 'file contains no <pos> block. This is OK if the file does '
@@ -421,7 +421,7 @@ class ClansParser(object):
                      for l in block])
 
     def _parse_hsp_att(self, mode):
-        '''
+        """
         Parse a list of lines in the CLANS <hsp> format \'INT INT: FLOAT\'.
 
         NOTE: some CLANS <hsp> lines contain more than one float; we omit the
@@ -434,7 +434,7 @@ class ClansParser(object):
         @rtype: dict
         @return: a dict using 2-tuples of the two integers as keys and the
                  float as values
-        '''
+        """
         if mode not in ("hsp", "att"):
             raise ValueError('mode must be either "hsp" or "att"')
 
@@ -458,13 +458,13 @@ class ClansParser(object):
                          for line in block])
 
     def _parse_mtx(self):
-        '''
+        """
         Parse a list of lines in the CLANS <mtx> format.
 
         @rtype: dict
         @return: a dict using 2-tuples of the two integers as keys and the
                  float as values
-        '''
+        """
         if 'mtx' not in self._data_block_dict:
             raise MissingBlockError(
                 'file contains no <mtx> block. This is OK if the file does '
@@ -480,7 +480,7 @@ class ClansParser(object):
 
 
 class ClansWriter(object):
-    '''
+    """
     CLANS file format writer for L{Clans} instances.
 
     @param clans_instance: the L{Clans} instance
@@ -488,7 +488,7 @@ class ClansWriter(object):
 
     @param filename: the output filename
     @type filename: str
-    '''
+    """
 
     def __init__(self, clans_instance, filename):
         self._clans_instance = clans_instance
@@ -514,35 +514,35 @@ class ClansWriter(object):
 
     @property
     def clans_instance(self):
-        '''
+        """
         the L{Clans} instance that resulted from parsing a CLANS file.
 
         @rtype: L{Clans} instance
-        '''
+        """
         return self._clans_instance
 
     @property
     def filename(self):
-        '''
+        """
         The output filename.
 
         @rtype: str
-        '''
+        """
         return self._filename
 
     def _clans_param_block(self):
-        '''
+        """
         Appends a <param>data</param> CLANS file block to stream self._file.
-        '''
+        """
         param_block = self._clans_instance.params._to_clans_param_block()
         self._file.write(param_block)
 
     def _clans_rotmtx_block(self):
-        '''
+        """
         Appends a <rotmtx>data</rotmtx> CLANS file block to stream self._file.
 
         @raise ValueError: if self.clans_instance.rotmtx is no 3x3 numpy.array
-        '''
+        """
         rotmtx = self._clans_instance.rotmtx
 
         if rotmtx is None:
@@ -557,19 +557,19 @@ class ClansWriter(object):
         self._file.write('\n</rotmtx>\n')
 
     def _clans_seq_block(self):
-        '''
+        """
         Appends a <seq>data</seq> CLANS file block to stream self._file.
-        '''
+        """
         self._file.write('<seq>\n')
         self._file.write(''.join([e.output_string_seq()
                                  for e in self._clans_instance.entries]))
         self._file.write('</seq>\n')
 
     def _clans_seqgroups_block(self):
-        '''
+        """
         Appends a <seqgroupsparam>data</seqgroups> CLANS file block to stream
         self._file.
-        '''
+        """
         seqgroups = self._clans_instance.seqgroups
 
         if seqgroups is not None and len(seqgroups) > 0:
@@ -579,20 +579,20 @@ class ClansWriter(object):
             self._file.write('\n</seqgroups>\n')
 
     def _clans_pos_block(self):
-        '''
+        """
         Appends a <pos>data</pos> CLANS file block to stream self._file.
-        '''
+        """
         self._file.write('<pos>\n')
         self._file.write('\n'.join([e.output_string_pos()
                                    for e in self._clans_instance.entries]))
         self._file.write('\n</pos>\n')
 
     def _clans_hsp_block(self):
-        '''
+        """
         Appends a <hsp>data</hsp> CLANS file block to stream self._file.
         If the CLANS instance has hsp_att_mode=="att" we add a <att>data<att>
         block which has the same format.
-        '''
+        """
 
         self._file.write('<{0}>\n'.format(self._clans_instance._hsp_att_mode))
 
@@ -625,14 +625,14 @@ class ClansWriter(object):
 
 
 class ClansEntryGiComparator(object):
-    '''
+    """
     Comparator for two L{ClansEntry}s.
     Comparison is based on \'gi|\' numbers and residue ranges parsed from
     L{ClansEntry}.name attributes if they can be parsed from it. Otherwise
     the complete name is used.
 
     @raise ValueError: if a residue range contains no terminal residue
-    '''
+    """
 
     def __init__(self):
         self._mapping = {}  # mapping cache for faster access
@@ -724,7 +724,7 @@ class ClansEntryGiComparator(object):
 
 
 class ClansParams(object):
-    '''
+    """
     Class for handling L{Clans} parameters.
     See L{ClansParams}._DEFAULTS for accepted parameter names.
 
@@ -732,7 +732,7 @@ class ClansParams(object):
 
     @raise KeyError: if a supplied parameter name is not known
     (i.e. it is not a key in _DEFAULTS)
-    '''
+    """
 
     _DEFAULTS = {'attfactor': 10.0,
                  'attvalpow': 1,
@@ -778,13 +778,13 @@ class ClansParams(object):
 
     @property
     def complexatt(self):
-        '''
+        """
         if True, complex attraction computations are used.
 
         raises ValueError if set to non-boolean value
 
         @rtype: bool
-        '''
+        """
         return self._complexatt
 
     @complexatt.setter
@@ -796,13 +796,13 @@ class ClansParams(object):
 
     @property
     def attfactor(self):
-        '''
+        """
         factor in the attractive force
 
         raises ValueError if C{value} is not castable to float
         
         @rtype: float
-        '''
+        """
         return self._attfactor
 
     @attfactor.setter
@@ -811,13 +811,13 @@ class ClansParams(object):
             
     @property
     def attvalpow(self):
-        '''
+        """
         exponent in the attractive force
 
         raises ValueError if C{value} is not castable to float
 
         @rtype: float
-        '''
+        """
         return self._attvalpow
 
     @attvalpow.setter
@@ -826,13 +826,13 @@ class ClansParams(object):
 
     @property
     def repfactor(self):
-        '''
+        """
         factor in the repulsive force
 
         raises ValueError if C{value} is not castable to float
         
         @rtype: float
-        '''
+        """
         return self._repfactor
 
     @repfactor.setter
@@ -841,13 +841,13 @@ class ClansParams(object):
 
     @property
     def repvalpow(self):
-        '''
+        """
         exponent in the repulsive force
 
         raises ValueError if C{value} is not castable to float
         
         @rtype: float
-        '''
+        """
         return self._repvalpow
 
     @repvalpow.setter
@@ -856,13 +856,13 @@ class ClansParams(object):
 
     @property
     def cluster2d(self):
-        '''
+        """
         if True, clustering is done in 2D. Else in 3D.
 
         raises ValueError if set to non-boolean value
                 
         @rtype: bool
-        '''
+        """
         return self._cluster2d
 
 
@@ -876,14 +876,14 @@ class ClansParams(object):
 
     @property
     def pval(self):
-        '''
+        """
         p-value cutoff that determines which connections are considered for
         the attractive force
         
         raises ValueError if C{value} is not castable to float
         
         @rtype: float
-        '''
+        """
         return self._pval
 
     @pval.setter
@@ -892,13 +892,13 @@ class ClansParams(object):
 
     @property
     def maxmove(self):
-        '''
+        """
         maximal sequence (i.e. dot in the clustermap) movement per round
 
         raises ValueError if C{value} is not castable to float
 
         @rtype: float
-        '''
+        """
         return self._maxmove
 
     @maxmove.setter
@@ -907,13 +907,13 @@ class ClansParams(object):
 
     @property
     def usescval(self):
-        '''
+        """
         parameter with unclear function. Check in Clans.
 
         raises ValueError if set to non-boolean value
 
         @rtype: bool
-        '''
+        """
         return self._usescval
 
     @usescval.setter
@@ -926,13 +926,13 @@ class ClansParams(object):
 
     @property
     def cooling(self):
-        '''
+        """
         parameter  with unclear function. Check in Clans.
 
         raises ValueError if C{value} is not castable to float
 
         @rtype: float
-        '''
+        """
         return self._cooling
 
     @cooling.setter
@@ -941,13 +941,13 @@ class ClansParams(object):
 
     @property
     def currcool(self):
-        '''
+        """
         parameter  with unclear function. Check in Clans.
 
         raises ValueError if C{value} is not castable to float
 
         @rtype: float
-        '''
+        """
         return self._currcool
 
     @currcool.setter
@@ -956,13 +956,13 @@ class ClansParams(object):
 
     @property
     def dampening(self):
-        '''
+        """
         parameter  with unclear function. Check in Clans.
 
         raises ValueError if C{value} is not castable to float
 
         @rtype: float
-        '''
+        """
         return self._dampening
 
     @dampening.setter
@@ -971,13 +971,13 @@ class ClansParams(object):
 
     @property
     def minattract(self):
-        '''
+        """
         parameter  with unclear function. Check in Clans.
 
         raises ValueError if C{value} is not castable to float
 
         @rtype: float
-        '''
+        """
         return self._minattract
 
     @minattract.setter
@@ -986,14 +986,14 @@ class ClansParams(object):
 
     @property
     def blastpath(self):
-        '''
+        """
         path to the BLAST executable for protein-protein comparisons. BLAST+ is
         currently not supported by Clans.
 
         raises ValueError if C{value} is not a string
 
         @rtype: str
-        '''
+        """
         return self._blastpath
 
     @blastpath.setter
@@ -1006,13 +1006,13 @@ class ClansParams(object):
 
     @property
     def formatdbpath(self):
-        '''
+        """
         path to the formatdb executable of BLAST.
 
         raises ValueError if C{value} is not a string
 
         @rtype: str
-        '''
+        """
         return self._formatdbpath
 
     @formatdbpath.setter
@@ -1025,14 +1025,14 @@ class ClansParams(object):
 
     @property
     def showinfo(self):
-        '''
+        """
         if True, additional data (rotation matrix) is shown in the clustring
         window)
 
         raises ValueError if set to non-boolean value
 
         @rtype: bool
-        '''
+        """
         return self._showinfo
 
     @showinfo.setter
@@ -1045,13 +1045,13 @@ class ClansParams(object):
 
     @property
     def zoom(self):
-        '''
+        """
         zoom value (1.0 == not zoomed)
 
         raises ValueError if C{value} is not castable to float
 
         @rtype: float
-        '''
+        """
         return self._zoom
 
     @zoom.setter
@@ -1060,13 +1060,13 @@ class ClansParams(object):
 
     @property
     def dotsize(self):
-        '''
+        """
         size of the central dot representing each sequence in the clustermap
 
         raises ValueError if C{value} is not castable to int
 
         @rtype: int
-        '''
+        """
         return self._dotsize
 
     @dotsize.setter
@@ -1075,13 +1075,13 @@ class ClansParams(object):
 
     @property
     def ovalsize(self):
-        '''
+        """
         size of the circle around selected sequences
         
         raises ValueError if value not castable to int
 
         @rtype: int
-        '''
+        """
         return self._ovalsize
 
     @ovalsize.setter
@@ -1090,13 +1090,13 @@ class ClansParams(object):
 
     @property
     def groupsize(self):
-        '''
+        """
         default for the size of circles that mark newly created groups
         
         raises ValueError if C{value} is not castable to int
 
         @rtype: int
-        '''
+        """
         return self._groupsize
 
     @groupsize.setter
@@ -1105,13 +1105,13 @@ class ClansParams(object):
 
     @property
     def usefoldchange(self):
-        '''
+        """
         parameter  with unclear function. Check in Clans.
 
         raises ValueError if set to non-boolean value
 
         @rtype: bool
-        '''
+        """
         return self._usefoldchange
 
     @usefoldchange.setter
@@ -1124,13 +1124,13 @@ class ClansParams(object):
 
     @property
     def avgfoldchange(self):
-        '''
+        """
         parameter  with unclear function. Check in Clans.
 
         raises ValueError if set to non-boolean value
 
         @rtype: bool
-        '''
+        """
         return self._avgfoldchange
 
     @avgfoldchange.setter
@@ -1143,13 +1143,13 @@ class ClansParams(object):
 
     @property
     def colors(self):
-        '''
+        """
         colors that the coloring for different p-values/attractions
 
         raises ValueError if set to s.th. else than a dict
 
         @rtype: dict
-        '''
+        """
         return self._colors
 
     @colors.setter
@@ -1159,10 +1159,10 @@ class ClansParams(object):
         self._colors = value
 
     def set_default_params(self):
-        '''
+        """
         Sets the parameters to CLANS default values.
         See L{ClansParams}._DEFAULTS.
-        '''
+        """
         for k, v in self._DEFAULTS.items():
             if k == 'colors':
                 continue
@@ -1174,12 +1174,12 @@ class ClansParams(object):
             self.colors[i] = Color(*color)
 
     def _to_clans_param_block(self):
-        '''
+        """
         Creates a param block for a CLANS file from the L{ClansParams} values.
 
         @return: a CLANS file format <param>[data]</param> block
         @rtype: str
-        '''
+        """
 
         param_dict = {}
 
@@ -1215,10 +1215,10 @@ class ClansParams(object):
 
 
 class Clans(object):
-    '''
+    """
     Class for holding and manipulating data from one CLANS file.
     Initialization is always done as empty clustermap with default parameters.
-    '''
+    """
 
     def __init__(self):
         self._filename = None
@@ -1252,32 +1252,32 @@ class Clans(object):
 
     @property
     def filename(self):
-        '''
+        """
         file from which the data was parsed
 
         @rtype: str or None
-        '''
+        """
         return self._filename
 
     @property
     def params(self):
-        '''
+        """
         L{ClansParams} that contains the parameters set for this L{Clans}
         instance.
 
         @rtype: L{ClansParams}
-        '''
+        """
         return self._params
 
     @property
     def rotmtx(self):
-        '''
+        """
         3x3 rotation matrix that indicates the rotation state of the clustermap
 
         raises ValueError if rotation matrix shape is not 3x3
 
         @rtype: numpy.array
-        '''
+        """
         return self._rotmtx
 
     @rotmtx.setter
@@ -1288,30 +1288,30 @@ class Clans(object):
     
     @property
     def entries(self):
-        '''
+        """
         list of clustermap L{ClansEntry}s.
 
         @rtype: list
-        '''
+        """
         return self._entries
 
     @property
     def seqgroups(self):
-        '''
+        """
         list of L{ClansSeqgroup}s defined in the clustermap.
 
         @rtype: list
-        '''
+        """
         return self._seqgroups
 
     def set_default_rotmtx(self):
-        '''
+        """
         Resets the rotation matrix (rotmtx) to no rotation.
-        '''
+        """
         self.rotmtx = eye(3)
 
     def _update_index(self):
-        '''
+        """
         Creates a mapping of entry names to entry indices in the L{Clans}
         instance, speeding up entry.get_id() calls. The Index was introduced
         to get a better L{Clans}.write() performance, which suffered from
@@ -1321,7 +1321,7 @@ class Clans(object):
         @attention: the index needs unique entry names, therefore
         remove_duplicates is called first and can decrease the number of
         entries!!!
-        '''
+        """
         self.remove_duplicates()
 
         self._idx = dict([(e._get_unique_id(), i)
@@ -1329,9 +1329,9 @@ class Clans(object):
         self._has_good_index = True
 
     def sort(self):
-        '''
+        """
         Sorts the L{ClansEntry}s by name.
-        '''
+        """
 
         self._entries.sort(key=lambda entry: entry.name)
 
@@ -1339,7 +1339,7 @@ class Clans(object):
         self._update_index()
 
     def add_group(self, group, members=None):
-        '''
+        """
         Adds a new group.
 
         @param group: the new group
@@ -1349,7 +1349,7 @@ class Clans(object):
         @type members: list
 
         @raise ValueError: if group is no ClansSeqgroup instance
-        '''
+        """
         if not isinstance(group, ClansSeqgroup):
             raise ValueError('groups need to be ClansSeqgroup instances')
 
@@ -1358,14 +1358,14 @@ class Clans(object):
             [group.add(member) for member in members]
 
     def remove_group(self, group):
-        '''
+        """
         Removes a group.
 
         @param group: the new group
         @type group: L{ClansSeqgroup} instance
 
         @raise ValueError: if C{group} is no L{ClansSeqgroup} instance
-        '''
+        """
         if not isinstance(group, ClansSeqgroup):
             raise ValueError('groups need to be ClansSeqgroup instances')
 
@@ -1373,14 +1373,14 @@ class Clans(object):
         [group.remove(member) for member in group.members]
 
     def add_entry(self, entry):
-        '''
+        """
         Adds an new entry.
 
         @param entry: the new entry
         @type entry: L{ClansEntry} instance
 
         @raise ValueError: if C{entry} is no L{ClansEntry} instance
-        '''
+        """
         if not isinstance(entry, ClansEntry):
             raise ValueError('entries need to be L{ClansEntry} instances')
 
@@ -1390,23 +1390,23 @@ class Clans(object):
         self._has_good_index = False
 
     def remove_entry_by_name(self, entry_name):
-        '''
+        """
         Removes an entry fetched by its name.
 
         @param entry_name: name of the entry that shall be removed
         @type entry_name: string
-        '''
+        """
         entry = self.get_entry(entry_name, True)
 
         self.remove_entry(entry)
 
     def remove_entry(self, entry):
-        '''
+        """
         Removes an entry.
 
         @param entry: the entry that shall be removed
         @type entry: L{ClansEntry} instance
-        '''
+        """
         for other_entry in entry.hsp.keys():
             other_entry.remove_hsp(entry)
 
@@ -1420,7 +1420,7 @@ class Clans(object):
         self._has_good_index = False
 
     def get_entry(self, name, pedantic=True):
-        '''
+        """
         Checks if an entry with name C{name} exists and returns it.
         
         @param name: name of the sought entry
@@ -1437,7 +1437,7 @@ class Clans(object):
 
         @rtype: L{ClansEntry}
         @return: entry with name C{name}
-        '''
+        """
 
         hits = [e for e in self.entries if e.name == name]
 
@@ -1454,7 +1454,7 @@ class Clans(object):
             raise ValueError('ClansEntry {0} does not exist.'.format(name))
 
     def remove_duplicates(self, identity_function=None):
-        '''
+        """
         Determines and removes duplicates using C{identity_function}.
 
         @param identity_function: callable to compare two L{ClansEntry}s as
@@ -1463,7 +1463,7 @@ class Clans(object):
 
         @return: the removed entries
         @rtype: list of L{ClansEntry}s
-        '''
+        """
         if identity_function is None:
             identity_function = ClansEntryGiComparator()
 
@@ -1476,12 +1476,12 @@ class Clans(object):
         return remove_us
 
     def restrict_to_max_pvalue(self, cutoff):
-        '''
+        """
         removes all L{ClansEntry}s that have no connections above the C{cutoff}
 
         @param cutoff: the cutoff
         @type cutoff: float
-        '''
+        """
         ## loop to hit entries that have no HSPs left after the previous round
         removed_entries = []  # all removed entries go here
         remove_us = ['first_loop_round_starter']
@@ -1499,28 +1499,28 @@ class Clans(object):
         return removed_entries
 
     def restrict(self, keep_names):
-        '''
+        """
         Removes all entries whose name is not in keep_names
 
         @param keep_names: names of entries that shall be kept
         @type keep_names: iterable
-        '''
+        """
         [self.remove_entry(entry) for entry in
          [e for e in self.entries if e.name not in keep_names]]
 
     def write(self, filename):
-        '''
+        """
         writes the L{Clans} instance to a file in CLANS format
 
         @param filename: the target file\'s name
         @type filename: str
-        '''
+        """
         self._update_index()
         ClansWriter(self, filename)
 
 
 class ClansEntry(object):
-    '''
+    """
     Class holding the data of one CLANS sequence entry.
 
     @param name: the entry name
@@ -1535,7 +1535,7 @@ class ClansEntry(object):
     @param parent: parent of this entry
     @type parent: L{Clans} instance
     
-    '''
+    """
 
     def __init__(self, name=None, seq='', coords=None, parent=None):
         self._name = name
@@ -1567,13 +1567,13 @@ class ClansEntry(object):
 
     @property
     def name(self):
-        '''
+        """
         name of the entry
 
         raises ValueError if C{value} is not a string
 
         @rtype: string
-        '''
+        """
         return self._name
 
     @name.setter
@@ -1586,13 +1586,13 @@ class ClansEntry(object):
 
     @property
     def seq(self):
-        '''
+        """
         protein sequence of the entry
 
         raises ValueError if C{value} is not a string
 
         @rtype: string
-        '''
+        """
         return self._seq
 
     @seq.setter
@@ -1605,13 +1605,13 @@ class ClansEntry(object):
 
     @property
     def coords(self):
-        '''
+        """
         entry coordinates in 3D space
 
         raises ValueError if C{value} is not an iterable with 3 items
 
         @rtype: string
-        '''
+        """
         return self._coords
 
     @coords.setter
@@ -1624,39 +1624,39 @@ class ClansEntry(object):
 
     @property
     def parent(self):
-        '''
+        """
         L{Clans} instance that parents this L{ClansEntry}
 
         @rtype: L{Clans}
-        '''
+        """
         return self._parent
 
     @property
     def groups(self):
-        '''
+        """
         L{ClansSeqgroup}s that contain the entry
 
         @rtype: list
-        '''
+        """
         return self._groups
 
     @property
     def hsp(self):
-        '''
+        """
         connections between this and another L{ClansEntry}
 
         @rtype: dict
-        '''
+        """
         return self._hsp
 
     def get_id(self):
-        '''
+        """
         Returns the id of the current entry.
 
         @rtype: str
         @return: the entrys\' id is returned unless it has no parent in which
         case -1 is returned
-        '''
+        """
         if self.parent is None:
             return -1
 
@@ -1666,18 +1666,18 @@ class ClansEntry(object):
         return self.parent.entries.index(self)
 
     def _get_unique_id(self):
-        '''
+        """
         Returns a >>more<< unique ID (however this is not guaranteed to be
         really unique) than get_id. This ID determines which entries are deemed
         duplets by L{Clans}.remove_duplicates.
 
         @rtype: str
         @return: a more or less unique id
-        '''
+        """
         return self.name + '<###>' + self.seq
 
     def add_hsp(self, other, value):
-        '''
+        """
         Creates an HSP from self to other with the given value.
 
         @param other: the other entry
@@ -1685,18 +1685,18 @@ class ClansEntry(object):
 
         @param value: the value of the HSP
         @type value: float
-        '''
+        """
         self.hsp[other] = value
         other.hsp[self] = value
 
     def remove_hsp(self, other):
-        '''
+        """
         Removes the HSP between C{self} and C{other}; if none exists, does
         nothing.
 
         @param other: the other entry
         @type other: L{ClansEntry} instance
-        '''
+        """
         if other in self.hsp:
             self.hsp.pop(other)
 
@@ -1704,40 +1704,40 @@ class ClansEntry(object):
             other.hsp.pop(self)
 
     def output_string_seq(self):
-        '''
+        """
         Creates the CLANS <seq> block format representation of the entry.
 
         @rtype: str
         @return: entrys\' representation in CLANS <seq> block format
-        '''
+        """
 
         return '>{0}\n{1}\n'.format(self.name, self.seq)
 
     def output_string_pos(self):
-        '''
+        """
         Create the CLANS <pos> block format representation of the entry.
 
         @rtype: str
         @return: entrys\' representation in CLANS <pos> block format
-        '''
+        """
         return '{0} {1:.8f} {2:.8f} {3:.8f}'.format(
             *tuple([self.get_id()] + list(self.coords)))
 
     def output_string_hsp(self):
-        '''
+        """
         Creates the CLANS <hsp> block format representation of the entry.
 
 
         @rtype: str
         @return: entrys\' representation in CLANS <hsp> block format
-        '''
+        """
         return '\n'.join(['{0} {1}:{2:.8f}'.format(self.get_id(),
                                                    other.get_id(), value)
                           for (other, value) in self.hsp.items()])
 
 
 class ClansSeqgroup(object):
-    '''
+    """
     Class holding the data of one CLANS group (seqgroup).
 
     @kwparam name: name of the seqgroup
@@ -1760,7 +1760,7 @@ class ClansSeqgroup(object):
 
     @kwparam members: list of members of this seqgroup
     @type members: list
-    '''
+    """
 
     def __init__(self, **kw):
         self._name = None
@@ -1793,13 +1793,13 @@ class ClansSeqgroup(object):
 
     @property
     def name(self):
-        '''
+        """
         name of the seqgroup
 
         raises ValueError if C{value} is no string
 
         @rtype: string
-        '''
+        """
         return self._name
 
     @name.setter
@@ -1810,13 +1810,13 @@ class ClansSeqgroup(object):
     
     @property
     def type(self):
-        '''
+        """
         symbol used to represent the seqgroup in the graphical output
 
         raises ValueError if C{value} is not castable to int
 
         @rtype: int
-        '''
+        """
         return self._type
 
     @type.setter
@@ -1825,14 +1825,14 @@ class ClansSeqgroup(object):
       
     @property
     def size(self):
-        '''
+        """
         size of the symbol used to represent the seqgroup in the graphical
         output
 
         raises ValueError if C{value} is not castable to int
 
         @rtype: int
-        '''
+        """
         return self._size
 
     @size.setter
@@ -1841,13 +1841,13 @@ class ClansSeqgroup(object):
 
     @property
     def hide(self):
-        '''
+        """
         if True, the seqgroup\'s symbols in the graphical output are not drawn
 
         raises ValueError if C{value} is no bool
 
         @rtype: int
-        '''
+        """
         return self._hide
 
     @hide.setter
@@ -1860,14 +1860,14 @@ class ClansSeqgroup(object):
         
     @property
     def color(self):
-        '''
+        """
         color of the seqgroup
 
         raises ValueError if set to a wrongly formatted string (correct:
         \'x;y;z\')
 
         @rtype: L{Color}
-        '''
+        """
         return self._color
 
     @color.setter
@@ -1893,24 +1893,24 @@ class ClansSeqgroup(object):
 
     @property
     def members(self):
-        '''
+        """
         the members of this seqgroup
 
         @rtype: list
-        '''
+        """
         return self._members
 
     def is_empty(self):
-        '''
+        """
         Checks if the group contains entries.
 
         @rtype: bool
         @return: True if the group contains no entries, else False.
-        '''
+        """
         return len(self) == 0
 
     def add(self, new_member):
-        '''
+        """
         Adds entry C{new_member} to this L{ClansSeqgroup}.
 
         @param new_member: the member that shall be added to this
@@ -1920,7 +1920,7 @@ class ClansSeqgroup(object):
         @raise TypeError: if C{new_member} is no L{ClansEntry} instance
         @raise ValueError: if C{new_member} is already contained in this
         L{ClansSeqgroup}
-        '''
+        """
         if not isinstance(new_member, ClansEntry):
             raise TypeError('only ClansEntry instances can be added as ' +
                             'group members')
@@ -1933,7 +1933,7 @@ class ClansSeqgroup(object):
         new_member.groups.append(self)
 
     def remove(self, member):
-        '''
+        """
         Removes L{ClansEntry} C{member} from this group.
         
         @param member: the member to be removed
@@ -1941,7 +1941,7 @@ class ClansSeqgroup(object):
 
         @raise TypeError: if C{member} is no L{ClansEntry} instance
         @raise ValueError: if C{member} is not part of this L{ClansSeqgroup}
-        '''
+        """
         if not isinstance(member, ClansEntry):
             raise TypeError('argument must be a ClansEntry instance')
 
@@ -1953,13 +1953,13 @@ class ClansSeqgroup(object):
         member.groups.remove(self)
 
     def output_string(self):
-        '''
+        """
         Creates the CLANS <seqgroup> block format representation of the
         group.
 
         @rtype: str
         @return: entrys\' representation in CLANS <seqgroup> block format
-        '''
+        """
         sorted_members = sorted([m.get_id() for m in self.members])
         return ('name={0.name}\ntype={0.type}\nsize={0.size}\nhide={1}'
                 + '\ncolor={2}\nnumbers={3}').format(

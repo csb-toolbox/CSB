@@ -1,11 +1,11 @@
 """
 Procheck parser
-
 """
 import os
 import re
 import tempfile
 import subprocess
+
 
 class ProcheckInfo(dict):
 

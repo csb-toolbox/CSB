@@ -8,12 +8,16 @@ import numpy.random
 
 def fit(X, Y):
     """
-    returns the translation vector and the rotation matrix
+    Return the translation vector and the rotation matrix
     minimizing the RMSD between two sets of vectors, i.e.
-    if 
-    >>> R,t = fit(X,Y)
+    if
+     
+        >>> R,t = fit(X,Y)
+        
     then
-    >>> Y = dot(Y, transpose(R)) + t
+    
+        >>> Y = dot(Y, transpose(R)) + t
+        
     will be the fitted configuration.
 
     @param X: 3 x n input vector
@@ -52,12 +56,16 @@ def fit(X, Y):
 
 def wfit(X, Y, w):
     """
-    returns the translation vector and the rotation matrix
+    Return the translation vector and the rotation matrix
     minimizing the weighted RMSD between two sets of vectors, i.e.
-    if 
-    >>> R,t = wfit(X,Y,w)
+    if
+     
+        >>> R,t = wfit(X,Y,w)
+        
     then
-    >>> Y = dot(Y, transpose(R)) + t
+    
+        >>> Y = dot(Y, transpose(R)) + t
+        
     will be the fitted configuration.
 
     @param X: 3 x n input vector
@@ -98,52 +106,51 @@ def wfit(X, Y, w):
 
     return R, t
 
-def probabilistic_fit(X,Y, w = None, niter = 10):
+def probabilistic_fit(X, Y, w=None, niter=10):
+    """
+    Generate a superposition of X,Y where::
+    
+        R ~ exp(trace(dot(transpose(dot(transpose(X-t), Y)), R)))
+        t ~ N(t_opt, 1 / sqrt(N))
+    """
+        
     from csb.statistics.rand import random_rotation
     from numpy import dot, transpose, average
     
-    """
-    Generates a superposition of X,Y where
-    R ~ exp(trace(dot(transpose(dot(transpose(X-t),Y)),R)))
-    t ~ N(t_opt, 1/sqrt(N))
-    """
     if w is None:
-        R, t = fit(X,Y)
+        R, t = fit(X, Y)
     else:
-        R, t = wfit(X,Y,w)
+        R, t = wfit(X, Y, w)
             
     N = len(X)
 
     for i in range(niter):
         ## sample rotation
         if w is None:
-            A = dot(transpose(X-t),Y)
+            A = dot(transpose(X-t), Y)
         else:
-            A = dot(transpose(X-t)*w,Y)
+            A = dot(transpose(X-t) * w,Y)
 
         R = random_rotation(A)
 
         ## sample translation (without prior so far)
         if w is None:
-            mu = average(X - dot(Y, transpose(R)),0)
+            mu = average(X - dot(Y, transpose(R)), 0)
             t = numpy.random.standard_normal(len(mu)) / numpy.sqrt(N) + mu
         else:
             mu = dot(w, X - dot(Y, transpose(R))) / numpy.sum(w)
             t = numpy.random.standard_normal(len(mu)) / numpy.sqrt(numpy.sum(w)) + mu
 
-    return R,t
+    return R, t
     
-    
-
 def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
                     tol_stdv=0.05, full_output=False):
     """
-    Matches two arrays onto each other by iteratively throwing out
-    highly deviating entries
-
+    Matche two arrays onto each other by iteratively throwing out
+    highly deviating entries.
+    
     (Reference: Nilges et al.: Delineating well-ordered regions in
     protein structure ensembles).
-
 
     @param X: 3 x n input vector
     @type X: numpy array
@@ -152,11 +159,8 @@ def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
     @type Y: numpy array
 
     @param n_stdv: number of standard deviations above which points are considered to be outliers
-
     @param tol_rmsd: tolerance in rmsd
-
     @param tol_stdv: tolerance in standard deviations
-
     @param full_output: also return full history of values calculated by the algorithm
     """
 
@@ -225,10 +229,9 @@ def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
     else:
         return (R, t)
 
-
 def rmsd(X, Y):
     """
-    Calculate the root mean squared deviation (RMSD) using Kabsch' formula 
+    Calculate the root mean squared deviation (RMSD) using Kabsch' formula.
 
     @param X: 3 x n input vector
     @type X: numpy array
@@ -254,7 +257,8 @@ def rmsd(X, Y):
 
 def wrmsd(X, Y, w):
     """
-    Calculate the weighted root mean squared deviation (wRMSD) using Kabsch' formula 
+    Calculate the weighted root mean squared deviation (wRMSD) using Kabsch'
+    formula.
 
     @param X: 3 x n input vector
     @type X: numpy array
@@ -316,7 +320,7 @@ def _tm_d0(Lmin):
 
 def tm_score(x, y):
     """
-    Evaluate the TM-score of two conformations as they are (no fitting is done)
+    Evaluate the TM-score of two conformations as they are (no fitting is done).
     
     @param x: 3 x n input array
     @param x: 3 x n input array
@@ -379,7 +383,7 @@ def tm_superimpose(x, y, fit_method=fit):
 
 def center_of_mass(x, m=None):
     """
-    Compute the mean of a set of (optionally weighted) points
+    Compute the mean of a set of (optionally weighted) points.
 
     @param x: array of rank (n,d) where n is the number of points
               and d the dimension
@@ -399,7 +403,7 @@ def center_of_mass(x, m=None):
     
 def radius_of_gyration(x, m=None):
     """
-    Compute the radius of gyration of a set of (optionally weighted) points
+    Compute the radius of gyration of a set of (optionally weighted) points.
 
     @param x: array of rank (n,d) where n is the number of points
               and d the dimension
@@ -420,7 +424,7 @@ def radius_of_gyration(x, m=None):
 
 def second_moments(x, m=None):
     """
-    Compute the tensor second moments of a set of (optionally weighted) points
+    Compute the tensor second moments of a set of (optionally weighted) points.
 
     @param x: array of rank (n,d) where n is the number of points
               and d the dimension
@@ -442,7 +446,7 @@ def second_moments(x, m=None):
 
 def inertia_tensor(x, m=None):
     """
-    Compute the inertia tensor of a set of (optionally weighted) points
+    Compute the inertia tensor of a set of (optionally weighted) points.
 
     @param x: array of rank (n,d) where n is the number of points
               and d the dimension

@@ -1,7 +1,7 @@
 """
 APIs for working with protein structure fragments and libraries.
 
-@note: internal or legacy objects are left intentionally undocumented. 
+@note: internal or legacy objects are intentionally left undocumented. 
 """
 
 import os

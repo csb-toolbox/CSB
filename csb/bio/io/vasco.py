@@ -32,18 +32,6 @@ class ChemicalShiftContainer(csb.pyutils.DictionaryContainer):
         
         super(ChemicalShiftContainer, self).__init__()
 
-
-    def add_to_structure(self, structure):
-        """
-        @param structure: Structure which shall be extended with shift information
-        @type : Structure
-        """
-        
-        raise NotImplementedError('Not implemented')
-    
-
-    
-
 class VascoStructureParser(object):
     """
     Simple Vasco Parser
