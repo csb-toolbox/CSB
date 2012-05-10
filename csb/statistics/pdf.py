@@ -3,7 +3,7 @@ Probability density functions.
 """
 
 import numpy.random
-import scipy
+import scipy.special
 
 from abc import ABCMeta, abstractmethod
 from csb.pyutils import OrderedDict
@@ -173,10 +173,10 @@ class DirichletEstimator(AbstractEstimator):
 
     def estimate(self, context, data):
 
-        log_p = numpy.mean(log(data),0)
+        log_p = numpy.mean(log(data), 0)
         
-        e = numpy.mean(data,0)
-        v = numpy.mean(data**2,0)
+        e = numpy.mean(data, 0)
+        v = numpy.mean(data**2, 0)
         q = (e[0] - v[0]) / (v[0] - e[0]**2)
 
         a = e * q
@@ -184,8 +184,8 @@ class DirichletEstimator(AbstractEstimator):
         k = 0
         while(sum(abs(y-a)) > self.tol and k < self.n_iter):
             y = psi(sum(a)) + log_p
-            a = numpy.array(map(inv_psi,y))
-            k +=1 
+            a = numpy.array(map(inv_psi, y))
+            k += 1 
 
         return Dirichlet(a)
         
@@ -239,7 +239,6 @@ class AbstractDensity(object):
         return self.evaluate(x)
 
     def __str__(self):
-
         name = self.__class__.__name__
         params = ', '.join([ '{0}={1}'.format(p, v) for p, v in self._params.items() ])
         
@@ -414,17 +413,16 @@ class Normal(AbstractDensity):
 
 class InverseGaussian(AbstractDensity):
 
-    def __init__(self, mu = 1., llambda  = 1.):
+    def __init__(self, mu=1., llambda=1.):
 
         super(InverseGaussian, self).__init__()
 
         self._register('mu')
         self._register('llambda')
 
-        self.set_params(mu = mu, llambda = llambda)
+        self.set_params(mu=mu, llambda=llambda)
         self.estimate = NullEstimator()
 
-        
     @property
     def mu(self):
         return self['mu']
@@ -434,7 +432,6 @@ class InverseGaussian(AbstractDensity):
         if value <= 0.:
             raise ValueError("Mean mu should be greater than 0")
         self['mu'] = value
-
 
     @property
     def llambda(self):
@@ -456,25 +453,21 @@ class InverseGaussian(AbstractDensity):
         return  z + y 
 
 
-    def random(self, size = None):
-        from numpy.random import standard_normal, random
-        from numpy import sqrt, less_equal
+    def random(self, size=None):
 
         mu = self.mu
         _lambda = self.llambda
 
         mu_2l = mu / _lambda / 2.
-        Y = standard_normal(size)
+        Y = numpy.random.standard_normal(size)
         Y = mu * Y**2
         X = mu + mu_2l * (Y - sqrt(4 * _lambda * Y + Y**2))
-        U = random(size)
+        U = numpy.random.random(size)
 
-        m = less_equal(U, mu / (mu + X))
+        m = numpy.less_equal(U, mu / (mu + X))
 
         return m * X + (1 - m) * mu**2 / X
-
-
-        
+ 
 class GeneralizedNormal(AbstractDensity):
     
     def __init__(self, mu, alpha, beta):
@@ -517,10 +510,9 @@ class GeneralizedNormal(AbstractDensity):
              
         return log(beta / (2.0 * alpha)) - gammaln(1. / beta) - power(fabs(x - mu) / alpha, beta)
 
-
 class GeneralizedInverseGaussian(AbstractDensity):
 
-    def __init__(self, a = 1., b = 1., p = 1.):
+    def __init__(self, a=1., b=1., p=1.):
         super(GeneralizedInverseGaussian, self).__init__()
 
         self._register('a')
@@ -536,7 +528,7 @@ class GeneralizedInverseGaussian(AbstractDensity):
 
     @a.setter
     def a(self, value):
-        if a <= 0:
+        if value <= 0:
             raise ValueError("Parameter a is nonnegative")
         else:
             self['a'] = value
@@ -545,7 +537,7 @@ class GeneralizedInverseGaussian(AbstractDensity):
     def b(self):
         return self['b']
 
-    @a.setter
+    @b.setter
     def b(self, value):
         if value <= 0:
             raise ValueError("Parameter b is nonnegative")
@@ -556,7 +548,7 @@ class GeneralizedInverseGaussian(AbstractDensity):
     def p(self):
         return self['p']
 
-    @a.setter
+    @p.setter
     def p(self, value):
         if value <= 0:
             raise ValueError("Parameter p is nonnegative")
@@ -564,22 +556,17 @@ class GeneralizedInverseGaussian(AbstractDensity):
             self['p'] = value
 
     def log_prob(self, x):
-        from scipy.special import kv
-        from csb.math import log
-        from numpy import sqrt
 
         a = self['a']
         b = self['b']
         p = self['p']
 
-        lz = 0.5 * p * (log(a) - log(b)) - log(2 * kv(p,sqrt(a * b)))
+        lz = 0.5 * p * (log(a) - log(b)) - log(2 * scipy.special.kv(p, sqrt(a * b)))
 
         return lz + (p - 1) * log(x) - 0.5 * (a * x  + b / x)
         
+    def random(self, size=None):
 
-    def random(self, size = None):
-        from numpy import exp, log, sqrt, isreal, real
-        from numpy.random import random
         from csb.statistics.rand import inv_gaussian
         
         rvs = []
@@ -588,13 +575,10 @@ class GeneralizedInverseGaussian(AbstractDensity):
         b = self['b']
         p = self['p']
 
-        from numpy.random import gamma
-        from numpy import ones, sqrt, argmax,clip,where
-
-        s = a*0. + 1.
+        s = a * 0. + 1.
 
         if p < 0:
-            a,b = b,a
+            a, b = b, a
 
         if size == None:
             size = 1
@@ -604,13 +588,8 @@ class GeneralizedInverseGaussian(AbstractDensity):
                 l = b + 2*s
                 m = sqrt(l / a)
 
-                x = inv_gaussian(m,l,shape=m.shape)
-
-                if  x.min() < 0:
-                    from numpy import argmin
-                    print m[argmin(x)], l[argmin(x)], x.min()
-
-                s = gamma(abs(p)+0.5, x)
+                x = inv_gaussian(m, l, shape=m.shape)
+                s = numpy.random.gamma(abs(p) + 0.5, x)
 
             if p >= 0:
                 rvs.append(x)
@@ -619,7 +598,6 @@ class GeneralizedInverseGaussian(AbstractDensity):
 
         return numpy.array(rvs)
         
-    
 class Gamma(AbstractDensity):
 
     def __init__(self, alpha=1, beta=1):
@@ -653,7 +631,7 @@ class Gamma(AbstractDensity):
         return a * log(b) - gammaln(clip(a, 1e-308, 1e308)) + \
                (a-1) * log(clip(x, 1e-308, 1e308)) - b * x
 
-    def random(self, size = None):
+    def random(self, size=None):
         return numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
 
 class InverseGamma(AbstractDensity):
@@ -672,7 +650,7 @@ class InverseGamma(AbstractDensity):
         return self['alpha']
 
     @alpha.setter
-    def alpha(self,value):
+    def alpha(self, value):
         self['alpha'] = value
         
     @property
@@ -687,7 +665,7 @@ class InverseGamma(AbstractDensity):
         a, b = self['alpha'], self['beta']
         return a * log(b) - gammaln(a) - (a+1) * log(x) - b / x
 
-    def random(self, size = None):
+    def random(self, size=None):
         return 1. / numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
     
 class MultivariateGaussian(Normal):
@@ -739,14 +717,13 @@ class MultivariateGaussian(Normal):
         x2 = take(x, dims2)
 
         A = take(take(self['Sigma'], dims, 0), dims,1)
-        B = take(take(self['Sigma'], dims2, 0), dims2,1)
-        C = take(take(self['Sigma'], dims, 0), dims2,1)
+        B = take(take(self['Sigma'], dims2, 0), dims2, 1)
+        C = take(take(self['Sigma'], dims, 0), dims2, 1)
 
         mu = mu1 + dot(C, dot(inv(B), x2 - mu2))
         Sigma = A - dot(C, dot(inv(B), C.T))
         
-        return MultivariateGaussian((mu,Sigma))
-
+        return MultivariateGaussian((mu, Sigma))
 
 class Dirichlet(AbstractDensity):
 
@@ -758,27 +735,19 @@ class Dirichlet(AbstractDensity):
         self.set_params(alpha=alpha)
         self.estimator = DirichletEstimator()
 
-
     @property
     def alpha(self):
         return self['alpha']
 
     @alpha.setter
-    def alpha(self,value):
+    def alpha(self, value):
         self['alpha'] = numpy.ravel(value)
-
 
     def log_prob(self, x):
         #TODO check wether x is in the probability simplex
         alpha = self.alpha
         return gammaln(sum(alpha)) - sum(gammaln(alpha)) \
-              + numpy.dot((alpha - 1).T,log(x).T) 
-        
-        
+              + numpy.dot((alpha - 1).T, log(x).T) 
         
     def random(self, size = None):
-
         return numpy.random.mtrand.dirichlet(self.alpha, size)
-
-
-    

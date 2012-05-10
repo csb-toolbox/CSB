@@ -177,7 +177,7 @@ class ProfileBuilder(object):
         bali = csb.pyutils.Shell.run(cmd)
         
         ali = self.target_id + '.a3m'
-        if bali.code <> 0:
+        if bali.code != 0:
             raise csb.pyutils.ProcessError(bali)
         if not os.path.isfile(ali):
             raise NoOutputError(ali, bali)        
@@ -196,7 +196,7 @@ class ProfileBuilder(object):
             cmd = '{0} {1} {2}'.format(cmd, ProfileBuilder.EMISSION_PSEUDO, ProfileBuilder.TRANSITION_PSEUDO)
                     
         nnmake = csb.pyutils.Shell.run(cmd)
-        if nnmake.code <> 0:
+        if nnmake.code != 0:
             raise csb.pyutils.ProcessError(nnmake)
         if not os.path.isfile(hhm):
             raise NoOutputError(hhm, nnmake)

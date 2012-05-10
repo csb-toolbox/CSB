@@ -43,9 +43,7 @@ class HHProfileParser(object):
     @raise IOError: if any of the files does not exist
     """
 
-    def __init__(self, hhm_file, pdb_file=None, debug=False):
-
-        self.debug = debug
+    def __init__(self, hhm_file, pdb_file=None):
 
         if not os.path.exists(hhm_file):
             raise IOError("Could not read HHM file {0}".format(hhm_file))
@@ -180,7 +178,7 @@ class HHProfileParser(object):
 
     def _issue(self, hmm, issue):
         """
-        Log any known parse error encountered :-( (in debug mode)
+        Log any known parse error encountered
 
         @param hmm: the faulty profile HMM
         @type hmm: L{ProfileHMM}
@@ -188,8 +186,6 @@ class HHProfileParser(object):
         @type issue: str
         """
         hmm._issues.append(issue)
-        if self.debug:
-            print "\n DEBUG: {0}\n".format(issue)
 
     def _parse_properties(self, hmm):
         """
