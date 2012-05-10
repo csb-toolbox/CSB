@@ -1,7 +1,7 @@
 """
 I-Sites fragment library APIs. 
 
-@warning: This module is no longer developed and provided as is. 
+@warning: This module is no longer developed and is provided as is. 
 """
 
 import sys
