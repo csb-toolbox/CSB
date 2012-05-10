@@ -46,7 +46,7 @@ class HelloWorldApp(csb.apps.Application):
         else:
             text = self.args.text
         
-        print text
+        self.log(text)
         self.log('HW: done.')        
         
 

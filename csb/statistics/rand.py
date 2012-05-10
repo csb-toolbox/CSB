@@ -1,4 +1,3 @@
-import scipy
 
 def probability_transform(shape, inv_cum, cum_min=0., cum_max=1.):
     """
@@ -36,8 +35,8 @@ def truncated_gamma(shape=None, alpha=1., beta=1., x_min=None, x_max=None):
     elif x_max is None:
         x_max = inf
         
-    x_min = max(0.,x_min)
-    x_max = min(1e300,x_max)
+    x_min = max(0., x_min)
+    x_max = min(1e300, x_max)
 
     a = gammainc(alpha, beta*x_min)
     b = gammainc(alpha, beta*x_max)
@@ -46,7 +45,6 @@ def truncated_gamma(shape=None, alpha=1., beta=1., x_min=None, x_max=None):
                                  lambda x,alpha=alpha: gammaincinv(alpha, x),
                                  a, b) / beta
 
-    
 def truncated_normal(shape=None, mu=0., sigma=1., x_min=None, x_max=None):
     """
     Generates random variates from a lower-and upper-bounded normal distribution
@@ -70,15 +68,14 @@ def truncated_normal(shape=None, mu=0., sigma=1., x_min=None, x_max=None):
         x_max = inf
         
     x_min = max(-1e300, x_min)
-    x_max = min(+1e300,x_max)
+    x_max = min(+1e300, x_max)
     var   = sigma**2 + 1e-300
     sigma = sqrt(2 * var)
     
-    a = erf((x_min-mu)/sigma)
-    b = erf((x_max-mu)/sigma)
+    a = erf((x_min-mu)  /sigma)
+    b = erf((x_max-mu) / sigma)
 
     return probability_transform(shape, erfinv, a, b) * sigma + mu
-
 
 def sample_dirichlet(alpha, n_samples = 1):
     """
@@ -90,15 +87,14 @@ def sample_dirichlet(alpha, n_samples = 1):
     from numpy import array, sum, transpose, ones
     from numpy.random import gamma
 
-    alpha = array(alpha,ndmin=1)
+    alpha = array(alpha, ndmin=1)
     X = gamma(alpha,
               ones(len(alpha)),
-              [n_samples,len(alpha)])
+              [n_samples, len(alpha)])
      
-    return transpose(transpose(X) / sum(X,-1))
+    return transpose(transpose(X) / sum(X, -1))
 
-
-def sample_sphere3d(radius = 1., n_samples = 1 ):
+def sample_sphere3d(radius=1., n_samples=1):
     """
     sample points from 3D sphere
 
@@ -124,8 +120,6 @@ def sample_sphere3d(radius = 1., n_samples = 1 ):
 
     return transpose([x, y, z])
 
-
-
 def sample_from_histogram(p, n_samples = 1):
     """
     returns the indice of bin according to the histogram p
@@ -140,11 +134,11 @@ def sample_from_histogram(p, n_samples = 1):
     from numpy.random import random
 
     indices = argsort(p)
-    indices = take(indices, arange(len(p)-1,-1,-1))
+    indices = take(indices, arange(len(p)-1, -1, -1))
 
     c = add.accumulate(take(p,indices)) / add.reduce(p)
 
-    return indices[add.reduce(less.outer(c, random(n_samples)),0)]
+    return indices[add.reduce(less.outer(c, random(n_samples)), 0)]
 
 
 def gen_inv_gaussian(a, b, p, burnin=10):
@@ -154,7 +148,7 @@ def gen_inv_gaussian(a, b, p, burnin=10):
     assumes scalar p
     """
     from numpy.random import gamma
-    from numpy import ones, sqrt, argmax,clip,where
+    from numpy import sqrt
 
     s = a*0. + 1.
 
@@ -166,12 +160,8 @@ def gen_inv_gaussian(a, b, p, burnin=10):
         l = b + 2*s
         m = sqrt(l / a)
 
-        x = inv_gaussian(m,l,shape=m.shape)
-        
-        if  x.min() < 0:
-            from numpy import argmin
-            print m[argmin(x)], l[argmin(x)], x.min()
-        s = gamma(abs(p)+0.5, x)
+        x = inv_gaussian(m, l, shape=m.shape)
+        s = gamma(abs(p) + 0.5, x)
 
     if p >= 0:
         return x
@@ -192,11 +182,9 @@ def inv_gaussian(mu=1., _lambda=1., shape=None):
 
     m = less_equal(U, mu / (mu + X))
 
-    return clip(m * X + (1 - m) * mu**2 / X ,1e-308,1e308)
+    return clip(m * X + (1 - m) * mu**2 / X, 1e-308, 1e308)
 
-
-
-def random_rotation(A, n_iter=10, initial_values = None):
+def random_rotation(A, n_iter=10, initial_values=None):
     """
     Generation of three-dimensional random rotations in
     fitting and matching problems, Habeck 2009
@@ -228,8 +216,8 @@ def random_rotation(A, n_iter=10, initial_values = None):
 
         u = random(n)
 
-        if kappa <> 0.:
-            x = clip(1 + 2 * log(u + (1-u) * exp(-kappa)) / kappa,-1.,1.)
+        if kappa != 0.:
+            x = clip(1 + 2 * log(u + (1-u) * exp(-kappa)) / kappa, -1., 1.)
         else:
             x = 2*u - 1
 
@@ -256,15 +244,15 @@ def random_rotation(A, n_iter=10, initial_values = None):
     for _i in range(n_iter):
 
         ## sample alpha and gamma
-        phi = vonmisesvariate(0.,clip(cos(beta/2)**2 * (L[0]+L[1]),1e-308,1e10))
-        psi = vonmisesvariate(pi, sin(beta/2)**2 * (L[0]-L[1]))
+        phi = vonmisesvariate(0., clip(cos(beta/2)**2 * (L[0] + L[1]), 1e-308, 1e10))
+        psi = vonmisesvariate(pi, sin(beta/2)**2 * (L[0] - L[1]))
         u   = randint(0,1)
         
         alpha = 0.5 * (phi + psi) + pi * u
         gamma = 0.5 * (phi - psi) + pi * u
 
         ## sample beta
-        kappa = cos(phi) * (L[0]+L[1]) + cos(psi) * (L[0]-L[1]) + 2 * L[2]
+        kappa = cos(phi) * (L[0] + L[1]) + cos(psi) * (L[0] - L[1]) + 2 * L[2]
         beta  = sample_beta(kappa)
 
     return dot(U, dot(euler(alpha, beta, gamma), V))

@@ -10,6 +10,7 @@ Common high-level Python code utilities.
 """
 
 import re
+import sys
 import time
 import shlex
 import subprocess
@@ -165,7 +166,7 @@ class InterruptibleThread(threading.Thread):
         try:
             self.__result = self.__target(*self.__args, **self.__kwargs)
         except Exception as ex:
-            print ex
+            sys.stderr.write(ex)
             self.__result = None
 
 def singleton(klass):
@@ -253,11 +254,12 @@ class Stack(list):
         """
         return len(self) == 0
         
-class EnumValueError(ValueError):
-    pass
-
-class EnumMemberError(AttributeError):
-    pass
+def metaclass(meta, base=object):
+    """
+    Return a new class with parent class C{base} and metaclass C{meta}.
+    This works in both python 2 and 3.
+    """
+    return meta("NewBase", (base,), {})
 
 def deepcopy(obj, recursion=100000):
     """
@@ -269,7 +271,7 @@ def deepcopy(obj, recursion=100000):
     @param recursion: maximum recursion limit
     @type recursion: int
     """
-    import cPickle, sys
+    import cPickle
     
     current = sys.getrecursionlimit()
     sys.setrecursionlimit(recursion)
@@ -282,6 +284,12 @@ def deepcopy(obj, recursion=100000):
 
 def _deserialize_enum(enum, name):
     return getattr(enum, name)
+
+class EnumValueError(ValueError):
+    pass
+
+class EnumMemberError(AttributeError):
+    pass
     
 class EnumItem(object):
     
@@ -381,8 +389,8 @@ class EnumMeta(type):
     
     def __str__(self):
         return repr(self)
-    
-class enum(object):
+ 
+class enum(metaclass(EnumMeta)):
     """
     Base class for all enumeration types. Supports both string and integer
     enumeration values. Examples:
@@ -563,8 +571,10 @@ class Enum(object):
     
 class ItemNotFoundError(KeyError):
     pass
+
 class InvalidKeyError(KeyError):
     pass
+
 class DuplicateKeyError(InvalidKeyError):
     pass
 

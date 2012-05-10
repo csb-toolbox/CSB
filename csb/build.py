@@ -17,11 +17,13 @@ by the Console itself, belong to the same CSB package.
        source trees.
 @see: [CSB 0000038]
 """
+from __future__ import print_function
 
 import os
 import sys
+import getopt
 import traceback
-
+        
 if os.path.basename(__file__) == '__init__.py':
     PARENT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 else:
@@ -175,7 +177,7 @@ Options:
         self.log('# Preparing the file system...')
                 
         if not os.path.exists(self._output):
-            self.log('Creating output directory {`0}'.format(self._output), level=2)
+            self.log('Creating output directory {0}'.format(self._output), level=2)
             os.mkdir(self._output)
 
         if os.path.exists(self._temp):
@@ -345,9 +347,9 @@ Options:
     def exit(message=None, code=0, usage=True):
         
         if message:
-            print message
+            print(message)
         if usage:
-            print Console.USAGE.format(program=Console.PROGRAM)    
+            print(Console.USAGE.format(program=Console.PROGRAM))    
                 
         sys.exit(code)               
 
@@ -360,9 +362,7 @@ Options:
         output = None
         verb = 1
         buildtype = BuildTypes.SOURCE
-            
-        import getopt
-        
+                
         try:   
             options, dummy = getopt.getopt(argv, 'o:v:t:h', ['output=', 'verbosity=', 'type=', 'help'])
             

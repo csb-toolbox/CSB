@@ -162,6 +162,7 @@ decorators you need in order to write tests for CSB.
           is missing some features, that's why csb.test will take care of
           replacing it with unittest2 instead. 
 """
+from __future__ import print_function
 
 import os
 import sys
@@ -169,6 +170,7 @@ import imp
 import types
 import time
 import cPickle
+import getopt
 import tempfile
 import csb.io
 
@@ -759,15 +761,13 @@ Options:
     def exit(self, message=None, code=0, usage=True):
         
         if message:
-            print message
+            print(message)
         if usage:
-            print Console.USAGE.format(self)    
+            print(Console.USAGE.format(self))    
                 
         sys.exit(code)        
         
     def parseArguments(self, argv):
-        
-        import getopt
         
         try:
             

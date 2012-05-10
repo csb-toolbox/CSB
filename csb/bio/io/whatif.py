@@ -9,7 +9,7 @@ import subprocess
 
 def grep(lines, what):
     for i in range(len(lines)):
-        if lines[i].find(what) <> -1:
+        if lines[i].find(what) != -1:
             return i
 
 

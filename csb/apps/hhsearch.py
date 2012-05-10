@@ -64,14 +64,14 @@ class HHsearchApp(csb.apps.Application):
             message = 'Bad exit code from HHsearch: #{0.code}.\nSTDERR: {0.stderr}\nSTDOUT: {0.stdout}'.format(pe.context)
             HHsearchApp.exit(message, ExitCodes.EXT_TOOL_FAILURE)
 
-        print '\nRank Hit   Prob  St  End Qst Qend'
-        print '-------------------------------------'
+        self.log('\nRank Hit   Prob  St  End Qst Qend')
+        self.log('-------------------------------------')
                             
         for c in results:
-            print '\n\n# QUERY:{0}\n'.format(c.queryfile)
+            self.log('\n\n# QUERY:{0}\n'.format(c.queryfile))
             if c.result:
                 for hit in c.result:
-                    print '{0.rank:3}. {0.id:5} {0.probability:5.3f} {0.start:3} {0.end:3} {0.qstart:3} {0.qend:3}'.format(hit)
+                    self.log('{0.rank:3}. {0.id:5} {0.probability:5.3f} {0.start:3} {0.end:3} {0.qstart:3} {0.qend:3}'.format(hit))
 
 
 class Context(object):
@@ -109,7 +109,6 @@ def _task(args):
         binary, db, cpu, context = args
         return HHsearch(binary, db, cpu=cpu).run(context)
     except (KeyboardInterrupt, SystemExit):
-        print '\nTerminating...'
         return
 
 class SecStructureScoring(object):

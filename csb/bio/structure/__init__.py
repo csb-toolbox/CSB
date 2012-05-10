@@ -1459,7 +1459,7 @@ class Atom(Abstract3DEntity):
         return self._vector
     @vector.setter
     def vector(self, vector):
-        if numpy.shape(vector) <> (3,):
+        if numpy.shape(vector) != (3,):
             raise ValueError("Three dimensional vector expected")
         self._vector = numpy.array(vector)
     

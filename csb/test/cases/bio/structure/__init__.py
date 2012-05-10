@@ -552,7 +552,7 @@ class TestChain(test.Case):
             
         self.assertAlmostEqual(self.chain.rmsd(clone), 0, 5)
         
-        # mutate clone a bit to achieve RMSD <> 0
+        # mutate clone a bit to achieve RMSD != 0
         clone[0]['CA'].vector[0] += 2.0
         si = self.chain.align(clone)
         self.assertNotEqual(si.rmsd, 0.0)   
