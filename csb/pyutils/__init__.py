@@ -389,8 +389,10 @@ class EnumMeta(type):
     
     def __str__(self):
         return repr(self)
+
+EnumBase = metaclass(EnumMeta)
  
-class enum(metaclass(EnumMeta)):
+class enum(EnumBase):
     """
     Base class for all enumeration types. Supports both string and integer
     enumeration values. Examples:
@@ -414,9 +416,6 @@ class enum(metaclass(EnumMeta)):
            subclass of L{enum} in the global namespace of your module. Nesting
            the enum in another class for example will break pickling.
     """
-        
-    __metaclass__ = EnumMeta
-    
     def __init__(self):
         raise TypeError("Can't instantiate static enum type {0}".format(self.__class__))
 
