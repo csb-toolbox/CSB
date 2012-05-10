@@ -7,6 +7,7 @@ import numpy
 
 from csb.statistics.pdf import AbstractDensity
 
+
 class MaxentModel(AbstractDensity):
     """
     Fourier expansion of a biangular log-probability density
@@ -20,7 +21,6 @@ class MaxentModel(AbstractDensity):
         @param beta: inverse temperature
         @type beta: float
         """
-        from numpy import zeros
         super(MaxentModel, self).__init__()
         
         self._n = int(n)
@@ -41,7 +41,6 @@ class MaxentModel(AbstractDensity):
         """
         return self._beta
 
-
     @property
     def n(self):
         """
@@ -51,11 +50,9 @@ class MaxentModel(AbstractDensity):
         """
         return self._n
 
-    
-
     def load_old(self, aa, f_name):
         """
-        Loads set of expansion coefficents from isd
+        Load set of expansion coefficients from isd.
 
         @param aa: Amino acid type
         @param f_name: File containing ramachandran definition
@@ -76,10 +73,9 @@ class MaxentModel(AbstractDensity):
             elif f == 'sin' and g == 'sin':
                 self._ss[k, l] = -x
 
-
     def load(self, aa, f_name):
         """
-        Loads set of expansion coefficents from isd+
+        Load set of expansion coefficients from isd+.
 
         @param aa: Amino acid type
         @param f_name: File containing ramachandran definition
@@ -100,16 +96,12 @@ class MaxentModel(AbstractDensity):
         # Not a typo, I accidently swichted cos*sin and sin*cos
         self._cc, self._cs, self._sc, self._ss = -a, -c, -b, -d
 
-
     def _periodicities(self):
-        from numpy import arange
-
-        return arange(self._n)
-
+        return numpy.arange(self._n)
 
     def log_prob(self, x, y):
         """
-        returns the energy at positions (x,y) 
+        Return the energy at positions (x,y).
 
         @param x: x-coordinates for evaluation
         @type x: array-like
@@ -118,34 +110,28 @@ class MaxentModel(AbstractDensity):
         @type y: array-like
         """
         return -self.energy(x,y)
-        
-
+    
     def set(self, coef):
         """
-        Sets the fourier expansion coefficents and calculations the 
-        new partation function
+        Set the fourier expansion coefficients and calculations the 
+        new partation function.
 
         @param coef: expansion coefficents
         @type coef: array like, with shape (4,n,n)
         """
-        from numpy import reshape
-
         self._cc[:, :], self._ss[:, :], self._cs[:, :], self._sc[:, :] = \
-                    reshape(coef, (4, self._n, self._n))
+                    numpy.reshape(coef, (4, self._n, self._n))
         self.normalize()
 
     def get(self):
         """
-        returns current expansion coefficents
+        Return current expansion coefficients.
         """
-        from numpy import array
+        return numpy.array([self._cc, self._ss, self._cs, self._sc])
 
-        return array([self._cc, self._ss, self._cs, self._sc])
-
-    
     def energy(self, x, y=None):
         """
-        returns the energy at positions (x,y) 
+        Return the energy at positions (x,y). 
 
         @param x: x-coordinates for evaluation
         @type x: array-like
@@ -169,9 +155,9 @@ class MaxentModel(AbstractDensity):
 
     def sample_weights(self):
         """
-        creates a random set of expansion coefficents
+        Create a random set of expansion coefficients.
         """
-        from numpy import add, sqrt
+        from numpy import add
         from numpy.random import standard_normal
 
         k = self._periodicities()
@@ -181,25 +167,23 @@ class MaxentModel(AbstractDensity):
 
     def prob(self, x, y):
         """
-        Returns the probability of the configurations x cross y
+        Return the probability of the configurations x cross y.
         """
         from csb.math import exp
         return exp(-self.beta * self(x, y))
 
-
     def z(self):
         """
-        Calculate the partion function 
+        Calculate the partion function .
         """
         from scipy.integrate import dblquad
         from numpy import pi
 
         return dblquad(self.prob, 0., 2 * pi, lambda x: 0., lambda x: 2 * pi)
 
-
-    def log_z(self, n=500, integration = 'simpson'):
+    def log_z(self, n=500, integration='simpson'):
         """
-        Calculate the log partion function 
+        Calculate the log partion function.
         """
         from numpy import pi, linspace, max
         from csb.math import log, exp
@@ -230,11 +214,10 @@ class MaxentModel(AbstractDensity):
         else:
             raise NotImplementedError(
                 'Choose from trapezoidal and simpson-rule Integration')
-        
-
+    
     def entropy(self, n=500):
         """
-        Calculate the entropy of the model
+        Calculate the entropy of the model.
 
         @param n: number of integration points for numerical integration
         @type n: integer
@@ -257,7 +240,7 @@ class MaxentModel(AbstractDensity):
 
     def calculate_statistics(self, data):
         """
-        Calculate the sufficient statistics for the data
+        Calculate the sufficient statistics for the data.
         """
         from numpy import cos, sin, dot, multiply
 
@@ -272,7 +255,7 @@ class MaxentModel(AbstractDensity):
     def normalize(self, normalize_full=True):
         """
         Remove parameter, which do not have any influence on the model
-        and compute the partition function 
+        and compute the partition function.
 
         @param normalize_full: compute partition function
         @type normalize_full: boolean
@@ -289,8 +272,8 @@ class MaxentModel(AbstractDensity):
 
 class MaxentPosterior(object):
     """
-    Object to hold and calcuate the posterior (log)probability
-    given an exponential family model and correspondingdata
+    Object to hold and calculate the posterior (log)probability
+    given an exponential family model and corresponding data.
     """
 
     def __init__(self, model, data):
@@ -311,7 +294,7 @@ class MaxentPosterior(object):
 
     @model.setter
     def model(self, value):
-        self._model = model
+        self._model = value
         self._stats = self.model.calculate_statistics(self._data)
         
     @property
@@ -319,21 +302,19 @@ class MaxentPosterior(object):
         return self._data
 
     @data.setter
-    def data(self,value):
-        self._data = numpy.array(data)
+    def data(self, value):
+        self._data = numpy.array(value)
         self._stats = self.model.calculate_statistics(value)
 
-        
     @property
     def stats(self):
         return self._stats
-
 
     def __call__(self, weights=None, n=100):
         """
         Returns the log posterior likelihood
 
-        @param weights: optional expansion coeffients of the model,
+        @param weights: optional expansion coefficients of the model,
                          if none are specified those of the model are used
         @param n: number of integration point for calculating the partition function
         """
@@ -354,6 +335,3 @@ class MaxentPosterior(object):
         self._log_likelihoods.append(log_likelihood)
 
         return log_likelihood
-
-
-

@@ -37,7 +37,6 @@ class Cumulative(object):
     def cumulative_desity(self, x, nchunks=None):
         return 1 - self.__call__(x,nchunks)
 
-
 def geometric_mean(x, axis=None):
     """
     @param x:
@@ -70,8 +69,8 @@ def kurtosis(x, axis=None):
     from numpy import mean, std
 
     m = x.mean(axis)
-    a = mean((x-m)**4,axis)
-    s = std(x,axis)
+    a = mean((x-m)**4, axis)
+    s = std(x, axis)
 
     return a / s**4 - 3
 
@@ -85,7 +84,7 @@ def skewness(x, axis=None):
     from numpy import mean, std
 
     s = std(x)
-    return mean((x-x.mean())**3,axis) / s**3
+    return mean((x - x.mean())**3, axis) / s**3
     
 def autocorrelation(x,n):
     """
@@ -98,26 +97,26 @@ def autocorrelation(x,n):
     """
     from numpy import array, mean
     x = x - x.mean()
-    return array([mean(x[i:]*x[:len(x)-i]) for i in range(n)])
+    return array([mean(x[i:] * x[:len(x)-i]) for i in range(n)])
 
 def probabilistic_and(p, axis=0):
     """
-    probabilistic version of AND
+    Probabilistic version of AND
     """
     from numpy import array, multiply
     return multiply.reduce(array(p), axis=axis)
 
 def probabilistic_or(p, axis=0):
     """
-    probabilistic version of OR
+    Probabilistic version of OR
     """
     from numpy import array
-    return 1 - probabilistic_and(1-array(p), axis)
+    return 1 - probabilistic_and(1 - array(p), axis)
 
 def probabilistic_xor(p, axis=0):
     """
-    probabilistic version of XOR
-    works only for axis=0
+    Probabilistic version of XOR.
+    Works only for axis=0.
     """
     from numpy import array
 
@@ -129,9 +128,9 @@ def probabilistic_xor(p, axis=0):
     for i in range(p.shape[axis]):
         x = p_not * 1
         x[i] = p[i]
-        P.append(probabilistic_and(x,0))
+        P.append(probabilistic_and(x, 0))
 
-    return probabilistic_or(P,0)
+    return probabilistic_or(P, 0)
 
 def principal_coordinates(D, nd = None):
     """
@@ -160,10 +159,10 @@ def principal_coordinates(D, nd = None):
     v = v.real
     U = U.real
 
-    U = take(U,argsort(v),1)
+    U = take(U,argsort(v), 1)
     v = sort(v)
 
-    U = reverse(U,1)
+    U = reverse(U, 1)
     v = reverse(v)
     
     if nd is None: nd = len(v)
@@ -174,7 +173,7 @@ def principal_coordinates(D, nd = None):
 
 def entropy(p):
     """
-    Calculates the entropy of p 
+    Calculate the entropy of p. 
     @return: entropy of p
     """
     from csb.math import log
@@ -184,7 +183,7 @@ def entropy(p):
 
 def histogram2D(x, nbins=100, axes=None, nbatch=1000, normalize=True):
     """
-    Non-greedy histogram two-dimemsional histogram
+    Non-greedy two-dimensional histogram.
 
     @param x: input array of rank two
     @type x: numpy array
@@ -224,7 +223,7 @@ def histogram2D(x, nbins=100, axes=None, nbatch=1000, normalize=True):
 
 def histogram_nd(x, nbins=100, axes=None, nbatch=1000, normalize=True):
     """
-    Non-greedy histogram n-dimemsional histogram
+    Non-greedy n-dimemsional histogram.
 
     @param x: input array of rank (-1,n)
     @type x: numpy array
@@ -259,7 +258,7 @@ def histogram_nd(x, nbins=100, axes=None, nbatch=1000, normalize=True):
         y = x[:nbatch]
         x = x[nbatch:]
 
-        I = np.transpose([np.argmin(np.fabs(np.subtract.outer(y[:,i],axes[i])),1)
+        I = np.transpose([np.argmin(np.fabs(np.subtract.outer(y[:,i], axes[i])), 1)
                           for i in range(d)])
         I = np.dot(I,s)
         I = np.sort(I)
@@ -270,7 +269,7 @@ def histogram_nd(x, nbins=100, axes=None, nbatch=1000, normalize=True):
         H[i] += n
         
     if normalize:
-        H = H / H.sum() / np.multiply.reduce([axes[i][1]-axes[i][0] for i in range(d)])
+        H = H / H.sum() / np.multiply.reduce([axes[i][1] - axes[i][0] for i in range(d)])
 
     H = np.reshape(H, shape)
 
@@ -296,19 +295,18 @@ def density(x, nbins, normalize=True):
 
     return hx, hy
 
-def circvar(a,axis=None):
+def circvar(a, axis=None):
     """
-    Calculate circular variance of a circular variable
+    Calculate circular variance of a circular variable.
 
     @param a: input array
     @param axis: axis along which mean is calculated
     @type axis: None or integer    
     """
     from numpy import average, cos, sin
+    return 1 - average(cos(a), axis)**2 - average(sin(a), axis)**2
 
-    return 1 - average(cos(a),axis)**2 - average(sin(a),axis)**2
-
-def circmean(a,axis=None):
+def circmean(a, axis=None):
     """
     Estimate mean of a circular variable
 
@@ -317,8 +315,7 @@ def circmean(a,axis=None):
     @type axis: None or integer
     """
     from numpy import sin, cos, arctan2, average
-
-    return arctan2(average(sin(a),axis), average(cos(a),axis))
+    return arctan2(average(sin(a), axis), average(cos(a), axis))
 
 def running_average(x, w, axis=None):
     """
@@ -330,10 +327,4 @@ def running_average(x, w, axis=None):
     @param axis: axis along which mean is calculated
     """
     from numpy import array, mean
-
-    return array([mean(x[i:i+w],axis) for i in range(len(x)-w)])
-
-
-    
-
-
+    return array([mean(x[i:i+w], axis) for i in range(len(x) - w)])

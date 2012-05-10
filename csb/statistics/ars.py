@@ -27,15 +27,15 @@ class Envelope(object):
 
         from numpy import array, inf
 
-        self.x  =  array(x)
-        self.h  =  array(h)
+        self.x =  array(x)
+        self.h =  array(h)
         self.dh =  array(dh)
         self.z0 = -inf
         self.zk =  inf
         
     def z(self):
         """
-        support intervals for upper bounding function
+        Support intervals for upper bounding function.
         """
         from numpy import concatenate
 
@@ -46,11 +46,11 @@ class Envelope(object):
         z = (h[1:] - h[:-1] + x[:-1]*dh[:-1] - x[1:]*dh[1:]) / \
             (dh[:-1]-dh[1:])
 
-        return concatenate(([self.z0],z,[self.zk]))
+        return concatenate(([self.z0], z, [self.zk]))
 
     def u(self, x):
         """
-        piecewise linear upper bounding function
+        Piecewise linear upper bounding function.
         """
         z = self.z()[1:-1]
         j = (x>z).sum()
@@ -65,7 +65,7 @@ class Envelope(object):
 
     def l(self, x):
         """
-        piecewise linear lower bounding function
+        Piecewise linear lower bounding function.
         """
         from numpy import inf
 
@@ -75,21 +75,21 @@ class Envelope(object):
             return -inf
         else:
             j -= 1
-            return ((self.x[j+1]-x)*self.h[j] + (x-self.x[j])*self.h[j+1])/\
+            return ((self.x[j+1]-x) * self.h[j] + (x-self.x[j]) * self.h[j+1]) /\
                    (self.x[j+1] - self.x[j])
 
     def insert(self, x, h, dh):
         """
-        insert new support point for lower bounding function
-        (and indirectly for upper bounding function)
+        Insert new support point for lower bounding function
+        (and indirectly for upper bounding function).
         """
         from numpy import concatenate
 
-        j = (x>self.x).sum()
+        j = (x > self.x).sum()
 
         self.x  = concatenate((self.x[:j], [x], self.x[j:]))
         self.h  = concatenate((self.h[:j], [h], self.h[j:]))
-        self.dh = concatenate((self.dh[:j],[dh],self.dh[j:]))
+        self.dh = concatenate((self.dh[:j], [dh], self.dh[j:]))
 
     def log_masses(self):
         
@@ -100,10 +100,10 @@ class Envelope(object):
         a = abs(self.dh)
         m = (self.dh > 0)
         q = self.x * 0.        
-        putmask(q,m,z[1:])
-        putmask(q,1-m,z[:-1])
+        putmask(q, m, z[1:])
+        putmask(q, 1-m, z[:-1])
         
-        log_M = b - log(a) + log(1 - exp(-a*(z[1:]-z[:-1]))) + \
+        log_M = b - log(a) + log(1 - exp(-a * (z[1:] - z[:-1]))) + \
                 self.dh * q
 
         return log_M
@@ -114,7 +114,7 @@ class Envelope(object):
         b  = self.h - self.x * self.dh
         a  = self.dh
         
-        return exp(b) * (exp(a*z[1:]) - exp(a*z[:-1])) / a
+        return exp(b) * (exp(a * z[1:]) - exp(a * z[:-1])) / a
 
     def sample(self):
 
@@ -137,18 +137,17 @@ class Envelope(object):
         a = self.dh[j]
         b = self.h[j] - a*self.x[j]
 
-        return (log_M + log(a*u*exp(-b) + exp(a*z-log_M))) / a
+        return (log_M + log(a * u * exp(-b) + exp(a * z - log_M))) / a
 
 
 class LogProb(object):
 
     def __call__(self, x):
-
         raise NotImplementedError
 
 class Gauss(LogProb):
 
-    def __init__(self, mu, sigma = 1.):
+    def __init__(self, mu, sigma=1.):
 
         self.mu = float(mu)
         self.sigma = float(sigma)
@@ -156,10 +155,10 @@ class Gauss(LogProb):
     def __call__(self, x):
 
         return -0.5*(x - self.mu)**2 / self.sigma**2, \
-               -(x-self.mu)/self.sigma**2
+               -(x - self.mu) / self.sigma**2
 
 
-class ARS:
+class ARS(object):
 
     from numpy import inf
 
@@ -177,7 +176,6 @@ class ARS:
 
     def sample(self, maxiter=100):
 
-        from numpy import exp
         from numpy.random import random
 
         for i in range(maxiter):

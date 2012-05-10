@@ -8,7 +8,6 @@ files, each superposed on different components.
 import sys
 import numpy
 import csb.apps
-import csb.pyutils
 import csb.bio.structure
 from csb.bio.io.wwpdb import LegacyStructureParser
 from csb.statistics import mixtures

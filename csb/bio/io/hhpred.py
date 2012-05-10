@@ -21,7 +21,6 @@ from csb.bio.hmm import HHpredHitList, HHpredHit, ScoreUnits, States, EVDParamet
 class HHProfileFormatError(ValueError):
     pass
 
-
 class HHOutputFormatError(HHProfileFormatError):
     pass
 
@@ -633,7 +632,6 @@ class HHProfileParser(object):
 
         return hmm
 
-
 HHpredProfileParser = HHProfileParser
 
 
@@ -836,6 +834,5 @@ class HHOutputParser(object):
                 hits.command = data
 
         return hits
-
 
 HHpredOutputParser = HHOutputParser

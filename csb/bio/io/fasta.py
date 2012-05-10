@@ -1,5 +1,5 @@
 """
-FASTA format parsers.
+FASTA format sequence parsers.
 """
 
 import cStringIO

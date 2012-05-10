@@ -1,5 +1,5 @@
 """
-Object representations of 3D and secondary structures. 
+3D and secondary structure APIs. 
 """
 
 import os
@@ -385,6 +385,9 @@ class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         
         @return: FASTA-formatted string with all chains in the structure
         @rtype: str
+        
+        @deprecated: this method will be removed soon. Use
+                     L{csb.bio.sequence.ChainSequence.create} instead
         """
         fasta = []
         
