@@ -21,7 +21,7 @@ class TestMaxent(test.Case):
         data = csb.io.load(self.data_fn)
         model = MaxentModel(k)
         model.sample_weights()
-        posterior = MaxentPosterior(model, data[:1000] / 180. * numpy.pi  )
+        posterior = MaxentPosterior(model, data[:100000] / 180. * numpy.pi  )
 
         model.get() * 1.
 
