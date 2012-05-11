@@ -1,5 +1,4 @@
-import numpy.random
-
+import numpy
 import csb.test as test
 import csb.statistics.pdf
 
@@ -14,9 +13,9 @@ class TestScaleMixture(test.Case):
     def test_random(self):
                
         mixture = ScaleMixture(scales = [1.,1.,1.,1.],
-                               prior = GammaPrior(), d = 3)
+                               prior = GammaPrior(), d=3)
 
-        s = mixture.random()
+        mixture.random()
         samples = mixture.random(10000)
 
         mu = numpy.mean(samples)
@@ -25,15 +24,14 @@ class TestScaleMixture(test.Case):
         self.assertWithinDelta(0.0, mu, delta=1e-1)
         self.assertWithinDelta(1., var, delta=1e-1)
 
-
     def test_logprob(self):
 
-        x = numpy.linspace(-5,5,1000)
+        x = numpy.linspace(-5, 5, 1000)
 
         normal = csb.statistics.pdf.Normal()
 
-        mixture = ScaleMixture(scales = [1.,1.,1.,1.],
-                               prior = None, d = 1)
+        mixture = ScaleMixture(scales=[1.,1.,1.,1.],
+                               prior=None, d=1)
 
         px = mixture(x)
         gx = normal(x)
@@ -41,8 +39,6 @@ class TestScaleMixture(test.Case):
         for i in range(len(px)):
             self.assertWithinDelta(px[i], 4 * gx[i], delta=1e-1)
 
-        
-    
     def test_gamma(self):
         """
         The posterior of a gaussian scale mixture with gamma prior
@@ -57,9 +53,9 @@ class TestScaleMixture(test.Case):
 
                
         mixture = ScaleMixture(scales = X.shape[0],
-                               prior = GammaPrior(), d = 3)
+                               prior = GammaPrior(), d=3)
 
-        from csb.bio.utils import rmsd, fit
+        from csb.bio.utils import fit
 
         R,t = fit(X,Y)
         #numpy.random.seed(100)
@@ -78,10 +74,9 @@ class TestScaleMixture(test.Case):
         t_opt = numpy.zeros((3,))
         
         for i in range(3):
-            self.assertWithinDelta(t[i], t_opt[i], delta = 2.)
+            self.assertWithinDelta(t[i], t_opt[i], delta=2.)
             for j in range(3):
-                self.assertWithinDelta(R_opt[i,j], R[i,j], delta = 1e-1)
-
+                self.assertWithinDelta(R_opt[i,j], R[i,j], delta=1e-1)
 
     def test_invgamma(self):
         """
@@ -96,12 +91,12 @@ class TestScaleMixture(test.Case):
         Y = numpy.array(ensemble[13].list_coordinates(['CA'], True))
 
                
-        mixture = ScaleMixture(scales = X.shape[0],
-                               prior = InvGammaPrior(), d = 3)
+        mixture = ScaleMixture(scales=X.shape[0],
+                               prior=InvGammaPrior(), d=3)
 
-        from csb.bio.utils import rmsd, fit
+        from csb.bio.utils import fit
 
-        R,t = fit(X,Y)
+        R, t = fit(X, Y)
         #numpy.random.seed(100)
         # gibbs sampling cycle
         for i in range(200):
@@ -118,10 +113,9 @@ class TestScaleMixture(test.Case):
         t_opt = numpy.zeros((3,))
         
         for i in range(3):
-            self.assertWithinDelta(t[i], t_opt[i], delta = 2.)
+            self.assertWithinDelta(t[i], t_opt[i], delta=2.)
             for j in range(3):
-                self.assertWithinDelta(R_opt[i,j], R[i,j], delta = 1e-1)
-
+                self.assertWithinDelta(R_opt[i,j], R[i,j], delta=1e-1)
 
             
 if __name__ == '__main__':

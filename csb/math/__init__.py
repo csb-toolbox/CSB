@@ -85,7 +85,7 @@ def log_sum_exp_accumulate(x, axis=0):
     @type x: Numpy array
     """
     xmax = x.max(axis)
-    return log(numpy.add.accumulate(exp(x-xmax), axis)) + xmax
+    return log(numpy.add.accumulate(exp(x - xmax), axis)) + xmax
 
 def radian2degree(x):
     """
@@ -114,9 +114,9 @@ def euler_angles(r):
 
     @param r: 3x3 Rotation matrix
     """
-    a = numpy.arctan2(r[2,1], r[2,0]) % (2 * numpy.pi)
-    b = numpy.arctan2((r[2,0] + r[2,1]) / (numpy.cos(a) + numpy.sin(a)), r[2,2]) % (2 * numpy.pi)
-    c = numpy.arctan2(r[1,2], -r[0,2]) % (2 * numpy.pi)
+    a = numpy.arctan2(r[2, 1], r[2, 0]) % (2 * numpy.pi)
+    b = numpy.arctan2((r[2, 0] + r[2, 1]) / (numpy.cos(a) + numpy.sin(a)), r[2, 2]) % (2 * numpy.pi)
+    c = numpy.arctan2(r[1, 2], -r[0, 2]) % (2 * numpy.pi)
 
     return a, b, c
 
@@ -133,9 +133,9 @@ def euler(a, b, c):
     ca, cb, cc = cos(a), cos(b), cos(c)
     sa, sb, sc = sin(a), sin(b), sin(c)
 
-    return array([[ cc*cb*ca-sc*sa,  cc*cb*sa+sc*ca, -cc*sb],
-                  [-sc*cb*ca-cc*sa, -sc*cb*sa+cc*ca,  sc*sb],
-                  [     sb*ca,            sb*sa,        cb ]])
+    return array([[ cc * cb * ca - sc * sa, cc * cb * sa + sc * ca, -cc * sb],
+                  [-sc * cb * ca - cc * sa, -sc * cb * sa + cc * ca, sc * sb],
+                  [     sb * ca, sb * sa, cb ]])
 
 def norm(x):
     """
@@ -151,7 +151,7 @@ def reverse(array, axis=0):
     Reverse the order of elements in an array.
     """
     from numpy import take, arange
-    return take(array, arange(array.shape[axis]-1, -1, -1), axis)
+    return take(array, arange(array.shape[axis] - 1, -1, -1), axis)
 
 def polar(x):
     """
@@ -163,8 +163,8 @@ def polar(x):
     
     (d,) = x.shape
     phi = numpy.zeros(d)
-    for i in range(1,d)[::-1]:
-        phi[i-1] = numpy.arctan2(x[i] / numpy.cos(phi[i]), x[i-1])
+    for i in range(1, d)[::-1]:
+        phi[i - 1] = numpy.arctan2(x[i] / numpy.cos(phi[i]), x[i - 1])
         
     return numpy.array([norm(x)] + phi[:-1].tolist())
 
@@ -185,9 +185,9 @@ def from_polar(x):
     x = numpy.zeros(d)
     x[0] = r
     
-    for i in range(d-1):
+    for i in range(d - 1):
 
-        x[i+1] = x[i] * s[i]
+        x[i + 1] = x[i] * s[i]
         x[i] *= c[i]
 
     return x
@@ -224,7 +224,7 @@ def from_polar3d(x):
     S = numpy.sin(phi)
     C = numpy.cos(phi)
     
-    return r * numpy.array([s*C, s*S, c])
+    return r * numpy.array([s * C, s * S, c])
 
 def dihedral_angle(a, b, c, d):
     """
@@ -239,9 +239,9 @@ def dihedral_angle(a, b, c, d):
     
     v = b - c
     m = numpy.cross((a - b), v)
-    m /=  norm(m)
+    m /= norm(m)
     n = numpy.cross((d - c), v)
-    n /=  norm(m)
+    n /= norm(m)
 
     c = numpy.dot(m, n)
     s = numpy.dot(numpy.cross(n, m), v) / norm(v)
@@ -259,18 +259,18 @@ def psi(x):
     """
     from numpy import inf, log, sum, exp
 
-    coef = [-1./12., 1./120., -1./252., 1./240., -1./132.,
-            691./32760., -1./12.]
+    coef = [-1. / 12., 1. / 120., -1. / 252., 1. / 240., -1. / 132.,
+            691. / 32760., -1. / 12.]
 
     if x == 0.:
         return -inf
     elif x < 0.:
         raise ValueError('not defined for negative values')
     elif x < 6.:
-        return psi(x+1) - 1./x
+        return psi(x + 1) - 1. / x
     else:
         logx = log(x)
-        res  = logx - 0.5/x
+        res = logx - 0.5 / x
         res += sum([coef[i] * exp(-2 * (i + 1) * logx) for i in range(7)])
         return res
 
@@ -280,12 +280,12 @@ def approx_psi(x):
 
     if type(x) == numpy.ndarray:
         y = 0. * x
-        y[where(x < 0.6)] =  - EULER_MASCHERONI - 1. / clip(x[where(x < 0.6)], 1e-154, 1e308)
+        y[where(x < 0.6)] = -EULER_MASCHERONI - 1. / clip(x[where(x < 0.6)], 1e-154, 1e308)
         y[where(x >= 0.6)] = log(x[where(x >= 0.6)] - 0.5)
         return y
     else:
         if x < 0.6:
-            return - EULER_MASCHERONI - 1 / clip(x, 1e-154, 1e308)
+            return -EULER_MASCHERONI - 1 / clip(x, 1e-154, 1e308)
         else:
             return log(x - 0.5)
 
@@ -296,13 +296,13 @@ def d_approx_psi(x):
     
     if type(x) == numpy.ndarray:
         y = 0. * x
-        y[where(x < 0.6)] = 1. / clip(x[where(x < 0.6)], 1e-154, 1e308)**2
+        y[where(x < 0.6)] = 1. / clip(x[where(x < 0.6)], 1e-154, 1e308) ** 2
         y[where(x >= 0.6)] = 1. / (x[where(x >= 0.6)] - 0.5)
         return y
     else:
 
         if x < 0.6:
-            return 1 / clip(x, 1e-154, 1e308)**2
+            return 1 / clip(x, 1e-154, 1e308) ** 2
         else:
             return 1 / (x - 0.5)
     
@@ -314,7 +314,7 @@ def inv_psi(y, tol=1e-10, n_iter=100, psi=psi):
     from scipy.special import digamma
     ## initial value
 
-    if y < - 5/3. - EULER_MASCHERONI:
+    if y < -5 / 3. - EULER_MASCHERONI:
         x = -1 / (EULER_MASCHERONI + y)
     else:
         x = 0.5 + exp(y)

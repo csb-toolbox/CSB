@@ -153,6 +153,7 @@ class TestTable(test.Case):
         self.assertEqual(self.table.where('ID').between(11, 12).select('A').scalar(), 11.1)        
         self.assertEqual(self.table.where('ID').in_(11).select('A').scalar(), 11.1)
         self.assertEqual(self.table.where('ID').in_(11, 12).select('A').scalar(), 11.1)                
+
         
 @test.unit
 class TestAutoFlushStream(test.Case):

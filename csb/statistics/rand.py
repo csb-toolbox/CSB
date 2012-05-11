@@ -29,7 +29,7 @@ def truncated_gamma(shape=None, alpha=1., beta=1., x_min=None, x_max=None):
     from numpy import inf
 
     if x_min is None and x_max is None:
-        return gamma(alpha, 1/beta, shape)
+        return gamma(alpha, 1 / beta, shape)
     elif x_min is None:
         x_min = 0.
     elif x_max is None:
@@ -38,11 +38,11 @@ def truncated_gamma(shape=None, alpha=1., beta=1., x_min=None, x_max=None):
     x_min = max(0., x_min)
     x_max = min(1e300, x_max)
 
-    a = gammainc(alpha, beta*x_min)
-    b = gammainc(alpha, beta*x_max)
+    a = gammainc(alpha, beta * x_min)
+    b = gammainc(alpha, beta * x_max)
 
     return probability_transform(shape,
-                                 lambda x,alpha=alpha: gammaincinv(alpha, x),
+                                 lambda x, alpha=alpha: gammaincinv(alpha, x),
                                  a, b) / beta
 
 def truncated_normal(shape=None, mu=0., sigma=1., x_min=None, x_max=None):
@@ -69,11 +69,11 @@ def truncated_normal(shape=None, mu=0., sigma=1., x_min=None, x_max=None):
         
     x_min = max(-1e300, x_min)
     x_max = min(+1e300, x_max)
-    var   = sigma**2 + 1e-300
+    var = sigma ** 2 + 1e-300
     sigma = sqrt(2 * var)
     
-    a = erf((x_min-mu) / sigma)
-    b = erf((x_max-mu) / sigma)
+    a = erf((x_min - mu) / sigma)
+    b = erf((x_max - mu) / sigma)
 
     return probability_transform(shape, erfinv, a, b) * sigma + mu
 
@@ -110,7 +110,7 @@ def sample_sphere3d(radius=1., n_samples=1):
     from numpy.random  import random
     from numpy import arccos, transpose, cos, sin, pi, power
 
-    r = radius * power(random(n_samples), 1/3.)
+    r = radius * power(random(n_samples), 1 / 3.)
     theta = arccos(2. * (random(n_samples) - 0.5))
     phi = 2 * pi * random(n_samples)
 
@@ -148,14 +148,14 @@ def gen_inv_gaussian(a, b, p, burnin=10):
     from numpy.random import gamma
     from numpy import sqrt
 
-    s = a*0. + 1.
+    s = a * 0. + 1.
 
     if p < 0:
-        a,b = b,a
+        a, b = b, a
 
     for i in range(burnin):
 
-        l = b + 2*s
+        l = b + 2 * s
         m = sqrt(l / a)
 
         x = inv_gaussian(m, l, shape=m.shape)
@@ -174,13 +174,13 @@ def inv_gaussian(mu=1., _lambda=1., shape=None):
     from numpy import sqrt, less_equal, clip
     
     mu_2l = mu / _lambda / 2.
-    Y = mu * standard_normal(shape)**2
-    X = mu + mu_2l * (Y - sqrt(4 * _lambda * Y + Y**2))
+    Y = mu * standard_normal(shape) ** 2
+    X = mu + mu_2l * (Y - sqrt(4 * _lambda * Y + Y ** 2))
     U = random(shape)
 
     m = less_equal(U, mu / (mu + X))
 
-    return clip(m * X + (1 - m) * mu**2 / X, 1e-308, 1e308)
+    return clip(m * X + (1 - m) * mu ** 2 / X, 1e-308, 1e308)
 
 def random_rotation(A, n_iter=10, initial_values=None):
     """
@@ -216,9 +216,9 @@ def random_rotation(A, n_iter=10, initial_values=None):
         u = random(n)
 
         if kappa != 0.:
-            x = clip(1 + 2 * log(u + (1-u) * exp(-kappa)) / kappa, -1., 1.)
+            x = clip(1 + 2 * log(u + (1 - u) * exp(-kappa)) / kappa, -1., 1.)
         else:
-            x = 2*u - 1
+            x = 2 * u - 1
 
         if n == 1:
             return arccos(x)[0]
@@ -230,7 +230,7 @@ def random_rotation(A, n_iter=10, initial_values=None):
 
     if det(U) < 0:
         L[2] *= -1
-        U[:,2] *= -1
+        U[:, 2] *= -1
     if det(V) < 0:
         L[2] *= -1
         V[2] *= -1
@@ -243,15 +243,15 @@ def random_rotation(A, n_iter=10, initial_values=None):
     for _i in range(n_iter):
 
         ## sample alpha and gamma
-        phi = vonmisesvariate(0., clip(cos(beta / 2)**2 * (L[0] + L[1]), 1e-308, 1e10))
-        psi = vonmisesvariate(pi, sin(beta / 2)**2 * (L[0] - L[1]))
-        u   = randint(0,1)
+        phi = vonmisesvariate(0., clip(cos(beta / 2) ** 2 * (L[0] + L[1]), 1e-308, 1e10))
+        psi = vonmisesvariate(pi, sin(beta / 2) ** 2 * (L[0] - L[1]))
+        u = randint(0, 1)
         
         alpha = 0.5 * (phi + psi) + pi * u
         gamma = 0.5 * (phi - psi) + pi * u
 
         ## sample beta
         kappa = cos(phi) * (L[0] + L[1]) + cos(psi) * (L[0] - L[1]) + 2 * L[2]
-        beta  = sample_beta(kappa)
+        beta = sample_beta(kappa)
 
     return dot(U, dot(euler(alpha, beta, gamma), V))

@@ -40,7 +40,7 @@ def fit(X, Y):
 
     ## SVD of correlation matrix
 
-    V, _L, U = svd(dot((X-x).T, Y-y))
+    V, _L, U = svd(dot((X - x).T, Y - y))
 
     ## calculate rotation and translation
 
@@ -127,9 +127,9 @@ def probabilistic_fit(X, Y, w=None, niter=10):
     for i in range(niter):
         ## sample rotation
         if w is None:
-            A = dot(transpose(X-t), Y)
+            A = dot(transpose(X - t), Y)
         else:
-            A = dot(transpose(X-t) * w,Y)
+            A = dot(transpose(X - t) * w, Y)
 
         R = random_rotation(A)
 
@@ -278,13 +278,13 @@ def wrmsd(X, Y, w):
 
     w = w / w.sum()
 
-    X = X - dot(w,X)
-    Y = Y - dot(w,Y)
+    X = X - dot(w, X)
+    Y = Y - dot(w, Y)
 
-    R_x = sum(X.T**2 * w)
-    R_y = sum(Y.T**2 * w)
+    R_x = sum(X.T ** 2 * w)
+    R_y = sum(Y.T ** 2 * w)
 
-    L = svd(dot(transpose(Y)*w, X))[1]
+    L = svd(dot(transpose(Y) * w, X))[1]
 
     return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300))
 
@@ -304,7 +304,7 @@ def torsion_rmsd(x, y):
     phi, psi = (x - y).T
     assert len(phi) == len(psi)
     
-    r = sin(phi).sum()**2 + cos(phi).sum()**2 + sin(psi).sum()**2 + cos(psi).sum()**2
+    r = sin(phi).sum() ** 2 + cos(phi).sum() ** 2 + sin(psi).sum() ** 2 + cos(psi).sum() ** 2
     return 1 - (1.0 / len(phi)) * sqrt(r / 2.0)
 
 def _tm_d0(Lmin):
@@ -418,9 +418,9 @@ def radius_of_gyration(x, m=None):
     
     x = x - center_of_mass(x, m)
     if m is None:
-        return sqrt((x**2).sum() / len(x))
+        return sqrt((x ** 2).sum() / len(x))
     else:
-        return sqrt(dot(m,(x**2).sum(1)) / m.sum())
+        return sqrt(dot(m, (x ** 2).sum(1)) / m.sum())
 
 def second_moments(x, m=None):
     """
@@ -440,7 +440,7 @@ def second_moments(x, m=None):
     x = (x - center_of_mass(x, m)).T
     
     if m is not None:
-        return dot(x*m, x.T)
+        return dot(x * m, x.T)
     else:
         return dot(x, x.T)
 
@@ -460,10 +460,10 @@ def inertia_tensor(x, m=None):
     from numpy import dot, eye
 
     x = (x - center_of_mass(x, m)).T
-    r2= (x**2).sum(0)
+    r2 = (x ** 2).sum(0)
     
     if m is not None:
-        return eye(x.shape[0]) * dot(m,r2) - dot(x*m,x.T)
+        return eye(x.shape[0]) * dot(m, r2) - dot(x * m, x.T)
     else:
         return eye(x.shape[0]) * r2.sum() - dot(x, x.T)
 
@@ -488,7 +488,7 @@ def distance_matrix(X, Y=None):
     if Y.ndim < 2: Y = Y.reshape((1, -1))
 
     C = dot(X, transpose(Y))
-    S = add.outer(sum(X**2, 1), sum(Y**2, 1))
+    S = add.outer(sum(X ** 2, 1), sum(Y ** 2, 1))
 
     return sqrt(clip(S - 2 * C, 0., 1e300))
 

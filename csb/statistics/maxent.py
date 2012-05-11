@@ -109,7 +109,7 @@ class MaxentModel(AbstractDensity):
         @param y: y-coordinates for evaluation
         @type y: array-like
         """
-        return -self.energy(x,y)
+        return -self.energy(x, y)
     
     def set(self, coef):
         """
@@ -236,7 +236,7 @@ class MaxentModel(AbstractDensity):
         average_energy = trapezoidal_2d(f * exp(f - f_max))\
                          * exp(f_max + 2 * log(dx) - log_z)
 
-        return - average_energy + log_z
+        return -average_energy + log_z
 
     def calculate_statistics(self, data):
         """

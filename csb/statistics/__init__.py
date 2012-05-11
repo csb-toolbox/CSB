@@ -16,7 +16,7 @@ class Cumulative(object):
         from numpy import greater, reshape, concatenate
         
         c = []
-        x = reshape(x,(-1,))
+        x = reshape(x, (-1,))
 
         if nchunks is None:
 
@@ -30,12 +30,12 @@ class Cumulative(object):
             y = x[:size]
             x = x[size:]
 
-            c = concatenate((c,greater.outer(y, self.data).sum(1) / float(len(self.data))))
+            c = concatenate((c, greater.outer(y, self.data).sum(1) / float(len(self.data))))
 
         return c
     
     def cumulative_desity(self, x, nchunks=None):
-        return 1 - self.__call__(x,nchunks)
+        return 1 - self.__call__(x, nchunks)
 
 def geometric_mean(x, axis=None):
     """
@@ -69,10 +69,10 @@ def kurtosis(x, axis=None):
     from numpy import mean, std
 
     m = x.mean(axis)
-    a = mean((x-m)**4, axis)
+    a = mean((x - m) ** 4, axis)
     s = std(x, axis)
 
-    return a / s**4 - 3
+    return a / s ** 4 - 3
 
 def skewness(x, axis=None):
     """
@@ -84,9 +84,9 @@ def skewness(x, axis=None):
     from numpy import mean, std
 
     s = std(x)
-    return mean((x - x.mean())**3, axis) / s**3
+    return mean((x - x.mean()) ** 3, axis) / s ** 3
     
-def autocorrelation(x,n):
+def autocorrelation(x, n):
     """
     auto-correlation of a times series
 
@@ -97,7 +97,7 @@ def autocorrelation(x,n):
     """
     from numpy import array, mean
     x = x - x.mean()
-    return array([mean(x[i:] * x[:len(x)-i]) for i in range(n)])
+    return array([mean(x[i:] * x[:len(x) - i]) for i in range(n)])
 
 def probabilistic_and(p, axis=0):
     """
@@ -132,7 +132,7 @@ def probabilistic_xor(p, axis=0):
 
     return probabilistic_or(P, 0)
 
-def principal_coordinates(D, nd = None):
+def principal_coordinates(D, nd=None):
     """
     Reconstruction of a multidimensional configuration that
     optimally reproduces the input distance matrix.
@@ -145,13 +145,13 @@ def principal_coordinates(D, nd = None):
     
     ## calculate centered similarity matrix
     
-    B = - clip(D, 1e-150, 1e150)**2 / 2.
+    B = -clip(D, 1e-150, 1e150) ** 2 / 2.
 
     b = B.mean(0)
 
     B = B - b
     B = (B.T - b).T
-    B+= b.mean()
+    B += b.mean()
 
     ## calculate spectral decomposition
 
@@ -159,7 +159,7 @@ def principal_coordinates(D, nd = None):
     v = v.real
     U = U.real
 
-    U = take(U,argsort(v), 1)
+    U = take(U, argsort(v), 1)
     v = sort(v)
 
     U = reverse(U, 1)
@@ -167,7 +167,7 @@ def principal_coordinates(D, nd = None):
     
     if nd is None: nd = len(v)
 
-    X = U[:,:nd] * sqrt(clip(v[:nd], 0., 1e300))
+    X = U[:, :nd] * sqrt(clip(v[:nd], 0., 1e300))
 
     return X
 
@@ -205,19 +205,19 @@ def histogram2D(x, nbins=100, axes=None, nbatch=1000, normalize=True):
         lower, upper = x.min(0), x.max(0)
         axes = [linspace(lower[i], upper[i], nbins) for i in range(lower.shape[0])]
 
-    H = zeros((len(axes[0]),len(axes[1])))
+    H = zeros((len(axes[0]), len(axes[1])))
 
     while len(x):
 
         y = x[:nbatch]
         x = x[nbatch:]
 
-        I = transpose([argmin(fabs(subtract.outer(y[:,i],axes[i])),1) for i in range(2)])
+        I = transpose([argmin(fabs(subtract.outer(y[:, i], axes[i])), 1) for i in range(2)])
 
-        for i, j in I: H[i,j] += 1
+        for i, j in I: H[i, j] += 1
 
     if normalize:
-        H = H / H.sum() / (axes[0][1]-axes[0][0]) / (axes[1][1]-axes[1][0])
+        H = H / H.sum() / (axes[0][1] - axes[0][0]) / (axes[1][1] - axes[1][0])
 
     return H, axes
 
@@ -258,13 +258,13 @@ def histogram_nd(x, nbins=100, axes=None, nbatch=1000, normalize=True):
         y = x[:nbatch]
         x = x[nbatch:]
 
-        I = np.transpose([np.argmin(np.fabs(np.subtract.outer(y[:,i], axes[i])), 1)
+        I = np.transpose([np.argmin(np.fabs(np.subtract.outer(y[:, i], axes[i])), 1)
                           for i in range(d)])
-        I = np.dot(I,s)
+        I = np.dot(I, s)
         I = np.sort(I)
 
         i = list(set(I.tolist()))
-        n = np.equal.outer(I,i).sum(0)
+        n = np.equal.outer(I, i).sum(0)
         
         H[i] += n
         
@@ -291,7 +291,7 @@ def density(x, nbins, normalize=True):
     hx = 0.5 * (hx[1:] + hx[:-1])
     hy = hy.astype('d')
     if normalize:
-        hy /= (hx[1]-hx[0]) * hy.sum()
+        hy /= (hx[1] - hx[0]) * hy.sum()
 
     return hx, hy
 
@@ -304,7 +304,7 @@ def circvar(a, axis=None):
     @type axis: None or integer    
     """
     from numpy import average, cos, sin
-    return 1 - average(cos(a), axis)**2 - average(sin(a), axis)**2
+    return 1 - average(cos(a), axis) ** 2 - average(sin(a), axis) ** 2
 
 def circmean(a, axis=None):
     """
@@ -327,4 +327,4 @@ def running_average(x, w, axis=None):
     @param axis: axis along which mean is calculated
     """
     from numpy import array, mean
-    return array([mean(x[i:i+w], axis) for i in range(len(x) - w)])
+    return array([mean(x[i:i + w], axis) for i in range(len(x) - w)])

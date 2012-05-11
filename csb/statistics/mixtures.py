@@ -20,8 +20,8 @@ class GaussianMixture(object):
     n_inner = 1           ## inner loop in M-step
 
     alpha_sigma = 0.0001  ## prior for variance (inverse Gamma
-    beta_sigma  = 0.01    ## distribution)
-    min_sigma   = 0.0     ##
+    beta_sigma = 0.01    ## distribution)
+    min_sigma = 0.0     ##
 
     use_cache = True      ## cache for distance matrix
 
@@ -53,7 +53,7 @@ class GaussianMixture(object):
                         for m in range(self.M)])                    #@UnusedVariable
         self.t = zeros((self.M, self.K, 3))
         self.sigma = ones(self.K)
-        self.w = 1./self.K + zeros(self.K)
+        self.w = 1. / self.K + zeros(self.K)
 
         self.Z = None
 
@@ -86,8 +86,8 @@ class GaussianMixture(object):
         D = self.get_delta(X)
         N = self.get_dimension(D)
 
-        log_p = - 0.5 * D / clip(self.sigma**2, 1e-300, 1e300) \
-                - 0.5 * N * log(2 * pi * self.sigma**2) \
+        log_p = -0.5 * D / clip(self.sigma ** 2, 1e-300, 1e300) \
+                - 0.5 * N * log(2 * pi * self.sigma ** 2) \
                 + log(self.w)
 
         return sum(log_sum_exp(transpose(log_p)))
@@ -103,10 +103,10 @@ class GaussianMixture(object):
         n = sum(Z, 0)
         N = self.get_dimension(Z)
 
-        L = - 0.5 * sum(Z * D / clip(self.sigma**2, 1e-300, 1e300)) \
-            - 0.5 * N * sum(n * log(2 * pi * self.sigma**2)) \
+        L = -0.5 * sum(Z * D / clip(self.sigma ** 2, 1e-300, 1e300)) \
+            - 0.5 * N * sum(n * log(2 * pi * self.sigma ** 2)) \
             + sum(n * log(self.w)) \
-            - 0.5 * sum(log(self.sigma**2)) ## Jeffreys' prior
+            - 0.5 * sum(log(self.sigma ** 2)) ## Jeffreys' prior
 
         return L
 
@@ -146,7 +146,7 @@ class GaussianMixture(object):
         N = self.get_dimension(Z)
 
         alpha = N * sum(Z, 0) + self.alpha_sigma
-        beta  = sum(Z*D, 0) + self.beta_sigma
+        beta = sum(Z * D, 0) + self.beta_sigma
 
         self.sigma = sqrt(beta / alpha).clip(self.min_sigma)
 
@@ -171,10 +171,10 @@ class GaussianMixture(object):
         from numpy import clip
         from csb.math import log, log_sum_exp, exp
 
-        Z  = -0.5 * self.get_delta(X) / clip(self.sigma**2, 1e-300, 1e300)
-        Z -=  0.5 * self.get_dimension(Z) * log(self.sigma**2)
+        Z = -0.5 * self.get_delta(X) / clip(self.sigma ** 2, 1e-300, 1e300)
+        Z -= 0.5 * self.get_dimension(Z) * log(self.sigma ** 2)
         Z += log(self.w)
-        Z  = self.beta * Z.T
+        Z = self.beta * Z.T
         Z -= log_sum_exp(Z)
 
         self.del_cache()
@@ -289,12 +289,12 @@ class GaussianMixture(object):
         i = argmax(self.sigma)
 
         # duplicate column
-        Z = hstack([self.Z, self.Z[:,i].reshape((-1, 1))])
+        Z = hstack([self.Z, self.Z[:, i].reshape((-1, 1))])
 
         # mask disjoint equal sized parts
-        mask = Z[:,i].cumsum() / Z[:,i].sum() > 0.5
-        Z[mask,i] *= 0.0
-        Z[mask == False,-1] *= 0.0
+        mask = Z[:, i].cumsum() / Z[:, i].sum() > 0.5
+        Z[mask, i] *= 0.0
+        Z[mask == False, -1] *= 0.0
 
         new = type(self)(self.N, self.M, self.K + 1, self.beta)
         new.Z = Z
@@ -313,7 +313,7 @@ class GaussianMixture(object):
         m = cls(X.shape[1], X.shape[0], start)
         m.initialize(X, False)
 
-        for K in range(start+1, stop):                      #@UnusedVariable
+        for K in range(start + 1, stop):                      #@UnusedVariable
             m.em(X, n_iter, verbose, False, False, eps)
             yield m
 
@@ -353,7 +353,7 @@ class GaussianMixture(object):
                 if randomize > 1:
                     return max([cls.from_coords(X, K, n_iter, verbose, 1, eps)
                         for _ in range(randomize)],
-                        key = lambda mixture: mixture.log_likelihood_reduced(X))
+                        key=lambda mixture: mixture.log_likelihood_reduced(X))
 
                 mixture = cls(X.shape[1], X.shape[0], K)
                 mixture.initialize(X, randomize)
@@ -392,7 +392,7 @@ class GaussianMixture(object):
 
         n = self.M
         k = self.K
-        error_variance = sum(self.sigma**2 * self.w)
+        error_variance = sum(self.sigma ** 2 * self.w)
 
         return n * log(error_variance) + k * log(n)
 
@@ -449,7 +449,7 @@ class SegmentMixture(GaussianMixture):
 
         from numpy import dot, array, sum, transpose
 
-        D = array([[sum((self.Y[k] - dot(X[m] - self.t[m,k], self.R[m,k]))**2, 1)
+        D = array([[sum((self.Y[k] - dot(X[m] - self.t[m, k], self.R[m, k])) ** 2, 1)
                     for k in range(self.K)]
                    for m in range(self.M)])
 
@@ -462,7 +462,7 @@ class SegmentMixture(GaussianMixture):
         from numpy import sum, dot
 
         for k in range(self.K):
-            self.Y[k,:,:] = sum([dot(X[m] - self.t[m,k], self.R[m,k])
+            self.Y[k, :, :] = sum([dot(X[m] - self.t[m, k], self.R[m, k])
                                  for m in range(self.M)], 0) / self.M
 
     def estimate_T(self, X, Z):
@@ -473,7 +473,7 @@ class SegmentMixture(GaussianMixture):
 
         for m in range(self.M):
             for k in range(self.K):
-                self.R[m,k,:,:], self.t[m,k,:] = wfit(X[m], self.Y[k], Z[:,k])
+                self.R[m, k, :, :], self.t[m, k, :] = wfit(X[m], self.Y[k], Z[:, k])
 
     def initialize(self, X, randomize=True):
 
@@ -482,7 +482,7 @@ class SegmentMixture(GaussianMixture):
 
         if randomize:
             w = random(self.K) + (5. * self.K / self.N)
-            w/= sum(w)
+            w /= sum(w)
 
             c = repeat(arange(self.K), multinomial(self.N, w))
         else:
@@ -500,7 +500,7 @@ class SegmentMixture(GaussianMixture):
 
         from numpy import array, dot
 
-        C = [array([dot(X[m] - self.t[m,k], self.R[m,k])
+        C = [array([dot(X[m] - self.t[m, k], self.R[m, k])
                     for m in range(self.M)])
              for k in range(self.K)]
 
@@ -520,7 +520,7 @@ class SegmentMixture2(SegmentMixture):
 
         from numpy import dot, array, sum, transpose
 
-        D = array([[sum((self.Y - dot(X[m] - self.t[m,k], self.R[m,k]))**2, 1)
+        D = array([[sum((self.Y - dot(X[m] - self.t[m, k], self.R[m, k])) ** 2, 1)
                     for k in range(self.K)]
                    for m in range(self.M)])
 
@@ -532,16 +532,16 @@ class SegmentMixture2(SegmentMixture):
         """
         from numpy import sum, dot, clip, transpose
 
-        s = 1. / clip(self.sigma**2, 1e-308, 1e308)
+        s = 1. / clip(self.sigma ** 2, 1e-308, 1e308)
         n = self.M * dot(Z, s)
 
-        self.Y[:,:] = 0.
+        self.Y[:, :] = 0.
 
         for k in range(self.K):
 
-            Y = sum([dot(X[m] - self.t[m,k], self.R[m,k])
+            Y = sum([dot(X[m] - self.t[m, k], self.R[m, k])
                      for m in range(self.M)], 0)
-            self.Y += transpose(transpose(Y) * Z[:,k] * s[k])
+            self.Y += transpose(transpose(Y) * Z[:, k] * s[k])
 
         self.Y = transpose(transpose(self.Y) / n)
 
@@ -553,7 +553,7 @@ class SegmentMixture2(SegmentMixture):
 
         for m in range(self.M):
             for k in range(self.K):
-                self.R[m,k,:,:], self.t[m,k,:] = wfit(X[m], self.Y, Z[:,k])
+                self.R[m, k, :, :], self.t[m, k, :] = wfit(X[m], self.Y, Z[:, k])
 
 class ConformerMixture(GaussianMixture):
     """
@@ -565,7 +565,7 @@ class ConformerMixture(GaussianMixture):
 
         from numpy import dot, array, sum
 
-        return array([[sum((self.Y[k] - dot(X[m] - self.t[m,k], self.R[m,k]))**2)
+        return array([[sum((self.Y[k] - dot(X[m] - self.t[m, k], self.R[m, k])) ** 2)
                        for k in range(self.K)]
                       for m in range(self.M)])
 
@@ -578,8 +578,8 @@ class ConformerMixture(GaussianMixture):
         n = clip(sum(Z, 0), 1e-300, 1e300)
 
         for k in range(self.K):
-            self.Y[k,:,:] = sum([Z[m,k] * dot(X[m] - self.t[m,k], self.R[m,k])
-                                 for m in range(self.M)], 0)[:,:] / n[k]
+            self.Y[k, :, :] = sum([Z[m, k] * dot(X[m] - self.t[m, k], self.R[m, k])
+                                 for m in range(self.M)], 0)[:, :] / n[k]
 
     def estimate_T(self, X, Z):
         """
@@ -589,7 +589,7 @@ class ConformerMixture(GaussianMixture):
 
         for m in range(self.M):
             for k in range(self.K):
-                self.R[m,k,:,:], self.t[m,k,:] = fit(X[m], self.Y[k])
+                self.R[m, k, :, :], self.t[m, k, :] = fit(X[m], self.Y[k])
 
     def initialize(self, X, randomize=True):
 
@@ -599,7 +599,7 @@ class ConformerMixture(GaussianMixture):
         if randomize:
             self.Y = X[permutation(self.M)[:self.K]]
         else:
-            self.Y = X[linspace(0, self.M-1, self.K).astype(int)]
+            self.Y = X[linspace(0, self.M - 1, self.K).astype(int)]
 
         self.estimate_T(X, None)
         Z = self.e_step(X)
@@ -616,7 +616,7 @@ class ConformerMixture(GaussianMixture):
         Z = self.e_step(X)
         c = argmax(Z, 1)
 
-        C = [array([dot(X[m] - self.t[m,k], self.R[m,k])
+        C = [array([dot(X[m] - self.t[m, k], self.R[m, k])
                     for m in where(c == k)[0]])
              for k in range(self.K)]
 

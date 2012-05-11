@@ -27,11 +27,11 @@ class Envelope(object):
 
         from numpy import array, inf
 
-        self.x =  array(x)
-        self.h =  array(h)
-        self.dh =  array(dh)
+        self.x = array(x)
+        self.h = array(h)
+        self.dh = array(dh)
         self.z0 = -inf
-        self.zk =  inf
+        self.zk = inf
         
     def z(self):
         """
@@ -39,12 +39,12 @@ class Envelope(object):
         """
         from numpy import concatenate
 
-        h  = self.h
+        h = self.h
         dh = self.dh
-        x  = self.x
+        x = self.x
 
-        z = (h[1:] - h[:-1] + x[:-1]*dh[:-1] - x[1:]*dh[1:]) / \
-            (dh[:-1]-dh[1:])
+        z = (h[1:] - h[:-1] + x[:-1] * dh[:-1] - x[1:] * dh[1:]) / \
+            (dh[:-1] - dh[1:])
 
         return concatenate(([self.z0], z, [self.zk]))
 
@@ -53,7 +53,7 @@ class Envelope(object):
         Piecewise linear upper bounding function.
         """
         z = self.z()[1:-1]
-        j = (x>z).sum()
+        j = (x > z).sum()
 
         return self.h[j] + self.dh[j] * (x - self.x[j])
 
@@ -69,14 +69,14 @@ class Envelope(object):
         """
         from numpy import inf
 
-        j = (x>self.x).sum()
+        j = (x > self.x).sum()
 
         if j == 0 or j == len(self.x):
             return -inf
         else:
             j -= 1
-            return ((self.x[j+1]-x) * self.h[j] + (x-self.x[j]) * self.h[j+1]) /\
-                   (self.x[j+1] - self.x[j])
+            return ((self.x[j + 1] - x) * self.h[j] + (x - self.x[j]) * self.h[j + 1]) / \
+                   (self.x[j + 1] - self.x[j])
 
     def insert(self, x, h, dh):
         """
@@ -87,8 +87,8 @@ class Envelope(object):
 
         j = (x > self.x).sum()
 
-        self.x  = concatenate((self.x[:j], [x], self.x[j:]))
-        self.h  = concatenate((self.h[:j], [h], self.h[j:]))
+        self.x = concatenate((self.x[:j], [x], self.x[j:]))
+        self.h = concatenate((self.h[:j], [h], self.h[j:]))
         self.dh = concatenate((self.dh[:j], [dh], self.dh[j:]))
 
     def log_masses(self):
@@ -101,7 +101,7 @@ class Envelope(object):
         m = (self.dh > 0)
         q = self.x * 0.        
         putmask(q, m, z[1:])
-        putmask(q, 1-m, z[:-1])
+        putmask(q, 1 - m, z[:-1])
         
         log_M = b - log(a) + log(1 - exp(-a * (z[1:] - z[:-1]))) + \
                 self.dh * q
@@ -110,9 +110,9 @@ class Envelope(object):
 
     def masses(self):
 
-        z  = self.z()
-        b  = self.h - self.x * self.dh
-        a  = self.dh
+        z = self.z()
+        b = self.h - self.x * self.dh
+        a = self.dh
         
         return exp(b) * (exp(a * z[1:]) - exp(a * z[:-1])) / a
 
@@ -129,13 +129,13 @@ class Envelope(object):
         j = (c < u).sum()
 
         if j > 0:
-            u-= c[j-1]
-            z = self.z()[j-1]
+            u -= c[j - 1]
+            z = self.z()[j - 1]
         else:
             z = self.z0
 
         a = self.dh[j]
-        b = self.h[j] - a*self.x[j]
+        b = self.h[j] - a * self.x[j]
 
         return (log_M + log(a * u * exp(-b) + exp(a * z - log_M))) / a
 
@@ -154,8 +154,8 @@ class Gauss(LogProb):
 
     def __call__(self, x):
 
-        return -0.5*(x - self.mu)**2 / self.sigma**2, \
-               -(x - self.mu) / self.sigma**2
+        return -0.5 * (x - self.mu) ** 2 / self.sigma ** 2, \
+               - (x - self.mu) / self.sigma ** 2
 
 
 class ARS(object):
@@ -166,7 +166,7 @@ class ARS(object):
 
         self.logp = logp
 
-    def initialize(self, x, z0=-inf, zmax=inf):
+    def initialize(self, x, z0= -inf, zmax=inf):
 
         from numpy import array
 
@@ -185,10 +185,10 @@ class ARS(object):
             u = self.hull.u(x)
             w = random()
 
-            if w <= exp(l-u): return x
+            if w <= exp(l - u): return x
 
             h, dh = self.logp(x)
 
-            if w <= exp(h-u): return x
+            if w <= exp(h - u): return x
 
-            self.hull.insert(x,h,dh)
+            self.hull.insert(x, h, dh)

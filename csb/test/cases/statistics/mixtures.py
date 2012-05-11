@@ -1,10 +1,9 @@
-
-from numpy import array, argmax, linspace
+from numpy import array, linspace
 
 from csb import test
-
 from csb.bio.io.wwpdb import LegacyStructureParser
 from csb.statistics import mixtures
+
 
 @test.functional
 class TestMixtures(test.Case):
@@ -78,6 +77,7 @@ class TestMixtures(test.Case):
                 break
         else:
             self.assertTrue(False, 'mixture not reproduced with annealing')
+
 
 if __name__ == '__main__':
 
