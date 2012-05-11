@@ -95,9 +95,9 @@ def autocorrelation(x, n):
     @param n: Maximal lag for which to compute the auto-correlation
     @type n: int
     """
-    from numpy import array, mean
+    from numpy import array, mean, std
     x = x - x.mean()
-    return array([mean(x[i:] * x[:len(x) - i]) for i in range(n)])
+    return array([mean(x[i:] * x[:len(x) - i]) for i in range(n)]) / std(x)**2
 
 def probabilistic_and(p, axis=0):
     """
