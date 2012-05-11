@@ -1,12 +1,11 @@
 import csb.test as test
-
 import numpy
-import scipy.stats
 
 from csb.math import exp, log_sum_exp, log
 from csb.statistics.rand import truncated_gamma, truncated_normal, sample_from_histogram
 from csb.statistics.pdf import Normal
 from csb.statistics import density
+
 
 @test.functional
 class TestRand(test.Case):
@@ -31,8 +30,6 @@ class TestRand(test.Case):
         p = (alpha - 1) * log(x) - beta * x
         p -= log_sum_exp(p)
         p = exp(p) / (x[1]-x[0])
-
-
 
     def testTruncatedNormal(self):
 
@@ -75,3 +72,8 @@ class TestRand(test.Case):
 
         self.assertWithinDelta(mu, numpy.mean(samples), delta=0.5)
         self.assertWithinDelta(sigma, numpy.std(samples), delta=0.5)
+
+
+if __name__ == '__main__':
+
+    test.Console()

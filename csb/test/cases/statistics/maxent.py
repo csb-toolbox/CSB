@@ -23,7 +23,7 @@ class TestMaxent(test.Case):
         model.sample_weights()
         posterior = MaxentPosterior(model, data[:1000] / 180. * numpy.pi  )
 
-        x = model.get() * 1.
+        model.get() * 1.
 
         x0 = posterior.model.get().flatten()
         target = lambda w: -posterior(w, n=50)

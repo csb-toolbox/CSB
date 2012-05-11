@@ -76,7 +76,7 @@ class GaussianMLEstimator(AbstractEstimator):
         x = array(data)
         
         mu = mean(x)
-        sigma = sqrt(mean((x - mu)**2))
+        sigma = sqrt(mean((x - mu) ** 2))
         
         return Normal(mu, sigma)
 
@@ -140,7 +140,7 @@ class GenNormalBruteForceEstimator(AbstractEstimator):
     def estimate_with_fixed_beta(self, data, beta):
         
         mu = median(data)
-        v = mean((data - mu)**2)
+        v = mean((data - mu) ** 2)
         alpha = sqrt(v * exp(gammaln(1. / beta) - gammaln(3. / beta)))
     
         return mu, alpha
@@ -176,13 +176,13 @@ class DirichletEstimator(AbstractEstimator):
         log_p = numpy.mean(log(data), 0)
         
         e = numpy.mean(data, 0)
-        v = numpy.mean(data**2, 0)
-        q = (e[0] - v[0]) / (v[0] - e[0]**2)
+        v = numpy.mean(data ** 2, 0)
+        q = (e[0] - v[0]) / (v[0] - e[0] ** 2)
 
         a = e * q
         y = a * 0
         k = 0
-        while(sum(abs(y-a)) > self.tol and k < self.n_iter):
+        while(sum(abs(y - a)) > self.tol and k < self.n_iter):
             y = psi(sum(a)) + log_p
             a = numpy.array(map(inv_psi, y))
             k += 1 
@@ -402,7 +402,7 @@ class Normal(AbstractDensity):
         mu = self.mu
         sigma = self.sigma
         
-        return log(1.0 / sqrt(2 * pi * sigma**2)) - (x - mu)**2 / (2 * sigma**2)
+        return log(1.0 / sqrt(2 * pi * sigma ** 2)) - (x - mu) ** 2 / (2 * sigma ** 2)
     
     def random(self, size=None):
         
@@ -448,8 +448,8 @@ class InverseGaussian(AbstractDensity):
         mu = self.mu
         _lambda = self.llambda
 
-        y = - 0.5 * _lambda * (x - mu)**2 / (mu**2 * x)
-        z = 0.5 *  (log(_lambda) - log( 2 * pi * x**3))
+        y = -0.5 * _lambda * (x - mu) ** 2 / (mu ** 2 * x)
+        z = 0.5 * (log(_lambda) - log(2 * pi * x ** 3))
         return  z + y 
 
 
@@ -460,13 +460,13 @@ class InverseGaussian(AbstractDensity):
 
         mu_2l = mu / _lambda / 2.
         Y = numpy.random.standard_normal(size)
-        Y = mu * Y**2
-        X = mu + mu_2l * (Y - sqrt(4 * _lambda * Y + Y**2))
+        Y = mu * Y ** 2
+        X = mu + mu_2l * (Y - sqrt(4 * _lambda * Y + Y ** 2))
         U = numpy.random.random(size)
 
         m = numpy.less_equal(U, mu / (mu + X))
 
-        return m * X + (1 - m) * mu**2 / X
+        return m * X + (1 - m) * mu ** 2 / X
  
 class GeneralizedNormal(AbstractDensity):
     
@@ -563,7 +563,7 @@ class GeneralizedInverseGaussian(AbstractDensity):
 
         lz = 0.5 * p * (log(a) - log(b)) - log(2 * scipy.special.kv(p, sqrt(a * b)))
 
-        return lz + (p - 1) * log(x) - 0.5 * (a * x  + b / x)
+        return lz + (p - 1) * log(x) - 0.5 * (a * x + b / x)
         
     def random(self, size=None):
 
@@ -585,7 +585,7 @@ class GeneralizedInverseGaussian(AbstractDensity):
         for i in xrange(int(size)):
             for j in range(burnin):
 
-                l = b + 2*s
+                l = b + 2 * s
                 m = sqrt(l / a)
 
                 x = inv_gaussian(m, l, shape=m.shape)
@@ -624,12 +624,12 @@ class Gamma(AbstractDensity):
     def beta(self, value):
         self['beta'] = value
 
-    def log_prob(self,x):
+    def log_prob(self, x):
             
         a, b = self['alpha'], self['beta']
 
         return a * log(b) - gammaln(clip(a, 1e-308, 1e308)) + \
-               (a-1) * log(clip(x, 1e-308, 1e308)) - b * x
+               (a - 1) * log(clip(x, 1e-308, 1e308)) - b * x
 
     def random(self, size=None):
         return numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
@@ -663,7 +663,7 @@ class InverseGamma(AbstractDensity):
 
     def log_prob(self, x):
         a, b = self['alpha'], self['beta']
-        return a * log(b) - gammaln(a) - (a+1) * log(x) - b / x
+        return a * log(b) - gammaln(a) - (a + 1) * log(x) - b / x
 
     def random(self, size=None):
         return 1. / numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
@@ -686,9 +686,9 @@ class MultivariateGaussian(Normal):
         S = self.sigma
         D = len(mu)
         q = self.__q(x)
-        return - 0.5 * (D * log(2 * pi) + log(abs(det(S)))) - 0.5 * q**2
+        return -0.5 * (D * log(2 * pi) + log(abs(det(S)))) - 0.5 * q ** 2
 
-    def __q(self,x):
+    def __q(self, x):
         from numpy import sum, dot, reshape
         from numpy.linalg import inv
 
@@ -710,13 +710,13 @@ class MultivariateGaussian(Normal):
 
         dims2 = [i for i in range(self['mu'].shape[0]) if not i in dims]
 
-        mu1 = take(self['mu'],dims)
-        mu2 = take(self['mu'],dims2)
+        mu1 = take(self['mu'], dims)
+        mu2 = take(self['mu'], dims2)
 
         # x1 = take(x, dims)
         x2 = take(x, dims2)
 
-        A = take(take(self['Sigma'], dims, 0), dims,1)
+        A = take(take(self['Sigma'], dims, 0), dims, 1)
         B = take(take(self['Sigma'], dims2, 0), dims2, 1)
         C = take(take(self['Sigma'], dims, 0), dims2, 1)
 
@@ -749,5 +749,5 @@ class Dirichlet(AbstractDensity):
         return gammaln(sum(alpha)) - sum(gammaln(alpha)) \
               + numpy.dot((alpha - 1).T, log(x).T) 
         
-    def random(self, size = None):
+    def random(self, size=None):
         return numpy.random.mtrand.dirichlet(self.alpha, size)

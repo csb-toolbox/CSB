@@ -7,10 +7,13 @@ files, each superposed on different components.
 
 import sys
 import numpy
+
 import csb.apps
 import csb.bio.structure
+
 from csb.bio.io.wwpdb import LegacyStructureParser
 from csb.statistics import mixtures
+
 
 class ExitCodes(csb.apps.ExitCodes):
     IO_ERROR = 2

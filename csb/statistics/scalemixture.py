@@ -41,7 +41,7 @@ class ScaleMixture(AbstractDensity):
     L{InvGammaPrior} leads to a K-Distribution as posterior.
     """
 
-    def __init__(self, scales=numpy.array([1.,1.]), prior=None, d=3):
+    def __init__(self, scales=numpy.array([1., 1.]), prior=None, d=3):
         
         super(ScaleMixture, self).__init__()
 
@@ -61,7 +61,7 @@ class ScaleMixture(AbstractDensity):
     @scales.setter
     def scales(self, value):
         if not isinstance(value, basestring) and \
-           isinstance(value,(numpy.ndarray, list, tuple)):
+           isinstance(value, (numpy.ndarray, list, tuple)):
             self['scales'] = numpy.array(value)
         else:
             raise ValueError("numpy array expected")
@@ -83,11 +83,11 @@ class ScaleMixture(AbstractDensity):
         dim = self._d
         s = self.scales
         
-        log_p = numpy.squeeze(-numpy.multiply.outer(x*x, 0.5*s)) + \
-                numpy.squeeze(dim * 0.5  * (log(s)-log(2 * numpy.pi)))
+        log_p = numpy.squeeze(-numpy.multiply.outer(x * x, 0.5 * s)) + \
+                numpy.squeeze(dim * 0.5 * (log(s) - log(2 * numpy.pi)))
 
         if self._prior is not None:
-            log_p +=  numpy.squeeze(self._prior.log_prob(s)) 
+            log_p += numpy.squeeze(self._prior.log_prob(s)) 
         return log_sum_exp(log_p.T, 0)
 
 
@@ -100,8 +100,8 @@ class ScaleMixture(AbstractDensity):
         
         else:
             #n = s.shape[0]
-            nrv = numpy.random.normal(size = shape)
-            indices = numpy.random.randint(len(s), size = shape)
+            nrv = numpy.random.normal(size=shape)
+            indices = numpy.random.randint(len(s), size=shape)
              
             return s[indices] * nrv 
 
@@ -123,8 +123,8 @@ class ARSPosteriorAlpha(csb.statistics.ars.LogProb):
 
         from scipy.special import gammaln, psi
 
-        return self.a * x -\
-               self.n * gammaln(numpy.clip(x, 1e-308, 1e308)) +\
+        return self.a * x - \
+               self.n * gammaln(numpy.clip(x, 1e-308, 1e308)) + \
                self.b * log(x), \
                self.a - self.n * psi(x) + self.b / x
 
@@ -142,7 +142,7 @@ class ARSPosteriorAlpha(csb.statistics.ars.LogProb):
         else:
             alpha = 1.
 
-        z = tol+1.
+        z = tol + 1.
 
         while abs(z) > tol:
 
@@ -150,10 +150,10 @@ class ARSPosteriorAlpha(csb.statistics.ars.LogProb):
                 b / numpy.clip(alpha, 1e-300, 1e300) - a
 
             alpha -= z / (n * d_approx_psi(alpha) - b
-                          / (alpha**2 + 1e-300))
+                          / (alpha ** 2 + 1e-300))
             alpha = numpy.clip(alpha, 1e-100, 1e300)
 
-        return numpy.clip(alpha - 1/(n + 1e-300), 1e-100, 1e300), \
+        return numpy.clip(alpha - 1 / (n + 1e-300), 1e-100, 1e300), \
                alpha + 1 / (n + 1e-300), alpha
 
 
@@ -179,23 +179,23 @@ class GammaPosteriorSampler(AbstractEstimator):
 
         a = numpy.mean(data)
         b = exp(numpy.mean(log(data)))
-        v = numpy.std(data)**2
+        v = numpy.std(data) ** 2
         n = len(data)
 
         samples = []
-        beta  = a / v
+        beta = a / v
         alpha = beta * a
 
         for i in range(self.n_samples):
 
             ## sample beta from Gamma distribution
-            beta = numpy.random.gamma(n*alpha+context._hyper_beta.alpha,
+            beta = numpy.random.gamma(n * alpha + context._hyper_beta.alpha,
                                       1 / (n * a + context._hyper_beta.beta))
 
             ## sample alpha with ARS
             logp = ARSPosteriorAlpha(n * log(beta * b)\
                                      - context.hyper_alpha.beta,
-                                     context.hyper_alpha.alpha-1., n)
+                                     context.hyper_alpha.alpha - 1., n)
             ars = csb.statistics.ars.ARS(logp)
             ars.initialize(logp.initial_values()[:2], z0=0.)
             alpha = ars.sample()
@@ -230,27 +230,27 @@ class InvGammaPosteriorSampler(AbstractEstimator):
 
         ## sufficient statistics
         
-        h = harmonic_mean(numpy.clip(data,1e-308,1e308))
-        g = geometric_mean(numpy.clip(data,1e-308,1e308))
+        h = harmonic_mean(numpy.clip(data, 1e-308, 1e308))
+        g = geometric_mean(numpy.clip(data, 1e-308, 1e308))
 
         n = len(data) 
 
         samples = []
 
         a = numpy.mean(1 / data)
-        v = numpy.std(1 / data)**2
+        v = numpy.std(1 / data) ** 2
 
-        beta  = a / v
+        beta = a / v
         alpha = beta * a
 
         for i in range(self.n_samples):
 
             ## sample alpha with ARS
 
-            logp = ARSPosteriorAlpha(n*(log(beta)-log(g))-context.hyper_alpha.beta,
-                                     context.hyper_alpha.alpha-1., n)
+            logp = ARSPosteriorAlpha(n * (log(beta) - log(g)) - context.hyper_alpha.beta,
+                                     context.hyper_alpha.alpha - 1., n)
             ars = csb.statistics.ars.ARS(logp)
-            ars.initialize(logp.initial_values()[:2],z0=0.)
+            ars.initialize(logp.initial_values()[:2], z0=0.)
 
             alpha = ars.sample()
 
@@ -262,7 +262,7 @@ class InvGammaPosteriorSampler(AbstractEstimator):
             beta = numpy.random.gamma(n * alpha + context.hyper_beta.alpha, \
                                       1 / (n / h + context.hyper_beta.beta))
 
-            samples.append((alpha,beta))
+            samples.append((alpha, beta))
 
         pdf.alpha, pdf.beta = samples[-1]
         return pdf
@@ -281,9 +281,9 @@ class GammaScaleSampler(AbstractEstimator):
         d = context._d
 
         a = alpha + 0.5 * d
-        b = beta  + 0.5 * data**2
+        b = beta + 0.5 * data ** 2
 
-        s = numpy.clip(numpy.random.gamma(a, 1./b), 1e-20, 1e10)
+        s = numpy.clip(numpy.random.gamma(a, 1. / b), 1e-20, 1e10)
         pdf.scales = s
 
         context.prior.estimate(s)
@@ -304,8 +304,8 @@ class InvGammaScaleSampler(AbstractEstimator):
         #d = context._d
 
         p = -alpha + 1.5 
-        b = 2*  beta 
-        a = 1e-5 + data**2 
+        b = 2 * beta 
+        a = 1e-5 + data ** 2 
 
         s = csb.statistics.rand.gen_inv_gaussian(a, b, p)
         s = numpy.clip(s, 1e-300, 1e300)
@@ -325,7 +325,7 @@ class GammaPrior(Gamma, ScaleMixturePrior):
     def __init__(self, alpha=1., beta=1., hyper_alpha=(4., 1.),
                  hyper_beta=(2., 1.)):
 
-        super(GammaPrior, self).__init__(alpha,beta)
+        super(GammaPrior, self).__init__(alpha, beta)
 
         self._hyper_alpha = Gamma(hyper_alpha[0], hyper_alpha[0])
         self._hyper_beta = Gamma(hyper_alpha[0], hyper_alpha[0])
@@ -373,9 +373,9 @@ class InvGammaPrior(InverseGamma, ScaleMixturePrior):
     """
 
     def __init__(self, alpha=1., beta=1., hyper_alpha=(4., 1.),
-                 hyper_beta=(2.,1.)):
+                 hyper_beta=(2., 1.)):
 
-        super(InvGammaPrior, self).__init__(alpha,beta)
+        super(InvGammaPrior, self).__init__(alpha, beta)
 
         self._hyper_alpha = Gamma(hyper_alpha[0], hyper_alpha[0])
         self._hyper_beta = Gamma(hyper_alpha[0], hyper_alpha[0])

@@ -17,13 +17,13 @@ def log_trapezoidal(log_y, x=None):
     return log_sum_exp(log_y_add + log_x_diff) - log(2)
 
 def log_midpoint_rule_2d(log_f, x, y):
-    x_delta = x[:-1]-x[1:]
-    y_delta = y[:-1]-y[1:]
+    x_delta = x[:-1] - x[1:]
+    y_delta = y[:-1] - y[1:]
 
-    z = array([log_f[:,1:] ,log_f[:,:-1]])
+    z = array([log_f[:, 1:] , log_f[:, :-1]])
 
-    y_hat = log_sum_exp(z.reshape((2,-1)),0 )
-    y_hat = reshape(y_hat, (len(x),len(y)-1))
+    y_hat = log_sum_exp(z.reshape((2, -1)), 0)
+    y_hat = reshape(y_hat, (len(x), len(y) - 1))
     y_hat += log(y_delta) - log(2)
 
     return log_sum_exp(y_hat + log(x_delta)) - log(2.)
@@ -33,7 +33,7 @@ def log_trapezoidal_2d(log_f, x=None, y=None):
     Compute the logarithm of the 1D integral of x, using trepezoidal approximation.
     Assumes x and y is monotonically increasing.
     """
-    int_y = array([log_trapezoidal(log_f[i,:], y) for i in range(len(y))])
+    int_y = array([log_trapezoidal(log_f[i, :], y) for i in range(len(y))])
     
     return log_trapezoidal(int_y, x)  
     

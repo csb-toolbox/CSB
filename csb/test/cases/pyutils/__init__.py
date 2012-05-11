@@ -201,7 +201,7 @@ class TestCollectionContainer(test.Case):
         self.assertEqual(self.test[self.test.start_index], self.items[0])        
         self.assertEqual(self.test[self.test.last_index], self.items[-1])
         self.assertEqual(self.test[-1], self.items[-1])
-        self.assertEqual(self.test[-1 : -2], self.items[-1 : -2])                            
+        self.assertEqual(self.test[-1 :-2], self.items[-1 :-2])                            
         
         def get(i):
             return self.test[i]
