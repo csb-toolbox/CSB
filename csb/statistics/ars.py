@@ -14,7 +14,7 @@ will generally depend on their accuracy.
 
 """
 
-from csb.math import exp, log
+from numpy import exp, log
 
 class Envelope(object):
     """
@@ -119,25 +119,26 @@ class Envelope(object):
     def sample(self):
 
         from numpy.random import random
-        from numpy import add
+        from numpy import add, exp, log
         from csb.math import log_sum_exp
         
         log_m = self.log_masses()
         log_M = log_sum_exp(log_m)
         c = add.accumulate(exp(log_m - log_M))
         u = random()
-        j = (c < u).sum()
-
-        if j > 0:
-            u -= c[j - 1]
-            z = self.z()[j - 1]
-        else:
-            z = self.z0
+        j = (u > c).sum()
 
         a = self.dh[j]
-        b = self.h[j] - a * self.x[j]
+        z = self.z()
+        
+        xmin, xmax = z[j],z[j+1]
 
-        return (log_M + log(a * u * exp(-b) + exp(a * z - log_M))) / a
+        u = random()
+
+        if a > 0:
+            return xmax + log(u + (1-u)*exp(-a*(xmax-xmin))) / a
+        else:
+            return xmin + log(u + (1-u)*exp(a*(xmax-xmin))) / a
 
 
 class LogProb(object):

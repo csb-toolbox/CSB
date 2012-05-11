@@ -41,7 +41,7 @@ class ScaleMixture(AbstractDensity):
     L{InvGammaPrior} leads to a K-Distribution as posterior.
     """
 
-    def __init__(self, scales=numpy.array([1., 1.]), prior=None, d=3):
+    def __init__(self, scales = numpy.array([1., 1.]), prior = None, d = 3):
         
         super(ScaleMixture, self).__init__()
 
@@ -173,6 +173,10 @@ class GammaPosteriorSampler(AbstractEstimator):
         The posterior of alpha can not be expressed analytically and is
         aproximated using adaptive rejection sampling.
         """
+        from csb.statistics.ars import ARS
+        from csb.math import approx_psi as psi
+        from csb.math import d_approx_psi as dpsi
+  
         pdf = GammaPrior()
 
         ## sufficient statistics
@@ -182,9 +186,9 @@ class GammaPosteriorSampler(AbstractEstimator):
         v = numpy.std(data) ** 2
         n = len(data)
 
-        samples = []
         beta = a / v
         alpha = beta * a
+        samples = []
 
         for i in range(self.n_samples):
 
@@ -226,6 +230,9 @@ class InvGammaPosteriorSampler(AbstractEstimator):
         The posterior of alpha can not be expressed analytically and is
         aproximated using adaptive rejection sampling. 
         """
+        from csb.statistics.ars import ARS
+        from csb.math import approx_psi as psi
+        from csb.math import d_approx_psi as dpsi
         pdf = GammaPrior()
 
         ## sufficient statistics
@@ -252,10 +259,11 @@ class InvGammaPosteriorSampler(AbstractEstimator):
             ars = csb.statistics.ars.ARS(logp)
             ars.initialize(logp.initial_values()[:2], z0=0.)
 
-            alpha = ars.sample()
+            alpha = numpy.abs(ars.sample())
 
             if alpha is None:
                 raise ValueError("Sampling failed")
+
 
             ## sample beta from Gamma distribution
 
@@ -304,8 +312,8 @@ class InvGammaScaleSampler(AbstractEstimator):
         #d = context._d
 
         p = -alpha + 1.5 
-        b = 2 * beta 
-        a = 1e-5 + data ** 2 
+        b = 2 *  beta 
+        a = 1e-5 + data**2 
 
         s = csb.statistics.rand.gen_inv_gaussian(a, b, p)
         s = numpy.clip(s, 1e-300, 1e300)
@@ -328,7 +336,7 @@ class GammaPrior(Gamma, ScaleMixturePrior):
         super(GammaPrior, self).__init__(alpha, beta)
 
         self._hyper_alpha = Gamma(hyper_alpha[0], hyper_alpha[0])
-        self._hyper_beta = Gamma(hyper_alpha[0], hyper_alpha[0])
+        self._hyper_beta = Gamma(hyper_beta[0], hyper_beta[0])
         self.estimator = GammaPosteriorSampler()
 
     @property
@@ -377,8 +385,8 @@ class InvGammaPrior(InverseGamma, ScaleMixturePrior):
 
         super(InvGammaPrior, self).__init__(alpha, beta)
 
-        self._hyper_alpha = Gamma(hyper_alpha[0], hyper_alpha[0])
-        self._hyper_beta = Gamma(hyper_alpha[0], hyper_alpha[0])
+        self._hyper_alpha = Gamma(hyper_alpha[0],hyper_alpha[0])
+        self._hyper_beta = Gamma(hyper_beta[0],hyper_beta[0])
         self.estimator = InvGammaPosteriorSampler()
 
     @property
