@@ -239,6 +239,13 @@ Options:
         """
         Build documentation in the output folder.        
         """
+        self.log('\n# Generating API documentation...')
+        try:
+            import epydoc.cli
+        except ImportError:
+            self.log('\n  Skipped: epydoc is missing')
+            return
+                
         self.log('\n# Emulating ARGV for the Doc Builder...', level=2)        
         argv = sys.argv    
         sys.argv = ['epydoc', '--html', '-o', self._apidocs, '--name', ROOT.upper(), 
@@ -247,10 +254,7 @@ Options:
         
         if self._verbosity > 0:                
             sys.argv.append('-v')
-            
-        import epydoc.cli
-
-        self.log('\n# Running the Doc Console...')
+        
         try:
             epydoc.cli.cli()
             sys.exit(0)
@@ -436,8 +440,8 @@ class RevisionHandler(object):
                say URL, author, etc. RevisionInfo would also has to be extended
         """
         cmd = '{0.svn} info {0.path}'.format(self)
-        revision = None
-        maxrevision = None
+        revision = 0
+        maxrevision = 0
         
         for line in self._run(cmd):
             if line.startswith('Revision:'):

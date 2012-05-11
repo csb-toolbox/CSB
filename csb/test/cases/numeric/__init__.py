@@ -29,7 +29,7 @@ class TestNumeric(test.Case):
         yy = np.linspace(-10., 10, 500)
 
         X, Y = np.meshgrid(xx, yy)
-        x = np.array(zip(np.ravel(X), np.ravel(Y)))        
+        x = np.array(list(zip(np.ravel(X), np.ravel(Y))))        
 
         # mean = np.zeros((2,))
         cov = np.eye(2)
@@ -53,7 +53,7 @@ class TestNumeric(test.Case):
         yy = np.linspace(-10., 10, 500)
 
         X, Y = np.meshgrid(xx, yy)
-        x = np.array(zip(np.ravel(X), np.ravel(Y)))        
+        x = np.array(list(zip(np.ravel(X), np.ravel(Y))))        
 
         # mean = np.zeros((2,))
         cov = np.eye(2)
@@ -76,7 +76,7 @@ class TestNumeric(test.Case):
         yy = np.linspace(-10., 10, 500)
 
         X, Y = np.meshgrid(xx, yy)
-        x = np.array(zip(np.ravel(X), np.ravel(Y)))        
+        x = np.array(list(zip(np.ravel(X), np.ravel(Y))))        
 
         # mean = np.zeros((2,))
         cov = np.eye(2)

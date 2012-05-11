@@ -43,7 +43,7 @@ class TestMath(test.Case):
         from csb.math import polar, from_polar
 
         rand = np.random.random((10000, 3))
-        result = np.array(map(polar, map(from_polar, rand)))
+        result = np.array(list(map(polar, map(from_polar, rand))))
 
         eps = 1e-8
         self.assertTrue((np.abs(rand - result) < eps).all())
@@ -54,7 +54,7 @@ class TestMath(test.Case):
         from csb.math import polar, from_polar
 
         rand = np.random.random((10000, 3))
-        result = np.array(map(from_polar, map(polar, rand)))
+        result = np.array(list(map(from_polar, map(polar, rand))))
 
         eps = 1e-8
         self.assertTrue((np.abs(rand - result) < eps).all())

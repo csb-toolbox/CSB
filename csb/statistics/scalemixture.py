@@ -1,6 +1,7 @@
 
 import numpy.random
 
+import csb.pyutils
 import csb.statistics.ars
 import csb.statistics.rand
 
@@ -60,7 +61,7 @@ class ScaleMixture(AbstractDensity):
 
     @scales.setter
     def scales(self, value):
-        if not isinstance(value, basestring) and \
+        if not isinstance(value, csb.pyutils.string) and \
            isinstance(value, (numpy.ndarray, list, tuple)):
             self['scales'] = numpy.array(value)
         else:

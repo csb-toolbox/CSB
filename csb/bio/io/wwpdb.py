@@ -5,7 +5,6 @@ PDB structure parsers.
 import re
 import os
 import numpy
-import urllib2
 import multiprocessing
 
 import csb.bio.structure
@@ -466,7 +465,7 @@ class AbstractStructureParser(object):
             elif line.startswith('  BIOMT'):
                 num = int(line[8:12])
                 vec = line[12:].split()
-                vec = map(float, vec)
+                vec = list(map(float, vec))
                 biomt[current].setdefault(chains, dict()).setdefault(num, []).extend(vec)
 
         if number not in biomt or len(biomt[number]) == 0:
@@ -477,7 +476,7 @@ class AbstractStructureParser(object):
 
         newchainiditer = iter('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
 
-        for chains, matrices in biomt[number].iteritems():
+        for chains, matrices in biomt[number].items():
             for num in matrices:
                 mat = numpy.array(matrices[num][0:12]).reshape((3,4))
                 R, t = mat[:3,:3], mat[:3,3]
@@ -490,7 +489,7 @@ class AbstractStructureParser(object):
                     if single:
                         if len(structure.chains) == 62:
                             raise ValueError('too many chains for single=True')
-                        copy.id = newchainiditer.next()
+                        copy.id = next(newchainiditer)
                     else:
                         copy.id = '%s%d' % (chain, num)
                     structure.chains.append(copy)
@@ -518,7 +517,7 @@ class AbstractStructureParser(object):
         
         while True:
             try:
-                line = stream.next()
+                line = next(stream)
             except StopIteration:
                 raise ValueError('No such model {0} in the structure.'.format(model))
             
@@ -545,7 +544,7 @@ class AbstractStructureParser(object):
         while True:
 
             try:
-                line = self._stream.next()
+                line = next(self._stream)
             except StopIteration:
                 break
             
@@ -749,7 +748,7 @@ class AbstractStructureParser(object):
         
         while True:
             try:
-                line = self._stream.next()
+                line = next(self._stream)
             except StopIteration:
                 break
 
@@ -856,7 +855,7 @@ class RegularStructureParser(AbstractStructureParser):
         
         self._stream.seek(0)
 
-        header = self._stream.next()
+        header = next(self._stream)
         if not header.startswith('HEADER'):
             raise PDBParseError('Does not look like a regular PDB file.')
 
@@ -865,7 +864,7 @@ class RegularStructureParser(AbstractStructureParser):
         while True:
 
             try:
-                line = self._stream.next()
+                line = next(self._stream)
             except StopIteration:
                 break
 
@@ -875,22 +874,22 @@ class RegularStructureParser(AbstractStructureParser):
                     chain_name = ''
                     chains = ''
                     while line.startswith('COMPND'):
-                        line = self._stream.next()
+                        line = next(self._stream)
                         if line.split()[2].startswith('MOLECULE:'):
                             chain_name += line[20:].strip()
                             while not chain_name.endswith(';'):
-                                line = self._stream.next()
+                                line = next(self._stream)
                                 if not line.startswith('COMPND'):
                                         break
                                 chain_name += ' ' + line[11:].strip()
                         else:
                             while not line.split()[2].startswith('CHAIN:'):
-                                line = self._stream.next()
+                                line = next(self._stream)
                                 if not line.startswith('COMPND'):
                                     raise csb.bio.structure.Broken3DStructureError('COMPND section is not parsable: missing chain identifier.')
                             chains = line[17:].strip()
                             while not chains.endswith(';'):
-                                line = self._stream.next()
+                                line = next(self._stream)
                                 if not line.startswith('COMPND'):
                                     break
                                 chains += ', ' + line[11:].strip()
@@ -974,7 +973,7 @@ class LegacyStructureParser(AbstractStructureParser):
         in_atom = False
         chains = csb.pyutils.OrderedDict()
 
-        header = self._stream.next()
+        header = next(self._stream)
         if header.startswith('HEADER'):
             structure = csb.bio.structure.Structure(header.split()[-1])
         else:
@@ -986,7 +985,7 @@ class LegacyStructureParser(AbstractStructureParser):
         while True:
 
             try:
-                line = self._stream.next()
+                line = next(self._stream)
             except StopIteration:
                 break
 
@@ -1113,7 +1112,7 @@ class FileSystemStructureProvider(StructureProvider):
         self._paths = csb.pyutils.OrderedDict()
         
         if paths is not None:
-            if isinstance(paths, basestring):
+            if isinstance(paths, csb.pyutils.string):
                 paths = [paths]
                             
             for path in paths:
@@ -1216,7 +1215,7 @@ class RemoteStructureProvider(StructureProvider):
     def _find(self, id):
         
         try:
-            return urllib2.urlopen(self.prefix + id + self.suffix)
+            return csb.io.urllib.urlopen(self.prefix + id + self.suffix)
         except:
             raise StructureNotFoundError(id)
         
@@ -1226,7 +1225,7 @@ class RemoteStructureProvider(StructureProvider):
         
         try:
             tmp = csb.io.TempFile(dispose=False)
-            tmp.write(stream.read())
+            tmp.write(stream.read().decode())
             tmp.flush()
             return tmp.name
                 
@@ -1241,7 +1240,7 @@ class RemoteStructureProvider(StructureProvider):
         
         try:
             with csb.io.TempFile() as tmp:
-                tmp.write(stream.read())
+                tmp.write(stream.read().decode())
                 tmp.flush()
                 return StructureParser(tmp.name).parse_structure(model=model)
         finally:

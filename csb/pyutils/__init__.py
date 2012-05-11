@@ -18,6 +18,11 @@ import threading
 
 from abc import ABCMeta, abstractproperty, abstractmethod
 
+try:
+    string = basestring
+except NameError:
+    string = str
+  
 
 class Shell(object):
     
@@ -38,7 +43,7 @@ class Shell(object):
         @raise TimeoutError: when the timeout is expired
         """
         
-        if isinstance(cmd, basestring):
+        if isinstance(cmd, string):
             cmd = shlex.split(cmd)
         
         try:
@@ -68,7 +73,7 @@ class Shell(object):
             else:
                 raise
                 
-        return ShellInfo(code, stdout or '', stderr or '', cmd)
+        return ShellInfo(code, stdout.decode() or '', stderr.decode() or '', cmd)
 
     @staticmethod
     def runstrict(cmd, timeout=None):
@@ -124,7 +129,7 @@ class InvalidCommandError(ValueError):
     def __init__(self, message, cmd):
         
         self.program = cmd[0]
-        if hasattr(cmd, '__iter__'):
+        if iterable(cmd):
             cmd = ' '.join(cmd)
         self.cmd = cmd
         self.msg = message
@@ -253,6 +258,19 @@ class Stack(list):
         Return True if the stack is empty
         """
         return len(self) == 0
+
+def iterable(obj):
+    """
+    Return True if C{obj} is a collection or iterator, but not string.
+    This is guaranteed to work in both python 2 and 3.
+    
+    @rtype: bool
+    """
+    if hasattr(obj, '__iter__'):
+        if not isinstance(obj, string):
+            return True
+        
+    return False  
         
 def metaclass(meta, base=object):
     """
@@ -271,13 +289,13 @@ def deepcopy(obj, recursion=100000):
     @param recursion: maximum recursion limit
     @type recursion: int
     """
-    import cPickle
+    from csb.io import Pickle
     
     current = sys.getrecursionlimit()
     sys.setrecursionlimit(recursion)
     
-    tmp = cPickle.dumps(obj, cPickle.HIGHEST_PROTOCOL)
-    copy = cPickle.loads(tmp)
+    tmp = Pickle.dumps(obj, Pickle.HIGHEST_PROTOCOL)
+    copy = Pickle.loads(tmp)
     
     sys.setrecursionlimit(current)
     return copy    
@@ -314,12 +332,19 @@ class EnumItem(object):
         return float(self.__value)
     def __hash__(self):
         return hash(self.__value)
-    def __cmp__(self, other):
+    def __lt__(self, other):
         if isinstance(other, EnumItem):
-            return cmp(self.__value, other.value)
+            return self.__value < other.value
         else:
-            return cmp(self.__value, other)
-
+            return self.__value < other
+    def __eq__(self, other):
+        if isinstance(other, EnumItem):
+            return self.__value == other.value
+        else:
+            return self.__value == other
+    def __ne__(self, other):
+        return not (self == other)
+                
     @property
     def name(self):
         return self.__name
@@ -363,7 +388,7 @@ class EnumMeta(type):
                 enumdict['_names'][attribute] = attribute
                 enumdict['_namesci'][attribute.lower()] = attribute
                 enumdict['_values'][value] = attribute
-                if isinstance(value, basestring):
+                if isinstance(value, string):
                     enumdict['_valuesci'][value.lower()] = attribute   
                 
                 enumdict[attribute] = EnumItem(attribute, value, None)      
@@ -500,7 +525,7 @@ class Enum(object):
         @raise EnumValueError: when such value is not found in enumclass
         """
 
-        if isinstance(value, basestring) and ignore_case:
+        if isinstance(value, string) and ignore_case:
             values = enumclass._valuesci
             value = value.lower()
         else:
@@ -529,7 +554,7 @@ class Enum(object):
         @raise EnumValueError: when such name is not found in enumclass's members  
         """
 
-        if isinstance(name, basestring) and ignore_case:
+        if isinstance(name, string) and ignore_case:
             names = enumclass._namesci
             name = name.lower()
         else:
@@ -772,7 +797,7 @@ class BaseCollectionContainer(AbstractIndexer):
             self._update_items(items)
 
     def __fix(self, i):
-        if i >= 0:
+        if i is not None and i >= 0:
             if i < self._start:
                 return None
             return i - self._start
@@ -1000,9 +1025,9 @@ except ImportError:
             if not self:
                 raise KeyError('dictionary is empty')
             if last:
-                key = reversed(self).next()
+                key = next(reversed(self))
             else:
-                key = iter(self).next()
+                key = next(iter(self))
             value = self.pop(key)
             return key, value
     

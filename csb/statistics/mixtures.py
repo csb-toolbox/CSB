@@ -372,7 +372,7 @@ class GaussianMixture(object):
             raise TypeError("K must be integer or sequence of 2 integers")
 
         mixture_it = cls.series(X, n_iter, verbose, start, stop, eps)
-        mixture = mixture_it.next()
+        mixture = next(mixture_it)
 
         # increase K as long as next candidate looks better
         for candidate in mixture_it:
@@ -422,7 +422,7 @@ class GaussianMixture(object):
         assert len(self_w) == len(other_w)
 
         # position numbers might be permutated, so count equal pairs
-        ww = zip(self_w, other_w)
+        ww = tuple(zip(self_w, other_w))
         same = sum(sorted(ww.count(i) for i in set(ww))[-K:])
 
         return float(same) / len(ww)

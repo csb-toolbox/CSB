@@ -2,8 +2,6 @@
 FASTA format sequence parsers.
 """
 
-import cStringIO
-
 import csb.io
 import csb.pyutils
 
@@ -68,7 +66,7 @@ class BaseSequenceParser(object):
         @rtype: L{SequenceCollection}
         """
 
-        stream = cStringIO.StringIO()
+        stream = csb.io.MemoryStream()
         stream.write(fasta_string)
 
         return self.parse_file(stream)
@@ -83,7 +81,7 @@ class BaseSequenceParser(object):
         @return: a list of L{Sequence}s
         @rtype: L{SequenceCollection}
         """
-        if isinstance(fasta_file, basestring):
+        if isinstance(fasta_file, csb.pyutils.string):
             stream = open(fasta_file)
         else:
             stream = fasta_file
@@ -106,7 +104,7 @@ class BaseSequenceParser(object):
         @return: efficient cursor over all L{Sequence}s (parse on demand)
         @rtype: iterator
         """
-        if isinstance(fasta_file, basestring):
+        if isinstance(fasta_file, csb.pyutils.string):
             stream = open(fasta_file)
         else:
             stream = fasta_file
@@ -198,7 +196,10 @@ class A3MSequenceIterator(object):
         return column  
     
     def __iter__(self):
-        return self    
+        return self
+    
+    def __next__(self):
+        return self.next()    
     
 class SequenceAlignmentReader(object):
     """

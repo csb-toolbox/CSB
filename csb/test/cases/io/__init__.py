@@ -3,7 +3,6 @@
 """
 
 import os
-import cStringIO
 import numpy
 import types
 import csb.io
@@ -175,6 +174,36 @@ class TestAutoFlushStream(test.Case):
 
 
 @test.unit
+class TestMemoryStream(test.Case):
+    
+    def setUp(self):
+        
+        super(TestMemoryStream, self).setUp()
+        self.stream = csb.io.MemoryStream()
+        
+    def testWrite(self):
+        
+        self.stream.write('tesT')
+        self.assertEqual(self.stream.getvalue(), 'tesT')
+
+    def testFlush(self):
+        
+        self.stream.write('tesT')
+        self.stream.flush()
+        self.assertEqual(self.stream.getvalue(), 'tesT')
+        
+    def testClose(self):
+        self.stream.close()
+        self.assertTrue(self.stream.closed)
+                
+    def testContextManager(self):
+        with csb.io.MemoryStream() as stream:
+            stream.write('tesT')
+            stream.flush()
+            self.assertEqual(stream.getvalue(), 'tesT')        
+            
+
+@test.unit
 class TestTempFile(test.Case):                           
             
     def testCallForwarding(self):
@@ -221,7 +250,7 @@ class TestEntryReader(test.Case):
         
         super(TestEntryReader, self).setUp()
         
-        self.stream = cStringIO.StringIO()
+        self.stream = csb.io.MemoryStream()
         self.data = r"""
 
 >>E0
@@ -270,7 +299,7 @@ text3
         
     def testDel(self):
         
-        stream = cStringIO.StringIO()
+        stream = csb.io.MemoryStream()
         reader = csb.io.EntryReader(stream, None, None)
 
         self.assertFalse(stream.closed)        
@@ -286,7 +315,7 @@ class TestEntryWriter(test.Case):
         # test with a file name
         tempFileName = self.config.getTempStream().name   
         writer = csb.io.EntryWriter(tempFileName, close=False)  # see below:
-        self.assertTrue(isinstance(writer.stream, file)) 
+        self.assertTrue(hasattr(writer.stream, 'write')) 
         self.assertTrue(writer.autoclose)                       # close is ignored in init when destination is a path, not a stream
         
         # with a stream, autoclose

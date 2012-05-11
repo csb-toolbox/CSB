@@ -46,7 +46,6 @@ class TestHHProfileRegressions(test.Case):
             hmm.to_hmm(tmp.name)
             tmp.flush()
             generated = open(tmp.name).read()
-
             self.assertEqual(strip(content), strip(generated))
 
         

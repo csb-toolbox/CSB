@@ -394,7 +394,7 @@ class AbstractSequence(object):
         return self._type
     @type.setter
     def type(self, value):
-        if isinstance(value, basestring):
+        if isinstance(value, csb.pyutils.string):
             value = csb.pyutils.Enum.parse(SequenceTypes, value)
         if value.enum is not SequenceTypes:
             raise TypeError(value) 
@@ -837,13 +837,13 @@ class AbstractAlignment(object):
 
         # 1. interpret the row slice: int, iter(int), iter(str) or slice(int) => list(int, 1-based)
         if isinstance(rowspec, slice):
-            if isinstance(rowspec.start, basestring) or isinstance(rowspec.stop, basestring):
+            if isinstance(rowspec.start, csb.pyutils.string) or isinstance(rowspec.stop, csb.pyutils.string):
                 raise TypeError("Invalid row slice: only indexes are supported")
             rowspec = SliceHelper(rowspec, 0, self.size)
             rows = range(rowspec.start + 1, rowspec.stop + 1)
         elif isinstance(rowspec, int):
             rows = [rowspec + 1]     
-        elif hasattr(rowspec, '__iter__'):
+        elif csb.pyutils.iterable(rowspec):
             try:
                 rows = []
                 for r in rowspec:
@@ -862,7 +862,7 @@ class AbstractAlignment(object):
             cols = range(colspec.start + 1, colspec.stop + 1)
         elif isinstance(colspec, int):
             cols = [colspec + 1] 
-        elif hasattr(colspec, '__iter__'):
+        elif csb.pyutils.iterable(colspec):
             try:
                 cols = [ c + 1 for c in colspec ]
             except:            
@@ -1034,11 +1034,9 @@ class AbstractAlignment(object):
         
         @rtype: str 
         """
-        
-        from cStringIO import StringIO
         from csb.bio.io.fasta import OutputBuilder
 
-        temp = StringIO()
+        temp = csb.io.MemoryStream()
                 
         try:            
             builder = OutputBuilder.create(format, temp, headers=headers)

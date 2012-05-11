@@ -58,10 +58,15 @@ The data contained in a Table can be extracted in several ways:
     - with text (TSV) serialization: simply call C{table.dump(file)}.
 """
 
+try:
+    import __builtin__ as builtins
+except ImportError:
+    import builtins
+
 import os
+
 import csb.io
-import cStringIO
-import __builtin__
+import csb.pyutils
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 
@@ -167,7 +172,7 @@ class SQLiteRepository(RepositoryImp):
     """
 
     PK = 'ROWID'
-    TYPES = { int: 'INT', long: 'BIGINT', float: 'REAL', str: 'VARCHAR' }
+    TYPES = { int: 'BIGINT', float: 'REAL', str: 'VARCHAR' }
     
     class ChunkedReader(object):
         
@@ -326,7 +331,7 @@ class DataRow(object):
         
     def __getitem__(self, i):
         
-        if isinstance(i, basestring):            
+        if isinstance(i, csb.pyutils.string):            
             return self._row[self._columns[i]]
         else:
             return self._row[i]            
@@ -399,8 +404,8 @@ class Table(object):
             if isinstance(definition[0], ColumnInfo):
                 self._metadata = [ c.copy() for c in definition ]
             else:
-                if isinstance(definition, basestring):
-                    definition = [ (d.split(':')[0], getattr(__builtin__, d.split(':')[1])) for d in definition.split() ]
+                if isinstance(definition, csb.pyutils.string):
+                    definition = [ (d.split(':')[0], getattr(builtins, d.split(':')[1])) for d in definition.split() ]
                 self._metadata = [ ColumnInfo(c[0], c[1]) for c in definition ]
             if len(self._metadata) < 1:
                 raise ValueError()
@@ -512,7 +517,7 @@ class Table(object):
             
     def __getstate__(self):
         
-        temp = cStringIO.StringIO()
+        temp = csb.io.MemoryStream()
         self.dump(temp)
         return temp.getvalue()
         
@@ -534,7 +539,7 @@ class Table(object):
         
         if len(exp.select) != 1:
             raise NotImplementedError('single-column expression expected')
-        if hasattr(value, '__iter__'):
+        if csb.pyutils.iterable(value):
             raise NotImplementedError("single-value assignment expected")     
         
         exp.data = value
@@ -555,7 +560,7 @@ class Table(object):
         @rtype: L{Expression}
         """
         
-        if not hasattr(i, '__iter__'):
+        if not csb.pyutils.iterable(i):
             i = [i, slice(None, None)]        
         else:
             i = list(i)
@@ -574,14 +579,14 @@ class Table(object):
         
         if isinstance(i[0], int):
             self._checkrow(i[0])
-            if len(columns) == 1 and isinstance(i[1], (int, basestring)):
+            if len(columns) == 1 and isinstance(i[1], (int, csb.pyutils.string)):
                 exp.scalar = True
             exp.predicate = Equals(i[0] + 1)
             
-        elif hasattr(i[0], '__iter__'):
+        elif csb.pyutils.iterable(i[0]):
             params = list(i[0])
             self._checkrow(params)
-            params = map(lambda x: x+1, params)
+            params = list(map(lambda x: x + 1, params))
             exp.predicate = In(params)
             
         elif isinstance(i[0], slice):
@@ -612,7 +617,7 @@ class Table(object):
         if isinstance(i, int):
             if i < 0:
                 raise NotImplementedError('Negative row indices are not supported')
-        elif hasattr(i, '__iter__'):
+        elif csb.pyutils.iterable(i):
             for j in i:
                 self._checkrow(j)
         else:
@@ -631,7 +636,7 @@ class Table(object):
             except:
                 raise IndexError('Column {0} out of range'.format(spec))
             
-        elif isinstance(spec, basestring):
+        elif isinstance(spec, csb.pyutils.string):
             if spec in columns:
                 return [spec]
             else:
@@ -648,7 +653,7 @@ class Table(object):
                 
             return [columns[i] for i in range(start, end, spec.step or 1)]
         
-        elif hasattr(spec, '__iter__'):
+        elif csb.pyutils.iterable(spec):
             return [self._getcols(i)[0] for i in spec]
         
         else:
@@ -834,7 +839,7 @@ class Expression(object):
     
     @staticmethod
     def array(args):
-        if len(args) == 1 and hasattr(args[0], '__iter__'):
+        if len(args) == 1 and csb.pyutils.iterable(args[0]):
             args = args[0]
         return list(args)
     
@@ -858,7 +863,7 @@ class Expression(object):
         if not value:
             self._select = list(self.all)
         else:        
-            if not hasattr(value, '__iter__'):
+            if not csb.pyutils.iterable(value):
                 value = [value]        
             for i in value:
                 if i == '*':
@@ -981,11 +986,11 @@ class Predicate(object):
         
         self._params = []
         
-        if not hasattr(params, '__iter__'):
+        if not csb.pyutils.iterable(params):
             params = [params]
         
         for p in params:
-            if hasattr(p, '__iter__'):
+            if csb.pyutils.iterable(p):
                 self._params.extend(p)
             else:
                 self._params.append(p)

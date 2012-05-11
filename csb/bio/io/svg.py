@@ -3,6 +3,7 @@ Build SVG diagrams from various csb objects.
 """
 
 import math
+import csb.pyutils
 
 from csb.bio.structure import SecondaryStructure, SecStructures
 
@@ -31,7 +32,7 @@ class SSCartoonBuilder(object):
                  cap='round'):
          
         if ss:
-            if isinstance(ss, basestring):
+            if isinstance(ss, csb.pyutils.string):
                 self._ss = SecondaryStructure(ss)
             else:
                 self._ss = ss.clone()

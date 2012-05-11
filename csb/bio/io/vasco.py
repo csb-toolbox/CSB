@@ -66,7 +66,7 @@ class VascoStructureParser(object):
         
         while True:
             try:
-                line = self._stream.next()
+                line = next(self._stream)
             except StopIteration :
                 break
 
@@ -92,7 +92,7 @@ class VascoStructureParser(object):
 
         while True:
             try:
-                line = self._stream.next()
+                line = next(self._stream)
             except StopIteration:
                 break
 

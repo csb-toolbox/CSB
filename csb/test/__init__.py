@@ -169,10 +169,11 @@ import sys
 import imp
 import types
 import time
-import cPickle
 import getopt
 import tempfile
+
 import csb.io
+import csb.pyutils
 
 try:
     from unittest import skip, skipIf
@@ -255,7 +256,7 @@ class Config(object):
         @type subDir: str           
         """
         file = self.getTestFile(fileName, subDir)
-        return cPickle.load(open(file))
+        return csb.io.Pickle.load(open(file, 'rb'))
     
     def getContent(self, fileName, subDir=''):
         """
@@ -308,9 +309,10 @@ class Case(unittest.TestCase):
         @param addArgs: additional arguments to append to the exception
         @type addArgs: tuple
         """
-        ex = sys.exc_info()
-        ex[1].args = list(ex[1].args) + list(addArgs)
-        raise ex[0], ex[1], ex[2]  
+        #ex = sys.exc_info()
+        #ex[1].args = list(ex[1].args) + list(addArgs)
+        #raise ex[0], ex[1], ex[2]
+        raise NotImplementedError()  
     
     def assertFasterThan(self, duration, callable, *args, **kargs):
         """
@@ -414,7 +416,7 @@ class AbstractTestBuilder(object):
         @return: a C{unittest.TestSuite} ready for the test runner
         @rtype: C{unittest.TestSuite} 
         """
-        if not hasattr(namespaces, '__iter__'):
+        if not csb.pyutils.iterable(namespaces):
             raise TypeError(namespaces)
         
         return unittest.TestSuite(self.loadTests(n) for n in namespaces)
@@ -471,7 +473,7 @@ class AbstractTestBuilder(object):
         Extract test cases recursively from a test C{obj} container. 
         """   
         cases = []
-        if isinstance(obj, unittest.TestSuite) or hasattr(obj, '__iter__'):
+        if isinstance(obj, unittest.TestSuite) or csb.pyutils.iterable(obj):
             for item in obj:
                 cases.extend(self._recurse(item))
         else:
@@ -595,7 +597,7 @@ def unit(klass):
     @param klass: a C{unittest.TestCase} class type
     @type klass: type
     """
-    if not isinstance(klass, (type, types.ClassType)):
+    if not isinstance(klass, type):
         raise TypeError("Can't apply class decorator on {0}".format(type(klass)))
     
     setattr(klass, Attributes.UNIT, True)
@@ -608,7 +610,7 @@ def functional(klass):
     @param klass: a C{unittest.TestCase} class type
     @type klass: type
     """
-    if not isinstance(klass, (type, types.ClassType)):
+    if not isinstance(klass, type):
         raise TypeError("Can't apply class decorator on {0}".format(type(klass))) 
        
     setattr(klass, Attributes.FUNCTIONAL, True)
@@ -621,7 +623,7 @@ def regression(klass):
     @param klass: a C{unittest.TestCase} class type
     @type klass: type
     """
-    if not isinstance(klass, (type, types.ClassType)):
+    if not isinstance(klass, type):
         raise TypeError("Can't apply class decorator on {0}".format(type(klass))) 
        
     setattr(klass, Attributes.REGRESSION, True)
@@ -636,7 +638,7 @@ def custom(function):
                      C{unittest.TestSuite}
     @type function: callable
     """
-    if isinstance(function, (type, types.ClassType)):
+    if isinstance(function, type):
         raise TypeError("Can't apply function decorator on a class")    
     elif not hasattr(function, '__call__'):
         raise TypeError("Can't apply function decorator on non-callable {0}".format(type(function))) 
@@ -723,7 +725,7 @@ Options:
         return self._namespace
     @namespace.setter
     def namespace(self, value):    
-        if hasattr(value, '__iter__'):
+        if csb.pyutils.iterable(value):
             self._namespace = list(value)
         else:
             self._namespace = [value]

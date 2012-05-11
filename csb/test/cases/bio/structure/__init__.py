@@ -13,7 +13,7 @@ def update_test_files():
     the internal representation of some classes has changed.
     """
     import os
-    import cPickle
+    from csb.io import Pickle
     from csb.bio.io.wwpdb import get
 
     model1 = get('1nz9', model=1)
@@ -22,13 +22,13 @@ def update_test_files():
     ensemble = structure.Ensemble()
     ensemble.models.append(model1)
     ensemble.models.append(model2)
-    cPickle.dump(ensemble, open(os.path.join(test.Config.DATA, '1nz9.full.pickle'), 'w'))
+    Pickle.dump(ensemble, open(os.path.join(test.Config.DATA, '1nz9.full.pickle'), 'wb'))
     
     mse = model1.chains['A'].find(164)
     mse._pdb_name = 'MSE'
     mse.atoms['SD']._element = structure.ChemElements.Se
     mse.atoms['SD']._full_name = 'SE  '
-    cPickle.dump(model1, open(os.path.join(test.Config.DATA, '1nz9.model1.pickle'), 'w'))
+    Pickle.dump(model1, open(os.path.join(test.Config.DATA, '1nz9.model1.pickle'), 'wb'))
     
     
 @test.regression
@@ -673,7 +673,7 @@ class TestResidue(test.Case):
         
     def testItems(self):
         self.assertEqual(tuple(self.residue.items)[0], self.residue['N'])
-        self.assertEqual(cmp(tuple(self.residue.items)[0], tuple(self.residue.items)[1]), -1)   
+        self.assertTrue(tuple(self.residue.items)[0] < tuple(self.residue.items)[1])  
     
     def testHasStructure(self):
         
@@ -782,8 +782,8 @@ class TestAtom(test.Case):
         """    
         self.assertEqual(self.atom.residue, self.residue) 
         
-    def testCMP(self):
-        self.assertEqual(cmp(self.residue['N'], self.residue['CA']), -1)
+    def testSorting(self):
+        self.assertTrue(self.residue['N'] < self.residue['CA'])
         
     def testVector(self):
         

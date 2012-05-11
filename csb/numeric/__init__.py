@@ -65,7 +65,7 @@ def simpson_2d(f):
     @return: approximation of the definit integral
     """
 
-    n = (f.shape[0] - 1) / 2
+    n = int((f.shape[0] - 1) / 2)
     i = 2 * arange(1, n + 1) - 1
     j = 2 * arange(1, n)
 

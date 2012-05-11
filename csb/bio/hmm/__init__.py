@@ -4,7 +4,6 @@ HHpred and Hidden Markov Model APIs.
 
 import sys
 import math
-import cStringIO
 
 import csb.pyutils
 import csb.io
@@ -300,10 +299,9 @@ class ProfileHMM(object):
         @param file_name: target file name
         @type file_name: str
         """
-        import cPickle
         rec = sys.getrecursionlimit()        
         sys.setrecursionlimit(10000)
-        cPickle.dump(self, open(file_name, 'w'))
+        csb.io.Pickle.dump(self, open(file_name, 'wb'))
         sys.setrecursionlimit(rec)
 
     @staticmethod
@@ -314,10 +312,9 @@ class ProfileHMM(object):
         @param file_name: source file name (pickle)
         @type file_name: str
         """
-        import cPickle
         rec = sys.getrecursionlimit()
         sys.setrecursionlimit(10000)
-        return cPickle.load(open(file_name, 'r'))
+        return csb.io.Pickle.load(open(file_name, 'rb'))
         sys.setrecursionlimit(rec)
 
     def _convert(self, units, score, scale, logbase):
@@ -346,7 +343,7 @@ class ProfileHMM(object):
         if convert_scores:
             self.convert_scores(ScoreUnits.LogScales)
                         
-        temp = cStringIO.StringIO()
+        temp = csb.io.MemoryStream()
         
         builder = HHMFileBuilder(temp)
         builder.add_hmm(self)
@@ -773,6 +770,9 @@ class EVDParameters(object):
         self.mu = mu
     
     def __nonzero__(self):
+        return self.__bool__()
+        
+    def __bool__(self):
         return (self.lamda is not None or self.mu is not None)
 
 
@@ -1443,8 +1443,8 @@ class HHpredHit(object):
     def __repr__(self):
         return "<HHpredHit: {0!s}>".format(self)
     
-    def __cmp__(self, other):
-        return cmp(self.rank, other.rank)
+    def __lt__(self, other):
+        return self.rank < other.rank
 
     def equals(self, other):
         """

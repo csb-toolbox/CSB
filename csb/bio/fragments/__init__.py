@@ -5,9 +5,9 @@ APIs for working with protein structure fragments and libraries.
 """
 
 import os
-import cPickle
 import numpy
 
+import csb.io
 import csb.pyutils
 import csb.bio.utils
 import csb.bio.structure
@@ -271,8 +271,8 @@ class TorsionPredictionInfo(object):
     def __str__(self):
         return '<TorsionPredictionInfo: {0.confidence:6.3f} at #{0.rank}>'.format(self)
     
-    def __cmp__(self, other):
-        return cmp(self.confidence, other.confidence)
+    def __lt__(self, other):
+        return self.confidence < other.confidence
 
 
 class AssignmentFactory(object):
@@ -359,7 +359,7 @@ class Target(csb.pyutils.AbstractNIContainer):
     def deserialize(pickle):
         
         with open(pickle) as stream:
-            return cPickle.load(stream)
+            return csb.io.Pickle.load(stream)
     
     @property
     def _children(self):
@@ -736,7 +736,7 @@ class TargetSegment(object):
                 
                 if s.source_id not in sources:
                     # hmm = HHProfileParser(os.path.join(hmm_path, s.source_id + '.hhm')).parse(ScoreUnits.Probability)
-                    sources[s.source_id] = cPickle.load(open(os.path.join(profiles, s.source_id + '.pkl')))
+                    sources[s.source_id] = csb.io.Pickle.load(open(os.path.join(profiles, s.source_id + '.pkl'), 'rb'))
                     
                 if q is not s:
                     
@@ -1077,9 +1077,7 @@ class Assignment(FragmentMatch):
         @deprecated: this method will be deleted soon. Use
         L{csb.bio.fragments.rosetta.OutputBuilder} instead.
         """
-        
-        from cStringIO import StringIO
-        stream = StringIO()
+        stream = csb.io.MemoryStream()
         
         if weight is None:
             weight = self.probability
@@ -1247,7 +1245,7 @@ class FragmentCluster(object):
 
         for i in self._matrix:
             
-            curravg = numpy.mean(self._matrix[i].values())
+            curravg = numpy.mean(list(self._matrix[i].values()))
             
             if avg is None or curravg < avg:
                 avg = curravg
@@ -1615,7 +1613,7 @@ class RosettaFragsetFactory(object):
         """
         
         frag_factory = self.rosetta.RosettaFragment
-        fragments = map(frag_factory.from_object, target.matches)
+        fragments = list(map(frag_factory.from_object, target.matches))
         #fragments = [ frag_factory.from_object(f) for f in target.matches if f.length >= 6 ]
         fragments.sort()
                 

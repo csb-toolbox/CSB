@@ -7,6 +7,8 @@ MPI fuer Entwicklungsbiologie, Tuebingen
 import os
 import re
 import operator
+import csb.pyutils
+
 from numpy import array, float64, eye, random
 
 
@@ -365,7 +367,7 @@ class ClansParser(object):
             block += ['']
 
         return dict([(i, (block[2 * i][1:], block[2 * i + 1].strip()))
-                     for i in range(len(block) / 2)])
+                     for i in range(int(len(block) / 2))])
 
     def _parse_seqgroups(self):
         """
@@ -998,7 +1000,7 @@ class ClansParams(object):
 
     @blastpath.setter
     def blastpath(self, value):
-        if not isinstance(value, basestring):
+        if not isinstance(value, csb.pyutils.string):
             raise ValueError(('blastpath cannot be {0} (accepted values: '
                               + 'strings)').format(value))
         
@@ -1017,7 +1019,7 @@ class ClansParams(object):
 
     @formatdbpath.setter
     def formatdbpath(self, value):
-        if not isinstance(value, basestring):
+        if not isinstance(value, csb.pyutils.string):
             raise ValueError(('formatdbpath cannot be {0} (accepted values: '
                               + 'strings)').format(value))
               
@@ -1578,7 +1580,7 @@ class ClansEntry(object):
 
     @name.setter
     def name(self, value):
-        if not isinstance(value, basestring):
+        if not isinstance(value, csb.pyutils.string):
             raise ValueError(('name cannot be {0} (accepted values: '
                               + 'strings)').format(value))
 
@@ -1597,7 +1599,7 @@ class ClansEntry(object):
 
     @seq.setter
     def seq(self, value):
-        if not isinstance(value, basestring):
+        if not isinstance(value, csb.pyutils.string):
             raise ValueError(('seq cannot be {0} (accepted values: '
                               + 'strings)').format(value))
 
@@ -1804,7 +1806,7 @@ class ClansSeqgroup(object):
 
     @name.setter
     def name(self, value):
-        if not isinstance(value, basestring):
+        if not isinstance(value, csb.pyutils.string):
             raise ValueError('name must be a string')
         self._name = value
     
@@ -1876,7 +1878,7 @@ class ClansSeqgroup(object):
             self._color = value
             return
 
-        if isinstance(value, basestring):
+        if isinstance(value, csb.pyutils.string):
             if value.count(separator) != 2:
                 raise ValueError(
                     ('separator \'{0}\' count in color \'{1}\': {2}. '

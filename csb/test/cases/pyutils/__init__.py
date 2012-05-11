@@ -1,9 +1,11 @@
 import sys
 import operator
 import copy
-import cPickle
+
 import csb.test as test
-import csb.pyutils as utils 
+import csb.pyutils as utils
+
+from csb.io import Pickle 
 
 
 @test.unit
@@ -34,7 +36,17 @@ class TestDeepCopy(test.Case):
         
         self.assertEquals(obj, copy)
         self.assertNotEquals(id(obj), id(copy))
+
+@test.unit
+class TestIterable(test.Case):
     
+    def runTest(self):
+        
+        for i in [ [], tuple(), iter([]) ]:
+            self.assertTrue(utils.iterable(i))
+            
+        self.assertFalse(utils.iterable(""))
+            
 @test.unit
 class TestEnum(test.Case):
     
@@ -123,11 +135,11 @@ class TestEnum(test.Case):
         self.assertTrue(copy.copy(SequenceTypes.Protein) is SequenceTypes.Protein)
         self.assertTrue(copy.deepcopy(SequenceTypes.Protein) is SequenceTypes.Protein)
         self.assertTrue(utils.deepcopy(SequenceTypes.Protein) is SequenceTypes.Protein)
-        self.assertTrue(cPickle.loads(cPickle.dumps(SequenceTypes.Protein)) is SequenceTypes.Protein)
+        self.assertTrue(Pickle.loads(Pickle.dumps(SequenceTypes.Protein)) is SequenceTypes.Protein)
         
         self.assertTrue(copy.deepcopy(SequenceTypes) is SequenceTypes)
         self.assertTrue(copy.deepcopy(SequenceTypes) is SequenceTypes)
-        self.assertTrue(cPickle.loads(cPickle.dumps(SequenceTypes)) is SequenceTypes)
+        self.assertTrue(Pickle.loads(Pickle.dumps(SequenceTypes)) is SequenceTypes)
         
 @test.unit
 class TestDictionaryContainer(test.Case):
@@ -201,7 +213,11 @@ class TestCollectionContainer(test.Case):
         self.assertEqual(self.test[self.test.start_index], self.items[0])        
         self.assertEqual(self.test[self.test.last_index], self.items[-1])
         self.assertEqual(self.test[-1], self.items[-1])
-        self.assertEqual(self.test[-1 :-2], self.items[-1 :-2])                            
+        self.assertEqual(self.test[-1 :-2], self.items[-1 :-2])
+        
+        self.assertEqual(self.test[: self.start + 2], self.items[:2])
+        self.assertEqual(self.test[self.start + 2 :], self.items[2:])
+        self.assertEqual(self.test[:], self.items[:])                   
         
         def get(i):
             return self.test[i]
@@ -312,7 +328,7 @@ class TestOrderedDict(test.Case):
         items = [('G', 4), ('A', 2), ('C', 8), ('B', 7)]
         odict = utils.OrderedDict(items)
         
-        self.assertEquals(odict.items(), items)
+        self.assertEquals(list(odict.items()), items)
         
         for i, k in enumerate(odict):
             self.assertEqual(k, items[i][0])            

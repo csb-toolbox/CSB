@@ -175,7 +175,7 @@ class LibrarySuperimposer(object):
         
         for task in tasks:
             for match in task.get():
-                if isinstance(match, basestring):       # error
+                if isinstance(match, csb.pyutils.string):       # error
                     self._out.write(' [E] ')                    
                     self._out.write(match.rstrip())
                     self._out.write('\n')
