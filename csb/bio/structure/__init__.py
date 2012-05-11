@@ -8,7 +8,6 @@ import copy
 import math
 import numpy
 import datetime
-import StringIO
 
 import csb.io
 import csb.pyutils
@@ -164,6 +163,9 @@ class CompositeEntityIterator(object):
                 
     def __iter__(self):
         return self
+
+    def __next__(self):
+        return self.next()      
         
     def next(self):
 
@@ -173,7 +175,7 @@ class CompositeEntityIterator(object):
             
             try:
                 current = self._stack.peek()
-                node = current.next()
+                node = next(current)
                 self._inspect(node)
                 return node
             
@@ -268,7 +270,7 @@ class Ensemble(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         if self.models.length < 1:
             raise InvalidOperation("Can't dump an empty ensemble")
         
-        temp = StringIO.StringIO()
+        temp = csb.io.MemoryStream()
 
         builder = PDBEnsembleFileBuilder(temp)        
         builder.add_header(self.first_model)
@@ -345,7 +347,7 @@ class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     @property
     def first_chain(self):
         if len(self._chains) > 0:
-            return self.items.next()
+            return next(self.items)
         return None
         
     @property
@@ -407,7 +409,7 @@ class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         @param output_file: output file name or open stream
         @type output_file: str or stream
         """
-        temp = StringIO.StringIO()
+        temp = csb.io.MemoryStream()
         
         builder = PDBFileBuilder(temp)
         
@@ -565,7 +567,7 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         return self._id
     @id.setter
     def id(self, id):
-        if not isinstance(id, basestring):
+        if not isinstance(id, csb.pyutils.string):
             raise ValueError(id)
         id = id.strip()
         if self._structure:
@@ -1077,7 +1079,8 @@ class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         else:
             return str(self._sequence_number)
     @id.setter
-    def id(self, (sequence_number, insertion_code)):
+    def id(self, value):
+        sequence_number, insertion_code = value
         old_id = self.id
         id = ''
         if sequence_number is not None:
@@ -1171,7 +1174,7 @@ class ProteinResidue(Residue):
     
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
           
-        if isinstance(type, basestring):
+        if isinstance(type, csb.pyutils.string):
             try:
                 if len(type) == 3:
                     type = csb.pyutils.Enum.parsename(SequenceAlphabets.Protein, type)
@@ -1261,7 +1264,7 @@ class NucleicResidue(Residue):
     
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
         
-        if isinstance(type, basestring):
+        if isinstance(type, csb.pyutils.string):
             try:
                 if len(type) > 1:
                     type = csb.pyutils.Enum.parsename(SequenceAlphabets.Nucleic, type)
@@ -1385,7 +1388,7 @@ class Atom(Abstract3DEntity):
         self.occupancy = None
         self.charge = None
 
-        if not isinstance(name, basestring):
+        if not isinstance(name, csb.pyutils.string):
             raise TypeError(name)
         name_compact = name.strip()
         if len(name_compact) < 1:
@@ -1393,7 +1396,7 @@ class Atom(Abstract3DEntity):
         self._name = name_compact
         self._full_name = name
             
-        if isinstance(element, basestring):
+        if isinstance(element, csb.pyutils.string):
             element = csb.pyutils.Enum.parsename(ChemElements, element)
         elif element is None:
             pass
@@ -1409,8 +1412,8 @@ class Atom(Abstract3DEntity):
     def __repr__(self):
         return "<Atom [{0.serial_number}]: {0.name}>".format(self)
         
-    def __cmp__(self, other):
-        return cmp(self.serial_number, other.serial_number)
+    def __lt__(self, other):
+        return self.serial_number < other.serial_number
     
     def apply_transformation(self, rotation, translation):
         
@@ -1506,7 +1509,9 @@ class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
         
     def __update_rep(self, atom):
         
-        if self._rep is None or (self._rep.occupancy < atom.occupancy):
+        if self._rep is None or \
+        ((self._rep.occupancy != atom.occupancy) and (self._rep.occupancy < atom.occupancy)):
+        
             self._rep = atom      
 
             self._serial_number = self._rep.serial_number
@@ -1732,7 +1737,7 @@ class SecondaryStructureElement(object):
         
         if not (0 < start <= end):
             raise IndexError('Element coordinates are out of range: 0 < start <= end.')
-        if isinstance(type, basestring):
+        if isinstance(type, csb.pyutils.string):
             type = csb.pyutils.Enum.parse(SecStructures, type)
         if type.enum is not SecStructures:
             raise TypeError(type)
@@ -1745,8 +1750,8 @@ class SecondaryStructureElement(object):
         if score is not None: 
             self.score = score
             
-    def __cmp__(self, other):
-        return cmp(self.start, other.start)
+    def __lt__(self, other):
+        return self.start < other.start
     
     def __eq__(self, other):
         return (self.type == other.type 
@@ -1881,7 +1886,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         
         @raise ValueError: if the confidence string is not of the same length
         """
-        if not isinstance(string, basestring):
+        if not isinstance(string, csb.pyutils.string):
             raise TypeError(string)
                 
         string = ''.join(re.split('\s+', string))
@@ -1907,7 +1912,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
                 confidence = None
                 if conf_string is not None:
                     confidence = list(conf_string[start : i])
-                    confidence = map(int, confidence)
+                    confidence = list(map(int, confidence))
                 motif = SecondaryStructureElement(start + 1, i, type, confidence)
                 motifs.append(motif)
                 
@@ -2193,7 +2198,7 @@ class TorsionAngles(object):
     def __init__(self, phi, psi, omega, units=AngleUnits.Degrees):
         
         try:
-            if isinstance(units, basestring):
+            if isinstance(units, csb.pyutils.string):
                 units = csb.pyutils.Enum.parse(AngleUnits, units, ignore_case=True)
             else:
                 if units.enum is not AngleUnits:

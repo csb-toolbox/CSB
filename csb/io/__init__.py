@@ -6,8 +6,37 @@ import os
 import tempfile
 import csb.pyutils
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+    
+try:
+    import cPickle as Pickle
+except ImportError:
+    import pickle as Pickle
+
+try:
+    import urllib.request as urllib
+except ImportError:
+    import urllib
+        
 
 NEWLINE = '\n'
+
+
+class MemoryStream(StringIO):
+    """
+    In-memory stream object.
+    """
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *a, **k):
+        try:
+            self.close()
+        except:
+            pass
     
 class AutoFlushStream(csb.pyutils.Proxy):
     """
@@ -169,11 +198,15 @@ class EntryWriter(object):
         self.newline = newline
         self.autoclose = close
         
-        if isinstance(destination, file) or hasattr(destination, 'write'):
-            self._stream = destination
-        elif isinstance(destination, basestring):
+        if isinstance(destination, csb.pyutils.string):
             self._stream = open(destination, 'w')
             self.autoclose = True
+            
+        elif hasattr(destination, 'write'):
+            self._stream = destination
+        
+        else:
+            raise TypeError(destination)         
             
     def __enter__(self):
         return self
@@ -259,9 +292,9 @@ def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
 
     if gzip:
         import gzip
-        f_handle = gzip.GzipFile(filename, 'w')
+        f_handle = gzip.GzipFile(filename, 'wb')
     else:
-        f_handle = open(filename, 'w')
+        f_handle = open(filename, 'wb')
 
     if type(this).__name__ == 'array':
         import Numeric                                                  #@UnresolvedImport
@@ -269,8 +302,7 @@ def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
         p.dump(this)
 
     else:
-        import cPickle
-        cPickle.dump(this, f_handle, 1)
+        Pickle.dump(this, f_handle, 1)
 
     f_handle.close()
 
@@ -292,9 +324,6 @@ def load(filename, gzip=False, lock=None, lock_path='~/'):
     
     @return: Python object unpickled from file
     """
-    import cPickle
-
-
     ## file locked?
     if lock is not None:
         _path, file = os.path.split(filename)
@@ -315,17 +344,17 @@ def load(filename, gzip=False, lock=None, lock_path='~/'):
         except:
             return
 
-    f_handle = open(filename)
+    f_handle = open(filename, 'rb')
 
     try:
-        this = cPickle.load(f_handle)
+        this = Pickle.load(f_handle)
     except:
         import Numeric                                                  #@UnresolvedImport
         f_handle.close()
         try:
             f_handle = gzip.GzipFile(filename)
         except:
-            f_handle = open(filename)
+            f_handle = open(filename, 'rb')
 
         unpickler = Numeric.Unpickler(f_handle)
         this = unpickler.load()

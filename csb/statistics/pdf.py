@@ -4,6 +4,7 @@ Probability density functions.
 
 import numpy.random
 import scipy.special
+import csb.pyutils
 
 from abc import ABCMeta, abstractmethod
 from csb.pyutils import OrderedDict
@@ -184,7 +185,7 @@ class DirichletEstimator(AbstractEstimator):
         k = 0
         while(sum(abs(y - a)) > self.tol and k < self.n_iter):
             y = psi(sum(a)) + log_p
-            a = numpy.array(map(inv_psi, y))
+            a = numpy.array(list(map(inv_psi, y)))
             k += 1 
 
         return Dirichlet(a)
@@ -216,7 +217,7 @@ class AbstractDensity(object):
     def __setitem__(self, param, value):
         
         if param in self._params: 
-            if hasattr(value, '__iter__'):
+            if csb.pyutils.iterable(value):
                 value = array(value)
             else:
                 value = float(value)
@@ -582,7 +583,7 @@ class GeneralizedInverseGaussian(AbstractDensity):
 
         if size == None:
             size = 1
-        for i in xrange(int(size)):
+        for i in range(int(size)):
             for j in range(burnin):
 
                 l = b + 2 * s

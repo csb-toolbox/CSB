@@ -110,9 +110,9 @@ class RosettaFragment(object):
         
         return RosettaFragment(self.source_id, qstart, qend, start, end, self.score, residues)
         
-    def __cmp__(self, other):
+    def __lt__(self, other):
         # lower score means a better fragment
-        return cmp(self.score, other.score)
+        return self.score < other.score
     
     def __iter__(self):
         return iter(self._residues)

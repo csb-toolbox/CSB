@@ -52,7 +52,7 @@ class TestMixtures(test.Case):
         K = len(set(w_ref))
 
         # algorithms with randomized initialization, try multiple times
-        for _ in xrange(repeats):
+        for _ in range(repeats):
             m = cls.from_coords(X, K, randomize=1)
 
             overlap = m.overlap(w_ref)
@@ -69,7 +69,7 @@ class TestMixtures(test.Case):
 
         # annealing (randomized initialization)
         m = cls(X.shape[1], X.shape[0], K)
-        for _ in xrange(repeats):
+        for _ in range(repeats):
             m.anneal(X, linspace(2.0, 0.1, 10))
 
             overlap = m.overlap(w_ref)

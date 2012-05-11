@@ -7,9 +7,9 @@ I-Sites fragment library APIs.
 import sys
 import collections
 import operator
-import cPickle
 import math 
 
+import csb.io
 import csb.pyutils
 import csb.bio.fragments
 import csb.bio.structure as structure
@@ -221,8 +221,8 @@ class ProfileMatch(object):
     def __repr__(self):
         return "<ProfileMatch: {0.id} at {0.start}, s={0.score}, rms={0.rmsd}, tm={0.tm_score},{0.tm_scoreout} >".format(self)
     
-    def __cmp__(self, other):
-        return cmp(self.score, other.score)
+    def __lt__(self, other):
+        return self.score < other.score
     
     def confidence(self, b0, b1, b2, b3=1.0):
         """
@@ -403,7 +403,7 @@ class Library(object):
         if self._ondemand:
             raise AttributeError("ID/rep-based access to clusters is not available in Delay-parsed libraries.")
         
-        if isinstance(item, basestring):
+        if isinstance(item, csb.pyutils.string):
             return self._byrep[item]
         else:
             return self._byid[item]
@@ -476,7 +476,7 @@ class Library(object):
             raise AttributeError("Delay-parsed libraries cannot be serialized.")
                 
         with open(file, 'wb') as output: 
-            cPickle.dump(self, output, protocol=cPickle.HIGHEST_PROTOCOL)
+            csb.io.Pickle.dump(self, output, protocol=csb.io.Pickle.HIGHEST_PROTOCOL)
     
     @staticmethod
     def deserialize(file):
@@ -491,7 +491,7 @@ class Library(object):
         """
 
         with open(file, 'rb') as output: 
-            library = cPickle.load(output)        
+            library = csb.io.Pickle.load(output)        
             
         return library
 
@@ -517,8 +517,8 @@ class Cluster(object):
         self.profile = ProteinProfile(ProteinProfile.BackgroundFreqs, alpha=self.pseudocount) 
         self.covariance = None
 
-    def __cmp__(self, other):
-        return cmp(self.id, other.id) 
+    def __lt__(self, other):
+        return self.id < other.id 
 
     @property
     def isite(self):
@@ -543,7 +543,7 @@ class Cluster(object):
         """
                 
         with open(file, 'wb') as output: 
-            cPickle.dump(self, output, protocol=cPickle.HIGHEST_PROTOCOL)
+            csb.io.Pickle.dump(self, output, protocol=csb.io.Pickle.HIGHEST_PROTOCOL)
     
     @staticmethod
     def deserialize(file):
@@ -558,7 +558,7 @@ class Cluster(object):
         """
 
         with open(file, 'rb') as output: 
-            cluster = cPickle.load(output)        
+            cluster = csb.io.Pickle.load(output)        
             
         return cluster            
         

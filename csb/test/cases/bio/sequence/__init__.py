@@ -276,7 +276,7 @@ class TestSequenceAlignment(test.Case):
 
         self.assertRaises(IndexError, lambda: a[-1, :])
         self.assertRaises(IndexError, lambda: a[:, -1])
-
+        
         self.assertRaises(TypeError, lambda: a['', :])
         self.assertRaises(TypeError, lambda: a[:, ''])
 

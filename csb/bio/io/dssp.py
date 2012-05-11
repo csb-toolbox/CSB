@@ -127,12 +127,10 @@ def get(accession, prefix='http://www.pdb.org/pdb/files/'):
     @return: see L{DSSPParser.parse}
     @rtype: dict
     """
-    import urllib2
-
     dssp = csb.io.TempFile()
 
-    browser = urllib2.urlopen(prefix + accession.lower() + '.dssp')
-    dssp.write(browser.read())
+    browser = csb.io.urllib.urlopen(prefix + accession.lower() + '.dssp')
+    dssp.write(browser.read().decode())
     dssp.flush()
 
     return DSSPParser().parse(dssp.name)

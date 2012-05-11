@@ -209,7 +209,7 @@ class HHProfileParser(object):
 
             elif line.startswith('LENG '):
                 m = re.search('(\d+)\D+(\d+)', line).groups()
-                m = map(int, m)
+                m = tuple(map(int, m))
                 hmm.length = ProfileLength(m[0], m[1])
 
             elif line.startswith('FILE '):
@@ -328,34 +328,34 @@ class HHProfileParser(object):
         
         while True:
             try:
-                line = lines.next()
+                line = next(lines)
             except StopIteration:
                 break
 
             if line.startswith('NULL'):
                 try:
-                    backprobs = map(parse_probability, line.split()[1:])
+                    backprobs = tuple(map(parse_probability, line.split()[1:]))
 
-                    line = lines.next()
+                    line = next(lines)
                     residues = line.split()[1:]
                     residues = [Enum.parse(SequenceAlphabets.Protein, aa) for aa in residues]
 
                     for pos, aa in enumerate(residues):
                         background[aa] = backprobs[pos]
 
-                    line = lines.next()
+                    line = next(lines)
                     tran_types = line.split()
 
-                    line = lines.next()
-                    start_probs = map(parse_probability, line.split())
+                    line = next(lines)
+                    start_probs = tuple(map(parse_probability, line.split()))
                 except StopIteration:
                     break
 
             elif re.match(pattern, line):
                 emrow = line
                 try:
-                    tran_lines.append(lines.next())
-                    #junkrow = lines.next()
+                    tran_lines.append(next(lines))
+                    #junkrow = next(lines)
                 except StopIteration:
                     break
 
@@ -434,7 +434,7 @@ class HHProfileParser(object):
             assert hmm.layers[rank][States.Match].rank == rank
 
             ofields = fields.split()
-            fields = map(parse_probability, ofields)
+            fields = tuple(map(parse_probability, ofields))
             
             # 3a. Parse all Neff values and create I[i] and D[i] states if NeffX[i] is not None
             for col, neff in enumerate(tran_types[7:10], start=7):
@@ -681,9 +681,7 @@ class HHOutputParser(object):
 
         @raise HHOutputFormatError: if the output is corrupt
         """
-        import cStringIO
-
-        stream = cStringIO.StringIO()
+        stream = csb.io.MemoryStream()
         stream.write(output)
         stream.seek(0)
 

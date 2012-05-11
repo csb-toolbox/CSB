@@ -347,7 +347,7 @@ class SliceContext(hhsearch.Context):
         self.start = start
         self.end = end
         
-        if not isinstance(segment, basestring):
+        if not isinstance(segment, csb.pyutils.string):
             segment = segment.to_hmm(convert_scores=True)
         
         super(SliceContext, self).__init__(segment)
@@ -364,12 +364,12 @@ class SliceContext(hhsearch.Context):
     def recurrence(self):
         return len(self.result)
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
         
         if self.recurrence == other.recurrence:
-            return cmp(self.length, other.length)
+            return self.length < other.length
         else:      
-            return cmp(self.recurrence, other.recurrence)
+            return self.recurrence < other.recurrence
 
 
 

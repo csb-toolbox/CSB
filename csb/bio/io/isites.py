@@ -178,7 +178,7 @@ class ISitesParser(object):
         
         while not done:
             try:
-                line = lines.next()
+                line = next(lines)
             except StopIteration:
                 done = True
                 break
@@ -208,7 +208,7 @@ class ISitesParser(object):
                 
             elif line.startswith(Tags.LINEARFIT):
                 fields = line.split()[1:]
-                cluster.linearfit = map(float, fields)
+                cluster.linearfit = tuple(map(float, fields))
                 
             elif line.startswith(Tags.COVARWEIGHT):
                 field = line.split()[1]                  
@@ -224,7 +224,7 @@ class ISitesParser(object):
                 rn = -1           
                 while True:
                     try:
-                        subline = lines.next()
+                        subline = next(lines)
                     except StopIteration:
                         break
                     if subline.startswith(Tags.PROFILE):
@@ -235,7 +235,7 @@ class ISitesParser(object):
                     
                     rn += 1
                     fields = subline.split()
-                    angles = map(float, fields[1:])                    
+                    angles = tuple(map(float, fields[1:]))                    
                     
                     torsion = structure.TorsionAngles(angles[0], angles[1], angles[2], units=structure.AngleUnits.Degrees)
                     j = cluster.representative.angles.append(torsion)
@@ -270,7 +270,7 @@ class ISitesParser(object):
                     cluster.profile.add_column(**column)
                     
                     try:
-                        subline = lines.next()
+                        subline = next(lines)
                     except StopIteration:
                         in_profile = False
                         break
@@ -310,11 +310,11 @@ class ISitesParser(object):
                         i, j = int(istr) - 1, int(jstr) - 1
                         assert 0 <= i < motiflen and 0 <= j < motiflen, "Covariance is a [motiflen x motiflen] matrix."
                     else:
-                        values = map(float, subline.split())
+                        values = list(map(float, subline.split()))
                         cluster.covariance[i][j].append(values)
                     
                     try:
-                        subline = lines.next()
+                        subline = next(lines)
                     except StopIteration:
                         in_tensor = False                        
                         break                    

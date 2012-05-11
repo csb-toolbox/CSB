@@ -109,7 +109,7 @@ class RandomCoil(object):
         """
                    
         try:
-            if isinstance(residue, basestring):
+            if isinstance(residue, pu.string):
                 if len(residue) == 1:
                     residue = pu.Enum.parse(SequenceAlphabets.Protein, residue)
                 else:
@@ -145,7 +145,7 @@ class RandomCoil(object):
         try:
             if isinstance(residue, int):
                 residue = chain.residues[residue]
-            elif isinstance(residue, basestring):
+            elif isinstance(residue, pu.string):
                 residue = chain.find(residue)
             else:
                 residue = chain.residues[residue.rank]
