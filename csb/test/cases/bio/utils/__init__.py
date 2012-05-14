@@ -4,6 +4,8 @@ import multiprocessing
 
 import csb.test as test
 import csb.bio.utils as cbu
+import csb.io
+
 
 X1 = numpy.array([
     [ 0.,  0.,  0.],
@@ -43,23 +45,39 @@ X6 = numpy.array([
     [   0.,  100.,    0.],
     [  60.,   60.,    0.]])
 
+            
 @test.regression
 class Regressions(test.Case):
 
+    def _timeoutTest(self):
+        cbu.tm_superimpose([[1, 1, 1]], [[1, 1, 1]])
+        
+    def _multiprocessingTest(self):        
+        return True
+    
+    def _runProcess(self, target, timeout=1.0):
+                
+        p = multiprocessing.Process(target=target)
+        p.start()
+        p.join(timeout=timeout)
+        
+        return p
+                        
     def testTMSuperimpose(self):
         """
         @see: [CSB 0000058]
         """
-        def timeouttest():
-            cbu.tm_superimpose([[1, 1, 1]], [[1, 1, 1]])
-
-        p = multiprocessing.Process(target=timeouttest)
-        p.start()
-        p.join(timeout=0.1)
-
+        try:
+            self._runProcess(target=self._multiprocessingTest)
+        except:
+            self.skipTest("may produce a false positive")
+                
+        p = self._runProcess(target=self._timeoutTest, timeout=5.0)
+        
         if p.is_alive():
             p.terminate()
-            self.fail('Timeout expired')
+            self.fail('timeout expired')
+            
 
 @test.functional
 class TestUtils(test.Case):
@@ -78,13 +96,13 @@ class TestUtils(test.Case):
 
     def testWFit(self):
         w = numpy.array([1., 1., 0.])
-        R, t = cbu.wfit(X1, X2, w)
+        R, t = cbu.wfit(X1, X2, w)                              #@UnusedVariable
 
         d = 5.0**0.5
         self.assertArrayEqual(t, [-d / 2.0 + 0.5, 0., 0.])
 
     def testFitWellordered(self):
-        R, t = cbu.fit_wellordered(X5, X6, 10, 1.0)
+        R, t = cbu.fit_wellordered(X5, X6, 10, 1.0)             #@UnusedVariable
 
         self.assertArrayEqual(t, [0., 0., 0.])
 
@@ -111,7 +129,7 @@ class TestUtils(test.Case):
         self.assertAlmostEqual(score, 0.4074, 4)
 
     def testTmSuperimpose(self):
-        R, t, score = cbu.tm_superimpose(X1, X2)
+        R, t, score = cbu.tm_superimpose(X1, X2)            #@UnusedVariable
 
         self.assertAlmostEqual(score, 0.4074, 4)
 

@@ -174,10 +174,6 @@ class GammaPosteriorSampler(AbstractEstimator):
         The posterior of alpha can not be expressed analytically and is
         aproximated using adaptive rejection sampling.
         """
-        from csb.statistics.ars import ARS
-        from csb.math import approx_psi as psi
-        from csb.math import d_approx_psi as dpsi
-  
         pdf = GammaPrior()
 
         ## sufficient statistics
@@ -231,9 +227,6 @@ class InvGammaPosteriorSampler(AbstractEstimator):
         The posterior of alpha can not be expressed analytically and is
         aproximated using adaptive rejection sampling. 
         """
-        from csb.statistics.ars import ARS
-        from csb.math import approx_psi as psi
-        from csb.math import d_approx_psi as dpsi
         pdf = GammaPrior()
 
         ## sufficient statistics

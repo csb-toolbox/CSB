@@ -57,7 +57,7 @@ class AutoFlushStream(csb.pyutils.Proxy):
 class TempFile(csb.pyutils.Proxy):
     """
     Create a temporary file and take care of deleting it upon object
-    destruction. The file can opened multiple times on any platform, unlike
+    destruction. The file can be opened multiple times on any platform, unlike
     the case with tempfile.NamedTemporaryFile (does not work on Windows).
     """
 

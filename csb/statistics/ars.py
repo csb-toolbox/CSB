@@ -119,7 +119,7 @@ class Envelope(object):
     def sample(self):
 
         from numpy.random import random
-        from numpy import add, exp, log
+        from numpy import add
         from csb.math import log_sum_exp
         
         log_m = self.log_masses()
@@ -131,14 +131,14 @@ class Envelope(object):
         a = self.dh[j]
         z = self.z()
         
-        xmin, xmax = z[j],z[j+1]
+        xmin, xmax = z[j], z[j + 1]
 
         u = random()
 
         if a > 0:
-            return xmax + log(u + (1-u)*exp(-a*(xmax-xmin))) / a
+            return xmax + log(u + (1 - u) * exp(-a * (xmax - xmin))) / a
         else:
-            return xmin + log(u + (1-u)*exp(a*(xmax-xmin))) / a
+            return xmin + log(u + (1 - u) * exp(a * (xmax - xmin))) / a
 
 
 class LogProb(object):
@@ -167,7 +167,7 @@ class ARS(object):
 
         self.logp = logp
 
-    def initialize(self, x, z0= -inf, zmax=inf):
+    def initialize(self, x, z0=-inf, zmax=inf):
 
         from numpy import array
 

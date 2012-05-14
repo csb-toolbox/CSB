@@ -1,7 +1,6 @@
 import csb.test as test
 
 import os
-from tempfile import mkstemp
 
 from csb.bio.io import ClansParser
 from csb.bio.io.clans import Clans, ClansEntry, ClansParams, ClansSeqgroup,\
@@ -291,19 +290,19 @@ class TestClansWriter(test.Case):
         super(TestClansWriter, self).setUp()
                 
         self.filename = self.config.getTestFile('out.clans')
-        self.temporary_filename = mkstemp(
-            prefix='clansWriterFunctionalTest')[1]
+        self.temp = self.config.getTempStream()
 
     def testWrittenIsIdenticalToOriginal(self):
         cp = ClansParser()
         clans_instance = cp.parse_file(self.filename)
 
-        clans_instance.write(self.temporary_filename)
+        clans_instance.write(self.temp.name)
+        self.temp.flush()
 
         with open(self.filename) as original_file:
             original_lines = original_file.readlines()
 
-        with open(self.temporary_filename) as written_file:
+        with open(self.temp.name) as written_file:
             written_lines = written_file.readlines()
 
         self.assertEqual(len(original_lines), len(written_lines))
@@ -312,7 +311,7 @@ class TestClansWriter(test.Case):
             self.assertEqual(original_line, written_lines[i])
 
     def tearDown(self):
-        os.remove(self.temporary_filename)
+        self.temp.close()
     
 
 if __name__ == '__main__':

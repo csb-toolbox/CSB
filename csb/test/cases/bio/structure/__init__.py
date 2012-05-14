@@ -7,7 +7,7 @@ import csb.pyutils
 import csb.bio.sequence as sequence
 
 
-def update_test_files():
+def updateFiles():
     """
     Refresh the pickled structures in csb/test/data. This might be needed when
     the internal representation of some classes has changed.
@@ -369,9 +369,9 @@ class TestStructure(test.Case):
             self.assertEqual(pdbraw, open(tmp.name).read())
             
         # and to a file 
-        tmp = self.config.getTempStream().name   
-        self.structure.to_pdb(tmp)
-        self.assertEqual(pdbraw, open(tmp).read())            
+        with self.config.getTempStream() as tmp:   
+            self.structure.to_pdb(tmp.name)
+            self.assertEqual(pdbraw, open(tmp.name).read())            
             
 @test.unit
 class TestChain(test.Case):
@@ -732,18 +732,18 @@ class TestResidue(test.Case):
         # should not raise InvalidOperation (same residue)
         self.assertRaises(structure.DuplicateAtomIDError, self.residue.atoms.append, self.residue['CA'])
                 
-        atom = structure.Atom(9999999999, 'Cx', structure.ChemElements.C, numpy.array([1, 1, 1]))                   
+        atom = structure.Atom(999999, 'Cx', structure.ChemElements.C, numpy.array([1, 1, 1]))                   
         self.residue.atoms.append(atom)
         self.assertTrue(atom.name in self.residue)
         self.assertEqual(atom.residue, self.residue)
         
         # test alternate handling
-        atom2 = structure.Atom(9999999999, 'Cx', structure.ChemElements.C, numpy.array([2, 2, 2]), alternate=True)  
+        atom2 = structure.Atom(999999, 'Cx', structure.ChemElements.C, numpy.array([2, 2, 2]), alternate=True)  
         self.residue.atoms.append(atom2)
         self.assertTrue(isinstance(self.residue['Cx'], structure.DisorderedAtom))
         self.assertEqual(self.residue['Cx'].length, 2)
 
-        atom3 = structure.Atom(9999999999, 'Cx', structure.ChemElements.C, numpy.array([3, 3, 3]))             
+        atom3 = structure.Atom(999999, 'Cx', structure.ChemElements.C, numpy.array([3, 3, 3]))             
         self.residue.atoms.append(atom3)
         self.assertEqual(self.residue['Cx'].length, 3)  
 
