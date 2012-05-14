@@ -263,8 +263,10 @@ class ClansParser(object):
                                           color=group_raw_data['color'])
 
                     ## get members corresponding to the IDs in this group
+                    ## NOTE: this silently corrects files where a seqgroup
+                    ##       contains the same entry multiple times
                     members = [self._clans_instance.entries[number]
-                               for number in group_raw_data['numbers']]
+                               for number in set(group_raw_data['numbers'])]
 
                     self._clans_instance.add_group(group, members)
 
@@ -329,7 +331,7 @@ class ClansParser(object):
             elif v == 'false':
                 tmp_params[k] = False
                 
-        self._clans_instance._params = ClansParams(**tmp_params)
+        self._clans_instance._params = ClansParams(strict=False, **tmp_params)
 
     def _parse_rotmtx(self):
         """
@@ -769,11 +771,11 @@ class ClansParams(object):
                 'usescval': False,
                 'zoom': 1.0}
 
-    def __init__(self, **kw):
+    def __init__(self, strict=True, **kw):
         self.set_default_params()
 
         for param_name, param_value in kw.items():
-            if param_name not in self._DEFAULTS:
+            if param_name not in self._DEFAULTS and strict:
                 raise KeyError('parameter {0} (value: {1}) unknown'.format(
                     param_name, param_value))
             self.__setattr__(param_name, param_value)
