@@ -171,6 +171,9 @@ class TestAutoFlushStream(test.Case):
         self.assertEqual(content, '$')          # will fail if not flushed (this is the actual test)
         stream.flush()
         self.assertEqual(content, '$')
+        
+    def tearDown(self):
+        self.temp.close()
 
 
 @test.unit
@@ -336,6 +339,7 @@ class TestEntryWriter(test.Case):
         self.assertFalse(writer.autoclose)             
         del writer
         self.assertFalse(temp.closed)
+        temp.close()
              
     def testContextManager(self):
         
@@ -351,33 +355,33 @@ class TestEntryWriter(test.Case):
     
     def testWrite(self):
         
-        temp = self.config.getTempStream()   
-        
-        writer = csb.io.EntryWriter(temp, close=False)
-        writer.write('D')
-        writer.stream.flush()
-        
-        self.assertEqual(open(temp.name).read(), 'D')
+        with self.config.getTempStream() as temp:   
+            
+            writer = csb.io.EntryWriter(temp, close=False)
+            writer.write('D')
+            writer.stream.flush()
+            
+            self.assertEqual(open(temp.name).read(), 'D')
         
     def testWriteLine(self):
         
-        temp = self.config.getTempStream()   
+        with self.config.getTempStream() as temp:   
         
-        writer = csb.io.EntryWriter(temp, close=False)
-        writer.writeline('D')
-        writer.stream.flush()
-        
-        self.assertEqual(open(temp.name).read(), 'D' + csb.io.NEWLINE)
+            writer = csb.io.EntryWriter(temp, close=False)
+            writer.writeline('D')
+            writer.stream.flush()
+            
+            self.assertEqual(open(temp.name).read(), 'D' + csb.io.NEWLINE)
         
     def testWriteAll(self):
         
-        temp = self.config.getTempStream()   
+        with self.config.getTempStream() as temp:  
         
-        writer = csb.io.EntryWriter(temp, close=False)
-        writer.writeall(('A', 'B', 'C',), '/')
-        writer.stream.flush()
-        
-        self.assertEqual(open(temp.name).read(), 'A/B/C/')  
+            writer = csb.io.EntryWriter(temp, close=False)
+            writer.writeall(('A', 'B', 'C',), '/')
+            writer.stream.flush()
+            
+            self.assertEqual(open(temp.name).read(), 'A/B/C/')  
 
         
         

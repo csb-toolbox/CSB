@@ -1,12 +1,13 @@
 """
 Python application for robust structure superposition of two structures
 """
-import sys
 import numpy
-import csb.apps
 
+import csb.apps
+import csb.bio.utils
 
 from csb.bio.io.wwpdb import LegacyStructureParser
+
 
 class ExitCodes(csb.apps.ExitCodes):
     IO_ERROR = 2
@@ -23,25 +24,25 @@ class AppRunner(csb.apps.AppRunner):
         cmd = csb.apps.ArgHandler(self.program, __doc__)
 
         # Input structures
-        cmd.add_positional_argument('pdb1', str, 
+        cmd.add_positional_argument('pdb1', str,
                                     'full path to the first structure')
 
-        cmd.add_positional_argument('pdb2', str, 
+        cmd.add_positional_argument('pdb2', str,
                                     'full path to the second structure')
 
         # Optional arguments 
         cmd.add_scalar_option('chain1', 'c', str,
                               'Chain of the first structure',
-                              default = 'A')
+                              default='A')
 
         cmd.add_scalar_option('chain2', 'd', str,
                               'Chain of the second structure',
-                              default = 'A')
+                              default='A')
         
         cmd.add_scalar_option('scalemixture', 's', str,
                               'Scale mixture distribution',
-                              default = 'student',
-                              choices = ['student','k'])
+                              default='student',
+                              choices=['student', 'k'])
 
         
         cmd.add_scalar_option('alignment', 'a', str,
@@ -50,9 +51,9 @@ class AppRunner(csb.apps.AppRunner):
                               + 'and chain2 the second sequence')
 
 
-        cmd.add_scalar_option('outfile', 'o',str,
+        cmd.add_scalar_option('outfile', 'o', str,
                               'file to which the rotated second structure will be written',
-                              default = 'bfit.pdb')
+                              default='bfit.pdb')
 
         return cmd
 
@@ -80,16 +81,16 @@ class BFitApp(csb.apps.Application):
 
         if self.args.alignment is not None:
             align = SequenceAlignment.parse(file(self.args.alignment).read())
-            align = align[:2,:]
+            align = align[:2, :]
             
             matches = []
-            for i in range(1,align.length + 1):
+            for i in range(1, align.length + 1):
                 if not align.gap_at(i):
-                    matches.append([align.columns[i][0].rank -1,
-                                    align.columns[i][1].rank -1])
+                    matches.append([align.columns[i][0].rank - 1,
+                                    align.columns[i][1].rank - 1])
             matches = numpy.array(matches)
-            X = X[matches[:,0],:]
-            Y = Y[matches[:,1],:]
+            X = X[matches[:, 0], :]
+            Y = Y[matches[:, 1], :]
 
         
         if len(X) != len(Y):
@@ -101,27 +102,27 @@ class BFitApp(csb.apps.Application):
         elif self.args.scalemixture == 'k':
             prior = InvGammaPrior()
         
-        mixture = ScaleMixture(scales = X.shape[0],
-                               prior = prior, d = 3)
+        mixture = ScaleMixture(scales=X.shape[0],
+                               prior=prior, d=3)
 
-        from csb.bio.utils import rmsd, fit
+        from csb.bio.utils import fit
 
-        R,t = fit(X,Y)
+        R, t = fit(X, Y)
 
         # gibbs sampling cycle
         for i in range(200):
             # apply rotation
-            data = numpy.sum((X - numpy.dot(Y, numpy.transpose(R)) - t)**2, axis=-1)**(1./2)
+            data = numpy.sum((X - numpy.dot(Y, numpy.transpose(R)) - t) ** 2, axis= -1) ** (1. / 2)
             # sample scales
             mixture.estimate(data)
             # sample rotations
-            R,t = probabilistic_fit(X,Y, mixture.scales)
-            R,t  = csb.bio.utils.wfit(X,Y, mixture.scales)
+            R, t = probabilistic_fit(X, Y, mixture.scales)
+            R, t = csb.bio.utils.wfit(X, Y, mixture.scales)
 
-        m.apply_transformation(R,t)
+        m.apply_transformation(R, t)
         m.to_pdb(self.args.outfile)
         
 
 
 if __name__ == '__main__':
-    AppRunner(sys.argv).run()
+    AppRunner().run()

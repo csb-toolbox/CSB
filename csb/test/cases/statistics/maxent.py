@@ -21,12 +21,12 @@ class TestMaxent(test.Case):
         data = csb.io.load(self.data_fn)
         model = MaxentModel(k)
         model.sample_weights()
-        posterior = MaxentPosterior(model, data[:100000] / 180. * numpy.pi  )
+        posterior = MaxentPosterior(model, data[:100000] / 180. * numpy.pi)
 
         model.get() * 1.
 
         x0 = posterior.model.get().flatten()
-        target = lambda w: -posterior(w, n=50)
+        target = lambda w:-posterior(w, n=50)
         x = fmin_powell(target, x0, disp=False)
 
         self.assertTrue(x != None)
@@ -35,8 +35,8 @@ class TestMaxent(test.Case):
         posterior.model.set(x)
         posterior.model.normalize(True)
 
-        xx = numpy.linspace(0 ,2 * numpy.pi, 500)
-        fx = posterior.model.log_prob(xx,xx)
+        xx = numpy.linspace(0 , 2 * numpy.pi, 500)
+        fx = posterior.model.log_prob(xx, xx)
 
         self.assertAlmostEqual(posterior.model.log_z(integration='simpson'),
                                posterior.model.log_z(integration='trapezoidal'),
@@ -44,7 +44,7 @@ class TestMaxent(test.Case):
         
         self.assertTrue(fx != None)
         z = numpy.exp(log_sum_exp(numpy.ravel(fx))) 
-        self.assertAlmostEqual(z * xx[1]**2, 1., places=1)
+        self.assertAlmostEqual(z * xx[1] ** 2, 1., places=1)
 
 
 if __name__ == '__main__':
