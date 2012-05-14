@@ -144,7 +144,7 @@ class Envelope(object):
 class LogProb(object):
 
     def __call__(self, x):
-        raise NotImplementedError
+        raise NotImplementedError()
 
 class Gauss(LogProb):
 
