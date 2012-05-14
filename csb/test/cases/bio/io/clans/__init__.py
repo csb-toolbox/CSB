@@ -305,8 +305,27 @@ class TestClansWriter(test.Case):
 
         self.assertEqual(len(original_lines), len(written_lines))
 
+        in_hsps = False
         for i, original_line in enumerate(original_lines):
-            self.assertEqual(original_line, written_lines[i])
+
+            if original_line == '<hsp>\n':
+                in_hsps = True
+                continue
+
+            if original_line == '</hsp>\n':
+                in_hsps = True
+                continue
+
+            if in_hsps:
+                original_start_end, original_value \
+                                    = original_line.strip().split(':')
+                written_start_end, written_value \
+                                   = written_lines[i].strip().split(':')
+                self.assertEqual(original_start_end, written_start_end)
+                self.assertTrue((float(original_value) - float(written_value)) < 1e-6)
+            else:
+                self.assertEqual(original_line, written_lines[i])
+            
 
     def tearDown(self):
         self.temp.close()
