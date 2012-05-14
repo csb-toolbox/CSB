@@ -42,7 +42,7 @@ decorators you need in order to write tests for CSB.
        reference to the test config, so your test method can be::
        
            def testSomeMethod(self):
-               myDataFile = self.config.getTestDataFile('some.file')
+               myDataFile = self.config.getTestFile('some.file')
                self.assert...
         
        The "unit" decorator marks the test case as a collection of unit tests.
@@ -55,14 +55,6 @@ decorators you need in order to write tests for CSB.
            def setUp(self):
                super(TestSomeClass, self).setUp()       # init the config
                # do something with self.config here...
-                
-       If you need to re-raise an exception by changing its signature::
-       
-           def testSomeMethod(self):
-               try:
-                   # do something that may crash
-               except:
-                   self.reRaise(addArgs=['Unhandled exception in data file ' + self.currentFile])
                    
        Writing custom (a.k.a. "data", "slow", "dynamic") tests is a little bit
        more work. Custom tests must be functions, not classes. Basically a
@@ -171,6 +163,7 @@ import types
 import time
 import getopt
 import tempfile
+import traceback
 
 import csb.io
 import csb.pyutils
@@ -304,15 +297,15 @@ class Case(unittest.TestCase):
     def reRaise(self, addArgs=()):
         """
         Re-raise the last exception with its full traceback, but modify the
-        argument list with C{addArgs}
+        argument list with C{addArgs} and the original stack trace.
         
         @param addArgs: additional arguments to append to the exception
         @type addArgs: tuple
         """
-        #ex = sys.exc_info()
-        #ex[1].args = list(ex[1].args) + list(addArgs)
-        #raise ex[0], ex[1], ex[2]
-        raise NotImplementedError()  
+        klass, ex, _tb = sys.exc_info()
+        ex.args = list(ex.args) + list(addArgs) + [''.join(traceback.format_exc())]
+        
+        raise klass(ex.args)
     
     def assertFasterThan(self, duration, callable, *args, **kargs):
         """
