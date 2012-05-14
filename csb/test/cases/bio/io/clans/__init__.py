@@ -1,7 +1,5 @@
 import csb.test as test
 
-import os
-
 from csb.bio.io import ClansParser
 from csb.bio.io.clans import Clans, ClansEntry, ClansParams, ClansSeqgroup,\
      Color
