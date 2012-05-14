@@ -454,10 +454,7 @@ class TestSeqResID(TestStandardID):
 @test.custom
 def TestPDB():
     
-    import glob
-
-    mask = raw_input('PDB file(s) (enter file name or mask): ')
-    suite = test.unittest.TestSuite()    
+    import glob 
     
     class PDBTestCase(test.Case):
         
@@ -467,12 +464,15 @@ def TestPDB():
                 StructureParser(self.entry).parse_structure()
             except:
                 self.reRaise([self.entry])    
-        
-    for entry in glob.glob(mask):
-        
-        case = PDBTestCase()
-        case.entry = entry
-        suite.addTest(case)
+
+    var = 'PDBMASK'
+    suite = test.unittest.TestSuite()
+    
+    if var in os.environ:
+        for entry in glob.glob(os.environ[var]):
+            case = PDBTestCase()
+            case.entry = entry
+            suite.addTest(case)
     
     return suite
 
