@@ -7,7 +7,7 @@ class StatisticalEnsemble(object):
 
         return exp(-self.energy(raw_energies))
 
-    def log_prob(self, raw_enegies):
+    def log_prob(self, raw_energies):
 
         return -self.energy(raw_energies)
 
@@ -65,7 +65,7 @@ class TsallisEnsemble(StatisticalEnsemble):
         return self._q
     @q.setter
     def q(self, value):
-        if q <= 0.:
+        if value <= 0.:
             raise ValueError("Inverse temperature {0} < 0".formate(value))
         self._q = value
 
@@ -122,5 +122,5 @@ class CompositeEnsemble(StatisticalEnsemble):
     
     def gradient(self, raw_energies):
 
-        return sum([self._ensembles[i].gradient(raw_eneriges[i])
+        return sum([self._ensembles[i].gradient(raw_energies[i])
                     for i in range(len(self.ensembles))],0)
