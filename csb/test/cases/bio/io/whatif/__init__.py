@@ -1,5 +1,3 @@
-
-import csb
 import csb.test as test
 
 from csb.bio.io.whatif import WhatCheckParser
