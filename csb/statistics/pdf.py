@@ -9,7 +9,7 @@ import csb.pyutils
 from abc import ABCMeta, abstractmethod
 from csb.pyutils import OrderedDict
 
-from csb.math import log, exp, psi, inv_psi
+from csb.numeric import log, exp, psi, inv_psi
 from scipy.special import gammaln
 from numpy import array, fabs, power, sqrt, pi, mean, median, clip
 

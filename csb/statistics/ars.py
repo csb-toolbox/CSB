@@ -120,7 +120,7 @@ class Envelope(object):
 
         from numpy.random import random
         from numpy import add
-        from csb.math import log_sum_exp
+        from csb.numeric import log_sum_exp
         
         log_m = self.log_masses()
         log_M = log_sum_exp(log_m)

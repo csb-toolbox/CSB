@@ -1,5 +1,5 @@
 
-from csb.math import log, exp
+from csb.numeric import log, exp
 from abc import ABCMeta, abstractmethod
 
 

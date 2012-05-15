@@ -205,12 +205,12 @@ def random_rotation(A, n_iter=10, initial_values=None):
     from numpy import cos, sin, dot, pi, clip
     from numpy.linalg import svd, det    
     from random import vonmisesvariate, randint
-    from csb.math import euler
+    from csb.numeric import euler
 
 
     def sample_beta(kappa, n=1):
         from numpy import arccos
-        from csb.math import log, exp
+        from csb.numeric import log, exp
         from numpy.random import random
 
         u = random(n)

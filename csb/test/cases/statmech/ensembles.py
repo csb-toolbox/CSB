@@ -1,6 +1,6 @@
 import numpy
 
-import csb.math
+import csb.numeric
 import csb.test as test
 
 from csb.statmech.ensembles import BoltzmannEnsemble, TsallisEnsemble, CompositeEnsemble
@@ -36,7 +36,7 @@ class TestEnergy(test.Case):
         tsallis = TsallisEnsemble(q=1.1, e_min= -50.)
         te = tsallis.energy(e)
         q = 1.1
-        ee = q / (q - 1.) * csb.math.log(1 + (q - 1) * (e + 50.)) - 50
+        ee = q / (q - 1.) * csb.numeric.log(1 + (q - 1) * (e + 50.)) - 50
         
         for i in range(len(e)):
             self.assertWithinDelta(ee[i], te[i], delta=1e-5)
@@ -48,7 +48,7 @@ class TestEnergy(test.Case):
 
         q = 1.1
         beta = 0.1
-        ee = q / (q - 1.) * csb.math.log(1 + (q - 1) * (e1 + 50.)) - 50
+        ee = q / (q - 1.) * csb.numeric.log(1 + (q - 1) * (e1 + 50.)) - 50
         ee += e2 * beta
 
         ce = CompositeEnsemble([TsallisEnsemble(q=q, e_min= -50.),

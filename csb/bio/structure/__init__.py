@@ -11,7 +11,7 @@ import datetime
 
 import csb.io
 import csb.pyutils
-import csb.math
+import csb.numeric
 import csb.bio.utils
 
 from abc import ABCMeta, abstractmethod, abstractproperty
@@ -1236,16 +1236,16 @@ class ProteinResidue(Residue):
         try:
             if prev_residue is not None and prev_residue.has_structure:
                 prev_c = prev_residue._atoms['C'].vector
-                angles.phi = csb.math.dihedral_angle(prev_c, n, ca, c)
+                angles.phi = csb.numeric.dihedral_angle(prev_c, n, ca, c)
         except csb.pyutils.ItemNotFoundError as missing_prevatom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the i-1 residue {1!r}.'.format(missing_prevatom, prev_residue))    
         try:
             if next_residue is not None and next_residue.has_structure:    
                 next_n = next_residue._atoms['N'].vector
-                angles.psi = csb.math.dihedral_angle(n, ca, c, next_n)
+                angles.psi = csb.numeric.dihedral_angle(n, ca, c, next_n)
                 next_ca = next_residue._atoms['CA'].vector
-                angles.omega = csb.math.dihedral_angle(ca, c, next_n, next_ca)
+                angles.omega = csb.numeric.dihedral_angle(ca, c, next_n, next_ca)
         except csb.pyutils.ItemNotFoundError as missing_nextatom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the i+1 residue {1!r}.'.format(missing_nextatom, next_residue))              

@@ -169,7 +169,7 @@ class MaxentModel(AbstractDensity):
         """
         Return the probability of the configurations x cross y.
         """
-        from csb.math import exp
+        from csb.numeric import exp
         return exp(-self.beta * self(x, y))
 
     def z(self):
@@ -186,7 +186,7 @@ class MaxentModel(AbstractDensity):
         Calculate the log partion function.
         """
         from numpy import pi, linspace, max
-        from csb.math import log, exp
+        from csb.numeric import log, exp
 
         if integration == 'simpson':
             from csb.numeric import simpson_2d
@@ -224,7 +224,7 @@ class MaxentModel(AbstractDensity):
         """
         from csb.numeric import trapezoidal_2d
         from numpy import pi, linspace, max
-        from csb.math import log, exp
+        from csb.numeric import log, exp
 
         x = linspace(0., 2 * pi, n)
         dx = x[1] - x[0]
