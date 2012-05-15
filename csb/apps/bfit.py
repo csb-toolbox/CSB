@@ -23,7 +23,12 @@ class AppRunner(csb.apps.AppRunner):
         return BFitApp
 
     def command_line(self):
-
+        __doc__ = "bFit is a probabilistic method for robust superposition" \
+                  + "and comparison of protein structures. To do so, "\
+                  + "non-rigid displacements in protein structures are "\
+                  + "modelled with outlier-tolerant probability "\
+                  + "distributions."
+        
         cmd = csb.apps.ArgHandler(self.program, __doc__)
 
         # Input structures
@@ -50,22 +55,28 @@ class AppRunner(csb.apps.AppRunner):
         
         cmd.add_scalar_option('alignment', 'a', str,
                               'Alignment in fasta format defining equivalent positions\n'
-                              + 'Assumes that chain1 is the first sequence of the alignment'
-                              + 'and chain2 the second sequence')
-
+                              + 'Assumes that chain1 is the first sequence of '
+                              + 'the alignment and chain2 the second sequence')
 
         cmd.add_scalar_option('outfile', 'o', str,
-                              'file to which the rotated second structure will be written',
+                              'file to which the rotated second ' +
+                              'structure will be written',
                               default='bfit.pdb')
+
+        cmd.add_scalar_option('niter', 'n', int,
+                              'Number of Gibbs sampling steps',
+                              default = 200)
 
         return cmd
 
 
 
 class BFitApp(csb.apps.Application):
-    
-    def main(self):
+    """
+    Python application for robust structure superposition of two protein structures
+    """
 
+    def main(self):
         try:
             parser = LegacyStructureParser(self.args.pdb1)
             r = parser.parse()
@@ -75,7 +86,6 @@ class BFitApp(csb.apps.Application):
         except IOError as e:
             self.exit('PDB file parsing failed\n' + str(e.value), ExitCodes.IO_ERROR)
 
-        
         X = numpy.array(r[self.args.chain1].list_coordinates(['CA'], True))
         Y = numpy.array(m[self.args.chain2].list_coordinates(['CA'], True))
 
@@ -94,7 +104,8 @@ class BFitApp(csb.apps.Application):
 
         
         if len(X) != len(Y):
-            self.exit('Structures are of different lengths, please specify an alignment',
+            self.exit('Structures are of different lengths,' +
+                      ' please specify an alignment',
                       ExitCodes.INPUT_ERROR)
         
         if self.args.scalemixture == 'student':
@@ -110,14 +121,15 @@ class BFitApp(csb.apps.Application):
         R, t = fit(X, Y)
 
         # gibbs sampling cycle
-        for i in range(200):
+        for i in range(self.args.niter):
             # apply rotation
-            data = numpy.sum((X - numpy.dot(Y, numpy.transpose(R)) - t) ** 2, axis= -1) ** (1. / 2)
+            data = numpy.sum((X - numpy.dot(Y, numpy.transpose(R)) - t) ** 2,
+                             axis= -1) ** (1. / 2)
             # sample scales
             mixture.estimate(data)
             # sample rotations
             R, t = probabilistic_fit(X, Y, mixture.scales)
-            R, t = csb.bio.utils.wfit(X, Y, mixture.scales)
+            
 
         m.apply_transformation(R, t)
         m.to_pdb(self.args.outfile)
