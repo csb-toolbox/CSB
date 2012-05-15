@@ -1,5 +1,7 @@
-import csb.test as test
 import numpy
+import warnings
+
+import csb.test as test
 
 from csb.math import exp, log_sum_exp, log
 from csb.statistics.rand import truncated_gamma, truncated_normal, sample_from_histogram
@@ -24,7 +26,18 @@ class TestRand(test.Case):
         hy, hx = density(x, 100)
         hx = 0.5 * (hx[1:] + hx[:-1])
         hy = hy.astype('d')
-        hy /= (hx[1] - hx[0]) * hy.sum()
+
+        with warnings.catch_warnings(record=True) as warning:
+            warnings.simplefilter("always")            
+            
+            hy /= (hx[1] - hx[0]) * hy.sum()
+            
+            self.assertLessEqual(len(warning), 1)
+            
+            if len(warning) == 1:
+                warning = warning[0]
+                self.assertEqual(warning.category, RuntimeWarning)
+                self.assertEqual(str(warning.message), 'divide by zero encountered in divide')            
 
         x = numpy.linspace(x_min, x_max, 1000)
         p = (alpha - 1) * log(x) - beta * x
@@ -49,8 +62,19 @@ class TestRand(test.Case):
         hy, hx = density(x, 100)
         hx = 0.5 * (hx[1:] + hx[:-1])
         hy = hy.astype('d')
-        hy /= (hx[1] - hx[0]) * hy.sum()
-
+        
+        with warnings.catch_warnings(record=True) as warning:
+            warnings.simplefilter("always")        
+            
+            hy /= (hx[1] - hx[0]) * hy.sum()
+            
+            self.assertLessEqual(len(warning), 1)
+            
+            if len(warning) == 1:
+                warning = warning[0]
+                self.assertEqual(warning.category, RuntimeWarning)
+                self.assertEqual(str(warning.message), 'divide by zero encountered in divide')
+            
         x = numpy.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
 
         p = -0.5 * (x - mu) ** 2 / sigma ** 2
