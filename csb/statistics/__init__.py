@@ -240,6 +240,9 @@ def histogram_nd(x, nbins=100, axes=None, nbatch=1000, normalize=True):
     """
     import numpy as np
 
+    if len(x.shape) == 1:
+        x = np.reshape(x, (-1,1))
+
     d = x.shape[1]
     
     if axes is None:
