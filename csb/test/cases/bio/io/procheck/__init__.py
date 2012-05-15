@@ -1,11 +1,6 @@
-
-import os
-
-import csb
 import csb.test as test
+
 from csb.bio.io.procheck import ProcheckParser
-
-
 
 @test.functional
 class TestProcheckParser(test.Case):
