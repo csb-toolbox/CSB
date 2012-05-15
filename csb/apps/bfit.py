@@ -7,6 +7,9 @@ import csb.apps
 import csb.bio.utils
 
 from csb.bio.io.wwpdb import LegacyStructureParser
+from csb.bio.utils import probabilistic_fit
+from csb.statistics.scalemixture import ScaleMixture, GammaPrior, InvGammaPrior
+from csb.bio.sequence import SequenceAlignment
 
 
 class ExitCodes(csb.apps.ExitCodes):
@@ -60,11 +63,8 @@ class AppRunner(csb.apps.AppRunner):
 
 
 class BFitApp(csb.apps.Application):
+    
     def main(self):
-
-        from csb.bio.utils import probabilistic_fit
-        from csb.statistics.scalemixture import ScaleMixture, GammaPrior, InvGammaPrior
-        from csb.bio.sequence import SequenceAlignment
 
         try:
             parser = LegacyStructureParser(self.args.pdb1)
