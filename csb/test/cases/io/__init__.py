@@ -223,17 +223,29 @@ class TestTempFile(test.Case):
             self.assertFalse(hasattr(temp, 'jxYUgg8'))
             self.assertRaises(AttributeError, lambda:getattr(temp, 'jxYUgg8'))
 
-    def testAutoCleanup(self):
-        
+    def testContextManager(self):
+                
         with csb.io.TempFile() as temp:
             self.assertTrue(os.path.exists(temp.name))
         self.assertFalse(os.path.exists(temp.name))
+
+    def testClose(self):
         
         temp = csb.io.TempFile()
-        name = temp.name
-        self.assertTrue(os.path.exists(name))
-        del temp
-        self.assertFalse(os.path.exists(name))
+
+        self.assertTrue(os.path.isfile(temp.name))
+        temp.close()
+        self.assertFalse(os.path.exists(temp.name)) 
+            
+    def testAutoCleanup(self):
+        
+        for dispose in [True, False]:
+            temp = csb.io.TempFolder(dispose=dispose)
+            name = temp.name
+        
+            self.assertTrue(os.path.isdir(name))
+            del temp
+            self.assertEquals(os.path.isdir(name), not dispose)
         
     def testMultipleHandles(self):
         
@@ -245,6 +257,40 @@ class TestTempFile(test.Case):
             
             self.assertEqual(data, open(temp.name).read())        
         
+        
+@test.unit
+class TestTempFolder(test.Case):                           
+
+    def testContextManager(self):
+        
+        with csb.io.TempFolder() as temp:
+            self.assertTrue(os.path.isdir(temp.name))
+            
+        self.assertFalse(os.path.exists(temp.name))
+        
+    def testClose(self):
+        
+        temp = csb.io.TempFolder()
+
+        for i in range(3):
+            name = os.path.join(temp.name, 'test{0}.txt'.format(i))
+            with open(name, 'w') as f:
+                f.write('.')
+                
+        self.assertTrue(os.path.isdir(temp.name))
+        temp.close()
+        self.assertFalse(os.path.exists(temp.name))   
+
+    def testAutoCleanup(self):
+        
+        for dispose in [True, False]:
+            temp = csb.io.TempFolder(dispose=dispose)
+            name = temp.name
+        
+            self.assertTrue(os.path.isdir(name))
+            del temp
+            self.assertEquals(os.path.isdir(name), not dispose)
+                    
                                         
 @test.unit
 class TestEntryReader(test.Case):

@@ -3,6 +3,7 @@ Common IO-related utility functions and classes.
 """
 
 import os
+import shutil
 import tempfile
 import csb.pyutils
 
@@ -59,6 +60,9 @@ class TempFile(csb.pyutils.Proxy):
     Create a temporary file and take care of deleting it upon object
     destruction. The file can be opened multiple times on any platform, unlike
     the case with tempfile.NamedTemporaryFile (does not work on Windows).
+    
+    @param dispose: automatically delete the file
+    @type dispose: bool    
     """
 
     def __init__(self, dispose=True):
@@ -101,7 +105,48 @@ class TempFile(csb.pyutils.Proxy):
             
     @property
     def name(self):
-        return self.__file        
+        return self.__file
+    
+class TempFolder(object):
+    """
+    Create a temporary directory which is automatically wiped when the object
+    is closed.
+    
+    @param dispose: automaticlaly delete the folder and its contents
+    @type dispose: bool                
+    """
+    
+    def __init__(self, dispose=True):
+         
+        name = tempfile.mkdtemp()
+
+        self.__name = os.path.abspath(name)
+        self.__dispose = bool(dispose)        
+        
+    def __del__(self):
+        
+        if self.__dispose:
+            try:
+                self.close()
+            except:
+                pass
+        
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *args):
+        self.close() 
+        
+    def close(self):
+        """
+        Delete the entire directory and its contents.
+        """
+        if os.path.exists(self.name):
+            shutil.rmtree(self.name)
+            
+    @property
+    def name(self):
+        return self.__name    
 
 class EntryReader(object):
     """
