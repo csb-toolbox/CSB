@@ -30,7 +30,7 @@ class AbstractWHAM(object):
         Return the Density of states (DOS).
 
         @param normalize: Ensure that the density of states sums to one
-        @rtype float
+        @rtype: float
         """
         if normalize:
             return self._log_g - log_sum_exp(self._log_g)
@@ -76,8 +76,8 @@ class AbstractWHAM(object):
         @param beta: Inverse Temperature
         @type beta: float or list
 
-        @param beta: List of ensembles for which the partition function should be evaluated
-        @type beta: List of ensembles
+        @param ensembles: List of ensembles for which the partition function should be evaluated
+        @type ensembles: List of ensembles
 
         @rtype: float or array
         """
