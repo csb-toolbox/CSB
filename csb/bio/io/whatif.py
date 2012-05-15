@@ -60,12 +60,11 @@ class WhatCheckParser(object):
         base = os.path.basename(pdb_file)
 
         with TempFolder() as tmp:
-            shutil.copy(os.path.expanduser(pdb_file),
-                        tmp)
-            os.chdir(tmp)
-            p = Shell.run('{0} {1}'.format(self.binary,
-                                           os.path.join(tmp, base)))
-            out = self.parse_summary(os.path.join(tmp,'pdbout.txt'))
+            shutil.copy(os.path.expanduser(pdb_file), tmp.name)
+            os.chdir(tmp.name)
+            Shell.run('{0} {1}'.format(self.binary,
+                                       os.path.join(tmp.name, base)))
+            out = self.parse_summary(os.path.join(tmp.name, 'pdbout.txt'))
             os.chdir(wd)
 
         return out
