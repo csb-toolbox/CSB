@@ -4,9 +4,10 @@ Simple WhatIf/WhatCheck Summary parser
 
 import re
 import os
-import tempfile
-import subprocess
+import shutil
 
+from csb.pyutils import Shell
+from csb.io import TempFolder
 
 class WhatCheckParser(object):
     """
@@ -28,18 +29,18 @@ class WhatCheckParser(object):
         text = f_handler.read()
 
         info = dict()
-        reRamachandran = re.compile('Ramachandran\s*Z-score\s*:\s*([0-9.Ee-]+)')
-        re1st = re.compile('1st\s*generation\s*packing\s*quality\s*:\s*([0-9.Ee-]+)')
-        re2nd = re.compile('2nd\s*generation\s*packing\s*quality\s*:\s*([0-9.Ee-]+)')
-        reBB = re.compile('Backbone\s*conformation\s*Z-score\s*:\s*([0-9.Ee-]+)')
-        reRotamer = re.compile('chi-1\S*chi-2\s*rotamer\s*normality\s*:\s*([0-9.Ee-]+)')
+        re_ramachandran = re.compile('Ramachandran\s*Z-score\s*:\s*([0-9.Ee-]+)')
+        re_1st = re.compile('1st\s*generation\s*packing\s*quality\s*:\s*([0-9.Ee-]+)')
+        re_2nd = re.compile('2nd\s*generation\s*packing\s*quality\s*:\s*([0-9.Ee-]+)')
+        re_backbone = re.compile('Backbone\s*conformation\s*Z-score\s*:\s*([0-9.Ee-]+)')
+        re_rotamer = re.compile('chi-1\S*chi-2\s*rotamer\s*normality\s*:\s*([0-9.Ee-]+)')
         
 
-        info['rama_z_score'] = float(reRamachandran.search(text).groups(0)[0])
-        info['bb_z_score'] = float(reBB.search(text).groups(0)[0])
-        info['1st_packing_z_score'] = float(re1st.search(text).groups(0)[0])
-        info['2nd_packing_z_score'] = float(re2nd.search(text).groups(0)[0])
-        info['rotamer_score'] = float(reRotamer.search(text).groups(0)[0])
+        info['rama_z_score'] = float(re_ramachandran.search(text).groups(0)[0])
+        info['bb_z_score'] = float(re_backbone.search(text).groups(0)[0])
+        info['1st_packing_z_score'] = float(re_1st.search(text).groups(0)[0])
+        info['2nd_packing_z_score'] = float(re_2nd.search(text).groups(0)[0])
+        info['rotamer_score'] = float(re_rotamer.search(text).groups(0)[0])
 
         f_handler.close()
         return info
@@ -48,25 +49,25 @@ class WhatCheckParser(object):
 
 
     def run(self, pdb_file):
+        """
+        Runs WhatCheck for the given pdbfile and parses the output.
+        Will fail if the WhatCheck binary is not in the path.
+        
+        @param pdb_file: file to parse
+        @return: dict of parsed values
+        """
         wd = os.getcwd()
-        tmp = tempfile.mkdtemp()
         base = os.path.basename(pdb_file)
-        
-        p = subprocess.call('cp %s %s/.' %(os.path.expanduser(pdb_file),
-                                           tmp), shell = True)
-        os.chdir(tmp)
 
-        p = subprocess.Popen('%s %s' %(self.binary, os.path.join(tmp, base)),
-                             stdout=open("/dev/null", "w"),
-                             stderr=open("/dev/null", "w"),
-                             shell = True)
-        
-        sts = os.waitpid(p.pid, 0)[1]    
-        
-        out = self.parse_summary(os.path.join(tmp,'pdbout.txt'))
-        
-        os.chdir(wd)
-        p = subprocess.call('rm -rf %s' %tmp, shell = True)
+        with TempFolder() as tmp:
+            shutil.copy(os.path.expanduser(pdb_file),
+                        tmp)
+            os.chdir(tmp)
+            p = Shell.run('{0} {1}'.format(self.binary,
+                                           os.path.join(tmp, base)))
+            out = self.parse_summary(os.path.join(tmp,'pdbout.txt'))
+            os.chdir(wd)
+
         return out
                     
         
