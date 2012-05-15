@@ -255,6 +255,16 @@ def rmsd(X, Y):
 
     return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300) / len(X))
 
+def rmsd_cur(X, Y):
+    """
+    Calculate the RMSD of two conformations as they are (no fitting is done).
+    For details, see L{rmsd}.
+
+    @return: rmsd value between the input vectors
+    @rtype: float
+    """
+    return distance_sq(X, Y).mean() ** 0.5
+
 def wrmsd(X, Y, w):
     """
     Calculate the weighted root mean squared deviation (wRMSD) using Kabsch'
@@ -316,29 +326,38 @@ def _tm_d0(Lmin):
     else:
         d0 = 0.5
 
-    return d0
+    return max(0.5, d0)
 
-def tm_score(x, y):
+def tm_score(x, y, L=None, d0=None):
     """
     Evaluate the TM-score of two conformations as they are (no fitting is done).
     
     @param x: 3 x n input array
-    @param x: 3 x n input array
+    @type x: numpy array
+    @param y: 3 x n input array
+    @type y: numpy array
+    @param L: length for normalization (default: C{len(x)})
+    @type L: int
+    @param d0: d0 in Angstroms (default: calculate from C{L})
+    @type d0: float
     
     @return: computed TM-score
     @rtype: float
     """
     from numpy import sum
 
-    d = sum((x - y) ** 2, 1) ** 0.5
-    d0 = _tm_d0(len(x))
-    
-    return sum(1 / (1 + (d / d0) ** 2)) / len(x)
+    if not L:
+        L = len(x)
+    if not d0:
+        d0 = _tm_d0(L)
+    d = distance(x, y)
 
-def tm_superimpose(x, y, fit_method=fit):
+    return sum(1 / (1 + (d / d0) ** 2)) / L
+
+def tm_superimpose(x, y, fit_method=fit, L=None, d0=None, L_ini_min=4, iL_step=1):
     """
     Compute the TM-score of two protein coordinate vector sets. 
-    Reference:  hang.bioinformatics.ku.edu/TM-score
+    Reference:  http://zhanglab.ccmb.med.umich.edu/TM-score
     
     @param x: 3 x n input vector
     @type x: numpy.array
@@ -347,39 +366,64 @@ def tm_superimpose(x, y, fit_method=fit):
     @param fit_method: a reference to a proper fitting function, e.g. fit
                        or fit_wellordered    
     @type fit_method: function
+    @param L: length for normalization (default: C{len(x)})
+    @type L: int
+    @param d0: d0 in Angstroms (default: calculate from C{L})
+    @type d0: float
+    @param L_ini_min: minimum length of initial alignment window (increase
+    to speed up but loose precision, a value of 0 disables local alignment
+    initialization)
+    @type L_ini_min: int
+    @param iL_step: initial alignment window shift (increase to speed up
+    but loose precision)
+    @type iL_step: int
     
     @return: rotation matrix, translation vector, TM-score
     @rtype: tuple
     """
-    from numpy import array, sum, dot, compress, power, ones, argmax
+    from numpy import asarray, sum, dot, zeros, clip
 
-    mask = ones(len(x)).astype('i')
-    d0 = _tm_d0(len(x))
-    
-    scores = []
-    transformations = []
+    x, y = asarray(x), asarray(y)
+    if not L:
+        L = len(x)
+    if not d0:
+        d0 = _tm_d0(L)
+    d0_search = clip(d0, 4.5, 8.0)
+    best = None, None, 0.0
 
-    for i in range(3):
+    L_ini_min = min(L, L_ini_min) if L_ini_min else L
+    L_ini = [L_ini_min] + filter(lambda x: x > L_ini_min,
+            [L // (2**n_init) for n_init in range(6)])
 
-        R, t = fit_method(compress(mask, x, 0), compress(mask, y, 0))
+    # the outer two loops define a sliding window of different sizes for the
+    # initial local alignment (disabled with L_ini_min=0)
+    for L_init in L_ini:
+        for iL in range(0, L - L_init + 1, min(L_init, iL_step)):
+            mask = zeros(L, bool)
+            mask[iL:iL+L_init] = True
 
-        scores.append(tm_score(x, dot(y, R.T) + t))
-        transformations.append((R, t))
+            # refine mask until convergence, similar to fit_wellordered
+            for i in range(20):
+                R, t = fit_method(x[mask], y[mask])
 
-        cutoff = min(max(4.5, d0), 8.0) + i
-        d = sum((x - dot(y, R.T) - t) ** 2, 1) ** 0.5
+                d = distance(x, dot(y, R.T) + t)
+                score = sum(1 / (1 + (d / d0) ** 2)) / L
 
-        while True:
-            
-            mask = (d < cutoff).astype('i')
-            if sum(mask) >= 3 or 3 >= len(mask):
-                break
-            cutoff += 0.5
+                if score > best[-1]:
+                    best = R, t, score
 
-    R, t = transformations[argmax(scores)]
-    score = max(scores)
-    
-    return R, t, score
+                cutoff = d0_search + (-1 if i == 0 else 1)
+                while True:
+                    mask_prev = mask
+                    mask = d < cutoff
+                    if sum(mask) >= 3 or 3 >= len(mask):
+                        break
+                    cutoff += 0.5
+
+                if (mask == mask_prev).all():
+                    break
+
+    return best
 
 def center_of_mass(x, m=None):
     """
@@ -491,5 +535,27 @@ def distance_matrix(X, Y=None):
     S = add.outer(sum(X ** 2, 1), sum(Y ** 2, 1))
 
     return sqrt(clip(S - 2 * C, 0., 1e300))
+
+def distance_sq(X, Y):
+    """
+    Squared distance between C{X} and C{Y} along the last axis. For details, see L{distance}.
+
+    @return: scalar or array of length m
+    @rtype: (m,) numpy.array
+    """
+    return ((numpy.asarray(X) - Y) ** 2).sum(-1)
+
+def distance(X, Y):
+    """
+    Distance between C{X} and C{Y} along the last axis.
+
+    @param X: m x n input vector
+    @type X: numpy array
+    @param Y: m x n input vector
+    @type Y: numpy array
+    @return: scalar or array of length m
+    @rtype: (m,) numpy.array
+    """
+    return distance_sq(X, Y) ** 0.5
 
 # vi:expandtab:smarttab:sw=4

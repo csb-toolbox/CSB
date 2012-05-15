@@ -896,12 +896,17 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         y = other.list_coordinates(what)
         assert len(x) == len(y)
         
+        L_ini_min = 0
         if how == AlignmentTypes.Global:                                            
             fit = csb.bio.utils.fit
-        else:
+        elif how == AlignmentTypes.Local:
             fit = csb.bio.utils.fit_wellordered
-            
-        r, t, tm = csb.bio.utils.tm_superimpose(x, y, fit)
+        else:
+            # TMscore.f like search (slow)
+            fit = csb.bio.utils.fit
+            L_ini_min = 4
+                
+        r, t, tm = csb.bio.utils.tm_superimpose(x, y, fit, None, None, L_ini_min)
         
         return SuperimposeInfo(r,t, tm_score=tm)         
     

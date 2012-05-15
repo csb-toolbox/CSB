@@ -174,6 +174,17 @@ class TestUtils(test.Case):
             [ 1., s2, 0. ]]
         self.assertArrayEqual(d, d_test)
 
+    def testDistance(self):
+        d = cbu.distance(X1, X2)
+
+        self.assertEqual(d.shape, (len(X1),))
+        self.assertArrayEqual(d[:2], [0., 2.])
+
+    def testRmsdCur(self):
+        rmsd = cbu.rmsd_cur(X1, X2)
+
+        self.assertAlmostEqual(rmsd, 2.0)
+
 if __name__ == '__main__':
 
     test.Console()
