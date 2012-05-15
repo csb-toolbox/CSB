@@ -80,7 +80,7 @@ class GaussianMixture(object):
         log-likelihood of the marginalized model (no auxiliary indicator
         variables)
         """
-        from csb.math import log, log_sum_exp
+        from csb.numeric import log, log_sum_exp
         from numpy import pi, sum, transpose, clip
 
         D = self.get_delta(X)
@@ -96,7 +96,7 @@ class GaussianMixture(object):
         """
         log-likelihood of the extended model (with indicators)
         """
-        from csb.math import log
+        from csb.numeric import log
         from numpy import pi, sum, clip
 
         D = self.get_delta(X)
@@ -169,7 +169,7 @@ class GaussianMixture(object):
         expectation step: calculation of indicators
         """
         from numpy import clip
-        from csb.math import log, log_sum_exp, exp
+        from csb.numeric import log, log_sum_exp, exp
 
         Z = -0.5 * self.get_delta(X) / clip(self.sigma ** 2, 1e-300, 1e300)
         Z -= 0.5 * self.get_dimension(Z) * log(self.sigma ** 2)

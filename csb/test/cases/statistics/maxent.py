@@ -5,7 +5,7 @@ import csb.io
 
 from scipy.optimize import fmin_powell
 
-from csb.math import log_sum_exp
+from csb.numeric import log_sum_exp
 from csb.statistics.maxent import MaxentModel, MaxentPosterior
 
 @test.functional

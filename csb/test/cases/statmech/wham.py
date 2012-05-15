@@ -33,7 +33,7 @@ class FunnyGaussian(object):
 
     def log_Z(self, beta=1.):
 
-        from csb.math import log
+        from csb.numeric import log
         from scipy.special import gammainc, gammaln
 
         return log(0.5 * self.d) + log(gammainc(0.5 * self.d, 0.5 * self.k)) + \
@@ -41,7 +41,7 @@ class FunnyGaussian(object):
 
     def log_g(self, energies):
         
-        from csb.math import log
+        from csb.numeric import log
         return (0.5 * self.d - 1) * log(2 * energies / self.k) + log(self.d / self.k)
 
  

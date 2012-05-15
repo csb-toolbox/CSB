@@ -3,7 +3,7 @@ import warnings
 
 import csb.test as test
 
-from csb.math import exp, log_sum_exp, log
+from csb.numeric import exp, log_sum_exp, log
 from csb.statistics.rand import truncated_gamma, truncated_normal, sample_from_histogram
 from csb.statistics.pdf import Normal
 from csb.statistics import density

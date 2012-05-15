@@ -7,7 +7,7 @@ import csb.statistics.rand
 
 from abc import abstractmethod, ABCMeta
 
-from csb.math import log, exp
+from csb.numeric import log, exp
 from csb.statistics import harmonic_mean, geometric_mean
 from csb.statistics.pdf import AbstractEstimator, AbstractDensity, Gamma, InverseGamma
 
@@ -79,7 +79,7 @@ class ScaleMixture(AbstractDensity):
         self.estimator = self._prior.get_estimator()
 
     def log_prob(self, x):
-        from csb.math import log_sum_exp
+        from csb.numeric import log_sum_exp
 
         dim = self._d
         s = self.scales
@@ -134,7 +134,7 @@ class ARSPosteriorAlpha(csb.statistics.ars.LogProb):
         Generate initial values by doing fixed point
         iterations to solve for alpha
         """
-        from csb.math import psi, inv_psi, d_approx_psi
+        from csb.numeric import psi, inv_psi, d_approx_psi
 
         n, a, b = self.n, self.a, self.b
 

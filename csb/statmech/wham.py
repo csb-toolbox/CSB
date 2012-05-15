@@ -4,7 +4,7 @@ from tempered ensembles using histogram reweighting
 """
 import numpy
 
-from csb.math import log, log_sum_exp
+from csb.numeric import log, log_sum_exp
 from csb.statistics import histogram_nd
 
 from abc import abstractmethod, ABCMeta

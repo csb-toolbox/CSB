@@ -140,7 +140,7 @@ def principal_coordinates(D, nd=None):
     See: Gower, J (1966)
     """
     from numpy import clip, sqrt, take, argsort, sort
-    from csb.math import reverse
+    from csb.numeric import reverse
     from scipy.linalg import eigh
     
     ## calculate centered similarity matrix
@@ -176,7 +176,7 @@ def entropy(p):
     Calculate the entropy of p. 
     @return: entropy of p
     """
-    from csb.math import log
+    from csb.numeric import log
     from numpy import sum
     
     return -sum(p * log(p))
