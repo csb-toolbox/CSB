@@ -1,31 +1,33 @@
+
 from csb.math import log, exp
+from abc import ABCMeta, abstractmethod
 
 
 class StatisticalEnsemble(object):
+    
+    __metaclass__ = ABCMeta
   
     def __call__(self, raw_energies):
-
         return exp(-self.energy(raw_energies))
 
     def log_prob(self, raw_energies):
-
         return -self.energy(raw_energies)
 
+    @abstractmethod
     def energy(self, raw_energies):
         """
         Transforms the raw energies as if they were observed
         in this statistical ensemble
         """
-        raise NotImplementedError('Subclass responsability')
+        pass
 
-        
     def gradient(self, raw_energies):
+        raise NotImplementedError()
 
-        raise NotImplementedError('Subclass responsability')
 
 class BoltzmannEnsemble(StatisticalEnsemble):
 
-    def __init__(self, beta = 1.):
+    def __init__(self, beta=1.):
         
         self._beta = float(beta)
 
@@ -42,17 +44,13 @@ class BoltzmannEnsemble(StatisticalEnsemble):
             raise ValueError("Inverse temperature {0} < 0".formate(value))
         self._beta = value
 
-
     def energy(self, raw_energies):
-
         return raw_energies * self._beta
-        
-
         
 
 class TsallisEnsemble(StatisticalEnsemble):
 
-    def __init__(self, q = 1., e_min = 0.):
+    def __init__(self, q=1., e_min=0.):
 
         self._q = q
         self._e_min = e_min
@@ -86,12 +84,12 @@ class TsallisEnsemble(StatisticalEnsemble):
         if (q < 1 + 1e-10):
             return raw_energies * q
         else:
-            return log( 1 + (raw_energies - e_min) * (q-1)) * q / (q-1) + e_min
+            return log(1 + (raw_energies - e_min) * (q - 1)) * q / (q - 1) + e_min
 
 
 class CompositeEnsemble(StatisticalEnsemble):
 
-    def __init__(self, ensembles = []):
+    def __init__(self, ensembles=[]):
 
         self._ensembles = ensembles
 
@@ -102,7 +100,7 @@ class CompositeEnsemble(StatisticalEnsemble):
         """
         return self._ensembles
     @ensembles.setter
-    def ensembles(self,value):
+    def ensembles(self, value):
         if not isinstance(value, list):
             if len(value) > 0:
                 if not isinstance(value[0], StatisticalEnsemble):
@@ -112,15 +110,10 @@ class CompositeEnsemble(StatisticalEnsemble):
             else:
                 self._enesmbles = value
 
-
     def energy(self, raw_energies):
-
         return sum([self._ensembles[i].energy(raw_energies[i])
-                    for i in range(len(self.ensembles))],0)
-    
-
+                    for i in range(len(self.ensembles))], 0)
     
     def gradient(self, raw_energies):
-
         return sum([self._ensembles[i].gradient(raw_energies[i])
-                    for i in range(len(self.ensembles))],0)
+                    for i in range(len(self.ensembles))], 0)
