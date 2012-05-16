@@ -1,3 +1,6 @@
+"""
+Approximation of a distribution as a mixture of gaussians with a zero mean but different sigmas
+"""
 
 import numpy.random
 
