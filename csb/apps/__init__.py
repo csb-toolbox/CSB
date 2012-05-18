@@ -152,9 +152,21 @@ class AppRunner(object):
         
     def __init__(self, argv=sys.argv):
         
-        self.module = argv[0]
-        self.program = os.path.basename(self.module)
-        self.args = argv[1:]
+        self._module = argv[0]
+        self._program = os.path.basename(self.module)
+        self._args = argv[1:]
+        
+    @property
+    def module(self):
+        return self._module
+    
+    @property
+    def program(self):
+        return self._program
+    
+    @property
+    def args(self):
+        return self._args
     
     @abstractproperty
     def target(self):

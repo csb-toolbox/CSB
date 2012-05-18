@@ -62,16 +62,19 @@ class TempFile(csb.pyutils.Proxy):
     the case with tempfile.NamedTemporaryFile (does not work on Windows).
     
     @param dispose: automatically delete the file
-    @type dispose: bool    
+    @type dispose: bool
+    @param mode: file open mode (text, binary), default=t
+    @type text: str
     """
 
-    def __init__(self, dispose=True):
+    def __init__(self, dispose=True, mode='t'):
         
         fd, file = tempfile.mkstemp()
         
         self.__file = file
         self.__fd = fd
-        self.__fh = open(self.__file, 'w')
+        self.__fh = open(self.__file, 'w' + mode)
+        self.__mode = mode
         self.__dispose = bool(dispose)
         
         super(TempFile, self).__init__(self.__fh)
@@ -102,6 +105,15 @@ class TempFile(csb.pyutils.Proxy):
             
         if os.path.exists(self.__file):
             os.remove(self.__file)
+            
+    def content(self):
+        """
+        @return: the current content of the file.
+        @rtype: str or bytes
+        """
+        self.flush()
+        with open(self.name, 'r' + self.__mode) as f:
+            return f.read()
             
     @property
     def name(self):

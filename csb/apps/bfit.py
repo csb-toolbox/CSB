@@ -59,13 +59,13 @@ class AppRunner(csb.apps.AppRunner):
                               + 'the alignment and chain2 the second sequence')
 
         cmd.add_scalar_option('outfile', 'o', str,
-                              'file to which the rotated second ' +
+                              'file to which the rotated second ' + 
                               'structure will be written',
                               default='bfit.pdb')
 
         cmd.add_scalar_option('niter', 'n', int,
                               'Number of Gibbs sampling steps',
-                              default = 200)
+                              default=200)
 
         return cmd
 
@@ -104,7 +104,7 @@ class BFitApp(csb.apps.Application):
 
         
         if len(X) != len(Y):
-            self.exit('Structures are of different lengths,' +
+            self.exit('Structures are of different lengths,' + 
                       ' please specify an alignment',
                       ExitCodes.INPUT_ERROR)
         
@@ -116,9 +116,7 @@ class BFitApp(csb.apps.Application):
         mixture = ScaleMixture(scales=X.shape[0],
                                prior=prior, d=3)
 
-        from csb.bio.utils import fit
-
-        R, t = fit(X, Y)
+        R, t = csb.bio.utils.fit(X, Y)
 
         # gibbs sampling cycle
         for i in range(self.args.niter):
