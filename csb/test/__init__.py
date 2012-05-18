@@ -264,7 +264,7 @@ class Config(object):
         with open(self.getTestFile(fileName, subDir)) as f:
             return f.read()
         
-    def getTempStream(self):
+    def getTempStream(self, mode='t'):
         """
         Return a temporary file stream::
         
@@ -273,9 +273,11 @@ class Config(object):
                 tmp.flush()
                 file_name = tmp.name
         
+        @param mode: file open mode (text, binary), default=t
+        @type mode: str
         @rtype: file stream
         """
-        return csb.io.TempFile()
+        return csb.io.TempFile(mode=mode)
 
 class Case(unittest.TestCase):
     """
