@@ -488,20 +488,17 @@ def gower_matrix(X):
     Gower, J.C. (1966). Some distance properties of latent root
     and vector methods used in multivariate analysis.
     Biometrika 53: 325-338
+
+    @param X: ensemble coordinates
+    @type X: (m,n,k) numpy.array
+
+    @return: symmetric dissimilarity matrix
+    @rtype: (n,n) numpy.array
     """
-    X = numpy.array(X)
-    n = X[0].shape[0]
-    #m = len(X)
-    
-    B = numpy.zeros((n, n))
-    for x in X:
-        for j in range(n):
-            for k in range(n):
-                B[j, k] += numpy.dot(x[j], x[k])
-    B = B / n
-    b = numpy.sum(B, 1) / n
-    bb = numpy.sum(b) / n
+    X = numpy.asarray(X)
 
-    B = (B - numpy.add.outer(b, b)) + bb
+    B = sum(numpy.dot(x, x.T) for x in X) / float(len(X))
+    b = B.mean(1)
+    bb = b.mean()
 
-    return B 
+    return (B - numpy.add.outer(b, b)) + bb
