@@ -1,3 +1,6 @@
+"""
+Random number generators
+"""
 
 def probability_transform(shape, inv_cum, cum_min=0., cum_max=1.):
     """
