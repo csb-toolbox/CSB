@@ -16,10 +16,10 @@ from csb.statistics import harmonic_mean, geometric_mean
 from csb.statistics.pdf import AbstractEstimator, AbstractDensity, Gamma, InverseGamma, NullEstimator
 
 
-def inv_digamma_minus_log(y, tol = 1e-10, n_iter = 100):
+def inv_digamma_minus_log(y, tol=1e-10, n_iter=100):
     """
-    solve y = psi(alpha) - log(alpha) for alpha by fixpoint
-    interation
+    Solve y = psi(alpha) - log(alpha) for alpha by fixed point
+    integration.
     """
     if y >= -log(6.):
         x = 1 / (2 * (1 - exp(y)))
@@ -94,7 +94,7 @@ class ScaleMixture(AbstractDensity):
     L{InvGammaPrior} leads to a K-Distribution as posterior.
     """
 
-    def __init__(self, scales = numpy.array([1., 1.]), prior = None, d = 3):
+    def __init__(self, scales=numpy.array([1., 1.]), prior=None, d=3):
         
         super(ScaleMixture, self).__init__()
 
@@ -279,12 +279,12 @@ class GammaPosteriorMAP(ScaleMixturePriorEstimator):
         pdf = GammaPrior()
 
         s = data[0].mean()
-        y = data[1].mean() - log(s)  -1.
+        y = data[1].mean() - log(s) - 1.
 
         alpha = abs(inv_digamma_minus_log(numpy.clip(y,
-                                                     -1e308,
-                                                     -1e-300)))
-        beta  = alpha / s
+                                                     - 1e308,
+                                                     - 1e-300)))
+        beta = alpha / s
 
         
         pdf.alpha, pdf.beta = alpha, beta
@@ -376,15 +376,15 @@ class InvGammaPosteriorMAP(ScaleMixturePriorEstimator):
         pdf = GammaPrior()
 
         
-        y =  log(data).mean() - log((data**-1).mean())
+        y = log(data).mean() - log((data ** -1).mean())
 
         alpha = inv_digamma_minus_log(numpy.clip(y,
-                                                 -1e308,
-                                                 -1e-300))
+                                                 - 1e308,
+                                                 - 1e-300))
         alpha = abs(alpha)
     
-        beta  = numpy.clip(alpha /
-                           (data**(-1)).mean(),
+        beta = numpy.clip(alpha / 
+                           (data ** (-1)).mean(),
                            1e-100, 1e100)
 
         pdf.alpha, pdf.beta = alpha, beta
@@ -404,7 +404,7 @@ class GammaScaleSampler(AbstractEstimator):
         d = context._d
 
         if len(data.shape) == 1:
-            data = data[:,numpy.newaxis]
+            data = data[:, numpy.newaxis]
         
         a = alpha + 0.5 * d * len(data.shape)
         b = beta + 0.5 * data.sum(-1) ** 2
@@ -430,7 +430,7 @@ class GammaScaleMAP(AbstractEstimator):
         d = context._d
 
         if len(data.shape) == 1:
-            data = data[:,numpy.newaxis]
+            data = data[:, numpy.newaxis]
         
         a = alpha + 0.5 * d * len(data.shape)
         b = beta + 0.5 * data.sum(-1) ** 2
@@ -458,11 +458,11 @@ class InvGammaScaleSampler(AbstractEstimator):
         d = context._d
 
         if len(data.shape) == 1:
-            data = data[:,numpy.newaxis]
+            data = data[:, numpy.newaxis]
 
         p = -alpha + 0.5 * d 
-        b = 2 *  beta 
-        a = 1e-5 + data.sum(-1)**2
+        b = 2 * beta 
+        a = 1e-5 + data.sum(-1) ** 2
 
         s = csb.statistics.rand.gen_inv_gaussian(a, b, p)
         s = numpy.clip(s, 1e-300, 1e300)
@@ -486,13 +486,13 @@ class InvGammaScaleMAP(AbstractEstimator):
         d = context._d
 
         if len(data.shape) == 1:
-            data = data[:,numpy.newaxis]
+            data = data[:, numpy.newaxis]
 
         p = -alpha + 0.5 * d 
-        b = 2 *  beta 
-        a = 1e-5 + data.sum(-1)**2 
+        b = 2 * beta 
+        a = 1e-5 + data.sum(-1) ** 2 
 
-        s = numpy.clip((numpy.sqrt(b) * kve(p+1, numpy.sqrt(a * b)))
+        s = numpy.clip((numpy.sqrt(b) * kve(p + 1, numpy.sqrt(a * b)))
                        / (numpy.sqrt(a) * kve(p, numpy.sqrt(a * b))),
                        1e-10, 1e10)
         pdf.scales = s

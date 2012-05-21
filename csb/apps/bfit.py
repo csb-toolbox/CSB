@@ -24,13 +24,13 @@ class AppRunner(csb.apps.AppRunner):
         return BFitApp
 
     def command_line(self):
-        __doc__ = "bFit is a probabilistic method for robust superposition" \
+        description = "bFit is a probabilistic method for robust superposition" \
                   + "and comparison of protein structures. To do so, "\
                   + "non-rigid displacements in protein structures are "\
                   + "modelled with outlier-tolerant probability "\
                   + "distributions."
         
-        cmd = csb.apps.ArgHandler(self.program, __doc__)
+        cmd = csb.apps.ArgHandler(self.program, description)
 
         # Input structures
         cmd.add_positional_argument('pdb1', str,

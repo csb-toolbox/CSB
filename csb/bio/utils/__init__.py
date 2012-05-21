@@ -5,7 +5,8 @@ Computational utility functions.
 import numpy
 import numpy.random
 
-import csb
+import csb.numeric
+
 
 def fit(X, Y):
     """
@@ -394,14 +395,14 @@ def tm_superimpose(x, y, fit_method=fit, L=None, d0=None, L_ini_min=4, iL_step=1
 
     L_ini_min = min(L, L_ini_min) if L_ini_min else L
     L_ini = [L_ini_min] + filter(lambda x: x > L_ini_min,
-            [L // (2**n_init) for n_init in range(6)])
+            [L // (2 ** n_init) for n_init in range(6)])
 
     # the outer two loops define a sliding window of different sizes for the
     # initial local alignment (disabled with L_ini_min=0)
     for L_init in L_ini:
         for iL in range(0, L - L_init + 1, min(L_init, iL_step)):
             mask = zeros(L, bool)
-            mask[iL:iL+L_init] = True
+            mask[iL:iL + L_init] = True
 
             # refine mask until convergence, similar to fit_wellordered
             for i in range(20):
@@ -561,8 +562,8 @@ def distance(X, Y):
 
 def average_structure(X):
     """
-    calculate an average structure from an ensemble of structures
-    (i.e. X is a rank-3 tensor: X[i] is a (N,3) configuration matrix)
+    Calculate an average structure from an ensemble of structures
+    (i.e. X is a rank-3 tensor: X[i] is a (N,3) configuration matrix).
     """
     from numpy.linalg import eig
 
@@ -574,32 +575,32 @@ def average_structure(X):
         U = U.real
 
     indices = numpy.argsort(v)[-3:]
-    v = numpy.take(v,indices,0)
-    U = numpy.take(U,indices,1)
+    v = numpy.take(v, indices, 0)
+    U = numpy.take(U, indices, 1)
         
     x = U * numpy.sqrt(v)
     i = 0
-    while is_mirror_image(x,X[0]) and i < 2:
-        x[:,i] *= -1
+    while is_mirror_image(x, X[0]) and i < 2:
+        x[:, i] *= -1
         i += 1
     return x
 
 
-def is_mirror_image(X,Y):
+def is_mirror_image(X, Y):
     """
-    check if two configurations X and Y are mirror images
-    (i.e. their optimal superposition involves a reflection)
+    Check if two configurations X and Y are mirror images
+    (i.e. their optimal superposition involves a reflection).
     """
     from numpy.linalg import det, svd
     
     ## center configurations
 
-    X = X - numpy.mean(X,0)
-    Y = Y - numpy.mean(Y,0)
+    X = X - numpy.mean(X, 0)
+    Y = Y - numpy.mean(Y, 0)
 
     ## SVD of correlation matrix
 
-    V, L, U = svd(numpy.dot(numpy.transpose(X),Y))
+    V, L, U = svd(numpy.dot(numpy.transpose(X), Y))             #@UnusedVariable
 
     R = numpy.dot(V, U)
 
