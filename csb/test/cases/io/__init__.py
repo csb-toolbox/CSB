@@ -1,6 +1,3 @@
-"""
-@todo: write tests for C{dump} and C{load}
-"""
 
 import os
 import numpy
@@ -9,6 +6,9 @@ import csb.io
 import csb.io.tsv
 import csb.test as test
 
+from csb.bio.io.wwpdb import LegacyStructureParser
+# Workaround I just need some class  which I can abuse to create a graph
+from csb.statistics.pdf import Gamma as Node
 
 @test.unit
 class TestTable(test.Case):
@@ -429,8 +429,92 @@ class TestEntryWriter(test.Case):
             
             self.assertEqual(open(temp.name).read(), 'A/B/C/')  
 
+
+
+@test.functional
+class TestDumpLoad(test.Case):
+
+    def setUp(self):
+        super(TestDumpLoad, self).setUp()
         
+        self.lists = [[],
+                      range(1000),
+                      list("Although that way may not be"+
+                           "obvious at first" +
+                           "unless you're Dutch.")] 
+        self.arrays = [numpy.array([]),
+                       numpy.random.random(1000),
+                       numpy.arange(1000),]
+                       
+        self.strings = ["",
+                        "Although that way may not be"+\
+                        "obvious at first" + \
+                        "unless you're Dutch.",
+                        "([0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])"]
+
+        # Completly connnected graph
         
+        self.big_graph = []
+        for _i in range(250):
+            n = Node()
+            self.big_graph.append( n )
+        for n in self.big_graph:
+            n.connections = set(self.big_graph)
+            n.connections.remove( n )
+
+        # Protein
+        pdbfile = self.config.getTestFile('ake-xray-ensemble-ca.pdb')
+        self.protein = LegacyStructureParser(pdbfile).parse_models()[0]
+
+        self.objs = [self.lists, self.arrays, self.strings,
+                     self.protein]
+
+    def testSimple(self):
+        load_func = csb.io.load
+        dump_func = csb.io.dump
+        self._test( load_func, dump_func)
+
+    def testGzip(self):
+        load_func = lambda x: csb.io.load(x, gzip = True)
+        dump_func = lambda x, y: csb.io.dump(x, y, gzip = True)
+        self._test( load_func, dump_func)
+
+    def testLock(self):
+        load_func = lambda x: csb.io.load(x, lock = True)
+        dump_func = lambda x, y: csb.io.dump(x, y, lock = True)
+        self._test( load_func, dump_func)
+
+    def testLockGzip(self):
+        load_func = lambda x: csb.io.load(x, gzip = True, lock = True)
+        dump_func = lambda x, y: csb.io.dump(x, y, gzip = True, lock = True)
+        self._test( load_func, dump_func)
+
+    def testRecusionLimit(self):
+        with self.assertRaises(RuntimeError) as cm:
+            with csb.io.TempFile(mode = 'b') as temp:
+                csb.io.dump(self.big_graph, temp.name)
+
+        
+    def _test(self, load_func, dump_func):
+        for ob in self.objs:
+            with csb.io.TempFile(mode = 'b') as temp:
+                dump_func(ob, temp.name)
+                ob2 = load_func(temp.name)
+                if type(ob) is list:
+                    for a, b in zip(ob2,ob):
+                        if type(a) is numpy.ndarray:
+                            self.assertTrue(numpy.all(a == b))
+                        else:
+                            self.assertEqual(a, b)
+                elif type(ob) is csb.bio.structure.Structure:
+                    self.assertEqual(ob.to_fasta(),
+                                     ob2.to_fasta())
+                    self.assertTrue(numpy.all(ob.list_coordinates()
+                                              == ob2.list_coordinates()))
+                else:
+                    self.assertEqual(ob, ob2)
+
+            
 if __name__ == '__main__':
     
     test.Console()        
