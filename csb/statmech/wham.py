@@ -1,6 +1,5 @@
 """
-This module provides algorithms to estimate free energies and density of states
-from tempered ensembles using histogram reweighting
+Estimate the free energy and density of states from tempered ensembles using histogram reweighting
 """
 import numpy
 
@@ -135,7 +134,6 @@ class WHAM(AbstractWHAM):
     def log_z(self, beta=1., ensembles=None):
         """
         Use trapezoidal rule to evaluate the partition function.
-        @todo: does so far only work for the one 1D.
         """
         from numpy import array, multiply, reshape
 
@@ -145,12 +143,17 @@ class WHAM(AbstractWHAM):
             beta = reshape(array(beta), (-1,))
             is_float = True
 
-        for i in range(self._ex.shape[0]):
-            x = self._ex[i, 1:] - self._ex[i, :-1]
-            y = -multiply.outer(beta, self._ex[i]) + self._log_g
-            y = reshape(array([y.T[1:], y.T[:-1]]), (2, len(beta) * len(x)))
-            y = log_sum_exp(y, 0) - log(2)
-            y = reshape(y, (len(x), len(beta))).T + log(x)
+        x = self._ex[0, 1:] - self._ex[0, :-1]
+        y = self._ex[0]
+
+        for i in range(1, self._ex.shape[0]):
+            x = multiply.outer(x, self._ex[i, 1:] - self._ex[i, :-1])
+            y = multiply.outer(y, self._ex[i])
+
+        y = - multiply.outer(beta, y) + self._log_g
+        y = reshape(array([y.T[1:], y.T[:-1]]), (2, -1))
+        y = log_sum_exp(y, 0) - log(2)
+        y = reshape(y, (-1, len(beta))).T + log(x)
 
         log_z = log_sum_exp(y.T, 0)
 
@@ -225,3 +228,6 @@ class ImplicitWHAM(AbstractWHAM):
         log_z = log_sum_exp((-e_ij_prime - x).T, 0)
 
         return log_z
+
+
+

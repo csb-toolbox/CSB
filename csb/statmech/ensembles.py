@@ -1,4 +1,6 @@
-
+"""
+Statistical Ensembles
+"""
 from csb.numeric import log, exp
 from abc import ABCMeta, abstractmethod
 
