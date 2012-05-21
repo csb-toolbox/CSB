@@ -482,3 +482,26 @@ def correlate(x, y):
 
     return fft.ifftn(X.conjugate() * Y)[slices].real
 
+
+def gower_matrix(X):
+    """
+    Gower, J.C. (1966). Some distance properties of latent root
+    and vector methods used in multivariate analysis.
+    Biometrika 53: 325-338
+    """
+    X = numpy.array(X)
+    n = X[0].shape[0]
+    m = len(X)
+    
+    B = numpy.zeros((n,n))
+    for x in X:
+        for j in range(n):
+            for k in range(n):
+                B[j,k] += numpy.dot(x[j], x[k])
+    B = B / n
+    b = numpy.sum(B,1) /n
+    bb = numpy.sum(b)/n
+
+    B = (B - numpy.add.outer(b,b)) + bb
+
+    return B 
