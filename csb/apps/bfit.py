@@ -9,6 +9,7 @@ import csb.bio.utils
 from csb.bio.io.wwpdb import LegacyStructureParser
 from csb.bio.utils import probabilistic_fit
 from csb.statistics.scalemixture import ScaleMixture, GammaPrior, InvGammaPrior
+from csb.statistics.scalemixture import GammaPosteriorMAP, InvGammaPosteriorMAP
 from csb.bio.sequence import SequenceAlignment
 
 
@@ -64,8 +65,12 @@ class AppRunner(csb.apps.AppRunner):
                               default='bfit.pdb')
 
         cmd.add_scalar_option('niter', 'n', int,
-                              'Number of Gibbs sampling steps',
+                              'Number of optimization steps',
                               default=200)
+
+        cmd.add_boolean_option('em', None,
+                               'Use the EM algorithm for optimsation',
+                               default = False)
 
         return cmd
 
@@ -110,8 +115,13 @@ class BFitApp(csb.apps.Application):
         
         if self.args.scalemixture == 'student':
             prior = GammaPrior()
+            if self.args.em:
+                prior.estimator = GammaPosteriorMAP()
+
         elif self.args.scalemixture == 'k':
             prior = InvGammaPrior()
+            if self.args.em:
+                prior.estimator = InvGammaPosteriorMAP()                
         
         mixture = ScaleMixture(scales=X.shape[0],
                                prior=prior, d=3)
