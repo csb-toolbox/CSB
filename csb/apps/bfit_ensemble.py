@@ -4,13 +4,11 @@ Python application for robust structure superposition of an ensemble of structur
 import numpy
 
 import csb.apps
-import csb.bio.utils
+import csb.bio.structure
 
 from csb.bio.io.wwpdb import LegacyStructureParser
-from csb.bio.utils import probabilistic_fit, average_structure
-from csb.statistics.scalemixture import ScaleMixture, GammaPrior, InvGammaPrior
-from csb.statistics.scalemixture import GammaPosteriorMAP, InvGammaPosteriorMAP
-from csb.bio.sequence import SequenceAlignment
+from csb.bio.utils import average_structure, fit, wfit
+from csb.statistics.scalemixture import ScaleMixture, GammaPrior
 
 
 class ExitCodes(csb.apps.ExitCodes):
@@ -23,13 +21,13 @@ class AppRunner(csb.apps.AppRunner):
         return BFitApp
 
     def command_line(self):
-        __doc__ = "bFit is a probabilistic method for robust superposition" \
+        description = "bFit is a probabilistic method for robust superposition" \
                   + "and comparison of protein structures. To do so, "\
                   + "non-rigid displacements in protein structures are "\
                   + "modelled with outlier-tolerant probability "\
                   + "distributions."
         
-        cmd = csb.apps.ArgHandler(self.program, __doc__)
+        cmd = csb.apps.ArgHandler(self.program, description)
 
         # Input structures
         cmd.add_positional_argument('pdb', str,
@@ -51,13 +49,13 @@ class AppRunner(csb.apps.AppRunner):
                               + 'the alignment and chain2 the second sequence')
 
         cmd.add_scalar_option('outfile', 'o', str,
-                              'file to which the rotated second ' +
+                              'file to which the rotated second ' + 
                               'structure will be written',
                               default='bfit.pdb')
 
         cmd.add_scalar_option('niter', 'n', int,
                               'Number of optimization steps',
-                              default = 200)
+                              default=200)
         
         return cmd
 
@@ -82,33 +80,29 @@ class BFitApp(csb.apps.Application):
         ensemble = parser.parse_models(models)
         X = numpy.array([model[self.args.chain].list_coordinates(['CA'], True) for model in ensemble])
         x_mu = average_structure(X)
-        n =X.shape[1]
-        m =X.shape[0]
-        R = numpy.zeros((m,3,3))
-        t = numpy.ones((m,3))
+        #n = X.shape[1]
+        m = X.shape[0]
+        R = numpy.zeros((m, 3, 3))
+        t = numpy.ones((m, 3))
 
 
         prior = GammaPrior()
         mixture = ScaleMixture(scales=X.shape[1],
                                prior=prior, d=3)
 
-        from csb.bio.utils import fit
-
-        from csb.bio.utils import fit, wfit
-
         for i in range(m):
-            R[i,:,:], t[i,:] = fit(x_mu, X[i])
+            R[i, :, :], t[i, :] = fit(x_mu, X[i])
         
         # gibbs sampling cycle
         for j in range(self.args.niter):
             # apply rotation
-            data = numpy.array([numpy.sum((x_mu - numpy.dot(X[i], numpy.transpose(R[i])) - t[i]) **2, -1)**0.5
+            data = numpy.array([numpy.sum((x_mu - numpy.dot(X[i], numpy.transpose(R[i])) - t[i]) ** 2, -1) ** 0.5
                                 for i in range(m)]).T
             # sample scales
             mixture.estimate(data)
             # sample rotations
             for i in range(m):
-                R[i,:,:], t[i,:] = wfit(x_mu, X[i], mixture.scales)
+                R[i, :, :], t[i, :] = wfit(x_mu, X[i], mixture.scales)
 
 
         out_ensemble = csb.bio.structure.Ensemble()

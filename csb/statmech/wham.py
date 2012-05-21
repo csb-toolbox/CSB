@@ -1,6 +1,8 @@
 """
-Estimate the free energy and density of states from tempered ensembles using histogram reweighting
+Estimate the free energy and density of states from tempered ensembles using
+histogram re-weighting.
 """
+
 import numpy
 
 from csb.numeric import log, log_sum_exp
@@ -150,7 +152,7 @@ class WHAM(AbstractWHAM):
             x = multiply.outer(x, self._ex[i, 1:] - self._ex[i, :-1])
             y = multiply.outer(y, self._ex[i])
 
-        y = - multiply.outer(beta, y) + self._log_g
+        y = -multiply.outer(beta, y) + self._log_g
         y = reshape(array([y.T[1:], y.T[:-1]]), (2, -1))
         y = log_sum_exp(y, 0) - log(2)
         y = reshape(y, (-1, len(beta))).T + log(x)
