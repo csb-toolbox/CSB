@@ -5,6 +5,7 @@ Computational utility functions.
 import numpy
 import numpy.random
 
+import csb
 
 def fit(X, Y):
     """
@@ -557,5 +558,51 @@ def distance(X, Y):
     @rtype: (m,) numpy.array
     """
     return distance_sq(X, Y) ** 0.5
+
+def average_structure(X):
+    """
+    calculate an average structure from an ensemble of structures
+    (i.e. X is a rank-3 tensor: X[i] is a (N,3) configuration matrix)
+    """
+    from numpy.linalg import eig
+
+    B = csb.numeric.gower_matrix(X)
+    v, U = eig(B)
+    if numpy.iscomplex(v).any():
+        v = v.real
+    if numpy.iscomplex(U).any():
+        U = U.real
+
+    indices = numpy.argsort(v)[-3:]
+    v = numpy.take(v,indices,0)
+    U = numpy.take(U,indices,1)
+        
+    x = U * numpy.sqrt(v)
+    i = 0
+    while is_mirror_image(x,X[0]) and i < 2:
+        x[:,i] *= -1
+        i += 1
+    return x
+
+
+def is_mirror_image(X,Y):
+    """
+    check if two configurations X and Y are mirror images
+    (i.e. their optimal superposition involves a reflection)
+    """
+    from numpy.linalg import det, svd
+    
+    ## center configurations
+
+    X = X - numpy.mean(X,0)
+    Y = Y - numpy.mean(Y,0)
+
+    ## SVD of correlation matrix
+
+    V, L, U = svd(numpy.dot(numpy.transpose(X),Y))
+
+    R = numpy.dot(V, U)
+
+    return det(R) < 0
 
 # vi:expandtab:smarttab:sw=4
