@@ -564,6 +564,12 @@ def average_structure(X):
     """
     Calculate an average structure from an ensemble of structures
     (i.e. X is a rank-3 tensor: X[i] is a (N,3) configuration matrix).
+
+    @param X: m x n x 3 input vector
+    @type X: numpy array
+    
+    @return: average structure
+    @rtype: (n,3) numpy.array
     """
     from numpy.linalg import eig
 
@@ -590,6 +596,13 @@ def is_mirror_image(X, Y):
     """
     Check if two configurations X and Y are mirror images
     (i.e. their optimal superposition involves a reflection).
+
+    @param X: n x 3 input vector
+    @type X: numpy array
+    @param Y: n x 3 input vector
+    @type Y: numpy array
+ 
+    @rtype: bool
     """
     from numpy.linalg import det, svd
     
