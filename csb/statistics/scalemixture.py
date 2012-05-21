@@ -25,7 +25,7 @@ def inv_digamma_minus_log(y, tol = 1e-10, n_iter = 100):
         x = 1 / (2 * (1 - exp(y)))
     else:
         x = 1.e-10
-    for i in range(n_iter):
+    for _i in range(n_iter):
         z = approx_psi(x) - log(x) - y
         if abs(z) < tol:
             break
@@ -59,7 +59,8 @@ class ScaleMixturePrior(object):
     def __init__(self, *args):
         super(ScaleMixturePrior, self).__init__(*args)
         self._scale = None
-
+        self._scale_estimator = NullEstimator()
+        
     @property
     def scale_estimator(self):
         return self._scale_estimator
@@ -76,7 +77,7 @@ class ScaleMixturePrior(object):
         if isinstance(strategy, ScaleMixturePriorEstimator):
             self._scale_estimator = strategy.get_scale_estimator()
         else:
-            self._scale_estimator = NullEstimator
+            self._scale_estimator = NullEstimator()
 
 
 class ScaleMixture(AbstractDensity):
@@ -239,7 +240,7 @@ class GammaPosteriorSampler(ScaleMixturePriorEstimator):
         alpha = beta * a
         samples = []
 
-        for i in range(self.n_samples):
+        for _i in range(self.n_samples):
 
             ## sample beta from Gamma distribution
             beta = numpy.random.gamma(n * alpha + context._hyper_beta.alpha,
