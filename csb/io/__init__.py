@@ -3,6 +3,8 @@ Common IO-related utility functions and classes.
 """
 
 import os
+import time
+import errno
 import shutil
 import tempfile
 import csb.pyutils
@@ -319,7 +321,7 @@ class EntryWriter(object):
             self.write(entry)
             self.write(delimiter)
 
-def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
+def dump(this, filename, gzip=False, lock=None, timeout=None):
     """
     Writes a python object to a file, using python cPickle
     Supports also '~' or '~user'.
@@ -334,18 +336,27 @@ def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
     """
 
     ## check whether file is locked
-    if lock is not None:
-
-        _path, file = os.path.split(filename)
-        lockfile = '%s/%s.lock' % (lock_path, file)
-
-        if os.path.exists(lockfile):
-            raise '%s is locked (%s)' % (filename, lockfile)
-
-        ## create lock file
-        open(lockfile, 'w').close()
-
+    ## file locked?
     filename = os.path.expanduser(filename)
+
+    if lock is not None:
+        lockdir = filename + '.lock'
+
+        if timeout is not None and timeout > 0:
+            end_time = timeout + time.time()
+
+        while True:
+            try:
+                os.mkdir(lockdir)
+            except OSError as e:
+                # File is already locked
+                if e.errno == errno.EEXIST:
+                    if timeout is not None and time.time() > end_time:
+                        raise IOError("Failed to acquire Lock")
+                else:
+                    raise IOError("Failed to acquire Lock")
+            else:
+                break
 
     if gzip:
         import gzip
@@ -366,11 +377,15 @@ def dump(this, filename, gzip=False, lock=None, lock_path='~/'):
     if lock is not None:
         ## release lock
         try:
-            os.remove(lockfile)
+             os.rmdir(lockdir)
         except:
-            raise IOError('missing lockfile %s' % lockfile)
+            raise IOError('missing lockfile %s' % lockdir)
 
-def load(filename, gzip=False, lock=None, lock_path='~/'):
+    
+
+
+
+def load(filename, gzip=False, lock=None, timeout=None):
     """
     Unpickle an object from filename
     
@@ -382,22 +397,31 @@ def load(filename, gzip=False, lock=None, lock_path='~/'):
     @return: Python object unpickled from file
     """
     ## file locked?
-    if lock is not None:
-        _path, file = os.path.split(filename)
-        lockfile = '%s/%s.lock' % (lock_path, file)
-
-        if os.path.exists(lockfile):
-            raise IOError('%s is locked (%s)' % (filename, lockfile))
-
-        ## lock file
-        open(lockfile, 'w').close()
-
     filename = os.path.expanduser(filename)
+
+    if lock is not None:
+        lockdir = filename + '.lock'
+
+        if timeout is not None and timeout > 0:
+            end_time = timeout + time.time()
+
+        while True:
+            try:
+                os.mkdir(lockdir)
+            except OSError as e:
+                # File is already locked
+                if e.errno == errno.EEXIST:
+                    if timeout is not None and time.time() > end_time:
+                        raise IOError("Failed to acquire Lock")
+                else:
+                    raise IOError("Failed to acquire Lock")
+            else:
+                break
 
     if gzip:
         import gzip
         try:
-            f_handle = gzip.GzipFile(filename)                          #@UnusedVariable
+            f_handle = gzip.GzipFile(filename)                          
         except:
             return
 
@@ -406,7 +430,7 @@ def load(filename, gzip=False, lock=None, lock_path='~/'):
     try:
         this = Pickle.load(f_handle)
     except:
-        import Numeric                                                  #@UnresolvedImport
+        import Numeric                                                  
         f_handle.close()
         try:
             f_handle = gzip.GzipFile(filename)
@@ -421,9 +445,10 @@ def load(filename, gzip=False, lock=None, lock_path='~/'):
     if lock is not None:
         ## release lock
         try:
-            os.remove(lockfile)
+             os.rmdir(lockdir)
         except:
-            raise IOError('missing lockfile %s' % lockfile)
+            raise IOError('missing lockfile %s' % lockdir)
 
     return this
+
 
