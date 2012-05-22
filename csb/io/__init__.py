@@ -377,13 +377,9 @@ def dump(this, filename, gzip=False, lock=None, timeout=None):
     if lock is not None:
         ## release lock
         try:
-             os.rmdir(lockdir)
+            os.rmdir(lockdir)
         except:
             raise IOError('missing lockfile %s' % lockdir)
-
-    
-
-
 
 def load(filename, gzip=False, lock=None, timeout=None):
     """
@@ -420,17 +416,17 @@ def load(filename, gzip=False, lock=None, timeout=None):
 
     if gzip:
         import gzip
-        try:
-            f_handle = gzip.GzipFile(filename)                          
-        except:
-            return
+        f_handle = gzip.GzipFile(filename)
+        f_handle.readline()   # will raise IOError if the stream is not gzip
+        f_handle.seek(0)  
 
-    f_handle = open(filename, 'rb')
+    else:
+        f_handle = open(filename, 'rb')
 
     try:
         this = Pickle.load(f_handle)
     except:
-        import Numeric                                                  
+        import Numeric                  #@UnresolvedImport                                    
         f_handle.close()
         try:
             f_handle = gzip.GzipFile(filename)
@@ -445,7 +441,7 @@ def load(filename, gzip=False, lock=None, timeout=None):
     if lock is not None:
         ## release lock
         try:
-             os.rmdir(lockdir)
+            os.rmdir(lockdir)
         except:
             raise IOError('missing lockfile %s' % lockdir)
 

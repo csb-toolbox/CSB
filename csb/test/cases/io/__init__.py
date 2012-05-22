@@ -5,6 +5,7 @@ import types
 import csb.io
 import csb.io.tsv
 import csb.test as test
+import csb.bio.structure
 
 from csb.bio.io.wwpdb import LegacyStructureParser
 # Workaround I just need some class  which I can abuse to create a graph
@@ -104,7 +105,7 @@ class TestTable(test.Case):
         self.assertTrue(isinstance(self.table[:, ('A',)], csb.io.tsv.Table))
         self.assertTrue(isinstance(self.table[:, 'A':], csb.io.tsv.Table))
         self.assertTrue(isinstance(self.table[1:2, 0], csb.io.tsv.Table))
-        self.assertTrue(isinstance(self.table[(1,2), 0], csb.io.tsv.Table))                        
+        self.assertTrue(isinstance(self.table[(1, 2), 0], csb.io.tsv.Table))                        
         
     def testSelect(self):
         
@@ -128,8 +129,8 @@ class TestTable(test.Case):
         # test data        
         self.assertEquals(len(list(self.table[1:2, :])), 1)
         self.assertEquals(len(list(self.table[1:, :])), 2)
-        self.assertEquals(len(list(self.table[(1,2), :])), 2)
-        self.assertEquals(len(list(self.table[(0,1,2), :])), 3)                           
+        self.assertEquals(len(list(self.table[(1, 2), :])), 2)
+        self.assertEquals(len(list(self.table[(0, 1, 2), :])), 3)                           
         self.assertEquals(len(list(self.table[:, :])), 3)
                 
         firstrow = fr(self.table.select('B', 'A'))
@@ -142,7 +143,7 @@ class TestTable(test.Case):
         self.assertEquals(fr(self.table[:, 'B':])[0], 'Row eleven')
                 
         self.assertEquals(fr(self.table[2, :])[0], 13)
-        self.assertEquals(fr(self.table[(1,2), :])[0], 12)
+        self.assertEquals(fr(self.table[(1, 2), :])[0], 12)
         self.assertEquals(fr(self.table[1:9, :])[0], 12)  
         
     def testWhere(self):
@@ -439,15 +440,15 @@ class TestDumpLoad(test.Case):
         
         self.lists = [[],
                       range(1000),
-                      list("Although that way may not be"+
-                           "obvious at first" +
+                      list("Although that way may not be" + 
+                           "obvious at first" + 
                            "unless you're Dutch.")] 
         self.arrays = [numpy.array([]),
                        numpy.random.random(1000),
-                       numpy.arange(1000),]
+                       numpy.arange(1000), ]
                        
         self.strings = ["",
-                        "Although that way may not be"+\
+                        "Although that way may not be" + \
                         "obvious at first" + \
                         "unless you're Dutch.",
                         "([0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])"]
@@ -457,10 +458,10 @@ class TestDumpLoad(test.Case):
         self.big_graph = []
         for _i in range(250):
             n = Node()
-            self.big_graph.append( n )
+            self.big_graph.append(n)
         for n in self.big_graph:
             n.connections = set(self.big_graph)
-            n.connections.remove( n )
+            n.connections.remove(n)
 
         # Protein
         pdbfile = self.config.getTestFile('ake-xray-ensemble-ca.pdb')
@@ -472,41 +473,46 @@ class TestDumpLoad(test.Case):
     def testSimple(self):
         load_func = csb.io.load
         dump_func = csb.io.dump
-        self._test( load_func, dump_func)
+        self._test(load_func, dump_func)
 
     def testGzip(self):
-        load_func = lambda x: csb.io.load(x, gzip = True)
-        dump_func = lambda x, y: csb.io.dump(x, y, gzip = True)
-        self._test( load_func, dump_func)
+        load_func = lambda x: csb.io.load(x, gzip=True)
+        dump_func = lambda x, y: csb.io.dump(x, y, gzip=True)
+        self._test(load_func, dump_func)
 
+    def testGzipFail(self):
+        load_func = lambda x: csb.io.load(x, gzip=True)
+        dump_func = lambda x, y: csb.io.dump(x, y, gzip=False)
+        with self.assertRaises(IOError):
+            self._test(load_func, dump_func)
+        
     def testLock(self):
-        load_func = lambda x: csb.io.load(x, lock = True)
-        dump_func = lambda x, y: csb.io.dump(x, y, lock = True)
-        self._test( load_func, dump_func)
+        load_func = lambda x: csb.io.load(x, lock=True)
+        dump_func = lambda x, y: csb.io.dump(x, y, lock=True)
+        self._test(load_func, dump_func)
 
     def testLockGzip(self):
-        load_func = lambda x: csb.io.load(x, gzip = True, lock = True)
-        dump_func = lambda x, y: csb.io.dump(x, y, gzip = True, lock = True)
-        self._test( load_func, dump_func)
+        load_func = lambda x: csb.io.load(x, gzip=True, lock=True)
+        dump_func = lambda x, y: csb.io.dump(x, y, gzip=True, lock=True)
+        self._test(load_func, dump_func)
 
     def testRecusionLimit(self):
-        with self.assertRaises(RuntimeError) as cm:
-            with csb.io.TempFile(mode = 'b') as temp:
+        with self.assertRaises(RuntimeError):
+            with csb.io.TempFile(mode='b') as temp:
                 csb.io.dump(self.big_graph, temp.name)
 
-        
     def _test(self, load_func, dump_func):
         for ob in self.objs:
-            with csb.io.TempFile(mode = 'b') as temp:
+            with csb.io.TempFile(mode='b') as temp:
                 dump_func(ob, temp.name)
                 ob2 = load_func(temp.name)
-                if type(ob) is list:
-                    for a, b in zip(ob2,ob):
-                        if type(a) is numpy.ndarray:
+                if isinstance(ob, list):
+                    for a, b in zip(ob2, ob):
+                        if isinstance(a, numpy.ndarray):
                             self.assertTrue(numpy.all(a == b))
                         else:
                             self.assertEqual(a, b)
-                elif type(ob) is csb.bio.structure.Structure:
+                elif isinstance(ob, csb.bio.structure.Structure):
                     self.assertEqual(ob.to_fasta(),
                                      ob2.to_fasta())
                     self.assertTrue(numpy.all(ob.list_coordinates()
