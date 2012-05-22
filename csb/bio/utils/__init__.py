@@ -394,8 +394,8 @@ def tm_superimpose(x, y, fit_method=fit, L=None, d0=None, L_ini_min=4, iL_step=1
     best = None, None, 0.0
 
     L_ini_min = min(L, L_ini_min) if L_ini_min else L
-    L_ini = [L_ini_min] + filter(lambda x: x > L_ini_min,
-            [L // (2 ** n_init) for n_init in range(6)])
+    L_ini = [L_ini_min] + list(filter(lambda x: x > L_ini_min,
+            [L // (2 ** n_init) for n_init in range(6)]))
 
     # the outer two loops define a sliding window of different sizes for the
     # initial local alignment (disabled with L_ini_min=0)

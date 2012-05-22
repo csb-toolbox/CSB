@@ -37,7 +37,7 @@ class TestRand(test.Case):
             if len(warning) == 1:
                 warning = warning[0]
                 self.assertEqual(warning.category, RuntimeWarning)
-                self.assertEqual(str(warning.message), 'divide by zero encountered in divide')            
+                self.assertTrue(str(warning.message).startswith('divide by zero encountered'))            
 
         x = numpy.linspace(x_min, x_max, 1000)
         p = (alpha - 1) * log(x) - beta * x
@@ -73,7 +73,7 @@ class TestRand(test.Case):
             if len(warning) == 1:
                 warning = warning[0]
                 self.assertEqual(warning.category, RuntimeWarning)
-                self.assertEqual(str(warning.message), 'divide by zero encountered in divide')
+                self.assertTrue(str(warning.message).startswith('divide by zero encountered'))
             
         x = numpy.linspace(mu - 5 * sigma, mu + 5 * sigma, 1000)
 

@@ -434,16 +434,20 @@ class AbstractTestBuilder(object):
         
         try:
             base = __import__(namespace, level=0, fromlist=['']).__file__
-            directory = os.path.dirname(base)
         except ImportError:
             raise InvalidNamespaceError('Namespapce {0} is not importable'.format(namespace))
-                
-        for entry in os.walk(directory):
+        
+        if os.path.splitext(os.path.basename(base))[0] != '__init__':
+            suites.append(self.loadTests(namespace))
+        
+        else:
             
-            for item in entry[2]:
-                file = os.path.join(entry[0], item)
-                if extension and item.endswith(extension):
-                    suites.append(self.loadFromFile(file))
+            for entry in os.walk(os.path.dirname(base)):
+                
+                for item in entry[2]:
+                    file = os.path.join(entry[0], item)
+                    if extension and item.endswith(extension):
+                        suites.append(self.loadFromFile(file))
                 
         return unittest.TestSuite(suites) 
     
@@ -669,6 +673,8 @@ class Console(object):
     @type builder: any L{csb.test.AbstractTestBuilder} subclass
     @param verbosity: verbosity level for C{unittest.TestRunner}
     @type verbosity: int
+    @param update: if True, refresh all pickles in csb/test/data
+    @type update: bool
     """
     
     BUILDERS = {'unit': UnitTestBuilder, 'functional': FunctionalTestBuilder, 
@@ -695,10 +701,15 @@ Options:
                          values are:
                              {0.builders}
                              
-      -v  verbosity      Verbosity level passed to unittest.TextTestRunner.    
+      -v  verbosity      Verbosity level passed to unittest.TextTestRunner.
+      
+      -u  update-files   Update test pickles in csb/test/data. This would be
+                         needed when using an interpreter with a different
+                         major version.              
     """
 
-    def __init__(self, namespace=('__main__',), builder=AnyTestBuilder, verbosity=1, argv=None):
+    def __init__(self, namespace=('__main__',), builder=AnyTestBuilder, verbosity=1,
+                 update=False, argv=None):
         
         if not argv:
             argv = sys.argv
@@ -706,11 +717,13 @@ Options:
         self._namespace = None            
         self._builder = None
         self._verbosity = 1
+        self._update = False
         self._program = os.path.basename(argv[0])
         
         self.namespace = namespace
         self.builder = builder
         self.verbosity = verbosity
+        self.update_files = update
         
         self.parseArguments(argv[1:])
         self.run()
@@ -746,8 +759,20 @@ Options:
     @property
     def program(self):
         return self._program
+    
+    @property
+    def update(self):
+        return self._update
+    @update.setter
+    def update(self, value):
+        self._update = bool(value)
                     
     def run(self):
+        
+        if self.update:
+            from csb.test.cases import updateFiles
+            print('Updating test pickles...')
+            updateFiles()
         
         builder = self.builder()
         suite = builder.loadMultipleTests(self.namespace)
@@ -768,7 +793,7 @@ Options:
         
         try:
             
-            options, args = getopt.getopt(argv, 'h:t:v:', ['help', 'type=', 'verbosity='])
+            options, args = getopt.getopt(argv, 'hut:v:', ['help', 'update-files', 'type=', 'verbosity='])
             
             for option, value in options:
                 if option in('-h', '--help'):
@@ -783,7 +808,9 @@ Options:
                         self.verbosity = int(value)
                     except ValueError:
                         self.exit(message='E: Verbosity must be an integer.', code=3)
-            
+                if option in('-u', '--update-files'):
+                    self.update = True
+                                
             if len(args) > 0:
                 self.namespace = list(args)
                       
