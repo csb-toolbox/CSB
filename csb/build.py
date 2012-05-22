@@ -475,10 +475,7 @@ class RevisionHandler(object):
         with open(sourcefile, 'w') as src:
             src.write(content)
 
-        compiled = os.path.splitext(sourcefile)[0] + '.pyc'
-        if os.path.exists(compiled):
-            os.remove(compiled)
-        
+        self._delcache(sourcefile)
         return imp.load_source('____source', sourcefile).__version__      
     
     def _run(self, cmd):
@@ -488,7 +485,17 @@ class RevisionHandler(object):
             raise RevisionError('SVN failed ({0.code}): {0.stderr}'.format(si), si.code, si.cmd)
         
         return si.stdout.splitlines()
-                 
+    
+    def _delcache(self, sourcefile):
+        
+        compiled = os.path.splitext(sourcefile)[0] + '.pyc'
+        if os.path.isfile(compiled):
+            os.remove(compiled)
+            
+        pycache = os.path.join(os.path.dirname(compiled), '__pycache__')
+        if os.path.isdir(pycache): 
+            shutil.rmtree(pycache)
+                
 class RevisionInfo(object):
     
     def __init__(self, item, revision, maxrevision):
