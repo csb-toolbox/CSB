@@ -439,7 +439,7 @@ class TestDumpLoad(test.Case):
         super(TestDumpLoad, self).setUp()
         
         self.lists = [[],
-                      range(1000),
+                      list(range(1000)),
                       list("Although that way may not be" + 
                            "obvious at first" + 
                            "unless you're Dutch.")] 

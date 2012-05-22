@@ -56,6 +56,7 @@ import tarfile
 import csb
 
 from csb.pyutils import Shell
+from csb.io import Pickle
 
 
 class BuildTypes(object):
@@ -218,10 +219,16 @@ Options:
         Run tests. Also make sure the current environment loads all modules from
         the input folder.
         """
-        import csb.test
+        import csb.test.cases
         assert csb.test.__file__.startswith(self._input), 'csb.test not loaded from the input!'     #@UndefinedVariable
         
         from csb.test import unittest
+        
+        try:
+            csb.test.Config().getPickle('1nz9.model1.pickle')
+        except:
+            self.log('\n# Updating test pickles...')
+            csb.test.cases.updateFiles()
         
         self.log('\n# Running the Test Console...')
                 
