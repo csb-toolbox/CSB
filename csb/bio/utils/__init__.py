@@ -571,10 +571,10 @@ def average_structure(X):
     @return: average structure
     @rtype: (n,3) numpy.array
     """
-    from numpy.linalg import eig
+    from numpy.linalg import eigh
 
     B = csb.numeric.gower_matrix(X)
-    v, U = eig(B)
+    v, U = eigh(B)
     if numpy.iscomplex(v).any():
         v = v.real
     if numpy.iscomplex(U).any():
