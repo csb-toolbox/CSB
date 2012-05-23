@@ -43,9 +43,9 @@ class GaussianMixture(object):
 
         self._out = log
 
-        self.K = int(K)
-        self.N = int(N)
-        self.M = int(M)
+        self._K = int(K)
+        self._N = int(N)
+        self._M = int(M)
         self.beta = float(beta)
 
         self.Y = zeros((self.K, self.N, 3))
@@ -53,13 +53,34 @@ class GaussianMixture(object):
                         for m in range(self.M)])                    #@UnusedVariable
         self.t = zeros((self.M, self.K, 3))
         self.sigma = ones(self.K)
-        self.w = 1. / self.K + zeros(self.K)
+        self.w = ones(self.K) / self.K
 
         self.Z = None
 
         self.del_cache()
 
+    @property
+    def K(self):
+        """Number of components
+        @rtype: int"""
+        return self._K
+
+    @property
+    def N(self):
+        """Number of atoms
+        @rtype: int"""
+        return self._N
+
+    @property
+    def M(self):
+        """Number of structures
+        @rtype: int"""
+        return self._M
+
     def log(self, *values):
+        """
+        Write C{values} to output stream (default: STDOUT)
+        """
         for value in values:
             self._out.write(str(value))
         self._out.write(os.linesep)
@@ -71,14 +92,19 @@ class GaussianMixture(object):
     def get_dimension(self, Z):
         """
         dimensionality of the mixture domain
+
+        @rtype: int
         """
-        return 3 * (int(len(Z) == self.M) * self.N + \
-                    int(len(Z) == self.N) * self.M)
+        if len(Z) == self.M:
+            return self.N * 3
+        return self.M * 3
 
     def log_likelihood_reduced(self, X):
         """
         log-likelihood of the marginalized model (no auxiliary indicator
         variables)
+
+        @rtype: float
         """
         from csb.numeric import log, log_sum_exp
         from numpy import pi, sum, transpose, clip
@@ -95,6 +121,8 @@ class GaussianMixture(object):
     def log_likelihood(self, X, Z):
         """
         log-likelihood of the extended model (with indicators)
+
+        @rtype: float
         """
         from csb.numeric import log
         from numpy import pi, sum, clip
@@ -167,6 +195,9 @@ class GaussianMixture(object):
     def e_step(self, X):
         """
         expectation step: calculation of indicators
+
+        @return: indicators matrix
+        @rtype: numpy array
         """
         from numpy import clip
         from csb.numeric import log, log_sum_exp, exp
@@ -273,7 +304,7 @@ class GaussianMixture(object):
 
             if verbose and not (i % verbose):
                 self.LL.append(self.log_likelihood(X, Z))
-                self.log(beta, self.LL[-1])
+                self.log('{0} {1}'.format(beta, self.LL[-1]))
 
             i += 1
 
@@ -387,6 +418,8 @@ class GaussianMixture(object):
         """
         Bayesian information criterion, calculated as
         BIC = M * ln(sigma_e^2) + K * ln(M)
+
+        @rtype: float
         """
         from numpy import log
 
@@ -446,7 +479,11 @@ class SegmentMixture(GaussianMixture):
     """
 
     def calculate_delta(self, X):
+        """
+        Squared atom distances to mean structures, summed over samples
 
+        @rtype: (N,K) numpy array
+        """
         from numpy import dot, array, sum, transpose
 
         D = array([[sum((self.Y[k] - dot(X[m] - self.t[m, k], self.R[m, k])) ** 2, 1)
@@ -459,11 +496,11 @@ class SegmentMixture(GaussianMixture):
         """
         (unweighted) average of backtransformed structures
         """
-        from numpy import sum, dot
-
-        for k in range(self.K):
-            self.Y[k, :, :] = sum([dot(X[m] - self.t[m, k], self.R[m, k])
-                                 for m in range(self.M)], 0) / self.M
+        from numpy import mean, dot
+        
+        self.Y = mean([[dot(X[m] - self.t[m, k], self.R[m, k])
+            for m in range(self.M)]
+            for k in range(self.K)], 1)
 
     def estimate_T(self, X, Z):
         """
@@ -508,7 +545,8 @@ class SegmentMixture(GaussianMixture):
 
 class SegmentMixture2(SegmentMixture):
     """
-    Using a single coordinate array
+    Same as L{SegmentMixture}, but instead of using C{K} mean structures, use
+    a single mean structure (C{Y} property has one dimension less).
     """
 
     def __init__(self, *args, **kw):
@@ -562,7 +600,11 @@ class ConformerMixture(GaussianMixture):
     """
 
     def calculate_delta(self, X):
+        """
+        Sum of squared distances: RMSD(X[m], Y[k])^2 * N
 
+        @rtype: (M,K) numpy array
+        """
         from numpy import dot, array, sum
 
         return array([[sum((self.Y[k] - dot(X[m] - self.t[m, k], self.R[m, k])) ** 2)
