@@ -1,4 +1,5 @@
 
+import sys
 import numpy
 import multiprocessing
 
@@ -62,7 +63,8 @@ class Regressions(test.Case):
         p.join(timeout=timeout)
         
         return p
-                        
+    
+    @test.skip("n/a on this platform", sys.platform.startswith('win'))        
     def testTMSuperimpose(self):
         """
         @see: [CSB 0000058]
