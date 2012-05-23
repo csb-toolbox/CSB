@@ -360,19 +360,19 @@ def dump(this, filename, gzip=False, lock=None, timeout=None):
 
     if gzip:
         import gzip
-        f_handle = gzip.GzipFile(filename, 'wb')
+        stream = gzip.GzipFile(filename, 'wb')
     else:
-        f_handle = open(filename, 'wb')
+        stream = open(filename, 'wb')
 
-    if type(this).__name__ == 'array':
-        import Numeric                                                  #@UnresolvedImport
-        p = Numeric.Pickler(f_handle)
-        p.dump(this)
-
-    else:
-        Pickle.dump(this, f_handle, 1)
-
-    f_handle.close()
+    try:
+        if type(this).__name__ == 'array':
+            import Numeric                                                  #@UnresolvedImport
+            p = Numeric.Pickler(stream)
+            p.dump(this)
+        else:
+            Pickle.dump(this, stream, 1)
+    finally:
+        stream.close()
 
     if lock is not None:
         ## release lock
@@ -416,27 +416,35 @@ def load(filename, gzip=False, lock=None, timeout=None):
 
     if gzip:
         import gzip
-        f_handle = gzip.GzipFile(filename)
-        f_handle.readline()   # will raise IOError if the stream is not gzip
-        f_handle.seek(0)  
+        stream = gzip.GzipFile(filename)
+        try:
+            stream.readline() 
+            stream.seek(0)
+        except:
+            stream.close()
+            raise
 
     else:
-        f_handle = open(filename, 'rb')
+        stream = open(filename, 'rb')
 
     try:
-        this = Pickle.load(f_handle)
-    except:
-        import Numeric                  #@UnresolvedImport                                    
-        f_handle.close()
+        this = Pickle.load(stream)
+    except:                                
+        stream.close()
+        import Numeric                                                      #@UnresolvedImport        
         try:
-            f_handle = gzip.GzipFile(filename)
+            stream = gzip.GzipFile(filename)
         except:
-            f_handle = open(filename, 'rb')
+            stream = open(filename, 'rb')
 
-        unpickler = Numeric.Unpickler(f_handle)
-        this = unpickler.load()
+        try:
+            unpickler = Numeric.Unpickler(stream)
+            this = unpickler.load()
+        except:
+            stream.close()
+            raise
 
-    f_handle.close()
+    stream.close()
 
     if lock is not None:
         ## release lock
