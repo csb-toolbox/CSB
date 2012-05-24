@@ -207,6 +207,19 @@ class Config(object):
         self.__config = Config
         self.__data = self.config.DATA
         self.__temp = self.config.TEMP
+
+    @staticmethod
+    def setDefaultDataRoot(path):
+        """
+        Override the default L{Config.DATA} with a new data root directory.
+        
+        @param path: full directory path
+        @type path: str
+        """
+        if not os.path.isdir(path):
+            raise IOError('Path not found: {0}'.format(path))
+        
+        Config.DATA = os.path.abspath(path)
         
     @property
     def config(self):
@@ -278,6 +291,39 @@ class Config(object):
         @rtype: file stream
         """
         return csb.io.TempFile(mode=mode)
+    
+    def ensureDataConsistency(self):
+        """
+        Try to deserialize some pickled data files. Call L{Config.updateDataFiles}
+        if the pickles appeared incompatible with the current interpreter.
+        """
+        try:
+            self.getPickle('1nz9.model1.pickle')
+        except:
+            self.updateDataFiles()
+        
+    def updateDataFiles(self):
+        """
+        Refresh the pickled structures in csb/test/data. This might be needed when
+        the internal representation of some classes has changed.
+        """
+        from csb.io import Pickle
+        from csb.bio.io.wwpdb import get
+        from csb.bio.structure import Ensemble, ChemElements
+    
+        model1 = get('1nz9', model=1)
+        model2 = get('1nz9', model=2)
+        
+        ensemble = Ensemble()
+        ensemble.models.append(model1)
+        ensemble.models.append(model2)
+        Pickle.dump(ensemble, open(os.path.join(self.data, '1nz9.full.pickle'), 'wb'))
+        
+        mse = model1.chains['A'].find(164)
+        mse._pdb_name = 'MSE'
+        mse.atoms['SD']._element = ChemElements.Se
+        mse.atoms['SD']._full_name = 'SE  '
+        Pickle.dump(model1, open(os.path.join(self.data, '1nz9.model1.pickle'), 'wb'))    
 
 class Case(unittest.TestCase):
     """
@@ -703,9 +749,7 @@ Options:
                              
       -v  verbosity      Verbosity level passed to unittest.TextTestRunner.
       
-      -u  update-files   Update test pickles in csb/test/data. This would be
-                         needed when using an interpreter with a different
-                         major version.              
+      -u  update-files   Force update of the test pickles in csb/test/data.
     """
 
     def __init__(self, namespace=('__main__',), builder=AnyTestBuilder, verbosity=1,
@@ -723,7 +767,7 @@ Options:
         self.namespace = namespace
         self.builder = builder
         self.verbosity = verbosity
-        self.update_files = update
+        self.update = update
         
         self.parseArguments(argv[1:])
         self.run()
@@ -770,9 +814,9 @@ Options:
     def run(self):
         
         if self.update:
-            from csb.test.cases import updateFiles
-            print('Updating test pickles...')
-            updateFiles()
+            Config().updateDataFiles()
+        else:
+            Config().ensureDataConsistency()
         
         builder = self.builder()
         suite = builder.loadMultipleTests(self.namespace)
