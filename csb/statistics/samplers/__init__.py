@@ -106,10 +106,12 @@ class EnsembleState(csb.pyutils.BaseCollectionContainer, AbstractState):
 
     def __init__(self, items):   
         super(EnsembleState, self).__init__(items, type=State)
-        
+    
+    @property
     def position(self):        
         return np.array([s.positions for s in self])
 
+    @property
     def momentum(self):
         return np.array([s.momentum for s in self])
 
