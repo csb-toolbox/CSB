@@ -14,19 +14,19 @@ LOCATION        = os.path.abspath(os.path.dirname(__file__))
 JUNK            = ['.svn']
 
 NAME            = ROOT
-VERSION         = imp.load_source('____csb', os.path.join(LOCATION, ROOT, '__init__.py')).__version__
+VERSION         = imp.load_source('____csb', os.path.join(LOCATION, ROOT, '__init__.py')).Version().short
 AUTHOR          = "Michael Habeck et al."
 EMAIL           = "michael.habeck@tuebingen.mpg.de"
 URL             = "http://www.eb.tuebingen.mpg.de/departments/1-protein-evolution/michael-habeck/computational-structural-biology"
 SUMMARY         = "Computational Structural Biology Toolbox"
 DESCRIPTION     = __doc__
-LICENSE         = 'BSD'
-REQUIRES        = ['numpy']
+LICENSE         = 'MIT'
+REQUIRES        = ['numpy', 'scipy']
 
 
 def sourcetree(root='csb', junk=('.svn',)):
     """
-    Since dustutils requires to HARD CODE the entire package hierarchy here,
+    Since distutils requires to HARD CODE the entire package hierarchy here,
     we need this function to load the source tree structure dynamically.
     
     @param root: name of the root package; this is 'csb'. Must be relative!
@@ -67,7 +67,7 @@ def sourcetree(root='csb', junk=('.svn',)):
 
 def datatree(package, dataroot, junk=('.svn',), mask='*.*'):
     """
-    Since dustutils will crash if the data root folder contains any subfolders,
+    Since distutils will crash if the data root folder contains any subfolders,
     we need this function to retrieve the data tree.
 
     @param package: root "package", containing a data folder. This is a 
@@ -132,7 +132,24 @@ def build():
               description=SUMMARY,
               long_description=DESCRIPTION,
               license=LICENSE,
-              requires=REQUIRES )
+              requires=REQUIRES,
+              classifiers=(
+                    'Development Status :: 5 - Production/Stable',
+                    'Intended Audience :: Developers',
+                    'Intended Audience :: Science/Research',
+                    'License :: OSI Approved :: MIT License',
+                    'Operating System :: OS Independent',
+                    'Programming Language :: Python',
+                    'Programming Language :: Python :: 2.6',
+                    'Programming Language :: Python :: 2.7',
+                    'Programming Language :: Python :: 3',
+                    'Topic :: Scientific/Engineering',
+                    'Topic :: Scientific/Engineering :: Bio-Informatics',
+                    'Topic :: Scientific/Engineering :: Mathematics',
+                    'Topic :: Scientific/Engineering :: Physics',
+                    'Topic :: Software Development :: Libraries'
+              )              
+    )
 
 
 

@@ -475,11 +475,14 @@ class RevisionHandler(object):
         
         @return: sourcefile.__version__
         """
-        content = open(sourcefile).read()
-        content = content.format(revision=revision)
+        content = open(sourcefile).readlines()
         
         with open(sourcefile, 'w') as src:
-            src.write(content)
+            for line in content:
+                if line.startswith('__version__'):
+                    src.write(line.format(revision=revision))
+                else:
+                    src.write(line)
 
         self._delcache(sourcefile)
         return imp.load_source('____source', sourcefile).__version__      
