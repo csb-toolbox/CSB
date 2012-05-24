@@ -161,7 +161,7 @@ Options:
         self._test()
         vn = self._package()     
         
-        self.log('\n# Done ({0}).\n'.format(vn))         
+        self.log('\n# Done ({0}).\n'.format(vn.full))         
 
     def log(self, message, level=1, ending='\n'):
 
@@ -295,7 +295,7 @@ Options:
         try:       
             setup = imp.load_source('setupcsb', 'setup.py')
             d = setup.build()
-            version = d.get_fullname()
+            version = setup.VERSION
             package = d.dist_files[0][2]
             
             if self._type == BuildTypes.BINARY:

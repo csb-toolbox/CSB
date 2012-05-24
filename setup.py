@@ -14,7 +14,7 @@ LOCATION        = os.path.abspath(os.path.dirname(__file__))
 JUNK            = ['.svn']
 
 NAME            = ROOT
-VERSION         = imp.load_source('____csb', os.path.join(LOCATION, ROOT, '__init__.py')).Version().short
+VERSION         = imp.load_source('____csb', os.path.join(LOCATION, ROOT, '__init__.py')).Version()
 AUTHOR          = "Michael Habeck et al."
 EMAIL           = "michael.habeck@tuebingen.mpg.de"
 URL             = "http://www.eb.tuebingen.mpg.de/departments/1-protein-evolution/michael-habeck/computational-structural-biology"
@@ -125,7 +125,7 @@ def build():
                                 test: datatree(test, 'data',      JUNK, '*.*'),
                                 nmr:  datatree(nmr,  'resources', JUNK, '*.*')
                             },
-              version=VERSION,
+              version=VERSION.short,
               author=AUTHOR,
               author_email=EMAIL,
               url=URL,
