@@ -73,8 +73,8 @@ class TestMultichain(test.Case):
         init_state = State(np.random.normal(size=1))
 
         self.samplers = [RWMCSampler(SamplePDF(sigma=self.sigma1), init_state, 2),
-                         RWMCSampler(SamplePDF(sigma=self.sigma1), init_state, 1),
-                         RWMCSampler(SamplePDF(sigma=self.sigma1), init_state, 0.5)]
+                         RWMCSampler(SamplePDF(sigma=self.sigma1), init_state, 1.5),
+                         RWMCSampler(SamplePDF(sigma=self.sigma1), init_state, 1.0)]
         
         self.timesteps = [0.05, 0.05]
         self.nsteps = [100, 100]
@@ -114,8 +114,8 @@ class TestMultichain(test.Case):
 
         states = [x[0].position[0] for x in samples]
 
-        self.assertWithinDelta(np.array(states).mean(), 0., 1e-1)
-        self.assertWithinDelta(np.array(states).var(), 1., 1e-1)
+        self.assertWithinDelta(np.array(states).mean(), 0., 1.5e-1)
+        self.assertWithinDelta(np.array(states).var(), 1., 1.5e-1)
 
     def testReplicaExchangeMC(self):
         
