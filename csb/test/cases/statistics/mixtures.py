@@ -38,10 +38,6 @@ class TestMixtures(test.Case):
 
         self._testMixture(mixtures.SegmentMixture, self.w_ref_segments)
 
-    def testSegmentMixture2(self):
-        
-        self._testMixture(mixtures.SegmentMixture2, self.w_ref_segments)
-
     def testConformerMixture(self):
 
         self._testMixture(mixtures.ConformerMixture, self.w_ref_conformers, 14./16.)
@@ -51,16 +47,6 @@ class TestMixtures(test.Case):
         X = self._ake_ensemble_coords()
         K = len(set(w_ref))
 
-        # algorithms with randomized initialization, try multiple times
-        for _ in range(repeats):
-            m = cls.from_coords(X, K, randomize=1)
-
-            overlap = m.overlap(w_ref)
-            if overlap >= min_overlap:
-                break
-        else:
-            self.assertTrue(False, 'mixture not reproduced within %d iterations' % (repeats))
-
         # non-randomized heuristic with BIC
         m = cls.from_coords(X)
         overlap = m.overlap(w_ref)
@@ -68,9 +54,10 @@ class TestMixtures(test.Case):
         self.assertTrue(overlap >= min_overlap, 'mixture not reproduced with heuristic')
 
         # annealing (randomized initialization)
-        m = cls(X.shape[1], X.shape[0], K)
+        m = cls(X, K, False)
         for _ in range(repeats):
-            m.anneal(X, linspace(2.0, 0.1, 10))
+            m.randomize_scales()
+            m.anneal(linspace(2.0, 0.1, 10))
 
             overlap = m.overlap(w_ref)
             if overlap >= min_overlap:

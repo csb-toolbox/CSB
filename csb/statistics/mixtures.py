@@ -1,408 +1,305 @@
 """
-Mixture models for protein structure ensembles.
+Mixture models for multi-dimensional data.
 
 Reference: Hirsch M, Habeck M. - Bioinformatics. 2008 Oct 1;24(19):2184-92
 """
 
 import os
 import sys
+import numpy
 
 from abc import ABCMeta, abstractmethod
 
-
 class GaussianMixture(object):
     """
-    Abstract mixture model for protein structure ensembles.
+    Gaussian mixture model for multi-dimensional data.
     """
+    _axis = None
 
-    __metaclass__ = ABCMeta
+    # prior for variance (inverse Gamma distribution)
+    ALPHA_SIGMA = 0.0001
+    BETA_SIGMA = 0.01
+    MIN_SIGMA = 0.0
 
-    n_inner = 1           ## inner loop in M-step
+    use_cache = True
 
-    alpha_sigma = 0.0001  ## prior for variance (inverse Gamma
-    beta_sigma = 0.01    ## distribution)
-    min_sigma = 0.0     ##
-
-    use_cache = True      ## cache for distance matrix
-
-    def __init__(self, N, M, K=1, beta=1., log=sys.stdout):
+    def __init__(self, X, K, train=True, axis=None):
         """
-        @param N: number of atoms
-        @type N: int
-
-        @param M: number of structures
-        @type M: int
+        @param X: multi dimensional input vector with samples along first axis
+        @type X: (M,...) numpy array
 
         @param K: number of components
         @type K: int
 
-        @param beta: reciprocal temperature (for annealed EM)
-        @type beta: float
+        @param train: train model
+        @type train: bool
+
+        @param axis: component axis in C{X}
+        @type axis: int
         """
-        from numpy import zeros, ones, identity, array
+        if self._axis is not None:
+            if axis is not None and axis != self._axis:
+                raise ValueError('axis is fixed for {0}'.format(type(self).__name__))
+            axis = self._axis
+        elif axis is None:
+            axis = 0
+        self._axis = axis
 
-        self._out = log
+        N = X.shape[axis]
+        self._X = X
+        self._dimension = numpy.prod(X.shape) / N
 
-        self._K = int(K)
-        self._N = int(N)
-        self._M = int(M)
-        self.beta = float(beta)
-
-        self.Y = zeros((self.K, self.N, 3))
-        self.R = array([[identity(3) for k in range(self.K)]        #@UnusedVariable
-                        for m in range(self.M)])                    #@UnusedVariable
-        self.t = zeros((self.M, self.K, 3))
-        self.sigma = ones(self.K)
-        self.w = ones(self.K) / self.K
-
-        self.Z = None
-
+        c = numpy.linspace(0, K, N, False).astype(int)
+        self._scales = numpy.equal.outer(range(K), c).astype(float)
+        self._means = numpy.zeros((K,) + X.shape[1:])
         self.del_cache()
+
+        if train:
+            self.em()
 
     @property
     def K(self):
         """Number of components
         @rtype: int"""
-        return self._K
+        return len(self.means)
 
     @property
     def N(self):
-        """Number of atoms
+        """Length of component axis
         @rtype: int"""
-        return self._N
+        return self._scales.shape[1]
 
     @property
     def M(self):
-        """Number of structures
+        """Number of data points
         @rtype: int"""
-        return self._M
-
-    def log(self, *values):
-        """
-        Write C{values} to output stream (default: STDOUT)
-        """
-        for value in values:
-            self._out.write(str(value))
-        self._out.write(os.linesep)
-        self._out.flush()
+        return len(self._X)
 
     def del_cache(self):
-        self.cache = None
+        """Clear model parameter cache (force recalculation)"""
+        self._w = None
+        self._sigma = None
+        self._delta = None
 
-    def get_dimension(self, Z):
-        """
-        dimensionality of the mixture domain
+    @property
+    def dimension(self):
+        """Dimensionality of the mixture domain
+        @rtype: int"""
+        return self._dimension
 
-        @rtype: int
-        """
-        if len(Z) == self.M:
-            return self.N * 3
-        return self.M * 3
+    @property
+    def means(self):
+        """@rtype: (K, ...) numpy array"""
+        return self._means
 
-    def log_likelihood_reduced(self, X):
-        """
-        log-likelihood of the marginalized model (no auxiliary indicator
-        variables)
-
-        @rtype: float
-        """
-        from csb.numeric import log, log_sum_exp
-        from numpy import pi, sum, transpose, clip
-
-        D = self.get_delta(X)
-        N = self.get_dimension(D)
-
-        log_p = -0.5 * D / clip(self.sigma ** 2, 1e-300, 1e300) \
-                - 0.5 * N * log(2 * pi * self.sigma ** 2) \
-                + log(self.w)
-
-        return sum(log_sum_exp(transpose(log_p)))
-
-    def log_likelihood(self, X, Z):
-        """
-        log-likelihood of the extended model (with indicators)
-
-        @rtype: float
-        """
-        from csb.numeric import log
-        from numpy import pi, sum, clip
-
-        D = self.get_delta(X)
-        n = sum(Z, 0)
-        N = self.get_dimension(Z)
-
-        L = -0.5 * sum(Z * D / clip(self.sigma ** 2, 1e-300, 1e300)) \
-            - 0.5 * N * sum(n * log(2 * pi * self.sigma ** 2)) \
-            + sum(n * log(self.w)) \
-            - 0.5 * sum(log(self.sigma ** 2)) ## Jeffreys' prior
-
-        return L
-
-    def get_delta(self, X, update_cache=False):
-        """
-        calculate squared 'distance matrix' between data and components
-        """
-        if update_cache and self.use_cache:
-            D = self.calculate_delta(X)
-            self.cache = D
-
-        if self.cache is not None:
-            return self.cache
-        return self.calculate_delta(X)
-
-    @abstractmethod
-    def calculate_delta(self, X):
-        pass
-
-    def estimate_w(self, Z):
-        """
-        estimate weights of components from indicators
-        """
-        from numpy import sum
-
-        n = sum(Z, 0)
-
-        self.w[:] = n / sum(n)
-
-    def estimate_sigma(self, X, Z):
-        """
-        estimate variances of the components
-        """
-        from numpy import sum, sqrt
-
-        D = self.get_delta(X, update_cache=True)
-        N = self.get_dimension(Z)
-
-        alpha = N * sum(Z, 0) + self.alpha_sigma
-        beta = sum(Z * D, 0) + self.beta_sigma
-
-        self.sigma = sqrt(beta / alpha).clip(self.min_sigma)
-
-    @abstractmethod
-    def estimate_Y(self, X, Z):
-        """
-        estimate conformers/segments
-        """
-        pass
-
-    @abstractmethod
-    def estimate_T(self, X, Z):
-        """
-        estimate superpositions
-        """
-        pass
-
-    def e_step(self, X):
-        """
-        expectation step: calculation of indicators
-
-        @return: indicators matrix
-        @rtype: numpy array
-        """
-        from numpy import clip
-        from csb.numeric import log, log_sum_exp, exp
-
-        Z = -0.5 * self.get_delta(X) / clip(self.sigma ** 2, 1e-300, 1e300)
-        Z -= 0.5 * self.get_dimension(Z) * log(self.sigma ** 2)
-        Z += log(self.w)
-        Z = self.beta * Z.T
-        Z -= log_sum_exp(Z)
-
+    @means.setter
+    def means(self, means):
+        if means.shape != self._means.shape:
+            raise ValueError('shape mismatch')
+        self._means = means
         self.del_cache()
 
-        return exp(Z).T
+    @property
+    def scales(self):
+        """@rtype: (K, N) numpy array"""
+        return self._scales
 
-    def m_step(self, X, Z):
-        """
-        maximization step: maximize posterior given indicators
-        """
-        for i in range(self.n_inner):
-            self.estimate_Y(X, Z)
-            self.estimate_T(X, Z)
+    @scales.setter
+    def scales(self, scales):
+        if scales.shape != self._scales.shape:
+            raise ValueError('shape mismatch')
+        self._scales = scales
+        self.del_cache()
 
-        self.estimate_w(Z)
-        self.estimate_sigma(X, Z)
+    @property
+    def w(self):
+        """Component weights
+        @rtype: (K,) numpy array"""
+        if not self.use_cache or self._w is None:
+            self._w = self.scales.mean(1)
+        return self._w
 
-    @abstractmethod
-    def initialize(self, X, randomize=True):
-        """
-        @param X: MxNx3 input vector (M: #structures, N: #atoms)
-        @type X: numpy array
+    @property
+    def sigma(self):
+        """Component variations
+        @rtype: (K,) numpy array"""
+        if not self.use_cache or self._sigma is None:
+            alpha = self.dimension * self.scales.sum(1) + self.ALPHA_SIGMA
+            beta = (self.delta * self.scales.T).sum(0) + self.BETA_SIGMA
+            self._sigma = numpy.sqrt(beta / alpha).clip(self.MIN_SIGMA)
+        return self._sigma
 
-        @param randomize: Randomize segment sizes. If False, all components will
-        be equal sized and continuous.
-        @type randomize: bool
-        """
-        pass
+    @property
+    def delta(self):
+        """Squared "distances" between data and components
+        @rtype: (N, K) numpy array"""
+        if not self.use_cache or self._delta is None:
+            self._delta = numpy.transpose([[d.sum()
+                for d in numpy.swapaxes([(self.means[k] - self.datapoint(m, k)) ** 2
+                    for m in range(self.M)], 0, self._axis)]
+                for k in range(self.K)])
+        return self._delta
 
-    def em(self, X, n_iter=100, verbose=0, initialize=True,
-            store_loglikelihood=False, eps=1e-30):
+    @property
+    def log_likelihood_reduced(self):
+        """Log-likelihood of the marginalized model (no auxiliary indicator variables)
+        @rtype: float"""
+        from csb.numeric import log, log_sum_exp
+        s_sq = (self.sigma ** 2).clip(1e-300, 1e300)
+        log_p = log(self.w) - 0.5 * \
+                (self.delta / s_sq + self.dimension * log(2 * numpy.pi * s_sq))
+        return log_sum_exp(log_p.T).sum()
+
+    @property
+    def log_likelihood(self):
+        """Log-likelihood of the extended model (with indicators)
+        @rtype: float"""
+        from csb.numeric import log
+        from numpy import pi, sum
+        n = self.scales.sum(1)
+        N = self.dimension
+        Z = self.scales.T
+        s_sq = (self.sigma ** 2).clip(1e-300, 1e300)
+        return sum(n * log(self.w)) - 0.5 * \
+                (sum(Z * self.delta / s_sq) + N * sum(n * log(2 * pi * s_sq)) + sum(log(s_sq)))
+
+    def datapoint(self, m, k):
+        """Training point number C{m} as if it would belong to component C{k}
+        @rtype: numpy array"""
+        return self._X[m]
+
+    def estimate_means(self):
+        """Update means from current model and samples"""
+        n = self.scales.sum(1)
+        self.means = numpy.array([numpy.sum([self.scales[k, m] * self.datapoint(m, k)
+            for m in range(self.M)], 0) / n[k]
+            for k in range(self.K)])
+
+    def estimate_scales(self, beta=1.0):
+        """Update scales from current model and samples
+        @param beta: inverse temperature
+        @type beta: float"""
+        from csb.numeric import log, log_sum_exp, exp
+        s_sq = (self.sigma ** 2).clip(1e-300, 1e300)
+        Z = (log(self.w) - 0.5 * (self.delta / s_sq + self.dimension * log(s_sq))) * beta
+        self.scales = exp(Z.T - log_sum_exp(Z.T))
+
+    def randomize_means(self):
+        """Pick C{K} samples from C{X} as means"""
+        import random
+        self.means = numpy.asarray(random.sample(self._X, self.K))
+        self.estimate_scales()
+
+    def randomize_scales(self, ordered=True):
+        """Random C{scales} initialization"""
+        from numpy.random import random, multinomial
+        if ordered:
+            K, N = self.scales.shape
+            Ks = numpy.arange(K)
+            w = random(K) + (5. * K / N) # with pseudocounts
+            c = numpy.repeat(Ks, multinomial(N, w / w.sum()))
+            self.scales = numpy.equal.outer(Ks, c).astype(float)
+        else:
+            s = random(self.scales.shape)
+            self.scales = s / s.sum(0)
+        self.estimate_means()
+
+    def e_step(self, beta=1.0):
+        """Expectation step for EM
+        @param beta: inverse temperature
+        @type beta: float"""
+        self.estimate_scales(beta)
+
+    def m_step(self):
+        """Maximization step for EM"""
+        self.estimate_means()
+
+    def em(self, n_iter=100, eps=1e-30):
         """
         Expectation maximization
-
-        @param X: MxNx3 input vector (M: #structures, N: #atoms)
-        @type X: numpy array
 
         @param n_iter: maximum number of iteration steps
         @type n_iter: int
 
-        @param verbose: if non-zero, print out log likelihood every C{verbose} step.
-        @type verbose: int
-
-        @param initialize: if True, call L{GaussianMixture.initialize}
-        @type initialize: bool
+        @param eps: log-likelihood convergence criterion
+        @type eps: float
         """
-        if initialize:
-            self.initialize(X)
-
-        if store_loglikelihood:
-            self.LL = []
-
-        LL_prev = 1e10
-
+        LL_prev = -numpy.inf
         for i in range(n_iter):
+            self.m_step()
+            self.e_step()
 
-            self.Z = self.e_step(X)
-            self.m_step(X, self.Z)
+            if eps is not None:
+                LL = self.log_likelihood
+                if abs(LL - LL_prev) < eps:
+                    break
+                LL_prev = LL
 
-            output = verbose and not (i % verbose)
-
-            if not (store_loglikelihood or output) and eps is None:
-                continue
-
-            LL = self.log_likelihood(X, self.Z)
-
-            if store_loglikelihood:
-                self.LL.append(LL)
-
-            if output:
-                self.log('%3d %16.5f' % (i, LL))
-
-            # convergence criteria
-            if abs(LL - LL_prev) < eps:
-                break
-
-            LL_prev = LL
-
-    def anneal(self, X, betas, verbose=0):
+    def anneal(self, betas):
         """
-        deterministic annealing
+        Deterministic annealing
+
+        @param betas: sequence of inverse temperatures
+        @type betas: iterable of floats
         """
-        self.beta = betas[0]
-        self.initialize(X)
-
-        if verbose:
-            self.LL = []
-
-        i = 0
         for beta in betas:
+            self.m_step()
+            self.e_step(beta)
 
-            self.beta = beta
-            self.Z = Z = self.e_step(X)
-
-            self.m_step(X, Z)
-
-            if verbose and not (i % verbose):
-                self.LL.append(self.log_likelihood(X, Z))
-                self.log('{0} {1}'.format(beta, self.LL[-1]))
-
-            i += 1
-
-    def increment_K(self, X):
+    def increment_K(self, train=True):
         """
         Split component with largest sigma
 
-        @returns: new instance of mixture with incremented K
+        @returns: new instance of mixture with incremented C{K}
         @rtype: L{GaussianMixture} subclass
         """
-        from numpy import argmax, hstack
-
-        i = argmax(self.sigma)
+        i = self.sigma.argmax()
 
         # duplicate column
-        Z = hstack([self.Z, self.Z[:, i].reshape((-1, 1))])
+        Z = numpy.vstack([self.scales, self.scales[i]])
 
         # mask disjoint equal sized parts
-        mask = Z[:, i].cumsum() / Z[:, i].sum() > 0.5
-        Z[mask, i] *= 0.0
-        Z[mask == False, -1] *= 0.0
+        mask = Z[i].cumsum() / Z[i].sum() > 0.5
+        Z[i, mask] *= 0.0
+        Z[-1, ~mask] *= 0.0
 
-        new = type(self)(self.N, self.M, self.K + 1, self.beta)
-        new.Z = Z
-        new.m_step(X, new.Z)
+        new = type(self)(self._X, self.K + 1, False, self._axis)
+        new.scales = Z
+        new.m_step()
+        if train:
+            new.em()
 
         return new
 
     @classmethod
-    def series(cls, X, n_iter=100, verbose=0, start=1, stop=9, eps=1e-30):
+    def series(cls, X, start=1, stop=9):
         """
-        For param description, see L{GaussianMixture.em}.
+        Iterator with mixture instances for C{K in range(start, stop)}
 
-        @return: Iterator with mixture instances for C{K in range(start, stop)}
+        @type X: (M,...) numpy array
+        @type start: int
+        @type stop: int
         @rtype: generator
         """
-        m = cls(X.shape[1], X.shape[0], start)
-        m.initialize(X, False)
+        mixture = cls(X, start)
+        yield mixture
 
-        for K in range(start + 1, stop):                      #@UnusedVariable
-            m.em(X, n_iter, verbose, False, False, eps)
-            yield m
-
-            m = m.increment_K(X)
-
-        yield m
+        for K in range(start + 1, stop):
+            mixture = mixture.increment_K()
+            yield mixture
 
     @classmethod
-    def from_coords(cls, X, K=0, n_iter=100, verbose=0, randomize=False, eps=1e-30):
+    def guess_K(cls, X):
         """
-        Factory method with coodinate array.
+        Factory method which finds best C{K} according to L{BIC<GaussianMixture.BIC>}.
 
-        @param X: MxNx3 input vector (M: #structures, N: #atoms)
-        @type X: numpy array
-
-        @param K: Number of components. If zero, then find best C{K} with
-        non-random initialization and sequential splitting of component with
-        largest sigma. Best C{K} is judged heuristically as mixture with
-        smallest L{BIC<GaussianMixture.BIC>}.
-        @type K: int 
-
-        @param n_iter: maximum number of iteration steps
-        @type n_iter: int
-
-        @param verbose: if non-zero, print out log likelihood every C{verbose} step.
-        @type verbose: int
-
-        @param randomize: if non-zero, do random initialization of components
-        C{randomize} times and take mixture with maximum log(likelihood).
-        @type randomize: int
+        @param X: multi dimensional input vector with samples along first axis
+        @type X: (M,...) numpy array
 
         @return: Mixture instance
         @rtype: L{GaussianMixture} subclass
         """
-        if isinstance(K, int):
-            if K > 0:
-                if randomize > 1:
-                    return max([cls.from_coords(X, K, n_iter, verbose, 1, eps)
-                        for _ in range(randomize)],
-                        key=lambda mixture: mixture.log_likelihood_reduced(X))
-
-                mixture = cls(X.shape[1], X.shape[0], K)
-                mixture.initialize(X, randomize)
-                mixture.em(X, n_iter, verbose, False, False, eps)
-
-                return mixture
-
-            K = (1, 9)
-
-        if randomize:
-            raise ValueError("randomize=True and K=0 are exclusive")
-
-        try:
-            start, stop = K
-        except:
-            raise TypeError("K must be integer or sequence of 2 integers")
-
-        mixture_it = cls.series(X, n_iter, verbose, start, stop, eps)
+        mixture_it = cls.series(X)
         mixture = next(mixture_it)
 
         # increase K as long as next candidate looks better
@@ -412,6 +309,18 @@ class GaussianMixture(object):
             mixture = candidate
 
         return mixture
+
+    @classmethod
+    def from_coords(cls, X, K=0):
+        """
+        Factory method with optional C{K}. Use C{guess_K} if C{K<1}.
+
+        @return: Mixture instance
+        @rtype: L{GaussianMixture} subclass
+        """
+        if K > 0:
+            return cls(X, K)
+        return cls.guess_K(X)
 
     @property
     def BIC(self):
@@ -429,30 +338,34 @@ class GaussianMixture(object):
 
         return n * log(error_variance) + k * log(n)
 
+    @property
+    def membership(self):
+        """Membership array
+        @rtype: (N,) numpy array"""
+        return self.scales.argmax(0)
+
     def overlap(self, other):
         """
         Similarity of two mixtures measured in membership overlap
 
-        @param other: Mixture with C{len(self.Z) == len(other.Z)} or a
-        segmentation array with C{len(self.Z) == len(other)}.
+        @param other: Mixture or membership array
         @type other: L{GaussianMixture} or sequence
 
         @return: segmentation overlap
         @rtype: float in interval [0.0, 1.0]
         """
-        from numpy import argmax, ndarray
-
         if isinstance(other, GaussianMixture):
-            other_w = argmax(other.Z, 1)
+            other_w = other.membership
             K = min(self.K, other.K)
-        elif isinstance(other, (list, tuple, ndarray)):
+        elif isinstance(other, (list, tuple, numpy.ndarray)):
             other_w = other
             K = min(self.K, len(set(other)))
         else:
-            raise TypeError
+            raise TypeError('other')
 
-        self_w = argmax(self.Z, 1)
-        assert len(self_w) == len(other_w)
+        self_w = self.membership
+        if len(self_w) != len(other_w):
+            raise ValueError('self.N != other.N')
 
         # position numbers might be permutated, so count equal pairs
         ww = tuple(zip(self_w, other_w))
@@ -460,208 +373,89 @@ class GaussianMixture(object):
 
         return float(same) / len(ww)
 
-
-class SegmentMixture(GaussianMixture):
+class AbstractStructureMixture(GaussianMixture):
     """
-    Gaussian mixture model for protein structure ensembles using a set of
-    segments
-    
+    Abstract mixture model for protein structure ensembles.
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self, X, K, *args, **kwargs):
+        if len(X.shape) != 3 or X.shape[-1] != 3:
+            raise ValueError('X must be array of shape (M,N,3)')
+
+        self._R = numpy.zeros((len(X), K, 3, 3))
+        self._t = numpy.zeros((len(X), K, 3))
+
+        super(AbstractStructureMixture, self).__init__(X, K, *args, **kwargs)
+
+    @property
+    def R(self):
+        """Rotation matrices
+        @rtype: (M,K,3,3) numpy array"""
+        return self._R
+
+    @property
+    def t(self):
+        """Translation vectors
+        @rtype: (M,K,3) numpy array"""
+        return self._t
+
+    def datapoint(self, m, k):
+        return numpy.dot(self._X[m] - self._t[m, k], self._R[m, k])
+
+    def m_step(self):
+        self.estimate_means()
+        self.estimate_T()
+
+    @abstractmethod
+    def estimate_T(self):
+        """Estimate superpositions"""
+        raise NotImplementedError
+
+class SegmentMixture(AbstractStructureMixture):
+    """
+    Gaussian mixture model for protein structure ensembles using a set of segments
+
     If C{X} is the coordinate array of a protein structure ensemble which
     can be decomposed into 2 rigid segments, the segmentation will be found by:
 
-    >>> mixture = SegmentMixture.from_coords(X, 2)
-    >>> membership = numpy.argmax(mixture.Z, 1)
+    >>> mixture = SegmentMixture(X, 2)
 
-    Superposition on first segment:
+    The segment membership of each atom is given by:
 
-    >>> X_superposed = mixture.clusters(X)[0]
-
+    >>> mixture.membership
+    array([0, 0, 0, ..., 1, 1, 1])
     """
+    _axis = 1
 
-    def calculate_delta(self, X):
-        """
-        Squared atom distances to mean structures, summed over samples
+    def estimate_T(self):
+        from csb.bio.utils import wfit
+        for m in range(self.M):
+            for k in range(self.K):
+                self._R[m, k], self._t[m, k] = wfit(self._X[m], self.means[k], self.scales[k])
 
-        @rtype: (N,K) numpy array
-        """
-        from numpy import dot, array, sum, transpose
-
-        D = array([[sum((self.Y[k] - dot(X[m] - self.t[m, k], self.R[m, k])) ** 2, 1)
-                    for k in range(self.K)]
-                   for m in range(self.M)])
-
-        return transpose(sum(D, 0))
-
-    def estimate_Y(self, X, Z):
-        """
-        (unweighted) average of backtransformed structures
-        """
-        from numpy import mean, dot
-        
-        self.Y = mean([[dot(X[m] - self.t[m, k], self.R[m, k])
+    def estimate_means(self):
+        # superpositions are weighted, so do unweighted mean here
+        self.means = numpy.mean([[self.datapoint(m, k)
             for m in range(self.M)]
             for k in range(self.K)], 1)
 
-    def estimate_T(self, X, Z):
-        """
-        weighted least-squares fit
-        """
-        from csb.bio.utils import wfit
-
-        for m in range(self.M):
-            for k in range(self.K):
-                self.R[m, k, :, :], self.t[m, k, :] = wfit(X[m], self.Y[k], Z[:, k])
-
-    def initialize(self, X, randomize=True):
-
-        from numpy.random import random, multinomial
-        from numpy import repeat, equal, arange, linspace
-
-        if randomize:
-            w = random(self.K) + (5. * self.K / self.N)
-            w /= sum(w)
-
-            c = repeat(arange(self.K), multinomial(self.N, w))
-        else:
-            c = linspace(0, self.K, self.N, False).astype(int)
-
-        self.Z = 1. * equal.outer(c, arange(self.K))
-
-        self.m_step(X, self.Z)
-
-    def clusters(self, X):
-        """
-        Return C{K} copies of the ensemble coordinate array, each superposed
-        on a different segment.
-        """
-
-        from numpy import array, dot
-
-        C = [array([dot(X[m] - self.t[m, k], self.R[m, k])
-                    for m in range(self.M)])
-             for k in range(self.K)]
-
-        return C
-
-class SegmentMixture2(SegmentMixture):
+class ConformerMixture(AbstractStructureMixture):
     """
-    Same as L{SegmentMixture}, but instead of using C{K} mean structures, use
-    a single mean structure (C{Y} property has one dimension less).
+    Gaussian mixture model for protein structure ensembles using a set of conformers
+
+    If C{mixture} is a trained model, the ensemble coordinate array of
+    structures from C{X} which belong to conformation C{k} is given by:
+
+    >>> indices = numpy.where(mixture.membership == k)[0]
+    >>> conformer = [mixture.datapoint(m, k) for m in indices]
     """
+    _axis = 0
 
-    def __init__(self, *args, **kw):
-
-        super(SegmentMixture2, self).__init__(*args, **kw)
-        self.Y = self.Y[0]
-
-    def calculate_delta(self, X):
-
-        from numpy import dot, array, sum, transpose
-
-        D = array([[sum((self.Y - dot(X[m] - self.t[m, k], self.R[m, k])) ** 2, 1)
-                    for k in range(self.K)]
-                   for m in range(self.M)])
-
-        return transpose(sum(D, 0))
-
-    def estimate_Y(self, X, Z):
-        """
-        (unweighted) average of backtransformed structures
-        """
-        from numpy import sum, dot, clip, transpose
-
-        s = 1. / clip(self.sigma ** 2, 1e-308, 1e308)
-        n = self.M * dot(Z, s)
-
-        self.Y[:, :] = 0.
-
-        for k in range(self.K):
-
-            Y = sum([dot(X[m] - self.t[m, k], self.R[m, k])
-                     for m in range(self.M)], 0)
-            self.Y += transpose(transpose(Y) * Z[:, k] * s[k])
-
-        self.Y = transpose(transpose(self.Y) / n)
-
-    def estimate_T(self, X, Z):
-        """
-        weighted least-squares fit
-        """
-        from csb.bio.utils import wfit
-
-        for m in range(self.M):
-            for k in range(self.K):
-                self.R[m, k, :, :], self.t[m, k, :] = wfit(X[m], self.Y, Z[:, k])
-
-class ConformerMixture(GaussianMixture):
-    """
-    Gaussian mixture model for protein structure ensembles using a set of
-    conformers
-    """
-
-    def calculate_delta(self, X):
-        """
-        Sum of squared distances: RMSD(X[m], Y[k])^2 * N
-
-        @rtype: (M,K) numpy array
-        """
-        from numpy import dot, array, sum
-
-        return array([[sum((self.Y[k] - dot(X[m] - self.t[m, k], self.R[m, k])) ** 2)
-                       for k in range(self.K)]
-                      for m in range(self.M)])
-
-    def estimate_Y(self, X, Z):
-        """
-        weighted average of backtransformed structures
-        """
-        from numpy import sum, dot, clip
-
-        n = clip(sum(Z, 0), 1e-300, 1e300)
-
-        for k in range(self.K):
-            self.Y[k, :, :] = sum([Z[m, k] * dot(X[m] - self.t[m, k], self.R[m, k])
-                                 for m in range(self.M)], 0)[:, :] / n[k]
-
-    def estimate_T(self, X, Z):
-        """
-        (unweighted) least-squares fit
-        """
+    def estimate_T(self):
         from csb.bio.utils import fit
-
         for m in range(self.M):
             for k in range(self.K):
-                self.R[m, k, :, :], self.t[m, k, :] = fit(X[m], self.Y[k])
-
-    def initialize(self, X, randomize=True):
-
-        from numpy.random import permutation
-        from numpy import linspace
-
-        if randomize:
-            self.Y = X[permutation(self.M)[:self.K]]
-        else:
-            self.Y = X[linspace(0, self.M - 1, self.K).astype(int)]
-
-        self.estimate_T(X, None)
-        Z = self.e_step(X)
-        self.estimate_w(Z)
-        self.estimate_sigma(X, Z)
-
-    def clusters(self, X):
-        """
-        Return C{K} ensemble coordinate arrays, representing C{K} conformations.
-        """
-
-        from numpy import argmax, array, dot, where
-
-        Z = self.e_step(X)
-        c = argmax(Z, 1)
-
-        C = [array([dot(X[m] - self.t[m, k], self.R[m, k])
-                    for m in where(c == k)[0]])
-             for k in range(self.K)]
-
-        return C
+                self._R[m, k], self._t[m, k] = fit(self._X[m], self.means[k])
 
 # vi:expandtab:smarttab:sw=4
