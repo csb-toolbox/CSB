@@ -1,3 +1,136 @@
+"""
+CSB is a python library and application framework, which can be used
+to solve problems in the field of Computational Structural Biology.
+
+The library is composed of a set of highly branched python packages
+(namespaces). Some of the packages are meant to be directly used by
+the clients (core library), while others are utility modules and take
+part in the development of the library: 
+
+    1. Core class library -- object-oriented, granular, with an emphasis
+       on design and clean interfaces. A Sequence is not a string, and a
+       Structure is not a dict or list. Naming conventions matter.
+       
+    2. Application framework -- executable console applications
+       ("protocols"), which consume objects from the core library.
+       The framework ensures that each CSB application is also reusable
+       and can be instantiated as a regular python object without any
+       ugly side effects (sys.exit() and friends). See L{csb.apps} for
+       more details. 
+       
+    3. Test framework -- built on top of the standard unittest as a thin
+       wrapping layer. Provides some sugar like test data file management,
+       and modular test execution. L{csb.test} will give you all the
+       details. 
+
+The core library is roughly composed of:
+
+    - bioinformatics APIs: L{csb.bio}, which includes stuff like
+      L{csb.bio.io}, L{csb.bio.structure}, L{csb.bio.sequence},
+      L{csb.bio.hmm}
+    
+    - statistical APIs and utilities: L{csb.statistics}, L{csb.numeric}
+    
+    - utility classes - L{csb.io}, L{csb.pyutils}
+    
+Perhaps one of the most frequently used parts of the library is the
+L{csb.bio.structure} module, which provides the L{Structure}, L{Chain},
+L{Residue} and L{Atom} objects. You could easily build a L{Structure}
+from scratch, but a far more common scenario is parsing a structure from
+a PDB file using one of the L{AbstractStructureParser}s. All bio IO
+objects, including the StructureParser factory, are defined in
+L{csb.bio.io} and sub-packages::
+
+    >>> from csb.bio.io.wwpdb import StructureParser
+    >>> p = StructureParser("/some/file/pdb1x80.ent")
+    >>> s = p.parse_structure()
+    >>> print(s)
+    <Structure: 1x80, 2 chains>
+    
+The last statement will return a L{csb.bio.structure.Structure} instance,
+which is a composite hierarchical object::
+
+    >>> for chain_id in s.chains:
+            chain = s.chains[chain_id]
+            for residue in chain.residues:
+                for atom_id in residue.atoms:
+                    atom = residue.atoms[atom.id]
+                    print(atom.vector)
+
+Some of the inner objects in this hierarchy behave just like dictionaries
+(but are not)::
+
+    >>> s.chains['A']        # access chain A by ID
+    <Chain A: Protein>
+    >>> s['A']               # the same
+    <Chain A: Protein>
+    
+Others behave like collections:
+
+    >>> chain.residues[10]               # 1-based access to the residues in the chain
+    <ProteinResidue [10]: PRO 10>
+    >>> chain[10]                        # 0-based, list-like access
+    <ProteinResidue [11]: GLY 11>
+    
+But all entities are iterable because they inherit the C{items} iterator
+from L{Abstract3DEntity}. So the above loop can be shortened::
+
+    >>> for chain in s.items:
+            for residue in chain.items:
+                for atom in residue.items:
+                    print(atom.vector)
+                    
+or even more::
+
+    >>> from csb.bio.structure import Atom
+    >>> for atom in s.components(klass=Atom):
+            print(atom.vector)
+
+You may also be interested in extracting a sub-chain from this structure::
+
+    >>> s.chains['B'].subregion(3, 20)    # from positions 3 to 20, inclusive
+    <Chain B: Protein>
+    
+or modifying it in some way, for example, in order to appenbd a new residue,
+try:
+
+    >>> from csb.bio.structure import ProteinResidue
+    >>> from csb.bio.sequence import ProteinAlphabet
+    >>> residue = ProteinResidue(401, ProteinAlphabet.ALA)
+    >>> s.chains['A'].residues.append(residue)
+    
+Finally, you would probably want to save your structure back to a PDB file:
+
+    >>> s.to_pdb('/some/file/name.pdb')    
+  
+
+
+CSB is an open source library, distributed under OSI-approved MIT license.
+::
+
+    Copyright (c) 2012 Michael Habeck
+    
+    Permission is hereby granted, free of charge, to any person obtaining
+    a copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+    
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+    
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    
+"""
+
 __version__ = '0.0.1.{revision}'
 
 
@@ -56,4 +189,4 @@ class Version(object):
         Full version, including the repository revision number.
         """        
         return '{0.major}.{0.minor}.{0.micro}.{0.revision}'.format(self)            
-    
+

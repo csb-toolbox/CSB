@@ -17,7 +17,7 @@ NAME            = ROOT
 VERSION         = imp.load_source('____csb', os.path.join(LOCATION, ROOT, '__init__.py')).Version()
 AUTHOR          = "Michael Habeck et al."
 EMAIL           = "michael.habeck@tuebingen.mpg.de"
-URL             = "http://www.eb.tuebingen.mpg.de/departments/1-protein-evolution/michael-habeck/computational-structural-biology"
+URL             = "http://www.eb.tuebingen.mpg.de/research/research-groups/michael-habeck.html"
 SUMMARY         = "Computational Structural Biology Toolbox"
 DESCRIPTION     = __doc__
 LICENSE         = 'MIT'
@@ -142,7 +142,8 @@ def build():
                     'Programming Language :: Python',
                     'Programming Language :: Python :: 2.6',
                     'Programming Language :: Python :: 2.7',
-                    'Programming Language :: Python :: 3',
+                    'Programming Language :: Python :: 3.1',
+                    'Programming Language :: Python :: 3.2',                    
                     'Topic :: Scientific/Engineering',
                     'Topic :: Scientific/Engineering :: Bio-Informatics',
                     'Topic :: Scientific/Engineering :: Mathematics',
