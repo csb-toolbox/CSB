@@ -1047,6 +1047,9 @@ class LegacyStructureParser(AbstractStructureParser):
 
     
 StructureParser = AbstractStructureParser.create_parser
+"""
+Alias for L{AbstractStructureParser.create_parser}.
+"""
 
 
 class StructureProvider(object):
