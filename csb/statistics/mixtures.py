@@ -3,12 +3,10 @@ Mixture models for multi-dimensional data.
 
 Reference: Hirsch M, Habeck M. - Bioinformatics. 2008 Oct 1;24(19):2184-92
 """
-
-import os
-import sys
 import numpy
 
 from abc import ABCMeta, abstractmethod
+
 
 class GaussianMixture(object):
     """
@@ -59,20 +57,26 @@ class GaussianMixture(object):
 
     @property
     def K(self):
-        """Number of components
-        @rtype: int"""
+        """
+        Number of components
+        @rtype: int
+        """
         return len(self.means)
 
     @property
     def N(self):
-        """Length of component axis
-        @rtype: int"""
+        """
+        Length of component axis
+        @rtype: int
+        """
         return self._scales.shape[1]
 
     @property
     def M(self):
-        """Number of data points
-        @rtype: int"""
+        """
+        Number of data points
+        @rtype: int
+        """
         return len(self._X)
 
     def del_cache(self):
@@ -83,13 +87,17 @@ class GaussianMixture(object):
 
     @property
     def dimension(self):
-        """Dimensionality of the mixture domain
-        @rtype: int"""
+        """
+        Dimensionality of the mixture domain
+        @rtype: int
+        """
         return self._dimension
 
     @property
     def means(self):
-        """@rtype: (K, ...) numpy array"""
+        """
+        @rtype: (K, ...) numpy array
+        """
         return self._means
 
     @means.setter
@@ -101,7 +109,9 @@ class GaussianMixture(object):
 
     @property
     def scales(self):
-        """@rtype: (K, N) numpy array"""
+        """
+        @rtype: (K, N) numpy array
+        """
         return self._scales
 
     @scales.setter
@@ -113,16 +123,20 @@ class GaussianMixture(object):
 
     @property
     def w(self):
-        """Component weights
-        @rtype: (K,) numpy array"""
+        """
+        Component weights
+        @rtype: (K,) numpy array
+        """
         if not self.use_cache or self._w is None:
             self._w = self.scales.mean(1)
         return self._w
 
     @property
     def sigma(self):
-        """Component variations
-        @rtype: (K,) numpy array"""
+        """
+        Component variations
+        @rtype: (K,) numpy array
+        """
         if not self.use_cache or self._sigma is None:
             alpha = self.dimension * self.scales.sum(1) + self.ALPHA_SIGMA
             beta = (self.delta * self.scales.T).sum(0) + self.BETA_SIGMA
@@ -131,8 +145,10 @@ class GaussianMixture(object):
 
     @property
     def delta(self):
-        """Squared "distances" between data and components
-        @rtype: (N, K) numpy array"""
+        """
+        Squared "distances" between data and components
+        @rtype: (N, K) numpy array
+        """
         if not self.use_cache or self._delta is None:
             self._delta = numpy.transpose([[d.sum()
                 for d in numpy.swapaxes([(self.means[k] - self.datapoint(m, k)) ** 2
@@ -142,8 +158,10 @@ class GaussianMixture(object):
 
     @property
     def log_likelihood_reduced(self):
-        """Log-likelihood of the marginalized model (no auxiliary indicator variables)
-        @rtype: float"""
+        """
+        Log-likelihood of the marginalized model (no auxiliary indicator variables)
+        @rtype: float
+        """
         from csb.numeric import log, log_sum_exp
         s_sq = (self.sigma ** 2).clip(1e-300, 1e300)
         log_p = log(self.w) - 0.5 * \
@@ -152,8 +170,10 @@ class GaussianMixture(object):
 
     @property
     def log_likelihood(self):
-        """Log-likelihood of the extended model (with indicators)
-        @rtype: float"""
+        """
+        Log-likelihood of the extended model (with indicators)
+        @rtype: float
+        """
         from csb.numeric import log
         from numpy import pi, sum
         n = self.scales.sum(1)
@@ -164,34 +184,44 @@ class GaussianMixture(object):
                 (sum(Z * self.delta / s_sq) + N * sum(n * log(2 * pi * s_sq)) + sum(log(s_sq)))
 
     def datapoint(self, m, k):
-        """Training point number C{m} as if it would belong to component C{k}
-        @rtype: numpy array"""
+        """
+        Training point number C{m} as if it would belong to component C{k}
+        @rtype: numpy array
+        """
         return self._X[m]
 
     def estimate_means(self):
-        """Update means from current model and samples"""
+        """
+        Update means from current model and samples
+        """
         n = self.scales.sum(1)
         self.means = numpy.array([numpy.sum([self.scales[k, m] * self.datapoint(m, k)
             for m in range(self.M)], 0) / n[k]
             for k in range(self.K)])
 
     def estimate_scales(self, beta=1.0):
-        """Update scales from current model and samples
+        """
+        Update scales from current model and samples
         @param beta: inverse temperature
-        @type beta: float"""
+        @type beta: float
+        """
         from csb.numeric import log, log_sum_exp, exp
         s_sq = (self.sigma ** 2).clip(1e-300, 1e300)
         Z = (log(self.w) - 0.5 * (self.delta / s_sq + self.dimension * log(s_sq))) * beta
         self.scales = exp(Z.T - log_sum_exp(Z.T))
 
     def randomize_means(self):
-        """Pick C{K} samples from C{X} as means"""
+        """
+        Pick C{K} samples from C{X} as means
+        """
         import random
         self.means = numpy.asarray(random.sample(self._X, self.K))
         self.estimate_scales()
 
     def randomize_scales(self, ordered=True):
-        """Random C{scales} initialization"""
+        """
+        Random C{scales} initialization
+        """
         from numpy.random import random, multinomial
         if ordered:
             K, N = self.scales.shape
@@ -205,13 +235,17 @@ class GaussianMixture(object):
         self.estimate_means()
 
     def e_step(self, beta=1.0):
-        """Expectation step for EM
+        """
+        Expectation step for EM
         @param beta: inverse temperature
-        @type beta: float"""
+        @type beta: float
+        """
         self.estimate_scales(beta)
 
     def m_step(self):
-        """Maximization step for EM"""
+        """
+        Maximization step for EM
+        """
         self.estimate_means()
 
     def em(self, n_iter=100, eps=1e-30):
@@ -284,7 +318,7 @@ class GaussianMixture(object):
         mixture = cls(X, start)
         yield mixture
 
-        for K in range(start + 1, stop):
+        for K in range(start + 1, stop):                        #@UnusedVariable
             mixture = mixture.increment_K()
             yield mixture
 
@@ -340,8 +374,10 @@ class GaussianMixture(object):
 
     @property
     def membership(self):
-        """Membership array
-        @rtype: (N,) numpy array"""
+        """
+        Membership array
+        @rtype: (N,) numpy array
+        """
         return self.scales.argmax(0)
 
     def overlap(self, other):
@@ -390,14 +426,18 @@ class AbstractStructureMixture(GaussianMixture):
 
     @property
     def R(self):
-        """Rotation matrices
-        @rtype: (M,K,3,3) numpy array"""
+        """
+        Rotation matrices
+        @rtype: (M,K,3,3) numpy arra
+        y"""
         return self._R
 
     @property
     def t(self):
-        """Translation vectors
-        @rtype: (M,K,3) numpy array"""
+        """
+        Translation vectors
+        @rtype: (M,K,3) numpy array
+        """
         return self._t
 
     def datapoint(self, m, k):
@@ -409,7 +449,9 @@ class AbstractStructureMixture(GaussianMixture):
 
     @abstractmethod
     def estimate_T(self):
-        """Estimate superpositions"""
+        """
+        Estimate superpositions
+        """
         raise NotImplementedError
 
 class SegmentMixture(AbstractStructureMixture):
