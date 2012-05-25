@@ -82,7 +82,7 @@ class ProMixApp(csb.apps.Application):
         mixture = mixtures.ConformerMixture.from_coords(X, self.args.components)
         self.log('Number of conformers: %d' % (mixture.K))
 
-        membership = mixture.Z.argmax(1)
+        membership = mixture.membership
 
         for k,(sigma,w) in enumerate(zip(mixture.sigma, mixture.w)):
             outfile = 'promix_conformer_%d.pdb' % (k+1)
