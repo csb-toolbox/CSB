@@ -8,13 +8,13 @@ in this field, chances are you may find something useful here. Our
 package consists of a few major components:
 
     1. Core class library -- object-oriented, granular, with an emphasis
-	   on design and clean interfaces. 
-	   
-	2. Application framework -- console applications ("protocols"),
-	   which consume objects from the core library in order to build
-	   something executable (and hopefully useful).
-	   
-	3. Test framework -- makes sure the library *actually* works.
+       on design and clean interfaces. 
+       
+    2. Application framework -- console applications ("protocols"),
+       which consume objects from the core library in order to build
+       something executable (and hopefully useful).
+       
+    3. Test framework -- makes sure the library *actually* works.
 
 
 Compatibility
@@ -50,20 +50,20 @@ If you are installing CSB on Windows, numpy, scipy and matplotlib can be
 installed from binary MSI/exe packages, the rest can be installed from
 PyPi. On Debian-like Linux distributions use your package manager::
 
-	$ apt-get install *package*
+    $ apt-get install *package*
 
 where *package* is one of: python-numpy, python-scipy, python-matplotlib.
 
 Finally, install CSB itself::
 
-	$ python setup.py install
-	
+    $ python setup.py install
+    
 CSB has been just installed at the following location::
 
-	$ python -c "import csb, os; print(os.path.abspath(os.path.join(csb.__path__[0], '..')))"
+    $ python -c "import csb, os; print(os.path.abspath(os.path.join(csb.__path__[0], '..')))"
 
 Let's call this path *$LIB*.
-			
+            
 
 Testing
 -------
@@ -74,15 +74,15 @@ the source code, or if you simply want to check if your installation works.
 All CSB tests are executed with the csb.test.Console. A typical way to run 
 the console is::
 
-	$ python $LIB/csb/test/app.py "csb.test.cases.*"
-	
+    $ python $LIB/csb/test/app.py "csb.test.cases.*"
+    
 or just::
 
-	$ python $LIB/csb/test/app.py 		
+    $ python $LIB/csb/test/app.py         
 
 For help try::
 
-	$ python $LIB/csb/test/app.py -h	
+    $ python $LIB/csb/test/app.py -h    
 
 For more details on our test framework, including guidelines for writing
 unit test, please refer to the API documentation, package "csb.test".
@@ -94,9 +94,9 @@ Running CSB Applications
 CSB is bundled with a number of executable console csb.apps. Each app
 provides a standard command line interface. To run any app, try::
 
-	$ python $LIB/csb/apps/*appname*.py --help
-	
-where *appname* is the name of the application.	For more details on
+    $ python $LIB/csb/apps/*appname*.py --help
+    
+where *appname* is the name of the application.    For more details on
 our app framework, including guidelines for writing new applications,
 please refer to the API documentation, package "csb.apps".
 
@@ -107,7 +107,7 @@ Documentation
 A quick introduction/tutorial is available in the root package "csb".
 Try::
 
-	$ python -c "import csb; help(csb)"
+    $ python -c "import csb; help(csb)"
 
 Detailed API documentation can be found in the "docs/api" directory in the
 distribution package. Simply open docs/api/index.html in your browser.
@@ -120,15 +120,15 @@ This library is developed by Michael Habeck's Computational Structural
 Biology Group, at the Max Planck Institute for Developmental Biology,
 Tuebingen, Germany:
 
-	http://www.eb.tuebingen.mpg.de/research/research-groups/michael-habeck.html
-	
+    http://www.eb.tuebingen.mpg.de/research/research-groups/michael-habeck.html
+    
 The source code of the library is hosted at the following SVN repository:
 
-	https://svn.tuebingen.mpg.de/agbs/projects/CSB
-		
+    https://svn.tuebingen.mpg.de/agbs/projects/CSB
+        
 Send any requests and feedback to:
-	
-	michael.habeck@tuebingen.mpg.de
+    
+    michael.habeck@tuebingen.mpg.de
 
 
 License

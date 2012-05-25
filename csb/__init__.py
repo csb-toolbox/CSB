@@ -39,7 +39,7 @@ L{Residue} and L{Atom} objects. You could easily build a L{Structure}
 from scratch, but a far more common scenario is parsing a structure from
 a PDB file using one of the L{AbstractStructureParser}s. All bio IO
 objects, including the StructureParser factory, are defined in
-L{csb.bio.io} and sub-packages::
+L{csb.bio.io} and sub-packages:
 
     >>> from csb.bio.io.wwpdb import StructureParser
     >>> p = StructureParser("/some/file/pdb1x80.ent")
@@ -48,7 +48,7 @@ L{csb.bio.io} and sub-packages::
     <Structure: 1x80, 2 chains>
     
 The last statement will return a L{csb.bio.structure.Structure} instance,
-which is a composite hierarchical object::
+which is a composite hierarchical object:
 
     >>> for chain_id in s.chains:
             chain = s.chains[chain_id]
@@ -58,7 +58,7 @@ which is a composite hierarchical object::
                     print(atom.vector)
 
 Some of the inner objects in this hierarchy behave just like dictionaries
-(but are not)::
+(but are not):
 
     >>> s.chains['A']        # access chain A by ID
     <Chain A: Protein>
@@ -73,20 +73,20 @@ Others behave like collections:
     <ProteinResidue [11]: GLY 11>
     
 But all entities are iterable because they inherit the C{items} iterator
-from L{Abstract3DEntity}. So the above loop can be shortened::
+from L{Abstract3DEntity}. So the above loop can be shortened:
 
     >>> for chain in s.items:
             for residue in chain.items:
                 for atom in residue.items:
                     print(atom.vector)
                     
-or even more::
+or even more:
 
     >>> from csb.bio.structure import Atom
     >>> for atom in s.components(klass=Atom):
             print(atom.vector)
 
-You may also be interested in extracting a sub-chain from this structure::
+You may also be interested in extracting a sub-chain from this structure:
 
     >>> s.chains['B'].subregion(3, 20)    # from positions 3 to 20, inclusive
     <Chain B: Protein>
@@ -105,8 +105,7 @@ Finally, you would probably want to save your structure back to a PDB file:
   
 
 
-CSB is an open source library, distributed under OSI-approved MIT license.
-::
+CSB is an open source library, distributed under OSI-approved MIT license::
 
     Copyright (c) 2012 Michael Habeck
     
