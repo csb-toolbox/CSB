@@ -22,6 +22,9 @@ class HMCSampler(AbstractSingleChainMC):
     @param state: Inital state
     @type state: L{State}
 
+    @param gradient: Gradient of the negative log-probability
+    @type gradient: L{AbstractGradient}
+
     @param timestep: Timestep used for integrating Hamiltonian equations of motion
     @type timestep: float
 
@@ -29,17 +32,19 @@ class HMCSampler(AbstractSingleChainMC):
     @type nsteps: int
 
     @param integrator: Integrator to be used
-    @type integrator: subclass instance of L{AbstractIntegrator}
+    @type integrator: L{AbstractIntegrator}
     """
 
     def __init__(self, pdf, state, gradient, timestep, nsteps, integrator):
         
         super(HMCSampler, self).__init__(pdf, state)
         
-        self._timestep = timestep
-        self._nsteps = nsteps
+        self._timestep = None
+        self.timestep = timestep
+        self._nsteps = None
+        self.nsteps = nsteps
         self._integrator = integrator
-        self._gradient = gradient 
+        self._gradient = gradient
 
     def _propose(self):
         
@@ -58,6 +63,22 @@ class HMCSampler(AbstractSingleChainMC):
                                + 0.5 * sum(self.state.momentum ** 2) + E(self.state.position))
 
         return pacc
+
+    @property
+    def timestep(self):
+        return self._timestep
+
+    @timestep.setter
+    def timestep(self, value):
+        self._timestep = float(value)
+
+    @property
+    def nsteps(self):
+        return self._nsteps
+
+    @nsteps.setter
+    def nsteps(self, value):
+        self._nsteps = int(value)
 
 class RWMCSampler(AbstractSingleChainMC):
     """
@@ -78,7 +99,8 @@ class RWMCSampler(AbstractSingleChainMC):
     def __init__(self, pdf, state, max_proposal_distance):
         
         super(RWMCSampler, self).__init__(pdf, state)
-        self._max_proposal_distance = max_proposal_distance
+        self._max_proposal_distance = None
+        self.max_proposal_distance = max_proposal_distance
 
     def _propose(self):
         
@@ -92,3 +114,11 @@ class RWMCSampler(AbstractSingleChainMC):
         
         pacc = csb.numeric.exp(-(E(proposal.position) - E(self.state.position)))
         return pacc
+
+    @property
+    def max_proposal_distance(self):
+        return self._max_proposal_distance
+
+    @max_proposal_distance.setter
+    def max_proposal_distance(self, value):
+        self._max_proposal_distance = float(value)
