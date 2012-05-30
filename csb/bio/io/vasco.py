@@ -1,3 +1,7 @@
+"""
+VASCO Chemical Shift format parser.
+"""
+
 import csb.pyutils
 
 

@@ -130,7 +130,7 @@ def get(accession, prefix='http://www.pdb.org/pdb/files/'):
     dssp = csb.io.TempFile()
 
     browser = csb.io.urllib.urlopen(prefix + accession.lower() + '.dssp')
-    dssp.write(browser.read().decode())
+    dssp.write(browser.read().decode('utf-8'))
     dssp.flush()
 
     return DSSPParser().parse(dssp.name)

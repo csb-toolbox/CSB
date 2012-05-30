@@ -1,6 +1,5 @@
 """
-@note: doc in progress
-
+Statistics root package.
 """
 
 class Cumulative(object):
