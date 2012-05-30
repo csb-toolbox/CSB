@@ -1228,7 +1228,7 @@ class RemoteStructureProvider(StructureProvider):
         
         try:
             tmp = csb.io.TempFile(dispose=False)
-            tmp.write(stream.read().decode())
+            tmp.write(stream.read().decode('utf-8'))
             tmp.flush()
             return tmp.name
                 
@@ -1243,7 +1243,7 @@ class RemoteStructureProvider(StructureProvider):
         
         try:
             with csb.io.TempFile() as tmp:
-                tmp.write(stream.read().decode())
+                tmp.write(stream.read().decode('utf-8'))
                 tmp.flush()
                 return StructureParser(tmp.name).parse_structure(model=model)
         finally:
