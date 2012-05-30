@@ -386,6 +386,16 @@ class Case(unittest.TestCase):
         
         if abs(value - expected) > delta:
             self.fail('|{0} - {1}| > {2})'.format(value, expected, delta))
+            
+    @classmethod
+    def execute(cls):
+        """
+        Run this test case.
+        """
+        suite = unittest.TestLoader().loadTestsFromTestCase(cls)
+        runner = unittest.TextTestRunner()
+                
+        return runner.run(suite)            
 
 class InvalidNamespaceError(NameError, ImportError):
     pass
