@@ -7,6 +7,8 @@ from abc import ABCMeta, abstractmethod
 from csb.statistics.samplers import Trajectory
 from csb.statistics.samplers.mc import State
 
+from copy import deepcopy
+
 
 class AbstractIntegrator(object):
     """
@@ -49,9 +51,9 @@ class AbstractIntegrator(object):
         if return_trajectory:
             result.append(init_state)
 
-        state = init_state
+        state = State(init_state.position, init_state.momentum)
         for i in range(length):
-            self.integrate_once(state, i)
+            state = self.integrate_once(state, i)
             if return_trajectory:
                 result.append(state)
 
@@ -82,17 +84,18 @@ class LeapFrog(AbstractIntegrator):
     """
     
     def integrate_once(self, state, current_step):
-        
+        result = State(state.position, state.momentum)
         i = current_step
+        
         if i == 0:
-            self._oldgrad = self._gradient(state.position, 0.)
+            self._oldgrad = self._gradient(result.position, 0.)
             
-        momentumhalf = state.momentum - 0.5 * self._timestep * self._oldgrad
-        state.position = state.position + self._timestep * momentumhalf
-        self._oldgrad = self._gradient(state.position, (i + 1) * self._timestep)
-        state.momentum = momentumhalf - 0.5 * self._timestep * self._oldgrad
+        momentumhalf = result.momentum - 0.5 * self._timestep * self._oldgrad
+        result.position = result.position + self._timestep * momentumhalf
+        self._oldgrad = self._gradient(result.position, (i + 1) * self._timestep)
+        result.momentum = momentumhalf - 0.5 * self._timestep * self._oldgrad
 
-        return state
+        return result
 
 class VelocityVerlet(AbstractIntegrator):
     """
@@ -100,18 +103,19 @@ class VelocityVerlet(AbstractIntegrator):
     """
 
     def integrate_once(self, state, current_step):
+        result = State(state.position, state.momentum)
+        i = current_step
         
-        i = current_step        
         if i == 0:
-            self._oldgrad = self._gradient(state.position, 0.)
+            self._oldgrad = self._gradient(result.position, 0.)
             
-        state.position = state.position + self._timestep * state.momentum \
+        result.position = result.position + self._timestep * result.momentum \
                          - 0.5 * self._timestep ** 2 * self._oldgrad
-        newgrad = self._gradient(state.position, (i + 1) * self._timestep)
-        state.momentum = state.momentum - 0.5 * self._timestep * (self._oldgrad + newgrad)
+        newgrad = self._gradient(result.position, (i + 1) * self._timestep)
+        result.momentum = result.momentum - 0.5 * self._timestep * (self._oldgrad + newgrad)
         self._oldgrad = newgrad
 
-        return state
+        return result
 
 class AbstractGradient(object):
     """

@@ -80,7 +80,7 @@ class MDPropagator(AbstractPropagator):
     def generate(self, init_state, length, return_trajectory=False):
         integrator = self._integrator(self.timestep, self.gradient)
         
-        traj = integrator.integrate(copy.deepcopy(init_state), length, return_trajectory)
+        traj = integrator.integrate(init_state, length, return_trajectory)
         return traj
 
 class ThermostattedMDPropagator(MDPropagator):
@@ -156,7 +156,7 @@ class ThermostattedMDPropagator(MDPropagator):
         heat = 0.
         state = copy.deepcopy(init_state)
         for i in range(length):
-            integrator.integrate_once(state, i)
+            state = integrator.integrate_once(state, i)
             if i % self._update_interval == 0:
                 state.momentum, stepheat = self._update(state.momentum,
                                                         self._temperature(i * self.timestep),
