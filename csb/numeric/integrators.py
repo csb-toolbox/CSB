@@ -4,10 +4,8 @@ Provides various integration schemes and an abstract gradient class.
 
 from abc import ABCMeta, abstractmethod
 
-from csb.statistics.samplers import Trajectory
 from csb.statistics.samplers.mc import State
-
-from copy import deepcopy
+from csb.statistics.samplers.mc.propagators import TrajectoryBuilder
 
 
 class AbstractIntegrator(object):
@@ -40,33 +38,33 @@ class AbstractIntegrator(object):
         @param length: Nubmer of integration steps to be performed
         @type length: int
         
-        @param return_trajectory: Return complete trajectory instead of final
-                                  state only
+        @param return_trajectory: Return complete L{Trajectory} instead of the initial
+                                  and final states only (L{PropagationResult})
         @type return_trajectory: boolean
 
-        @rtype: L{Trajectory}
+        @rtype: L{AbstractPropagationResult}
         """
         
-        result = []
-        if return_trajectory:
-            result.append(init_state)
-
-        state = State(init_state.position, init_state.momentum)
-        for i in range(length):
+        builder = TrajectoryBuilder.create(full=return_trajectory)
+            
+        builder.add_initial_state(init_state)
+        state = init_state.clone() #State(init_state.position, init_state.momentum)
+        
+        for i in range(length - 1):
             state = self.integrate_once(state, i)
-            if return_trajectory:
-                result.append(state)
+            builder.add_intermediate_state(state)
 
-        if not return_trajectory:
-            result.append(state)
+        state = self.integrate_once(state, length - 1)
+        builder.add_final_state(state)
 
-        return Trajectory(result)
+        return builder.product
 
     @abstractmethod
     def integrate_once(self, state, current_step):
         """
         Integrates one step starting from an initial state and an initial time
         given by the product of the timestep and the current_step parameter.
+        The input C{state} is changed in place.
 
         @param state: State which to evolve one integration step
         @type state: L{State}
@@ -74,6 +72,7 @@ class AbstractIntegrator(object):
         @param current_step: Current integration step
         @type current_step: int
         
+        @return: the altered state
         @rtype: L{State}
         """
         pass
@@ -84,18 +83,18 @@ class LeapFrog(AbstractIntegrator):
     """
     
     def integrate_once(self, state, current_step):
-        result = State(state.position, state.momentum)
+        
         i = current_step
         
         if i == 0:
-            self._oldgrad = self._gradient(result.position, 0.)
+            self._oldgrad = self._gradient(state.position, 0.)
             
-        momentumhalf = result.momentum - 0.5 * self._timestep * self._oldgrad
-        result.position = result.position + self._timestep * momentumhalf
-        self._oldgrad = self._gradient(result.position, (i + 1) * self._timestep)
-        result.momentum = momentumhalf - 0.5 * self._timestep * self._oldgrad
+        momentumhalf = state.momentum - 0.5 * self._timestep * self._oldgrad
+        state.position = state.position + self._timestep * momentumhalf
+        self._oldgrad = self._gradient(state.position, (i + 1) * self._timestep)
+        state.momentum = momentumhalf - 0.5 * self._timestep * self._oldgrad
 
-        return result
+        return state
 
 class VelocityVerlet(AbstractIntegrator):
     """
@@ -103,19 +102,19 @@ class VelocityVerlet(AbstractIntegrator):
     """
 
     def integrate_once(self, state, current_step):
-        result = State(state.position, state.momentum)
+
         i = current_step
         
         if i == 0:
-            self._oldgrad = self._gradient(result.position, 0.)
+            self._oldgrad = self._gradient(state.position, 0.)
             
-        result.position = result.position + self._timestep * result.momentum \
+        state.position = state.position + self._timestep * state.momentum \
                          - 0.5 * self._timestep ** 2 * self._oldgrad
-        newgrad = self._gradient(result.position, (i + 1) * self._timestep)
-        result.momentum = result.momentum - 0.5 * self._timestep * (self._oldgrad + newgrad)
+        newgrad = self._gradient(state.position, (i + 1) * self._timestep)
+        state.momentum = state.momentum - 0.5 * self._timestep * (self._oldgrad + newgrad)
         self._oldgrad = newgrad
 
-        return result
+        return state
 
 class AbstractGradient(object):
     """

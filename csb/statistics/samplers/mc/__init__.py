@@ -711,7 +711,7 @@ class AbstractRENS(AbstractExchangeMC):
         traj12 = self._run_traj_generator(trajinfo12)
         traj21 = self._run_traj_generator(trajinfo21)
 
-        return RENSSwapCommunicator(param_info, traj21.last, traj12.last, traj21.heat, traj12.heat)
+        return RENSSwapCommunicator(param_info, traj21.final, traj12.final, traj21.heat, traj12.heat)
 
     def _calc_pacc_swap(self, swapcom):
         

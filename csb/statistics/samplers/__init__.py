@@ -95,6 +95,9 @@ class State(AbstractState):
             State.check_equal_length(value, self.position)
         self._momentum = np.array(value)
         
+    def clone(self):
+        return State(self.position, self.momentum)
+        
 class EnsembleState(csb.pyutils.BaseCollectionContainer, AbstractState):
     """
     Defines an Ensemble Monte Carlo state; it is a read-only collection
@@ -115,31 +118,6 @@ class EnsembleState(csb.pyutils.BaseCollectionContainer, AbstractState):
     def momentum(self):
         return np.array([s.momentum for s in self])
 
-class Trajectory(csb.pyutils.CollectionContainer):
-    """
-    Ordered collection of states, representing a phase-space trajectory.
 
-    @param items: initialization list
-    @type items: list
-    @param heat: heat produced during the trajectory
-    @type heat: float
-    """
-    
-    def __init__(self, items, heat=0.0):
-        
-        super(Trajectory, self).__init__(items)
-        
-        self._heat = None    
-        self.heat = heat
-    
-    @property
-    def heat(self):
-        return self._heat
-    @heat.setter
-    def heat(self, value):
-        self._heat = float(value)
-        
-    @property
-    def last(self):
-        return self._items[-1]
+
 
