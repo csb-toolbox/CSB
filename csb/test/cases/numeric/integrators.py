@@ -29,7 +29,7 @@ class TestIntegrators(test.Case):
 
     def _run(self, algorithm):
         
-        result = algorithm.integrate(self.state, self.nsteps).last.position
+        result = algorithm.integrate(self.state, self.nsteps).final.position
         self.assertWithinDelta(result, cos(self.nsteps * self.dt), 0.1)
         
     def testLeapFrog(self):
@@ -43,11 +43,14 @@ class TestIntegrators(test.Case):
         self._run(algorithm)
 
 @test.regression
-class IntegratorsRegressionTests(test.Case):
+class ReferenceRegressions(test.Case):
+    """
+    @see: [0000108]
+    """    
 
     def setUp(self):
         
-        super(IntegratorsRegressionTests, self).setUp()
+        super(ReferenceRegressions, self).setUp()
         
         self.dt = 0.1
         self.grad = self._createGradient(1.)
@@ -62,28 +65,23 @@ class IntegratorsRegressionTests(test.Case):
             
         return Grad()        
 
-    def _run_referencebug(self, algorithm):
+    def _run(self, algorithm):
         
         result = algorithm.integrate(self.state, self.nsteps, True)
         self.assertFalse(result[0].position[0] == result[10].position[0])
         self.assertFalse(result[10].position[0] == result[20].position[0])
-        self.assertFalse(result[0].position == result.last.position)
+        self.assertFalse(result[0].position == result.final.position)
         
-    def testLeapFrog_referencebug(self):
-        """
-        @see: [0000108]
-        """
+    def testLeapFrog(self):
         
         algorithm = LeapFrog(self.dt, self.grad)
-        self._run_referencebug(algorithm)
+        self._run(algorithm)
 
-    def testVelocityVerlet_referencebug(self):
-        """
-        @see: [0000108]
-        """
+    def testVelocityVerlet(self):
         
         algorithm = VelocityVerlet(self.dt, self.grad)
-        self._run_referencebug(algorithm)
+        self._run(algorithm)
+        
 
 if __name__ == '__main__':
 

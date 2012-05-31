@@ -2,12 +2,129 @@
 Provides various deterministic and stochastic propagators.
 """
 
-import copy
 import numpy
 
-from abc import ABCMeta, abstractmethod
-from csb.statistics.samplers import Trajectory
+import csb.pyutils
 
+from abc import ABCMeta, abstractmethod, abstractproperty
+from csb.statistics.samplers import AbstractState
+
+
+class AbstractPropagationResult(object):
+    
+    __metaclass__ = ABCMeta 
+    
+    @abstractproperty
+    def initial(self):
+        pass
+    
+    @abstractproperty
+    def final(self):
+        pass
+
+class PropagationResult(AbstractPropagationResult):
+    
+    def __init__(self, initial, final, heat=0.0):
+        
+        if not isinstance(initial, AbstractState):
+            raise TypeError(initial)
+        
+        if not isinstance(final, AbstractState):
+            raise TypeError(final)        
+        
+        self._initial = initial
+        self._final = final
+        self._heat = None
+        
+        self.heat = heat
+        
+    @property
+    def initial(self):
+        return self._initial
+    
+    @property
+    def final(self):
+        return self._final
+    
+    @property
+    def heat(self):
+        return self._heat
+    @heat.setter
+    def heat(self, value):
+        self._heat = float(value)    
+    
+class Trajectory(csb.pyutils.CollectionContainer, AbstractPropagationResult):
+    """
+    Ordered collection of states, representing a phase-space trajectory.
+
+    @param items: list of states
+    @type items: list of L{AbstractState}
+    @param heat: heat produced during the trajectory
+    @type heat: float
+    """
+    
+    def __init__(self, items, heat=0.0):
+        
+        super(Trajectory, self).__init__(items, type=AbstractState)
+        
+        self._heat = None    
+        self.heat = heat
+    
+    @property
+    def initial(self):
+        return self[0]
+    
+    @property
+    def final(self):
+        return self[self.last_index]
+    
+    @property
+    def heat(self):
+        return self._heat
+    @heat.setter
+    def heat(self, value):
+        self._heat = float(value)    
+
+class TrajectoryBuilder(object):
+    
+    def __init__(self, heat=0.0):
+        self._heat = heat
+        self._states = []
+        
+    @staticmethod
+    def create(full=True):
+        
+        if full:
+            return TrajectoryBuilder()
+        else:
+            return ShortTrajectoryBuilder()
+        
+    @property
+    def product(self):
+        return Trajectory(self._states, heat=self._heat)
+
+    def add_initial_state(self, state):
+        self._states.insert(0, state.clone())
+        
+    def add_intermediate_state(self, state):
+        self._states.append(state.clone())
+    
+    def add_final_state(self, state):
+        self._states.append(state.clone())
+    
+class ShortTrajectoryBuilder(TrajectoryBuilder):    
+
+    def add_intermediate_state(self, state):
+        pass
+
+    @property
+    def product(self):
+        
+        if len(self._states) != 2:
+            raise ValueError("Can't create a product, two states required")
+        
+        initial, final = self._states
+        return PropagationResult(initial, final, heat=self._heat)
 
 class AbstractPropagator(object):
     """
@@ -28,11 +145,11 @@ class AbstractPropagator(object):
         @param length: Length of the trajectory (in integration steps or stochastic moves)
         @type length: int
 
-        @param return_trajectory: Switch to determine whether the complete trajectory
-                                 is returned or only the final state
+        @param return_trajectory: Return complete L{Trajectory} instead of the initial
+                                  and final states only (L{PropagationResult})                                 
         @type return_trajectory: boolean
 
-        @rtype: L{Trajectory}
+        @rtype: L{AbstractPropagationResult}
         """
         pass    
 
@@ -78,10 +195,11 @@ class MDPropagator(AbstractPropagator):
         self._timestep = float(value)
 
     def generate(self, init_state, length, return_trajectory=False):
+        
         integrator = self._integrator(self.timestep, self.gradient)
         
-        traj = integrator.integrate(init_state, length, return_trajectory)
-        return traj
+        result = integrator.integrate(init_state, length, return_trajectory)
+        return result
 
 class ThermostattedMDPropagator(MDPropagator):
     """
@@ -144,30 +262,40 @@ class ThermostattedMDPropagator(MDPropagator):
             heat = 0.5 * sum(momentum ** 2) - ke_old
 
         return momentum, heat
+    
+    def _step(self, i, state, heat, integrator):
+
+        state = integrator.integrate_once(state, i)
+        
+        if i % self._update_interval == 0:
+            state.momentum, stepheat = self._update(state.momentum,
+                                                    self._temperature(i * self.timestep),
+                                                    self._collision_probability)
+            
+            heat += stepheat
+            
+        return state, heat
 
     def generate(self, init_state, length, return_trajectory=False):
         
         integrator = self._integrator(self.timestep, self.gradient)
+        builder = TrajectoryBuilder.create(full=return_trajectory)
 
-        result = []
-        if return_trajectory:
-            result.append(init_state)
+        builder.add_initial_state(init_state)
 
         heat = 0.
-        state = copy.deepcopy(init_state)
-        for i in range(length):
-            state = integrator.integrate_once(state, i)
-            if i % self._update_interval == 0:
-                state.momentum, stepheat = self._update(state.momentum,
-                                                        self._temperature(i * self.timestep),
-                                                        self._collision_probability)
-                
-                heat += stepheat
-            if return_trajectory:
-                result.append(state)
+        state = init_state.clone()
+        
+        for i in range(length - 1):
+            state, heat = self._step(i, state, heat, integrator)
+            builder.add_intermediate_state(state)
 
-        if not return_trajectory:
-            result.append(state)
+        state, heat = self._step(length - 1, state, heat, integrator)        
+        builder.add_final_state(state)            
 
-        traj = Trajectory(result, heat)
+        traj = builder.product
+        traj.heat = heat
+        
         return traj
+
+

@@ -51,7 +51,7 @@ class HMCSampler(AbstractSingleChainMC):
         gen = MDPropagator(self._gradient, self._timestep, self._integrator)
         momenta = numpy.random.normal(size=self.state.position.shape)
         self.state = State(self.state.position, momenta)
-        proposal = gen.generate(self.state, self._nsteps).last
+        proposal = gen.generate(self.state, self._nsteps).final
         
         return proposal
 
