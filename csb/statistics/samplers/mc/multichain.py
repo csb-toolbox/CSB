@@ -102,21 +102,21 @@ class MDRENS(AbstractRENS):
     """
     Replica Exchange with Nonequilibrium Switches (RENS, Ballard & Jarzynski 2009)
     with Molecular Dynamics (MD) trajectories.
+
+    @param samplers: Samplers which sample their
+                         respective equilibrium distributions
+    @type samplers: list of L{AbstractSingleChainMC}
+
+    @param param_infos: ParameterInfo instance holding
+                        information required to perform a MDRENS swap
+    @type param_infos: list of L{MDRENSSwapParameterInfo}
+
+    @param integrator: Subclass of L{AbstractIntegrator} to be used to
+                       calculate the non-equilibrium trajectories
+    @type integrator: type
     """
 
     def __init__(self, samplers, param_infos, integrator):
-        """
-        @param samplers: Samplers which sample their
-                         respective equilibrium distributions
-        @type samplers: list of L{AbstractSingleChainMC}
-        
-        @param param_infos: ParameterInfo instance holding
-                            information required to perform a MDRENS swap
-        @type param_infos: list of L{MDRENSSwapParameterInfo}
-        
-        @param integrator: Integrator to be used
-        @type integrator: subclass of L{AbstractIntegrator}
-        """
         
         super(MDRENS, self).__init__(samplers, param_infos)
         
@@ -137,6 +137,18 @@ class ThermostattedMDRENS(MDRENS):
     """
     Replica Exchange with Nonequilibrium Switches (RENS, Ballard & Jarzynski, 2009)
     with Andersen-thermostatted Molecular Dynamics (MD) trajectories.
+
+    @param samplers: Samplers which sample their
+                         respective equilibrium distributions
+    @type samplers: list of L{AbstractSingleChainMC}
+
+    @param param_infos: ParameterInfo instance holding
+                        information required to perform a MDRENS swap
+    @type param_infos: list of L{ThermostattedMDRENSSwapParameterInfo}
+
+    @param integrator: Subclass of L{AbstractIntegrator} to be used to
+                       calculate the non-equilibrium trajectories
+    @type integrator: type
     """
 
     def __init__(self, samplers, param_infos, integrator):
