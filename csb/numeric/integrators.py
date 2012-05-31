@@ -39,7 +39,8 @@ class AbstractIntegrator(object):
         @type length: int
         
         @param return_trajectory: Return complete L{Trajectory} instead of the initial
-                                  and final states only (L{PropagationResult})
+                                  and final states only (L{PropagationResult}). This reduces
+                                  performance.
         @type return_trajectory: boolean
 
         @rtype: L{AbstractPropagationResult}
@@ -48,7 +49,7 @@ class AbstractIntegrator(object):
         builder = TrajectoryBuilder.create(full=return_trajectory)
             
         builder.add_initial_state(init_state)
-        state = init_state.clone() #State(init_state.position, init_state.momentum)
+        state = init_state.clone()
         
         for i in range(length - 1):
             state = self.integrate_once(state, i)

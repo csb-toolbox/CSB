@@ -25,14 +25,16 @@ class HMCSampler(AbstractSingleChainMC):
     @param gradient: Gradient of the negative log-probability
     @type gradient: L{AbstractGradient}
 
-    @param timestep: Timestep used for integrating Hamiltonian equations of motion
+    @param timestep: Timestep used for integration
     @type timestep: float
 
-    @param nsteps: Number of integration steps to be performed
+    @param nsteps: Number of integration steps to be performed in
+                   each iteration
     @type nsteps: int
 
-    @param integrator: Integrator to be used
-    @type integrator: L{AbstractIntegrator}
+    @param integrator: Subclass of L{AbstractIntegrator} to be used for
+                       integrating Hamiltionian equations of motion
+    @type integrator: type
     """
 
     def __init__(self, pdf, state, gradient, timestep, nsteps, integrator):

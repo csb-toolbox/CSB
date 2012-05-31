@@ -11,18 +11,44 @@ from csb.statistics.samplers import AbstractState
 
 
 class AbstractPropagationResult(object):
+    """
+    Abstract class providing the interface for the result
+    of a deterministic or stochastic propagation of a state.
+    """
     
     __metaclass__ = ABCMeta 
     
     @abstractproperty
     def initial(self):
+        """
+        Initial state
+        """
         pass
     
     @abstractproperty
     def final(self):
+        """
+        Final state
+        """
         pass
 
 class PropagationResult(AbstractPropagationResult):
+    """
+    Describes the result of a deterministic or stochastic
+    propagation of a state.
+
+    @param initial: Initial state from which the
+                    propagation started
+    @type initial: L{State}
+
+    @param final: Final state in which the propagation
+                  resulted
+    @type final: L{State}
+
+    @param heat: Heat produced during propagation
+    @type heat: float
+    """
+    
     
     def __init__(self, initial, final, heat=0.0):
         
@@ -48,6 +74,10 @@ class PropagationResult(AbstractPropagationResult):
     
     @property
     def heat(self):
+        """
+        @param heat: Heat produced during propagation
+        @type heat: float
+        """
         return self._heat
     @heat.setter
     def heat(self, value):
@@ -57,7 +87,7 @@ class Trajectory(csb.pyutils.CollectionContainer, AbstractPropagationResult):
     """
     Ordered collection of states, representing a phase-space trajectory.
 
-    @param items: list of states
+    @param items: list of states defining a phase-space trajectory
     @type items: list of L{AbstractState}
     @param heat: heat produced during the trajectory
     @type heat: float
@@ -86,6 +116,12 @@ class Trajectory(csb.pyutils.CollectionContainer, AbstractPropagationResult):
         self._heat = float(value)    
 
 class TrajectoryBuilder(object):
+    """
+    Allows to  build a Trajectory object step by step.
+
+    @param heat: heat produced over the trajectory
+    @type heat: float
+    """
     
     def __init__(self, heat=0.0):
         self._heat = heat
@@ -93,6 +129,17 @@ class TrajectoryBuilder(object):
         
     @staticmethod
     def create(full=True):
+        """
+        Trajectory builder factory.
+
+        @param full: if True, a TrajectoryBuilder instance designed
+                     to build a full trajectory with initial state,
+                     intermediate states and a final state. If False,
+                     a ShortTrajectoryBuilder instance designed to
+                     hold only the initial and the final state is
+                     returned
+        @type full: boolean
+        """
         
         if full:
             return TrajectoryBuilder()
@@ -101,15 +148,37 @@ class TrajectoryBuilder(object):
         
     @property
     def product(self):
+        """
+        The L{Trajectory} instance build by a specific instance of
+        this class
+        """
         return Trajectory(self._states, heat=self._heat)
 
     def add_initial_state(self, state):
+        """
+        Inserts a state at the beginning of the trajectory
+
+        @param state: state to be added
+        @type state: L{State}
+        """
         self._states.insert(0, state.clone())
         
     def add_intermediate_state(self, state):
+        """
+        Adds a state to the end of the trajectory
+
+        @param state: state to be added
+        @type state: L{State}
+        """
         self._states.append(state.clone())
     
     def add_final_state(self, state):
+        """
+        Adds a state to the end of the trajectory
+
+        @param state: state to be added
+        @type state: L{State}
+        """
         self._states.append(state.clone())
     
 class ShortTrajectoryBuilder(TrajectoryBuilder):    
@@ -119,6 +188,10 @@ class ShortTrajectoryBuilder(TrajectoryBuilder):
 
     @property
     def product(self):
+        """
+        The L{PropagationResult} instance built by a specific instance of
+        this class
+        """
         
         if len(self._states) != 2:
             raise ValueError("Can't create a product, two states required")
@@ -164,8 +237,9 @@ class MDPropagator(AbstractPropagator):
     @param timestep: Timestep to be used for integration
     @type timestep: float
 
-    @param integrator: Integrator to be used
-    @type integrator: L{AbstractIntegrator}
+    @param integrator: Subclass of L{AbstractIntegrator} to be used to integrate
+                       Hamiltonian equations of motion
+    @type integrator: type
     """
 
     def __init__(self, gradient, timestep, integrator):
@@ -212,8 +286,9 @@ class ThermostattedMDPropagator(MDPropagator):
     @param timestep: Timestep to be used for integration
     @type timestep: float
 
-    @param integrator: Integrator to be used
-    @type integrator: L{AbstractIntegrator}
+    @param integrator: Subclass of L{AbstractIntegrator} to be used to perform
+                       integration steps between momentum updates
+    @type integrator: type
 
     @param temperature: Time-dependent temperature
     @type temperature: Real-valued function
@@ -264,6 +339,22 @@ class ThermostattedMDPropagator(MDPropagator):
         return momentum, heat
     
     def _step(self, i, state, heat, integrator):
+        """
+        Performs one step consisting of an integration step
+        and possibly a momentum update
+
+        @param i: integration step count
+        @type i: int
+
+        @param state: state to be updated
+        @type state: L{State}
+
+        @param heat: heat produced up to the current integration step
+        @type heat: float
+
+        @param integrator: integration scheme used to evolve the state deterministically
+        @type integrator: L{AbstractIntegrator}
+        """
 
         state = integrator.integrate_once(state, i)
         
