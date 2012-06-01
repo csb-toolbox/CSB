@@ -31,6 +31,14 @@ class AbstractPropagationResult(object):
         Final state
         """
         pass
+    
+    @abstractproperty
+    def heat(self):
+        """
+        Heat produced during propagation
+        @rtype: float
+        """        
+        pass    
 
 class PropagationResult(AbstractPropagationResult):
     """
@@ -74,10 +82,6 @@ class PropagationResult(AbstractPropagationResult):
     
     @property
     def heat(self):
-        """
-        @param heat: Heat produced during propagation
-        @type heat: float
-        """
         return self._heat
     @heat.setter
     def heat(self, value):
