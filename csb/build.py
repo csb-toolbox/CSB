@@ -156,8 +156,8 @@ Options:
         self.log('\n# Building package {0} from {1}\n'.format(ROOT, SOURCETREE))
         
         self._init()        
-        self._revision()
-        self._doc()
+        v = self._revision()
+        self._doc(v)
         self._test()
         vn = self._package()     
         
@@ -211,7 +211,9 @@ Options:
         version = rh.write(revision, root)
 
         self.log('  This is {0}.__version__ {1}'.format(ROOT, version), level=1)
-        csb.__version__ = version     
+        csb.__version__ = version
+        
+        return version 
                 
     def _test(self):
         """
@@ -241,7 +243,7 @@ Options:
         else:
             self.log('\n  DID NOT PASS: The build might be broken')                             
         
-    def _doc(self):
+    def _doc(self, version):
         """
         Build documentation in the output folder.        
         """
@@ -254,7 +256,10 @@ Options:
                 
         self.log('\n# Emulating ARGV for the Doc Builder...', level=2)        
         argv = sys.argv    
-        sys.argv = ['epydoc', '--html', '-o', self._apidocs, '--name', ROOT.upper(), 
+        sys.argv = ['epydoc', '--html', '-o', self._apidocs,
+                    '--name', '{0} v{1}'.format(ROOT.upper(), version),
+                    '--no-private', '--exclude', 'csb.test.cases',
+                    '--css', os.path.join(self._temp, 'epydoc.css'),
                     '--fail-on-error', '--fail-on-warning', '--fail-on-docstring-warning',
                     self._root]
         

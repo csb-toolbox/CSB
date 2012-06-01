@@ -228,7 +228,7 @@ class ConfinedEntityIterator(CompositeEntityIterator):
 class Ensemble(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     """
     Represents an ensemble of multiple L{Structure} models.
-    Provides a list-like access to these models::
+    Provides a list-like access to these models:
     
         >>> ensemble[0]
         <Structure Model 1: accn, x chains>
@@ -308,7 +308,7 @@ class EnsembleModelsCollection(csb.pyutils.CollectionContainer):
 class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     """
     Represents a single model of a PDB 3-Dimensional molecular structure.
-    Provides access to the L{Chain} objects, contained in the model::
+    Provides access to the L{Chain} objects, contained in the model:
     
         >>> structure['A']
         <Chain A: Protein>
@@ -490,7 +490,7 @@ class StructureChainsTable(csb.pyutils.DictionaryContainer):
 class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     """
     Represents a polymeric chain. Provides list-like and rank-based access to
-    the residues in the chain::
+    the residues in the chain:
     
         >>> chain[0]
         <ProteinResidue [1]: SER None>
@@ -986,7 +986,7 @@ class ChainResiduesCollection(csb.pyutils.CollectionContainer):
 class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     """
     Base class representing a single residue. Provides a dictionary-like
-    access to the atoms contained in the residue::
+    access to the atoms contained in the residue:
     
         >>> residue['CA']
         <Atom [3048]: CA>

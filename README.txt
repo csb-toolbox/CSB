@@ -96,7 +96,7 @@ provides a standard command line interface. To run any app, try::
 
     $ python $LIB/csb/apps/*appname*.py --help
     
-where *appname* is the name of the application.    For more details on
+where *appname* is the name of the application. For more details on
 our app framework, including guidelines for writing new applications,
 please refer to the API documentation, package "csb.apps".
 
