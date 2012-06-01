@@ -1,6 +1,10 @@
 """
-CSB is a python library and application framework, which can be used
-to solve problems in the field of Computational Structural Biology.
+CSB is a high-level, object-oriented library used to solve problems in the
+field of Computational Structural Biology.
+
+
+Introduction
+============
 
 The library is composed of a set of highly branched python packages
 (namespaces). Some of the packages are meant to be directly used by
@@ -15,23 +19,27 @@ part in the development of the library:
        ("protocols"), which consume objects from the core library.
        The framework ensures that each CSB application is also reusable
        and can be instantiated as a regular python object without any
-       ugly side effects (sys.exit() and friends). See L{csb.apps} for
-       more details. 
+       ugly side effects (sys.exit() and friends). See L{csb.apps} for more
+       details. 
        
     3. Test framework -- built on top of the standard unittest as a thin
-       wrapping layer. Provides some sugar like test data file management,
-       and modular test execution. L{csb.test} will give you all the
-       details. 
+       wrapping layer. Provides some sugar like transparent management of
+       test data files, and modular test execution. L{csb.test} will give
+       you all the details. 
 
 The core library is roughly composed of:
 
-    - bioinformatics APIs: L{csb.bio}, which includes stuff like
+    - bioinformatics API: L{csb.bio}, which includes stuff like
       L{csb.bio.io}, L{csb.bio.structure}, L{csb.bio.sequence},
       L{csb.bio.hmm}
     
-    - statistical APIs and utilities: L{csb.statistics}, L{csb.numeric}
+    - statistics API: L{csb.statistics}, L{csb.numeric}
     
-    - utility classes - L{csb.io}, L{csb.pyutils}
+    - utilities - L{csb.io}, L{csb.pyutils}
+
+
+Getting started
+===============
     
 Perhaps one of the most frequently used parts of the library is the
 L{csb.bio.structure} module, which provides the L{Structure}, L{Chain},
@@ -73,7 +81,7 @@ Others behave like collections:
     <ProteinResidue [11]: GLY 11>
     
 But all entities are iterable because they inherit the C{items} iterator
-from L{Abstract3DEntity}. So the above loop can be shortened:
+from L{Abstract3DEntity}. The above loop can be shortened:
 
     >>> for chain in s.items:
             for residue in chain.items:
@@ -91,7 +99,7 @@ You may also be interested in extracting a sub-chain from this structure:
     >>> s.chains['B'].subregion(3, 20)    # from positions 3 to 20, inclusive
     <Chain B: Protein>
     
-or modifying it in some way, for example, in order to appenbd a new residue,
+or modifying it in some way, for example, in order to append a new residue,
 try:
 
     >>> from csb.bio.structure import ProteinResidue
@@ -102,10 +110,43 @@ try:
 Finally, you would probably want to save your structure back to a PDB file:
 
     >>> s.to_pdb('/some/file/name.pdb')    
-  
 
 
-CSB is an open source library, distributed under OSI-approved MIT license::
+Where to go from here
+=====================
+
+If you want to dive into statistics, you could peek inside L{csb.statistics}
+and its sub-packages. For example, L{csb.statistics.pdf} contains a collection
+of L{probability density objects<csb.statistics.pdf.AbstractDensity>},
+like L{Gaussian<csb.statistics.pdf.Normal>} or L{Gamma<csb.statistics.pdf.Gamma>}.
+
+But chances are you would first like to try reading some files, so you could
+start exploring L{csb.bio.io} right now. As we have already seen,
+L{csb.bio.io.wwpdb} provides PDB L{Structure<csb.bio.structure.Structure>}
+parsers, for example L{csb.bio.io.wwpdb.RegularStructureParser} and
+L{csb.bio.io.wwpdb.LegacyStructureParser}.
+
+L{csb.bio.io.fasta} is all about reading FASTA
+L{Sequence<csb.bio.sequence.AbstractSequence>}s and
+L{SequenceAlignment<csb.bio.sequence.AbstractAlignment>}s. Be sure to check out 
+L{csb.bio.io.fasta.SequenceParser}, L{csb.bio.io.fasta.SequenceAlignmentReader}
+and L{csb.bio.io.fasta.StructureAlignmentFactory}.
+
+If you are working with HHpred (L{ProfileHMM<csb.bio.hmm.ProfileHMM>}s,
+L{HHpredHit<csb.bio.hmm.HHpredHit>}s), then L{csb.bio.io.hhpred} is for you.
+This package provides L{csb.bio.io.hhpred.HHProfileParser} and
+L{csb.bio.io.hhpred.HHOutputParser}, which are used to read *.hhm and *.hhr
+files.
+
+Finally, if you want to make some nice plots with matplotlib, you may like the
+clean object-oriented interface of our L{Chart<csb.io.plotting.Chart>}. See
+L{csb.io.plotting} and maybe also L{csb.io.tsv} to get started.
+
+
+License
+=======
+
+CSB is open source and distributed under OSI-approved MIT license::
 
     Copyright (c) 2012 Michael Habeck
     
@@ -145,6 +186,8 @@ class Version(object):
         if not len(version) in (3, 4):
             raise ValueError(version)
         
+        self._package = __name__ 
+        
         self._major = version[0]
         self._minor = version[1]
         self._micro = version[2]
@@ -155,6 +198,9 @@ class Version(object):
 
     def __str__(self):
         return self.short
+    
+    def __repr__(self):
+        return '{0.package} {0.full}'.format(self)
     
     @property
     def major(self):
@@ -187,5 +233,9 @@ class Version(object):
         """
         Full version, including the repository revision number.
         """        
-        return '{0.major}.{0.minor}.{0.micro}.{0.revision}'.format(self)            
+        return '{0.major}.{0.minor}.{0.micro}.{0.revision}'.format(self)
+    
+    @property
+    def package(self):
+        return self._package
 

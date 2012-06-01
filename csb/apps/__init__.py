@@ -1,6 +1,29 @@
 """
 Root package for all executable CSB client programs.
 
+Introduction
+============
+
+There are roughly three types of CSB apps:
+    
+    1. protocols: client applications, which make use of the core library
+       to perform some action    
+    2. wrappers: these provide python bindings for external programs
+    3. mixtures of (1) and (2).
+
+The main design goal of this framework is to provide a way for writing
+executable code with minimal effort, without the hassle of repeating yourself
+over and over again. Creating a professional-grade CLI, validating and
+consuming the command line arguments is therefore really straightforward.
+On the other hand, one frequently feels the need to reuse some apps or their
+components in other apps. For such reasons, a CSB L{Application} is just a
+regular, importable python object, which never communicates directly with the
+command line interface or calls sys.exit(). The app's associated L{AppRunner}
+will take care of those things.      
+
+Getting Started
+===============
+
 Follow these simple steps to write a new CSB app:
 
     1. Create the app module in the C{csb.apps} package.
@@ -10,7 +33,7 @@ Follow these simple steps to write a new CSB app:
     the app's entry point. You have the L{csb.apps.Application.args} object at
     your disposal.
     
-    3. Create MyAppRunner class, derived from csb.apps.AppRunner. You need to
+    3. Create an AppRunner class, derived from csb.apps.AppRunner. You need to
     implement the following methods and properties:
     
         - property L{csb.apps.AppRunner.target} -- just return YourApp's class
@@ -124,7 +147,7 @@ class Application(object):
         @type message: str
         @param code: exit code (see L{ExitCodes} for common constants)
         @type code: int
-        @param usage: advice the client to show the usage line
+        @param usage: advise the client to show the usage line
         @type usage: bool        
         
         @note: you re not supposed to use C{sys.exit()} for the same purpose.
@@ -171,7 +194,7 @@ class AppRunner(object):
     @abstractproperty
     def target(self):
         """
-        Reference to the concrete {Application} class to run. This is
+        Reference to the concrete L{Application} class to run. This is
         an abstract property that couples the current C{AppRunner} to its
         corresponding L{Application}.
 
