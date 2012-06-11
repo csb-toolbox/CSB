@@ -127,9 +127,9 @@ class RWMCSampler(AbstractSingleChainMC):
         return pacc
 
     @property
-    def max_proposal_distance(self):
-        return self._max_proposal_distance
+    def stepsize(self):
+        return self._stepsize
 
-    @max_proposal_distance.setter
-    def max_proposal_distance(self, value):
-        self._max_proposal_distance = float(value)
+    @stepsize.setter
+    def stepsize(self, value):
+        self._stepsize = float(value)
