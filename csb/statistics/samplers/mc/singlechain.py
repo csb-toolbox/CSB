@@ -85,8 +85,7 @@ class HMCSampler(AbstractSingleChainMC):
 class RWMCSampler(AbstractSingleChainMC):
     """
     Random Walk Metropolis Monte Carlo implementation
-    (Metropolis, Rosenbluth, Teller, Teller 1953; Hastings, 1970)
-    with uniform proposal density.
+    (Metropolis, Rosenbluth, Teller, Teller 1953; Hastings, 1970).
     
     @param pdf: Probability density function to be sampled from
     @type pdf: L{csb.statistics.pdf.AbstractDensity}
@@ -94,21 +93,31 @@ class RWMCSampler(AbstractSingleChainMC):
     @param state: Inital state
     @type state: L{State}
 
-    @param max_proposal_distance: Maximum proposal distance
-    @type max_proposal_distance: float
+    @param stepsize: Serves to set the step size in
+                     proposal_density, e.g. for automatic acceptance
+                     rate adaption
+    @type stepsize: float
+
+    @param proposal_density: The proposal density as a function f(x, s)
+                             of the current state x and the stepsize s.
+                             By default, the proposal density is uniform,
+                             centered around x, and has width s.
+    @type proposal_density: callable
     """
     
-    def __init__(self, pdf, state, max_proposal_distance):
+    def __init__(self, pdf, state, stepsize=1., proposal_density=None):
         
         super(RWMCSampler, self).__init__(pdf, state)
-        self._max_proposal_distance = None
-        self.max_proposal_distance = max_proposal_distance
+        self._stepsize = None
+        self.stepsize = stepsize
+        if proposal_density == None:
+            self._proposal_density = lambda x, s: x.position + s * numpy.random.uniform(size=x.position.shape, low=-1., high=1.)
+        else:
+            self._proposal_density = proposal_density
 
     def _propose(self):
         
-        return State(self.state.position
-                     + (2 * numpy.random.uniform(size=self.state.position.shape) - 1)
-                     * self._max_proposal_distance)
+        return State(self._proposal_density(self._state, self.stepsize))
 
     def _calc_pacc(self, proposal):
         

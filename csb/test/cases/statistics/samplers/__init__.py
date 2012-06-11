@@ -46,7 +46,7 @@ class TestSinglechain(test.Case):
         for i in range(self.nits):
             sampler.sample()
             states.append(sampler.state.position[0])
-            
+
         self.assertWithinDelta(np.array(states).mean(), 0., 1e-1)
         self.assertWithinDelta(np.array(states).var(), 1., 1e-1)
 
@@ -57,7 +57,7 @@ class TestSinglechain(test.Case):
         self._run(sampler)
 
     def testRWMCSampler(self):
-        
+
         sampler = RWMCSampler(self.pdf, self.state, 1.2)
         self._run(sampler)
         
