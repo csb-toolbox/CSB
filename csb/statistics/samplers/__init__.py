@@ -72,7 +72,7 @@ class State(AbstractState):
     def __init__(self, position, momentum=None):
         
         self._position = None
-        self._momenum = None
+        self._momentum = None
 
         self.position = position
         self.momentum = momentum
@@ -96,7 +96,10 @@ class State(AbstractState):
         self._momentum = np.array(value)
         
     def clone(self):
-        return State(self.position, self.momentum)
+        if self.momentum == np.array(None, dtype=object):
+            return State(self.position)
+        else:
+            return State(self.position, self.momentum)
         
 class EnsembleState(csb.pyutils.BaseCollectionContainer, AbstractState):
     """
