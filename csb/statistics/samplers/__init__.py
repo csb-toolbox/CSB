@@ -87,19 +87,21 @@ class State(AbstractState):
 
     @property
     def momentum(self):
-        return self._momentum.copy()
+        if self._momentum is None:
+            return None
+        else:
+            return self._momentum.copy()
     @momentum.setter
     def momentum(self, value):
-        if not value == None:
+        if not value is None:
             State.check_flat_array(value)
             State.check_equal_length(value, self.position)
-        self._momentum = np.array(value)
+            self._momentum = np.array(value)
+        else:
+            self._momentum = None
         
     def clone(self):
-        if self.momentum == np.array(None, dtype=object):
-            return State(self.position)
-        else:
-            return State(self.position, self.momentum)
+        return State(self.position, self.momentum)
         
 class EnsembleState(csb.pyutils.BaseCollectionContainer, AbstractState):
     """
