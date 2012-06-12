@@ -7,7 +7,7 @@ MPI fuer Entwicklungsbiologie, Tuebingen
 import os
 import re
 import operator
-import csb.pyutils
+import csb
 
 from numpy import array, float64, eye, random
 
