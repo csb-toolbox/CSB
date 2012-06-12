@@ -646,7 +646,7 @@ class BaseDictionaryContainer(AbstractIndexer):
         try:
             return self._items[key]
         except KeyError:
-            raise ItemNotFoundError(key)
+            raise self._exception(key)
 
     def _getinternal(self, key):
         return self._items[key]
@@ -659,6 +659,10 @@ class BaseDictionaryContainer(AbstractIndexer):
 
     def __nonzero__(self):
         return len(self) > 0
+    
+    @property
+    def _exception(self):
+        return ItemNotFoundError
     
     @property
     def length(self):
@@ -702,7 +706,7 @@ class BaseDictionaryContainer(AbstractIndexer):
     def _remove_item(self, key):
         
         if key not in self._items:
-            raise ItemNotFoundError(key)
+            raise self._exception(key)
         del self._items[key]
 
 class ReadOnlyDictionaryContainer(BaseDictionaryContainer):
@@ -816,9 +820,9 @@ class BaseCollectionContainer(AbstractIndexer):
 
         except IndexError:
             if len(self) > 0:
-                raise CollectionIndexError('List index {0} out of range: {1}..{2}'.format(i, self.start_index, self.last_index))
+                raise self._exception('List index {0} out of range: {1}..{2}'.format(i, self.start_index, self.last_index))
             else:
-                raise CollectionIndexError('List index out of range. The collection is empty.')
+                raise self._exception('List index out of range. The collection is empty.')
     
     def _getinternal(self, i):
         return self._items[i]
@@ -831,7 +835,11 @@ class BaseCollectionContainer(AbstractIndexer):
 
     def __nonzero__(self):
         return len(self) > 0
-
+    
+    @property
+    def _exception(self):
+        return CollectionIndexError
+    
     @property
     def length(self):
         return len(self)

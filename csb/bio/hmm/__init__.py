@@ -10,8 +10,19 @@ import csb.io
 import csb.bio.structure as structure
 import csb.bio.sequence as sequence
 
+from csb.pyutils import Enum
+
 
 class UnobservableStateError(AttributeError):
+    pass
+
+class StateNotFoundError(csb.pyutils.ItemNotFoundError):
+    pass
+
+class TransitionNotFoundError(StateNotFoundError):
+    pass
+
+class LayerIndexError(csb.pyutils.CollectionIndexError):
     pass
 
 class StateExistsError(KeyError):
@@ -314,8 +325,10 @@ class ProfileHMM(object):
         """
         rec = sys.getrecursionlimit()
         sys.setrecursionlimit(10000)
-        return csb.io.Pickle.load(open(file_name, 'rb'))
-        sys.setrecursionlimit(rec)
+        try:
+            return csb.io.Pickle.load(open(file_name, 'rb'))
+        finally:
+            sys.setrecursionlimit(rec)
 
     def _convert(self, units, score, scale, logbase):
         
@@ -340,6 +353,8 @@ class ProfileHMM(object):
                               by the output file format
         @type convert_scores: bool
         """
+        from csb.bio.io.hhpred import HHMFileBuilder 
+        
         if convert_scores:
             self.convert_scores(ScoreUnits.LogScales)
                         
@@ -399,7 +414,7 @@ class ProfileHMM(object):
         @type chain_id: str
 
         @return: a shallow L{Structure} wrapper around the residues in the HMM.
-        @rtype: L{structure.Structure}
+        @rtype: L{Structure}
         """
         struct = structure.Structure(accession or self.id)
         chain = self.chain(chain_id)
@@ -415,16 +430,17 @@ class ProfileHMM(object):
         @type chain_id: str
 
         @return: a shallow L{Chain} wrapper around the residues in the HMM.
-        @rtype: L{structure.Chain}
+        @rtype: L{Chain}
         """
         if chain_id is None:
             if self.id:
                 chain_id = self.id.rstrip()[-1]
             else:
                 chain_id = '_'
-        chain = structure.Chain(chain_id, type=sequence.SequenceTypes.Protein, residues=self.residues)     
-
-        return chain
+                
+        return structure.Chain(chain_id,
+                               type=sequence.SequenceTypes.Protein,
+                               residues=self.residues)
 
     def emission_profile(self):
         """
@@ -491,24 +507,29 @@ class ProfileHMM(object):
                             self.scale, self.logbase))
                 for tran_kind in state.transitions:
                     transition = state.transitions[tran_kind]
-                    transition.probability = convert(units, transition.probability, self.scale, self.logbase)
+                    transition.probability = convert(units, transition.probability,
+                                                     self.scale, self.logbase)
             # The Neff-s are interger numbers and should not be transformed
             # (except when writing the profile to a hhm file)
 
         if self.start_insertion:
             for t_it in self.start_insertion.transitions:
                 transition = self.start_insertion.transitions[t_it]
-                transition.probability = convert(units, transition.probability, self.scale, self.logbase)
+                transition.probability = convert(units, transition.probability,
+                                                 self.scale, self.logbase)
 
             for residue in self.start_insertion.emission:
                 state = self.start_insertion
                 if state.emission[residue] is not None:
-                    state.emission.update(residue, convert(units, state.emission[residue],self.scale, self.logbase))
-                    state.background.update(residue, convert(units, state.background[residue],self.scale, self.logbase))
+                    state.emission.update(residue,
+                                          convert(units, state.emission[residue], self.scale, self.logbase))
+                    state.background.update(residue,
+                                            convert(units, state.background[residue], self.scale, self.logbase))
 
         for tran_kind in self.start.transitions:
             transition = self.start.transitions[tran_kind]
-            transition.probability = convert(units, transition.probability, self.scale, self.logbase)
+            transition.probability = convert(units,
+                                             transition.probability, self.scale, self.logbase)
 
 
         self._score_units = units
@@ -537,42 +558,30 @@ class ProfileHMM(object):
         score = 1
 
         if self.layers.length != other.layers.length or self.layers.length < 1:
-            raise ValueError(
-                'Both HMMs must have the same and positive number of layers')
+            raise ValueError('Both HMMs must have the same nonzero number of layers')
         if self.score_units != ScoreUnits.Probability or \
                other.score_units != ScoreUnits.Probability:
-            raise ValueError(
-                'Scores must be converted to probabilities first.')
+            raise ValueError('Scores must be converted to probabilities first.')
 
         for q_layer, s_layer in zip(self.layers, other.layers):
 
             try:
-                if States.Match in q_layer and \
-                       not q_layer[States.Match].silent:
+                if States.Match in q_layer and not q_layer[States.Match].silent:
                     q_state = q_layer[States.Match]
                 else:
                     q_state = q_layer[States.Insertion]
 
-                if States.Match in s_layer and \
-                       not s_layer[States.Match].silent:
+                if States.Match in s_layer and not s_layer[States.Match].silent:
                     s_state = s_layer[States.Match]
                 else:
                     s_state = s_layer[States.Insertion]
             except csb.pyutils.ItemNotFoundError:
-                raise ValueError('Query and subject must contain observable ' +
-                                 'states at each layer')
-
-            #assert set(q_state.emission) == set(s_state.emission)
-            #assert len(q_state.emission) > 0
+                raise ValueError('Query and subject must contain observable states '
+                                 'at each layer')
 
             emission_dotproduct = 0
 
             for aa in q_state.emission:
-                #assert q_state.background[aa] == s_state.background[aa], 'Identical background probabilities expected'
-                #assert q_state.background[aa] not in (0, None), 'Positive background probabilities expected'
-
-                #assert q_state.emission[aa] not in (0, None)
-                #assert s_state.emission[aa] not in (0, None), 'subject emission for {0!r}: {1}'.format(aa, s_state.emission[aa])
 
                 q_emission = q_state.emission[aa] or sys.float_info.min
                 s_emission = s_state.emission[aa] or sys.float_info.min
@@ -612,13 +621,14 @@ class ProfileHMMSegment(ProfileHMM):
     def __init__(self, hmm, start, end):
 
         if start < hmm.layers.start_index or start > hmm.layers.last_index:
-            raise IndexError('Start position {0} is out of range {1.start_index} .. {1.last_index}'.format(start, hmm.layers))
+            raise IndexError('Start position {0} is out of range'.format(start))
         if end < hmm.layers.start_index or end > hmm.layers.last_index:
-            raise IndexError('End position {0} is out of range {1.start_index} .. {1.last_index}'.format(end, hmm.layers))
+            raise IndexError('End position {0} is out of range'.format(end))
         
         #hmm = csb.pyutils.deepcopy(hmm)       
                 
-        super(ProfileHMMSegment, self).__init__(units=hmm.score_units, scale=hmm.scale, logbase=hmm.logbase)
+        super(ProfileHMMSegment, self).__init__(units=hmm.score_units,
+                                                scale=hmm.scale, logbase=hmm.logbase)
         self.id = hmm.id
         self.family = hmm.family 
         self.name = hmm.name
@@ -636,7 +646,8 @@ class ProfileHMMSegment(ProfileHMM):
         layers = csb.pyutils.deepcopy(hmm.layers[start : end + 1])
         max_score = 1.0
         if hmm.score_units != ScoreUnits.Probability:
-            max_score = hmm._convert_scores(hmm.score_units, max_score, hmm.scale, hmm.logbase)
+            max_score = hmm._convert_scores(hmm.score_units,
+                                            max_score, hmm.scale, hmm.logbase)
         self._build_graph(layers, max_score)
                         
         if hmm.dssp:
@@ -733,9 +744,9 @@ class ProfileHMMRegion(ProfileHMM):
     def __init__(self, hmm, start, end):        
         
         if start < hmm.layers.start_index or start > hmm.layers.last_index:
-            raise IndexError('Start position {0} is out of range {1.start_index} .. {1.last_index}'.format(start, hmm.layers))
+            raise IndexError('Start position {0} is out of range'.format(start))
         if end < hmm.layers.start_index or end > hmm.layers.last_index:
-            raise IndexError('End position {0} is out of range {1.start_index} .. {1.last_index}'.format(end, hmm.layers))
+            raise IndexError('End position {0} is out of range'.format(end))
         if hmm.score_units != ScoreUnits.Probability:
             raise ValueError('Scores must be converted to probabilities first.')
                 
@@ -778,10 +789,11 @@ class EVDParameters(object):
 
 class EmissionTable(csb.pyutils.DictionaryContainer):        
     """ 
-    Represents a lookup table of emission probabilities. Provides dictionary-like access:
+    Represents a lookup table of emission probabilities. Provides dictionary-like
+    access:
     
-        >>> state.emission['A']
-        emission probability of residue A
+        >>> state.emission[ProteinAlphabet.ALA]
+        emission probability for ALA
     
     @param emission: an initialization dictionary of emission probabilities
     @type emission: dict
@@ -790,14 +802,15 @@ class EmissionTable(csb.pyutils.DictionaryContainer):
     @type restrict: list
     """
 
-    def __init__(self, emission=None, restrict=csb.pyutils.Enum.members(sequence.ProteinAlphabet)):
+    def __init__(self, emission=None, restrict=Enum.members(sequence.ProteinAlphabet)):
         super(EmissionTable, self).__init__(emission, restrict)
             
     def append(self, residue, probability):
         """
         Append a new emission probability to the table.
         
-        @param residue: residue name (type) - a member of I{SequenceAlphabets.Protein}
+        @param residue: residue name (type) - a member of
+                        L{csb.bio.sequence.ProteinAlphabet}
         @type residue: L{csb.pyutils.EnumItem}
         @param probability: emission score
         @type probability: float
@@ -805,7 +818,7 @@ class EmissionTable(csb.pyutils.DictionaryContainer):
         @raise EmissionExistsError: if residue is already defined
         """
         if residue in self:
-            raise EmissionExistsError('State {0} is already emittable. Try x.update()'.format(residue))
+            raise EmissionExistsError('Residue {0} is already defined.'.format(residue))
 
         super(EmissionTable, self).append(residue, probability)
     
@@ -834,8 +847,8 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
     """ 
     Represents a lookup table of transitions that are possible from within a given state. 
     
-    Provides dictionary-like access, where dictionary keys are target states. These are members of 
-    the L{States} enumeration, e.g.:
+    Provides dictionary-like access, where dictionary keys are target states.
+    These are members of the L{States} enumeration, e.g.:
     
         >>> state.transitions[States.Match]
         transition info regarding transition from the current state to a Match state
@@ -844,15 +857,19 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
         >>> state.transitions[States.Match].successor
         the next match state
      
-    @param transitions: an initialization dictionary of target L{State} : L{Transition} pairs
+    @param transitions: an initialization dictionary of target L{State}:L{Transition} pairs
     @type transitions: dict
     @param restrict: a list of target states allowed for this transition table. 
                      Defaults to the L{States} enum members
     @type restrict: list
     """
     
-    def __init__(self, transitions=None, restrict=csb.pyutils.Enum.members(States)): 
+    def __init__(self, transitions=None, restrict=Enum.members(States)): 
         super(TransitionTable, self).__init__(transitions, restrict)
+        
+    @property
+    def _exception(self):
+        return TransitionNotFoundError        
     
     def append(self, transition):
         """
@@ -866,8 +883,9 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
         """
         
         if transition.successor.type in self:
-            raise TransitionExistsError('Transition to a {0} state is already defined.'.format(
-                                                                        transition.successor.type))
+            msg = 'Transition to a {0} state is already defined.'
+            raise TransitionExistsError(msg.format(transition.successor.type))
+        
         super(TransitionTable, self).append(transition.successor.type, transition)
     
     def set(self, table):
@@ -881,18 +899,19 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
         
     def update(self, target_statekind, transition):
         """ 
-        Update the transition information of a transition, which points to a target 
+        Update the information of a transition, which points to a target 
         state of the specified L{States} kind.
         
-        @param target_statekind: transition table key; the key of the transition to be updated
+        @param target_statekind: the key of the transition to be updated
         @type target_statekind: L{csb.pyutils.EnumItem}
         @param transition: new transition info object
         @type transition: L{Transition}
         
-        @raise ValueError: if I{transition.successor.type} differs from C{target_statekind}
+        @raise ValueError: if I{transition.successor.type} differs from
+                           C{target_statekind}
         """
         if transition.successor.type != target_statekind:
-            raise ValueError("Transition successor'type differs from the specified target_statekind.")
+            raise ValueError("Successor's type differs from the specified target state.")
                 
         super(TransitionTable, self)._update({target_statekind: transition})  
 
@@ -912,25 +931,30 @@ class HMMLayersCollection(csb.pyutils.CollectionContainer):
     """        
     def __init__(self, layers=None):
         super(HMMLayersCollection, self).__init__(layers, type=HMMLayer, start_index=1)
+        
+    @property
+    def _exception(self):
+        return LayerIndexError         
 
 class HMMLayer(csb.pyutils.DictionaryContainer):
     """
-    Provides a dictionary-like catalog of the available states at specific index(layer).
+    Provides a dictionary-like catalog of the available states at this layer.
     Lookup keys are members of the L{States} enumeration, e.g.:
     
         >>> profile.layers[i][States.Deletion]
-        the deletion state at index i  
+        the deletion state at layer number i  
     
-    @param rank: layer's index
+    @param rank: layer's number
     @type rank: int
-    @param residue: a representative L{structure.ProteinResidue} that is associated with this layer
-    @type residue: L{structure.ProteinResidue}        
-    @param states: initialization dictionary of L{States} type : L{State} info pairs
+    @param residue: a representative L{ProteinResidue} that is associated with
+                    this layer
+    @type residue: L{ProteinResidue}        
+    @param states: initialization dictionary of L{States}.Item:L{State} pairs
     @type states: dict 
     """        
     def __init__(self, rank, residue, states=None):
 
-        super(HMMLayer, self).__init__(states, restrict=csb.pyutils.Enum.members(States))
+        super(HMMLayer, self).__init__(states, restrict=Enum.members(States))
                 
         self._rank = int(rank)
         self._residue = None   
@@ -939,6 +963,10 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
         self._effective_deletions = None
         
         self.residue = residue
+        
+    @property
+    def _exception(self):
+        return StateNotFoundError         
 
     @property
     def rank(self):
@@ -987,7 +1015,8 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
         @raise StateExistsError: when a state of the same type is already defined
         """
         if state.type in self:
-            raise StateExistsError('State {0} is already defined at this position.'.format(state.type))
+            raise StateExistsError(
+                    'State {0} is already defined at this position.'.format(state.type))
 
         super(HMMLayer, self).append(state.type, state)
         
@@ -1010,7 +1039,7 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
    
 class State(object):
     """ 
-    Describes a Hidden Markov Model hidden state.
+    Describes a Hidden Markov Model state.
     
     @param type: one of the L{States} enumeration values, e.g. States.Match
     @type type: L{csb.pyutils.EnumItem}
@@ -1078,11 +1107,11 @@ class State(object):
                     
 class StateFactory(object):
     """
-    Simplifies the construction protein profile HMM states.
+    Simplifies the construction of protein profile HMM states.
     """
             
     def __init__(self):
-        self._aa = csb.pyutils.Enum.members(sequence.ProteinAlphabet)        
+        self._aa = Enum.members(sequence.ProteinAlphabet)        
     
     def create_match(self, emission, background):
         
@@ -1126,7 +1155,7 @@ class Transition(object):
     def __init__(self, predecessor, successor, probability):
         
         if not (isinstance(predecessor, State) or isinstance(successor, State)):
-            raise TypeError('Transition predecessor and successor states must be State instances.')
+            raise TypeError('Predecessor and successor must be State instances.')
                 
         self._predecessor = predecessor
         self._successor = successor
@@ -1158,132 +1187,6 @@ class Transition(object):
     @property
     def type(self):
         return self._type
-
-
-class HHMFileBuilder(object):
-    """
-    Builder for HHpred's hhm files.
-    
-    @param output: destination stream
-    @type output: file
-    """
-    
-    def __init__(self, output):
-
-        if not hasattr(output, 'write'):
-            raise TypeError(output)    
-
-        self._out = output
-        
-    @property
-    def output(self):
-        return self._out    
-
-    def write(self, data):
-        self._out.write(data)
-        
-    def writeline(self, data):
-        self.write(data)
-        self.write('\n')
-
-    def add_hmm(self, hmm):
-
-        if hmm.score_units != ScoreUnits.LogScales:
-            raise ValueError('Scores must be converted to LogScales first.')
-                
-        self.writeline('''HHsearch {0.version}
-NAME  {0.name}
-FAM   {0.family}
-LENG  {0.length.matches} match states, {0.length.layers} columns in multiple alignment
-NEFF  {0.effective_matches}
-PCT   {0.pseudocounts}'''.format(hmm))
-        if hmm.evd:
-            self.writeline('EVD   {0.lamda}  {0.mu}'.format(hmm.evd))            
-
-        self.writeline('SEQ')
-        if hmm.dssp:
-            self.writeline('>ss_dssp')
-            self.writeline(hmm.dssp.to_string())
-            if hmm.dssp_solvent:
-                self.writeline('>sa_dssp')
-                self.writeline(hmm.dssp_solvent)                
-        if hmm.psipred:
-            self.writeline('>ss_pred')
-            self.writeline(hmm.psipred.to_string())
-            self.writeline('>ss_conf')
-            confidence = [''.join(map(str, m.score)) for m in hmm.psipred]
-            self.writeline(''.join(confidence))
-
-        if hmm.alignment:
-            if hmm.consensus:
-                self.writeline(str(hmm.consensus))
-            self.writeline(hmm.alignment.format().rstrip('\r\n'))
-
-        self.writeline('#')
-
-        first_match = hmm.layers[1][States.Match]
-        null = [int(first_match.background[aa])
-                for aa in sorted(map(str, first_match.background))]
-        self.writeline('NULL   {0}'.format('\t'.join(map(str, null))))
-        self.writeline('HMM    {0}'.format(
-            '\t'.join(sorted(map(str, first_match.emission)))))
-
-        tran_types = 'M->M    M->I    M->D    I->M    I->I    D->M    D->D'.split()
-        self.writeline('       {0}'.format(
-            '\t'.join(tran_types + 'Neff    Neff_I    Neff_D'.split())))
-
-        self.write("       ")
-        for tran_type in tran_types:
-            source_statekind = csb.pyutils.Enum.parse(States, tran_type[0])
-            target_statekind = csb.pyutils.Enum.parse(States, tran_type[3])
-            if source_statekind == States.Match:
-                try:
-                    self.write("{0:<7}\t".format(
-                        int(hmm.start.transitions[target_statekind].probability)))
-                except csb.pyutils.ItemNotFoundError:
-                    self.write("*\t")
-            else:
-                self.write("*\t")
-        self.writeline('*\t' * 3)
-
-        for layer in hmm.layers:
-
-            self.write("{0} {1:<5}".format(layer.residue.type, layer.rank))
-            for aa in sorted(layer[States.Match].emission):
-                emission = layer[States.Match].emission[aa]
-                if emission is None:
-                    emission = '*'
-                else:
-                    emission = int(emission)
-                self.write("{0:<7}\t".format(emission))
-            self.writeline("{0}".format(layer.rank))
-
-            self.write("       ")
-            for tran_type in tran_types:
-                source_statekind = csb.pyutils.Enum.parse(States, tran_type[0])
-                target_statekind = csb.pyutils.Enum.parse(States, tran_type[3])
-
-                if target_statekind == States.Match and layer.rank == hmm.layers.last_index:
-                    target_statekind = States.End
-
-                try:
-                    state = layer[source_statekind]
-                    self.write("{0:<7}\t".format(
-                        int(state.transitions[target_statekind].probability)))
-                except csb.pyutils.ItemNotFoundError:
-                    self.write("*\t")
-
-            for data in (layer.effective_matches, layer.effective_insertions,
-                         layer.effective_deletions):
-                if data is None:
-                    data = '*'
-                else:
-                    data = int(data * abs(hmm.scale))
-                self.write("{0:<7}\t".format(data))
-
-            self.writeline("\n")
-
-        self.writeline('//')
     
                 
 class HHpredHitAlignment(sequence.SequenceAlignment):
@@ -1620,6 +1523,9 @@ class HHpredHit(object):
 
 
 class HHpredHitList(object):
+    """
+    Represents a collection of L{HHpredHit}s.
+    """
 
     def __init__(self, hits, query_name='', match_columns=-1, no_of_seqs='',
                  neff=-1., searched_hmms=-1, date='', command=''):
@@ -1633,10 +1539,11 @@ class HHpredHitList(object):
         self.date = date
         self.command = command
 
-    def __repr__(self):
+    def __str__(self):
         return "HHpredHitList\n\tquery={0.query_name}\n\tmatch_columns={0.match_columns}\n\tno_of_seqs={0.no_of_seqs}\n\tneff={0.neff}\n\tsearched_hmms={0.searched_hmms}\n\tdate={0.date}\n\tcommand={0.command}".format(self)
 
-    __str__ = __repr__
+    def __repr__(self):
+        return "<HHpredHitList: {0} hits>".format(len(self))
 
     def __getitem__(self, index):
         return self._hits[index]

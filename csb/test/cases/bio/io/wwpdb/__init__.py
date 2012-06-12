@@ -1,11 +1,12 @@
 import os
 import csb.test as test
 
-from csb.bio.io.wwpdb import EntryID, StandardID, DegenerateID, SeqResID, InvalidEntryIDError
+from csb.bio.io.wwpdb import EntryID, StandardID, DegenerateID, SeqResID, InvalidEntryIDError, HeaderFormatError
 from csb.bio.io.wwpdb import StructureParser, RegularStructureParser, LegacyStructureParser, UnknownPDBResidueError
 from csb.bio.io.wwpdb import get, find, FileSystemStructureProvider, RemoteStructureProvider, CustomStructureProvider, StructureNotFoundError
 from csb.bio.sequence import SequenceAlphabets, SequenceTypes
 from csb.bio.structure import ChemElements, SecStructures, Structure
+
 
 @test.regression
 class TestBiomoleculeRegressions(test.Case):
@@ -70,6 +71,7 @@ class TestMappingRegressions(test.Case):
         self.assertEqual(chain.residues[2].sequence_number, None)
         self.assertEqual(chain.residues[15].sequence_number, 39)
         self.assertEqual(chain.residues[16].sequence_number, 40)
+        
 
 @test.unit
 class TestStructureParser(test.Case):
@@ -174,6 +176,16 @@ class TestLegacyStructureParser(test.Case):
         self.assertEqual(len(s2.chains), 1)
         self.assertEqual(s2.first_chain.id, 'B1')
         self.assertRaises(KeyError, parser.parse_biomolecule, 3)
+        
+    def testParseHetMolecules(self):
+        
+        with self.config.getTempStream() as tmp:
+            
+            tmp.write('HETATM    1  NA  BLM A   1     -14.575  27.241   3.310  1.00  0.00           N ')
+            tmp.flush()
+            
+            parser = LegacyStructureParser(tmp.name)
+            self.assertRaises(HeaderFormatError, parser.parse_structure)
 
         
 @test.unit
@@ -478,5 +490,5 @@ def TestPDB():
 
 
 if __name__ == '__main__':
-    
+
     test.Console()

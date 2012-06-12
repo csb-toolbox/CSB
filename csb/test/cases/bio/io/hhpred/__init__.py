@@ -104,6 +104,8 @@ class TestHHProfileParser(test.Case):
         
         self.assertEqual(layer.residue.type, SequenceAlphabets.Protein.ARG)             
         self.assertEqual(layer.residue.has_structure, True)
+        self.assertEqual(layer.residue.atoms['CA'].vector.tolist(), [3.996, -10.515, 45.483])
+        self.assertEqual(layer.residue.torsion.psi, 72.153702504057748)
         self.assertEqual(layer.residue.secondary_structure.type, SecStructures.Coil)                            
         self.assertEqual(layer.residue.secondary_structure.end, 4)
                 
@@ -132,7 +134,23 @@ class TestHHProfileParser(test.Case):
         match = layer[States.Match]
         self.assertAlmostEqual(match.background[SequenceAlphabets.Protein.ALA], 0.07662, places=4)                                               
         self.assertAlmostEqual(match.emission[SequenceAlphabets.Protein.LYS], 0.10041, places=4)                 
-        self.assertAlmostEqual(match.transitions[States.Match].probability, 1.0)           
+        self.assertAlmostEqual(match.transitions[States.Match].probability, 1.0)
+        
+    def testFormatStructure(self):
+        
+        with self.config.getTempStream() as tmp:
+            
+            p = HHProfileParser(self.hhm)
+            p.format_structure(self.pdb, 'A', tmp.name)
+            
+            tmp.flush()
+            hmm = HHProfileParser(self.hhm, tmp.name).parse()
+            
+            for layer in hmm.layers:
+                residue = layer.residue
+                
+                self.assertEqual(residue.rank, layer.rank)
+                self.assertEqual(residue.sequence_number, layer.rank)
         
 @test.unit
 class TestHHOutputParser(test.Case):
