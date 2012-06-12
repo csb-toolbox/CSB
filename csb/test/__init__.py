@@ -740,7 +740,7 @@ class Console(object):
     USAGE = r"""
 CSB Test Runner Console. Usage:
  
-     python {0.program} [-t type] [-v verbosity] namespace(s) 
+     python {0.program} [-u] [-t type] [-v verbosity] namespace(s) 
  
 Options:
       namespace(s)       A list of CSB test dotted namespaces, from which to

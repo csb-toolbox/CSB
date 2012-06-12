@@ -448,14 +448,6 @@ class TestChain(test.Case):
         self.assertRaises(IndexError, self.chain.subregion, -1, 5)
         self.assertRaises(IndexError, self.chain.subregion, 1, self.chain.length + 1)
         
-    def testFormatResidue(self):
-        
-        alanine = self.chain[0]
-        adenosine = structure.NucleicResidue(1, type=structure.SequenceAlphabets.Nucleic.Adenine)   
-        
-        self.assertEqual(self.chain.format_residue(alanine), 'ALA')  
-        self.assertEqual(self.chain.format_residue(adenosine), 'Adenine')
-        
     def testFind(self):
         
         self.assertEqual(self.chain.find('127'), self.chain[0])

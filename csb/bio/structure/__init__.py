@@ -7,7 +7,6 @@ import re
 import copy
 import math
 import numpy
-import datetime
 
 import csb.io
 import csb.pyutils
@@ -54,6 +53,18 @@ class Missing3DStructureError(Broken3DStructureError):
     pass   
     
 class InvalidOperation(Exception):
+    pass
+
+class EntityNotFoundError(csb.pyutils.ItemNotFoundError):
+    pass
+
+class ChainNotFoundError(EntityNotFoundError):
+    pass
+
+class AtomNotFoundError(EntityNotFoundError):
+    pass
+
+class EntityIndexError(csb.pyutils.CollectionIndexError):
     pass
 
 class DuplicateModelIDError(csb.pyutils.DuplicateKeyError):
@@ -267,6 +278,8 @@ class Ensemble(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         @param output_file: output file name or open stream
         @type output_file: str or stream
         """
+        from csb.bio.io.wwpdb import PDBEnsembleFileBuilder
+        
         if self.models.length < 1:
             raise InvalidOperation("Can't dump an empty ensemble")
         
@@ -304,6 +317,10 @@ class EnsembleModelsCollection(csb.pyutils.CollectionContainer):
             raise DuplicateModelIDError(structure.model_id) 
         else:
             return super(EnsembleModelsCollection, self).append(structure)
+        
+    @property
+    def _exception(self):
+        return EntityIndexError
 
 class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     """
@@ -409,8 +426,9 @@ class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         @param output_file: output file name or open stream
         @type output_file: str or stream
         """
+        from csb.bio.io.wwpdb import PDBFileBuilder
+                
         temp = csb.io.MemoryStream()
-        
         builder = PDBFileBuilder(temp)
         
         builder.add_header(self)
@@ -440,7 +458,11 @@ class StructureChainsTable(csb.pyutils.DictionaryContainer):
         if len(self) > 0:
             return "<StructureChains: {0}>".format(', '.join(self.keys()))
         else:
-            return "<StructureChains: empty>"     
+            return "<StructureChains: empty>"
+        
+    @property
+    def _exception(self):
+        return ChainNotFoundError        
     
     def append(self, chain):
         """
@@ -717,22 +739,7 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
             chain.secondary_structure = self.secondary_structure.subregion(start, end)
         chain._torsion_computed = self._torsion_computed
         
-        return chain        
-    
-    def format_residue(self, residue):
-        """
-        Return a PDB-friendly string representation of the residue. Safer than repr(residue).
-        
-        @param residue: the residue name to format (a member of any L{SequenceAlphabets})
-        @type residue: L{csb.pyutils.EnumItem}
-        
-        @return: PDB-friendly string representation of the residue type
-        @rtype: str
-        """
-        if self.type == SequenceTypes.NucleicAcid:                                  
-            return str(residue.type)
-        else:
-            return repr(residue.type)        
+        return chain  
         
     def find(self, sequence_number, insertion_code=None):
         """
@@ -949,6 +956,10 @@ class ChainResiduesCollection(csb.pyutils.CollectionContainer):
             return "<ChainResidues: {0} ... {1}>".format(self[self.start_index], self[self.last_index])
         else:
             return "<ChainResidues: empty>"
+        
+    @property
+    def _exception(self):
+        return EntityIndexError    
         
     def append(self, residue):
         """
@@ -1186,7 +1197,7 @@ class ProteinResidue(Residue):
                 else:    
                     type = csb.pyutils.Enum.parse(SequenceAlphabets.Protein, type)          
             except (csb.pyutils.EnumMemberError, csb.pyutils.EnumValueError):
-                raise ValueError("What is '{0}'?".format(type))
+                raise ValueError("'{0}' is not a valid amino acid".format(type))
         elif type.enum is not SequenceAlphabets.Protein:
             raise TypeError(type)
             
@@ -1229,7 +1240,8 @@ class ProteinResidue(Residue):
             c = self._atoms['C'].vector
         except csb.pyutils.ItemNotFoundError as missing_atom:
             if strict:
-                raise Broken3DStructureError('Could not retrieve {0} atom from the current residue {1!r}.'.format(missing_atom, self))
+                raise Broken3DStructureError('Could not retrieve {0} atom from the current residue {1!r}.'.format(
+                                                                                                missing_atom, self))
             else:
                 return angles
         
@@ -1239,7 +1251,8 @@ class ProteinResidue(Residue):
                 angles.phi = csb.numeric.dihedral_angle(prev_c, n, ca, c)
         except csb.pyutils.ItemNotFoundError as missing_prevatom:
             if strict:
-                raise Broken3DStructureError('Could not retrieve {0} atom from the i-1 residue {1!r}.'.format(missing_prevatom, prev_residue))    
+                raise Broken3DStructureError('Could not retrieve {0} atom from the i-1 residue {1!r}.'.format(
+                                                                                    missing_prevatom, prev_residue))    
         try:
             if next_residue is not None and next_residue.has_structure:    
                 next_n = next_residue._atoms['N'].vector
@@ -1248,7 +1261,8 @@ class ProteinResidue(Residue):
                 angles.omega = csb.numeric.dihedral_angle(ca, c, next_n, next_ca)
         except csb.pyutils.ItemNotFoundError as missing_nextatom:
             if strict:
-                raise Broken3DStructureError('Could not retrieve {0} atom from the i+1 residue {1!r}.'.format(missing_nextatom, next_residue))              
+                raise Broken3DStructureError('Could not retrieve {0} atom from the i+1 residue {1!r}.'.format(
+                                                                                    missing_nextatom, next_residue))              
                                 
         return angles
 
@@ -1276,7 +1290,7 @@ class NucleicResidue(Residue):
                 else:    
                     type = csb.pyutils.Enum.parse(SequenceAlphabets.Nucleic, type)
             except (csb.pyutils.EnumMemberError, csb.pyutils.EnumValueError):
-                raise ValueError("What is '{0}'?".format(type))
+                raise ValueError("'{0}' is not a valid nucleotide".format(type))
         elif type.enum is not SequenceAlphabets.Nucleic:
             raise TypeError(type)
             
@@ -1286,7 +1300,8 @@ class NucleicResidue(Residue):
 class UnknownResidue(Residue):
     
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
-        super(UnknownResidue, self).__init__(rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)
+        super(UnknownResidue, self).__init__(
+                        rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)
             
 class ResidueAtomsTable(csb.pyutils.DictionaryContainer):
     """ 
@@ -1306,7 +1321,11 @@ class ResidueAtomsTable(csb.pyutils.DictionaryContainer):
         if len(self) > 0:
             return "<ResidueAtoms: {0}>".format(', '.join(self.keys()))
         else:
-            return "<ResidueAtoms: empty>"    
+            return "<ResidueAtoms: empty>"
+        
+    @property
+    def _exception(self):
+        return AtomNotFoundError
     
     def append(self, atom):
         """
@@ -1342,7 +1361,8 @@ class ResidueAtomsTable(csb.pyutils.DictionaryContainer):
                 self[atom.name].append(atom)          
         else:
             if atom.name in self:
-                raise DuplicateAtomIDError('Atom {0} is already defined for {1}'.format(atom.name, self.__residue))
+                raise DuplicateAtomIDError('Atom {0} is already defined for {1}'.format(
+                                                                        atom.name, self.__residue))
             else:                   
                 super(ResidueAtomsTable, self).append(atom.name, atom)
                 atom._residue = self.__residue
@@ -1388,10 +1408,10 @@ class Atom(Abstract3DEntity):
         self._element = None
         self._residue = None
         self._vector = None
-        self.alternate = False        
-        self.temperature = None
-        self.occupancy = None
-        self.charge = None
+        self._alternate = False        
+        self._temperature = None
+        self._occupancy = None
+        self._charge = None
 
         if not isinstance(name, csb.pyutils.string):
             raise TypeError(name)
@@ -1435,7 +1455,16 @@ class Atom(Abstract3DEntity):
         elif skip:
             return numpy.array([])
         else:
-            raise Missing3DStructureError()        
+            raise Missing3DStructureError()
+        
+    def clone(self):
+        
+        residue = self._residue
+        self._residue = None
+        clone = copy.deepcopy(self)
+        self._residue = residue
+        
+        return clone
 
     @property
     def serial_number(self):
@@ -1473,6 +1502,34 @@ class Atom(Abstract3DEntity):
         if numpy.shape(vector) != (3,):
             raise ValueError("Three dimensional vector expected")
         self._vector = numpy.array(vector)
+        
+    @property
+    def alternate(self):
+        return self._alternate
+    @alternate.setter
+    def alternate(self, value):
+        self._alternate = value
+    
+    @property
+    def temperature(self):
+        return self._temperature
+    @temperature.setter
+    def temperature(self, value):
+        self._temperature = value
+    
+    @property
+    def occupancy(self):
+        return self._occupancy
+    @occupancy.setter
+    def occupancy(self, value):
+        self._occupancy = value
+    
+    @property
+    def charge(self):
+        return self._charge
+    @charge.setter
+    def charge(self, value):
+        self._charge = value
     
     @property
     def items(self):
@@ -1532,181 +1589,6 @@ class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
             
     def __repr__(self):
         return "<DisorderedAtom: {0.length} alternative locations>".format(self)
-        
-class FileBuilder(object):
-    """
-    Base abstract files for all structure file formatters.
-    Defines a common step-wise interface according to the Builder pattern.
-    
-    @param output: output stream (this is where the product is constructed)
-    @type param: stream
-    """
-    
-    __metaclass__ = ABCMeta
-
-    def __init__(self, output):
-
-        if not hasattr(output, 'write'):
-            raise TypeError(output)
-        
-        def isnull(this, that, null=None):
-            if this is null:
-                return that
-            else:
-                return this        
-
-        self._out = output
-        self._isnull = isnull
-        
-    @property
-    def output(self):
-        return self._out
-    
-    @property
-    def isnull(self):
-        return self._isnull
-    
-    def write(self, text):
-        """
-        Write a chunk of text
-        """
-        self._out.write(text)   
-
-    def writeline(self, text):
-        """
-        Write a chunk of text and append a new line terminator
-        """        
-        self._out.write(text)
-        self._out.write('\n')
-                    
-    @abstractmethod
-    def add_header(self, master_structure):
-        pass
-    
-    @abstractmethod
-    def add_structure(self, structure):
-        pass
-    
-    def finalize(self):
-        pass
-
-class PDBFileBuilder(FileBuilder):
-    """
-    PDB file format builder.
-    """
-        
-    def writeline(self, text):
-        self.write('{0:80}\n'.format(text))
-        
-    def add_header(self, master):
-        """
-        Write the HEADER of the file using C{master}
-        
-        @type master: L{Structure}
-        """
-
-        isnull = self.isnull
-        
-        header = 'HEADER    {0:40}{1:%d-%b-%y}   {2:4}'
-        self.writeline(header.format('.', datetime.datetime.now(), master.accession.upper()))
-        
-        molecules = { }
-        
-        for chain_id in master.chains:
-            chain = master.chains[chain_id]
-            if chain.molecule_id not in molecules:
-                molecules[chain.molecule_id] = [ ]
-            molecules[chain.molecule_id].append(chain_id)
-        
-        k = 0
-        for mol_id in sorted(molecules):
-            
-            chains = molecules[mol_id]
-            first_chain = master.chains[ chains[0] ]            
-            
-            self.writeline('COMPND {0:3} MOL_ID: {1};'.format(k + 1, isnull(mol_id, '0')))
-            self.writeline('COMPND {0:3} MOLECULE: {1};'.format(k + 2, isnull(first_chain.name, '')))
-            self.writeline('COMPND {0:3} CHAIN: {1};'.format(k + 3, ', '.join(chains)))
-            k += 3
-            
-        for chain_id in master.chains:
-            
-            chain = master.chains[chain_id]
-            res = [ r._pdb_name for r in chain.residues ]
-
-            rn = 0
-            for j in range(0, chain.length, 13):
-                rn += 1
-                residues = [ '{0:>3}'.format(r) for r in res[j : j + 13] ]
-                self.writeline('SEQRES {0:>3} {1} {2:>4}  {3}'.format(
-                                            rn, chain.id, chain.length, ' '.join(residues) ))
-                
-    def add_structure(self, structure):
-        """
-        Append a new model to the file
-        
-        @type structure: L{Structure}
-        """
-
-        isnull = self.isnull
-         
-        for chain_id in structure.chains:
-        
-            chain = structure.chains[chain_id]
-            for residue in chain.residues:
-        
-                atoms = [ ]
-                for an in residue.atoms:
-                    atom = residue.atoms[an]
-                    if type(atom) is DisorderedAtom:
-                        for dis_atom in atom: atoms.append(dis_atom)
-                    else:
-                        atoms.append(atom)
-                atoms.sort()
-                
-                for atom in atoms:
-
-                    alt = atom.alternate
-                    if alt is True:
-                        alt = 'A'
-                    elif alt is False:
-                        alt = ' '
-                    
-                    if atom.element:
-                        element = repr(atom.element)
-                    else:
-                        element = ' '
-                    self.writeline('ATOM  {0:>5} {1:>4}{2}{3:>3} {4}{5:>4}{6}   {7:>8.3f}{8:>8.3f}{9:>8.3f}{10:>6.2f}{11:>6.2f}{12:>12}{13:2}'.format(
-                                        atom.serial_number, atom._full_name, isnull(alt, ' '), 
-                                        residue._pdb_name, chain.id, 
-                                        isnull(residue.sequence_number, residue.rank), isnull(residue.insertion_code, ' '), 
-                                        atom.vector[0], atom.vector[1], atom.vector[2], isnull(atom.occupancy, 0.0), isnull(atom.temperature, 0.0), 
-                                        element, isnull(atom.charge, ' ') ))        
-
-            self.writeline('TER')
-        
-    def finalize(self):
-        """
-        Add the END marker
-        """
-        self.writeline('END')
-        self._out.flush()     
-
-class PDBEnsembleFileBuilder(PDBFileBuilder):
-    """
-    Supports serialization of NMR ensembles.
-    
-    Functions as a simple decorator, which wraps C{add_structure} with
-    MODEL/ENDMDL records.
-    """
-
-    def add_structure(self, structure):
-        
-        model_id = self.isnull(structure.model_id, 1)
-        
-        self.writeline('MODEL     {0:>4}'.format(model_id))       
-        super(PDBEnsembleFileBuilder, self).add_structure(structure)
-        self.writeline('ENDMDL')
             
 class SuperimposeInfo(object):
     """
@@ -1722,7 +1604,7 @@ class SuperimposeInfo(object):
         self.translation = translation
         self.rmsd = rmsd
         self.tm_score = tm_score
-            
+
 class SecondaryStructureElement(object):
     """ 
     Describes a Secondary Structure Element.
@@ -1780,7 +1662,8 @@ class SecondaryStructureElement(object):
     def score(self, scores):
         if not len(scores) == self.length:
             raise ValueError('There must be a score entry for each residue in the element.')        
-        self._score = csb.pyutils.CollectionContainer(items=list(scores), type=int, start_index=self.start)
+        self._score = csb.pyutils.CollectionContainer(
+                                items=list(scores), type=int, start_index=self.start)
     
     def overlaps(self, other):
         """
