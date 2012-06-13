@@ -5,7 +5,7 @@ Abstract Monte Carlo samplers.
 import numpy.random
 
 import csb.numeric
-import csb.pyutils
+import csb.core
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 from csb.statistics.samplers import AbstractSampler, AbstractState, State, EnsembleState
@@ -149,7 +149,7 @@ class AbstractSingleChainMC(AbstractMC):
         """
         return float(self._accepted) / float(self._nmoves)
 
-class MCCollection(csb.pyutils.BaseCollectionContainer):
+class MCCollection(csb.core.BaseCollectionContainer):
     """
     Collection of single-chain samplers.
 

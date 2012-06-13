@@ -12,7 +12,7 @@ import abc
 import csb.apps
 import csb.io
 import csb.bio.io
-import csb.pyutils
+import csb.core
 
 
 class ExitCodes(csb.apps.ExitCodes):
@@ -238,7 +238,7 @@ class PDBProfileBuilder(ProfileBuilder):
         try:
             s = csb.bio.io.StructureParser(self.query).parse()            
             chain = s.chains[self.chain]
-        except csb.pyutils.ItemNotFoundError:
+        except csb.core.ItemNotFoundError:
             raise BuildArgError('Chain {0.chain} not found in {0.query}'.format(self))
         except IOError as ioe:
             raise BuildIOError(str(ioe))

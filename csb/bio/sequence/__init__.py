@@ -59,38 +59,38 @@ objects taken from those chains.
 """
 
 import re
-import csb.pyutils
+import csb.core
 import csb.io
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-class AlignmentFormats(csb.pyutils.enum):
+class AlignmentFormats(csb.core.enum):
     """
     Enumeration of multiple sequence alignment formats
     """
     A3M='a3m'; FASTA='fa'; PIR='pir'
 
-class SequenceTypes(csb.pyutils.enum):
+class SequenceTypes(csb.core.enum):
     """
     Enumeration of sequence types
     """
     NucleicAcid='NA'; DNA='DNA'; RNA='RNA'; Protein='Protein'; Unknown='Unknown'    
 
-class AlignmentTypes(csb.pyutils.enum):
+class AlignmentTypes(csb.core.enum):
     """
     Enumeration of alignment strategies
     """
     Global='global'; Local='local'
 
-class NucleicAlphabet(csb.pyutils.enum):
+class NucleicAlphabet(csb.core.enum):
     """
     Nucleic sequence alphabet
     """
     Adenine='A'; Cytosine='C'; Guanine='G'; Thymine='T'; Uracil='U'; Purine='R'; Pyrimidine='Y'; Ketone='K';
     Amino='M'; Strong='S'; Weak='W'; NotA='B'; NotC='D'; NotG='H'; NotT='V'; Any='N'; Masked='X'; GAP='-'; INSERTION='.';
     
-class ProteinAlphabet(csb.pyutils.enum):
+class ProteinAlphabet(csb.core.enum):
     """
     Protein sequence alphabet
     """
@@ -98,14 +98,14 @@ class ProteinAlphabet(csb.pyutils.enum):
     PYL='O'; PRO='P'; GLN='Q'; ARG='R'; SER='S'; THR='T'; SEC='U'; VAL='V'; TRP='W'; TYR='Y'; GLX='Z'; UNK='X'; GAP='-';
     INSERTION='.'; STOP='*'
                                     
-class StdProteinAlphabet(csb.pyutils.enum):
+class StdProteinAlphabet(csb.core.enum):
     """
     Standard protein sequence alphabet
     """      
     ALA='A'; CYS='C'; ASP='D'; GLU='E'; PHE='F'; GLY='G'; HIS='H'; ILE='I'; LYS='K'; LEU='L'; MET='M'; ASN='N';
     PRO='P'; GLN='Q'; ARG='R'; SER='S'; THR='T';  VAL='V'; TRP='W'; TYR='Y'
     
-class UnknownAlphabet(csb.pyutils.enum):
+class UnknownAlphabet(csb.core.enum):
     """
     Unknown sequence alphabet
     """  
@@ -130,7 +130,7 @@ class SequenceAlphabets(object):
             SequenceTypes.RNA: NucleicAlphabet,
             SequenceTypes.Unknown: UnknownAlphabet }
 
-    assert set(MAP) == csb.pyutils.Enum.members(SequenceTypes)
+    assert set(MAP) == csb.core.Enum.members(SequenceTypes)
     
     @staticmethod
     def get(type):
@@ -251,7 +251,7 @@ class ColumnIndexer(SequenceIndexer):
         return self._container._get_column(column)
     
 
-class SequenceCollection(csb.pyutils.ReadOnlyCollectionContainer):
+class SequenceCollection(csb.core.ReadOnlyCollectionContainer):
     """
     Represents a list of L{AbstractSequence}-s.
     """
@@ -450,8 +450,8 @@ class AbstractSequence(object):
         return self._type
     @type.setter
     def type(self, value):
-        if isinstance(value, csb.pyutils.string):
-            value = csb.pyutils.Enum.parse(SequenceTypes, value)
+        if isinstance(value, csb.core.string):
+            value = csb.core.Enum.parse(SequenceTypes, value)
         if value.enum is not SequenceTypes:
             raise TypeError(value) 
         self._type = value 
@@ -518,7 +518,7 @@ class Sequence(AbstractSequence):
             
     def _get(self, rank):        
         
-        type = csb.pyutils.Enum.parse(self.alphabet, self._residues[rank - 1])
+        type = csb.core.Enum.parse(self.alphabet, self._residues[rank - 1])
         return ResidueInfo(rank, type)
     
     def strip(self):
@@ -566,7 +566,7 @@ class RichSequence(AbstractSequence):
         else:
             if residue.isalpha() or residue in (self.alphabet.GAP, self.alphabet.INSERTION):
                 
-                type = csb.pyutils.Enum.parse(self.alphabet, residue)
+                type = csb.core.Enum.parse(self.alphabet, residue)
                 rank = len(self._residues) + 1
                 self._residues.append(ResidueInfo(rank, type))
             
@@ -790,7 +790,7 @@ class SliceHelper(object):
         self.stop = e
         self.step = t            
 
-class AlignmentRowsTable(csb.pyutils.BaseDictionaryContainer):
+class AlignmentRowsTable(csb.core.BaseDictionaryContainer):
     
     def __init__(self, container):
         
@@ -893,13 +893,13 @@ class AbstractAlignment(object):
 
         # 1. interpret the row slice: int, iter(int), iter(str) or slice(int) => list(int, 1-based)
         if isinstance(rowspec, slice):
-            if isinstance(rowspec.start, csb.pyutils.string) or isinstance(rowspec.stop, csb.pyutils.string):
+            if isinstance(rowspec.start, csb.core.string) or isinstance(rowspec.stop, csb.core.string):
                 raise TypeError("Invalid row slice: only indexes are supported")
             rowspec = SliceHelper(rowspec, 0, self.size)
             rows = range(rowspec.start + 1, rowspec.stop + 1)
         elif isinstance(rowspec, int):
             rows = [rowspec + 1]     
-        elif csb.pyutils.iterable(rowspec):
+        elif csb.core.iterable(rowspec):
             try:
                 rows = []
                 for r in rowspec:
@@ -918,7 +918,7 @@ class AbstractAlignment(object):
             cols = range(colspec.start + 1, colspec.stop + 1)
         elif isinstance(colspec, int):
             cols = [colspec + 1] 
-        elif csb.pyutils.iterable(colspec):
+        elif csb.core.iterable(colspec):
             try:
                 cols = [ c + 1 for c in colspec ]
             except:            

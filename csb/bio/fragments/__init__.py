@@ -14,7 +14,7 @@ import os
 import numpy
 
 import csb.io
-import csb.pyutils
+import csb.core
 import csb.bio.utils
 import csb.bio.structure
 import csb.bio.sequence
@@ -292,7 +292,7 @@ class AssignmentFactory(object):
     def assignment(self, *a, **k):
         return Assignment(*a, **k)
             
-class Target(csb.pyutils.AbstractNIContainer):
+class Target(csb.core.AbstractNIContainer):
     """
     Represents a protein structure prediction target.
     
@@ -314,16 +314,16 @@ class Target(csb.pyutils.AbstractNIContainer):
         self._overlap = overlap
         self._factory = factory
         
-        self._assignments = csb.pyutils.ReadOnlyCollectionContainer(type=Assignment)
-        self._errors = csb.pyutils.CollectionContainer()
+        self._assignments = csb.core.ReadOnlyCollectionContainer(type=Assignment)
+        self._errors = csb.core.CollectionContainer()
             
         resi = [factory.residue(native) for native in residues]
-        self._residues = csb.pyutils.ReadOnlyCollectionContainer(items=resi,
+        self._residues = csb.core.ReadOnlyCollectionContainer(items=resi,
                                             type=TargetResidue, start_index=1)
         
         if segments is not None:
             segments = dict([(s.start, s) for s in segments])
-        self._segments = csb.pyutils.ReadOnlyDictionaryContainer(items=segments)
+        self._segments = csb.core.ReadOnlyDictionaryContainer(items=segments)
         
     @staticmethod
     def from_sequence(id, sequence):
@@ -491,7 +491,7 @@ class TargetResidue(object):
         
         self._type = native_residue.type
         self._native = native_residue.clone()
-        self._assignments = csb.pyutils.ReadOnlyCollectionContainer(type=ResidueAssignmentInfo)
+        self._assignments = csb.core.ReadOnlyCollectionContainer(type=ResidueAssignmentInfo)
 
     @property
     def type(self):
@@ -600,7 +600,7 @@ class TargetSegment(object):
         self._end = end
         self._count = count
         
-        self._assignments = csb.pyutils.ReadOnlyCollectionContainer(type=Assignment)
+        self._assignments = csb.core.ReadOnlyCollectionContainer(type=Assignment)
     
     @property
     def count(self):
@@ -864,11 +864,11 @@ class Assignment(FragmentMatch):
         sub = source.subregion(start, end, clone=True)
         try:
             calpha = [r.atoms['CA'].vector.copy() for r in sub.residues]
-        except csb.pyutils.ItemNotFoundError:
+        except csb.core.ItemNotFoundError:
             raise csb.bio.structure.Broken3DStructureError()
         torsion = [r.torsion.copy() for r in sub.residues]
                     
-        self._calpha = csb.pyutils.ReadOnlyCollectionContainer(items=calpha, type=numpy.ndarray)
+        self._calpha = csb.core.ReadOnlyCollectionContainer(items=calpha, type=numpy.ndarray)
         self._torsion = torsion
         self._sequence = sub.sequence
         
@@ -1532,7 +1532,7 @@ class AdaptedAssignment(object):
     def to_rosetta(self, source):
         return self.fragment.to_rosetta(source, self.qstart, self.qend, self.confidence)
         
-class SmoothFragmentMap(csb.pyutils.AbstractContainer):
+class SmoothFragmentMap(csb.core.AbstractContainer):
     
     def __init__(self, length, centroids):
         

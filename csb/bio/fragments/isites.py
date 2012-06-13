@@ -10,14 +10,14 @@ import operator
 import math 
 
 import csb.io
-import csb.pyutils
+import csb.core
 import csb.bio.fragments
 import csb.bio.structure as structure
 import csb.bio.sequence
 import csb.bio.hmm as hmm
  
     
-class FragmentMatching(csb.pyutils.enum):
+class FragmentMatching(csb.core.enum):
     """
     Enumeration of fragment assignment methods
     """
@@ -403,7 +403,7 @@ class Library(object):
         if self._ondemand:
             raise AttributeError("ID/rep-based access to clusters is not available in Delay-parsed libraries.")
         
-        if isinstance(item, csb.pyutils.string):
+        if isinstance(item, csb.core.string):
             return self._byrep[item]
         else:
             return self._byid[item]
@@ -776,7 +776,7 @@ class Cluster(object):
         
         @param mode: specifies the desired comparison method to be implemented
                      by the callable - a member of the L{FragmentMatching} enum
-        @type mode: L{csb.pyutils.EnumItem}
+        @type mode: L{csb.core.EnumItem}
         
         @return: the proper comparison function which implements fragment comparison
                  with the C{mode} method
@@ -805,7 +805,7 @@ class Cluster(object):
         @param target: subject chain to be scanned to fragment instances
         @type target: L{structure.Chain}
         @param mode: fragment instance searching mode - a L{FragmentMatching} member
-        @type mode: L{csb.pyutils.EnumItem}
+        @type mode: L{csb.core.EnumItem}
         
         @return: a list of L{ProfileMatch}es
         @rtype: list
@@ -858,7 +858,7 @@ class Cluster(object):
         @param target: subject chain to be scanned to fragment instances
         @type target: L{structure.Chain}
         @param mode: fragment instance searching mode - a L{FragmentMatching} member
-        @type mode: L{csb.pyutils.EnumItem}
+        @type mode: L{csb.core.EnumItem}
         
         @return: a list of L{ProfileMatch}es
         @rtype: list
@@ -1003,7 +1003,7 @@ class Cluster(object):
         residues = []
         for layer in source.layers:
 
-            residues.append(csb.pyutils.deepcopy(layer.residue))
+            residues.append(csb.core.deepcopy(layer.residue))
 
             if start <= layer.rank <= end:
                 if not layer.residue.has_structure:

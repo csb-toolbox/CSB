@@ -3,7 +3,7 @@ import operator
 import copy
 
 import csb.test as test
-import csb.pyutils as utils
+import csb.core as utils
 
 from csb.io import Pickle 
 

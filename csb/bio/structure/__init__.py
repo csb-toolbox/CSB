@@ -67,7 +67,7 @@ import math
 import numpy
 
 import csb.io
-import csb.pyutils
+import csb.core
 import csb.numeric
 import csb.bio.utils
 
@@ -76,20 +76,20 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from csb.bio.sequence import SequenceTypes, SequenceAlphabets, AlignmentTypes
 
 
-class AngleUnits(csb.pyutils.enum):
+class AngleUnits(csb.core.enum):
     """
     Torsion angle unit types
     """
     Degrees='deg'; Radians='rad'
     
-class SecStructures(csb.pyutils.enum):
+class SecStructures(csb.core.enum):
     """
     Secondary structure types
     """
     Helix='H'; Strand='E'; Coil='C'; Turn='T'; Bend='S';
     Helix3='G'; PiHelix='I'; BetaBridge='B'; Gap='-'
     
-class ChemElements(csb.pyutils.enum):
+class ChemElements(csb.core.enum):
     """
     Periodic table elements
     """
@@ -113,7 +113,7 @@ class Missing3DStructureError(Broken3DStructureError):
 class InvalidOperation(Exception):
     pass
 
-class EntityNotFoundError(csb.pyutils.ItemNotFoundError):
+class EntityNotFoundError(csb.core.ItemNotFoundError):
     pass
 
 class ChainNotFoundError(EntityNotFoundError):
@@ -122,19 +122,19 @@ class ChainNotFoundError(EntityNotFoundError):
 class AtomNotFoundError(EntityNotFoundError):
     pass
 
-class EntityIndexError(csb.pyutils.CollectionIndexError):
+class EntityIndexError(csb.core.CollectionIndexError):
     pass
 
-class DuplicateModelIDError(csb.pyutils.DuplicateKeyError):
+class DuplicateModelIDError(csb.core.DuplicateKeyError):
     pass
 
-class DuplicateChainIDError(csb.pyutils.DuplicateKeyError):
+class DuplicateChainIDError(csb.core.DuplicateKeyError):
     pass
 
-class DuplicateResidueIDError(csb.pyutils.DuplicateKeyError):
+class DuplicateResidueIDError(csb.core.DuplicateKeyError):
     pass
 
-class DuplicateAtomIDError(csb.pyutils.DuplicateKeyError):
+class DuplicateAtomIDError(csb.core.DuplicateKeyError):
     pass
 
 class AlignmentArgumentLengthError(ValueError):
@@ -205,7 +205,7 @@ class Abstract3DEntity(object):
             for atom_kind in (what or residue.atoms):
                 try:
                     coords.append(residue.atoms[atom_kind].vector)
-                except csb.pyutils.ItemNotFoundError:
+                except csb.core.ItemNotFoundError:
                     if skip:
                         continue
                     raise Broken3DStructureError('Could not retrieve {0} atom from the structure'.format(atom_kind))
@@ -226,7 +226,7 @@ class CompositeEntityIterator(object):
             raise TypeError(node)
             
         self._node = node
-        self._stack = csb.pyutils.Stack()
+        self._stack = csb.core.Stack()
         
         self._inspect(node)
                 
@@ -294,7 +294,7 @@ class ConfinedEntityIterator(CompositeEntityIterator):
         if not isinstance(node, self._leaf):
             self._stack.push(node.items)
             
-class Ensemble(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
+class Ensemble(csb.core.AbstractNIContainer, Abstract3DEntity):
     """
     Represents an ensemble of multiple L{Structure} models.
     Provides a list-like access to these models:
@@ -360,7 +360,7 @@ class Ensemble(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
             with csb.io.EntryWriter(output_file, close=False) as out:
                 out.write(data)  
         
-class EnsembleModelsCollection(csb.pyutils.CollectionContainer):
+class EnsembleModelsCollection(csb.core.CollectionContainer):
     
     def __init__(self):
         
@@ -380,7 +380,7 @@ class EnsembleModelsCollection(csb.pyutils.CollectionContainer):
     def _exception(self):
         return EntityIndexError
 
-class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
+class Structure(csb.core.AbstractNIContainer, Abstract3DEntity):
     """
     Represents a single model of a PDB 3-Dimensional molecular structure.
     Provides access to the L{Chain} objects, contained in the model:
@@ -502,7 +502,7 @@ class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
             with csb.io.EntryWriter(output_file, close=False) as out:
                 out.write(data)
 
-class StructureChainsTable(csb.pyutils.DictionaryContainer):
+class StructureChainsTable(csb.core.DictionaryContainer):
     
     def __init__(self, structure=None, chains=None):
         self.__container = structure
@@ -567,7 +567,7 @@ class StructureChainsTable(csb.pyutils.DictionaryContainer):
         
         super(StructureChainsTable, self).append(new_id, chain)
         
-class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
+class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
     """
     Represents a polymeric chain. Provides list-like and rank-based access to
     the residues in the chain:
@@ -585,7 +585,7 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     @param chain_id: ID of the new chain
     @type chain_id: str
     @param type: sequence type (a member of the L{SequenceTypes} enum)
-    @type type: L{csb.pyutils.EnumItem}
+    @type type: L{csb.core.EnumItem}
     @param name: name of the chain
     @type name: str
     @param residues: initialization list of L{Residue}-s
@@ -647,7 +647,7 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         return self._id
     @id.setter
     def id(self, id):
-        if not isinstance(id, csb.pyutils.string):
+        if not isinstance(id, csb.core.string):
             raise ValueError(id)
         id = id.strip()
         if self._structure:
@@ -811,7 +811,7 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         @return: the residue object with such an ID
         @rtype: L{Residue}
         
-        @raise csb.pyutils.ItemNotFoundError: if no residue with that ID exists
+        @raise csb.core.ItemNotFoundError: if no residue with that ID exists
         """
         res_id = str(sequence_number).strip()
         
@@ -858,7 +858,7 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         @param what: a list of atom kinds, e.g. ['CA']
         @type what: list
         @param how: fitting method (global or local) - a member of the L{AlignmentTypes} enum
-        @type how: L{csb.pyutils.EnumItem}
+        @type how: L{csb.core.EnumItem}
         
         @return: superimposition info object, containing rotation matrix, translation 
                  vector and computed RMSD
@@ -896,7 +896,7 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         @param what: a list of atom kinds, e.g. ['CA']
         @type what: list
         @param how: fitting method (global or local) - a member of the L{AlignmentTypes} enum
-        @type how: L{csb.pyutils.EnumItem}
+        @type how: L{csb.core.EnumItem}
         
         @return: superimposition info object, containing rotation matrix, translation 
                  vector and computed RMSD
@@ -945,7 +945,7 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         @param what: a list of atom kinds, e.g. ['CA']
         @type what: list
         @param how: fitting method (global or local) - a member of the L{AlignmentTypes} enum
-        @type how: L{csb.pyutils.EnumItem}
+        @type how: L{csb.core.EnumItem}
         
         @return: superimposition info object, containing rotation matrix, translation 
                  vector and computed TM-score
@@ -998,7 +998,7 @@ class Chain(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
 
         return csb.bio.utils.tm_score(x, y)             
 
-class ChainResiduesCollection(csb.pyutils.CollectionContainer):
+class ChainResiduesCollection(csb.core.CollectionContainer):
     
     def __init__(self, chain, residues):
         super(ChainResiduesCollection, self).__init__(type=Residue, start_index=1)
@@ -1050,9 +1050,9 @@ class ChainResiduesCollection(csb.pyutils.CollectionContainer):
         try:
             return self.__lookup[id]
         except KeyError:
-            raise csb.pyutils.ItemNotFoundError(id)
+            raise csb.core.ItemNotFoundError(id)
         
-class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
+class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
     """
     Base class representing a single residue. Provides a dictionary-like
     access to the atoms contained in the residue:
@@ -1067,7 +1067,7 @@ class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
     @param rank: rank of the residue with respect to the chain
     @type rank: int
     @param type: residue type - a member of any L{SequenceAlphabets}
-    @type type: L{csb.pyutils.EnumItem}
+    @type type: L{csb.core.EnumItem}
     @param sequence_number: PDB sequence number of the residue
     @type sequence_number: str
     @param insertion_code: PDB insertion code, if any
@@ -1215,7 +1215,7 @@ class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         the subclass by passing them automatically to the underlying constructor. 
         
         @param sequence_type: create a Residue of that SequenceType 
-        @type sequence_type: L{csb.pyutils.EnumItem}
+        @type sequence_type: L{csb.core.EnumItem}
         
         @return: a new residue of the proper subclass
         @rtype: L{Residue} subclass
@@ -1239,7 +1239,7 @@ class ProteinResidue(Residue):
     @type rank: int
     @param type: residue type - a member of 
                  L{csb.bio.sequence.SequenceAlphabets.Protein}
-    @type type: L{csb.pyutils.EnumItem}
+    @type type: L{csb.core.EnumItem}
     @param sequence_number: PDB sequence number of the residue
     @type sequence_number: str
     @param insertion_code: PDB insertion code, if any
@@ -1248,13 +1248,13 @@ class ProteinResidue(Residue):
     
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
           
-        if isinstance(type, csb.pyutils.string):
+        if isinstance(type, csb.core.string):
             try:
                 if len(type) == 3:
-                    type = csb.pyutils.Enum.parsename(SequenceAlphabets.Protein, type)
+                    type = csb.core.Enum.parsename(SequenceAlphabets.Protein, type)
                 else:    
-                    type = csb.pyutils.Enum.parse(SequenceAlphabets.Protein, type)          
-            except (csb.pyutils.EnumMemberError, csb.pyutils.EnumValueError):
+                    type = csb.core.Enum.parse(SequenceAlphabets.Protein, type)          
+            except (csb.core.EnumMemberError, csb.core.EnumValueError):
                 raise ValueError("'{0}' is not a valid amino acid".format(type))
         elif type.enum is not SequenceAlphabets.Protein:
             raise TypeError(type)
@@ -1296,7 +1296,7 @@ class ProteinResidue(Residue):
             n = self._atoms['N'].vector
             ca = self._atoms['CA'].vector
             c = self._atoms['C'].vector
-        except csb.pyutils.ItemNotFoundError as missing_atom:
+        except csb.core.ItemNotFoundError as missing_atom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the current residue {1!r}.'.format(
                                                                                                 missing_atom, self))
@@ -1307,7 +1307,7 @@ class ProteinResidue(Residue):
             if prev_residue is not None and prev_residue.has_structure:
                 prev_c = prev_residue._atoms['C'].vector
                 angles.phi = csb.numeric.dihedral_angle(prev_c, n, ca, c)
-        except csb.pyutils.ItemNotFoundError as missing_prevatom:
+        except csb.core.ItemNotFoundError as missing_prevatom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the i-1 residue {1!r}.'.format(
                                                                                     missing_prevatom, prev_residue))    
@@ -1317,7 +1317,7 @@ class ProteinResidue(Residue):
                 angles.psi = csb.numeric.dihedral_angle(n, ca, c, next_n)
                 next_ca = next_residue._atoms['CA'].vector
                 angles.omega = csb.numeric.dihedral_angle(ca, c, next_n, next_ca)
-        except csb.pyutils.ItemNotFoundError as missing_nextatom:
+        except csb.core.ItemNotFoundError as missing_nextatom:
             if strict:
                 raise Broken3DStructureError('Could not retrieve {0} atom from the i+1 residue {1!r}.'.format(
                                                                                     missing_nextatom, next_residue))              
@@ -1332,7 +1332,7 @@ class NucleicResidue(Residue):
     @type rank: int
     @param type: residue type - a member of 
                  L{csb.bio.sequence.SequenceAlphabets.Nucleic}
-    @type type: L{csb.pyutils.EnumItem}
+    @type type: L{csb.core.EnumItem}
     @param sequence_number: PDB sequence number of the residue
     @type sequence_number: str
     @param insertion_code: PDB insertion code, if any
@@ -1341,13 +1341,13 @@ class NucleicResidue(Residue):
     
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
         
-        if isinstance(type, csb.pyutils.string):
+        if isinstance(type, csb.core.string):
             try:
                 if len(type) > 1:
-                    type = csb.pyutils.Enum.parsename(SequenceAlphabets.Nucleic, type)
+                    type = csb.core.Enum.parsename(SequenceAlphabets.Nucleic, type)
                 else:    
-                    type = csb.pyutils.Enum.parse(SequenceAlphabets.Nucleic, type)
-            except (csb.pyutils.EnumMemberError, csb.pyutils.EnumValueError):
+                    type = csb.core.Enum.parse(SequenceAlphabets.Nucleic, type)
+            except (csb.core.EnumMemberError, csb.core.EnumValueError):
                 raise ValueError("'{0}' is not a valid nucleotide".format(type))
         elif type.enum is not SequenceAlphabets.Nucleic:
             raise TypeError(type)
@@ -1361,7 +1361,7 @@ class UnknownResidue(Residue):
         super(UnknownResidue, self).__init__(
                         rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)
             
-class ResidueAtomsTable(csb.pyutils.DictionaryContainer):
+class ResidueAtomsTable(csb.core.DictionaryContainer):
     """ 
     Represents a collection of atoms. Provides dictionary-like access,
     where PDB atom names are used for lookup.
@@ -1452,7 +1452,7 @@ class Atom(Abstract3DEntity):
     @param name: atom's name
     @type name: str
     @param element: corresponding L{ChemElements}
-    @type element: L{csb.pyutils.EnumItem}
+    @type element: L{csb.core.EnumItem}
     @param vector: atom's coordinates
     @type vector: numpy array
     @param alternate: if True, means that this is a wobbling atom with multiple alternative 
@@ -1471,7 +1471,7 @@ class Atom(Abstract3DEntity):
         self._occupancy = None
         self._charge = None
 
-        if not isinstance(name, csb.pyutils.string):
+        if not isinstance(name, csb.core.string):
             raise TypeError(name)
         name_compact = name.strip()
         if len(name_compact) < 1:
@@ -1479,8 +1479,8 @@ class Atom(Abstract3DEntity):
         self._name = name_compact
         self._full_name = name
             
-        if isinstance(element, csb.pyutils.string):
-            element = csb.pyutils.Enum.parsename(ChemElements, element)
+        if isinstance(element, csb.core.string):
+            element = csb.core.Enum.parsename(ChemElements, element)
         elif element is None:
             pass
         elif element.enum is not ChemElements:
@@ -1593,7 +1593,7 @@ class Atom(Abstract3DEntity):
     def items(self):
         return iter([])
         
-class DisorderedAtom(csb.pyutils.CollectionContainer, Atom):
+class DisorderedAtom(csb.core.CollectionContainer, Atom):
     """
     A wobbling atom, which has alternative locations. Each alternative is represented 
     as a 'normal' L{Atom}. The atom with a highest occupancy is selected as a representative,
@@ -1672,7 +1672,7 @@ class SecondaryStructureElement(object):
     @param end: end position with reference to the chain
     @type end: float    
     @param type: element type - a member of the L{SecStructures} enum
-    @type type: csb.pyutils.EnumItem
+    @type type: csb.core.EnumItem
     @param score: secondary structure prediction confidence, if available
     @type score: int
     
@@ -1682,8 +1682,8 @@ class SecondaryStructureElement(object):
         
         if not (0 < start <= end):
             raise IndexError('Element coordinates are out of range: 0 < start <= end.')
-        if isinstance(type, csb.pyutils.string):
-            type = csb.pyutils.Enum.parse(SecStructures, type)
+        if isinstance(type, csb.core.string):
+            type = csb.core.Enum.parse(SecStructures, type)
         if type.enum is not SecStructures:
             raise TypeError(type)
                 
@@ -1720,7 +1720,7 @@ class SecondaryStructureElement(object):
     def score(self, scores):
         if not len(scores) == self.length:
             raise ValueError('There must be a score entry for each residue in the element.')        
-        self._score = csb.pyutils.CollectionContainer(
+        self._score = csb.core.CollectionContainer(
                                 items=list(scores), type=int, start_index=self.start)
     
     def overlaps(self, other):
@@ -1780,7 +1780,7 @@ class SecondaryStructureElement(object):
         else:
             assert False, 'Unhandled SS type: ' + repr(self.type)    
 
-class SecondaryStructure(csb.pyutils.CollectionContainer):
+class SecondaryStructure(csb.core.CollectionContainer):
     """
     Describes the secondary structure of a chain.
     Provides an index-based access to the secondary structure elements of the chain.
@@ -1832,7 +1832,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         
         @raise ValueError: if the confidence string is not of the same length
         """
-        if not isinstance(string, csb.pyutils.string):
+        if not isinstance(string, csb.core.string):
             raise TypeError(string)
                 
         string = ''.join(re.split('\s+', string))
@@ -1852,8 +1852,8 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
             
             if currel != char:
                 try:
-                    type = csb.pyutils.Enum.parse(SecStructures, currel)
-                except csb.pyutils.EnumValueError:
+                    type = csb.core.Enum.parse(SecStructures, currel)
+                except csb.core.EnumValueError:
                     raise UnknownSecStructureError(currel)
                 confidence = None
                 if conf_string is not None:
@@ -1930,7 +1930,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
         @param end: the end position of the region, 1-based, inclusive
         @type end: int     
         @param filter: return only elements of the specified L{SecStructures} kind
-        @type filter: L{csb.pyutils.EnumItem}
+        @type filter: L{csb.core.EnumItem}
         @param loose: grab all fully or partially matching elements within the region.
                       if False, return only the elements which strictly reside within 
                       the region
@@ -2046,7 +2046,7 @@ class SecondaryStructure(csb.pyutils.CollectionContainer):
             
         return sec_struct
         
-class TorsionAnglesCollection(csb.pyutils.CollectionContainer):
+class TorsionAnglesCollection(csb.core.CollectionContainer):
     """
     Describes a collection of torsion angles. Provides 1-based list-like access.
     
@@ -2136,7 +2136,7 @@ class TorsionAngles(object):
     @param omega: omega angle value in C{units}
     @type omega: float    
     @param units: any of L{AngleUnits}'s enum members
-    @type units: L{csb.pyutils.EnumItem}
+    @type units: L{csb.core.EnumItem}
     
     @raise ValueError: on invalid/unknown units
     """
@@ -2144,8 +2144,8 @@ class TorsionAngles(object):
     def __init__(self, phi, psi, omega, units=AngleUnits.Degrees):
         
         try:
-            if isinstance(units, csb.pyutils.string):
-                units = csb.pyutils.Enum.parse(AngleUnits, units, ignore_case=True)
+            if isinstance(units, csb.core.string):
+                units = csb.core.Enum.parse(AngleUnits, units, ignore_case=True)
             else:
                 if units.enum is not AngleUnits:
                     raise TypeError(units)

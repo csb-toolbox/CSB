@@ -35,7 +35,7 @@ The core library is roughly composed of:
     
     - statistics API: L{csb.statistics}, L{csb.numeric}
     
-    - utilities - L{csb.io}, L{csb.pyutils}
+    - utilities - L{csb.io}, L{csb.core}
 
 
 Getting started
@@ -153,7 +153,7 @@ When contributing code to CSB, please take into account the following:
        details on this topic, see L{csb.test}.
        
     2. The source code of CSB must be cross-platform and cross-interpreter
-       compatible. L{csb.pyutils} and L{csb.io} will give you all necessary
+       compatible. L{csb.core} and L{csb.io} will give you all necessary
        details on how to use the CSB compatibility layer.
 
 

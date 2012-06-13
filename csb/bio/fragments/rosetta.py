@@ -13,7 +13,7 @@ static factory method for building a library from a fragment file:
 """
 
 from csb.bio.structure import TorsionAnglesCollection, TorsionAngles
-from csb.pyutils import AbstractContainer
+from csb.core import AbstractContainer
 
 
 class ResidueInfo(object):

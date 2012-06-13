@@ -3,7 +3,7 @@ Defines abstract samplers.
 """
 
 import numpy as np
-import csb.pyutils
+import csb.core
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 
@@ -102,7 +102,7 @@ class State(AbstractState):
     def clone(self):
         return State(self.position, self.momentum)
         
-class EnsembleState(csb.pyutils.BaseCollectionContainer, AbstractState):
+class EnsembleState(csb.core.BaseCollectionContainer, AbstractState):
     """
     Defines an Ensemble Monte Carlo state; it is a read-only collection
     of State objects.

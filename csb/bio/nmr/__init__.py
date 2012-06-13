@@ -4,7 +4,7 @@ NMR related objects.
 
 import os
 import csb.io.tsv
-import csb.pyutils as pu
+import csb.core as pu
 
 from csb.bio.sequence import SequenceAlphabets
 
