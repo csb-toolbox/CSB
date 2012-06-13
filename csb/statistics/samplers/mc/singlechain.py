@@ -1,6 +1,5 @@
 """
-Various Monte Carlo equilibrium sampling algorithms, which simulate
-only one Markov chain.
+Various Monte Carlo equilibrium sampling algorithms, which simulate only one Markov chain.
 """
 
 import numpy

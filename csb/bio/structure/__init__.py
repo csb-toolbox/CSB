@@ -1,5 +1,63 @@
 """
-3D and secondary structure APIs. 
+3D and secondary structure APIs.
+
+This module defines some of the most fundamental abstractions in the library:
+L{Structure}, L{Chain}, L{Residue} and L{Atom}. Instances of these objects may
+exist independently and that is perfectly fine, but usually they are part of a
+Composite aggregation. The root node in this Composite is a L{Structure} (or
+L{Ensemble}). L{Structure}s are composed of L{Chain}s, and each L{Chain} is a
+collection of L{Residue}s. The leaf node is L{Atom}. 
+
+All of these objects implement the base L{Abstract3DEntity} interface. Therefore,
+every node in the Composite can be transformed:
+    
+    >>> r, t = [rotation matrix], [translation vector]
+    >>> entity.apply_transformation(r, t)
+    
+and it knows its immediate children:
+
+    >>> entity.items
+    <iterator>    # over all immediate child entities
+    
+If you want to traverse the complete Composite tree, starting at arbitrary level,
+and down to the lowest level, use one of the L{CompositeEntityIterator}s. Or just
+call L{Abstract3DEntity.components}:
+
+    >>> entity.components()
+    <iterator>   # over all descendants, of any type, at any level
+    >>> entity.components(klass=Residue)
+    <iterator>   # over all Residue descendants
+    
+Some of the inner objects in this hierarchy behave just like dictionaries
+(but are not):
+
+    >>> structure.chains['A']       # access chain A by ID
+    <Chain A: Protein>
+    >>> structure['A']              # the same
+    <Chain A: Protein>
+    >>> residue.atoms['CS']          
+    <Atom: CA>                      # access an atom by its name
+    >>> residue.atoms['CS']          
+    <Atom: CA>                      # the same
+        
+Others behave like list collections:
+
+    >>> chain.residues[10]               # 1-based access to the residues in the chain
+    <ProteinResidue [10]: PRO 10>
+    >>> chain[10]                        # 0-based, list-like access
+    <ProteinResidue [11]: GLY 11>
+    
+Step-wise building of L{Ensemble}s, L{Chain}s and L{Residue}s is supported through
+a number of C{append} methods, for example:
+
+    >>> residue = ProteinResidue(401, ProteinAlphabet.ALA)
+    >>> s.chains['A'].residues.append(residue)
+    
+See L{EnsembleModelsCollection}, L{StructureChainsTable}, L{ChainResiduesCollection}
+and L{ResidueAtomsTable} for more details.
+
+Some other objects in this module of potential interest are the self-explanatory
+L{SecondaryStructure} and L{TorsionAngles}.     
 """
 
 import os
@@ -331,8 +389,8 @@ class Structure(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         <Chain A: Protein>
         >>> structure.chains['A']
         <Chain A: Protein>
-        >>> structure.items[0]
-        <Chain A: Protein> #(given a chain order A, B...)    
+        >>> structure.items
+        <iterator of Chain-s>    
     
     @param accession: accession number of the structure
     @type accession: str
@@ -1003,8 +1061,8 @@ class Residue(csb.pyutils.AbstractNIContainer, Abstract3DEntity):
         <Atom [3048]: CA>
         >>> residue.atoms['CA']
         <Atom [3048]: CA>
-        >>> residue.items[1]
-        <Atom [3047]: CA>
+        >>> residue.items
+        <iterator of Atom-s>
     
     @param rank: rank of the residue with respect to the chain
     @type rank: int

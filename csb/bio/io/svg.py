@@ -10,7 +10,7 @@ from csb.bio.structure import SecondaryStructure, SecStructures
 
 class SSCartoonBuilder(object):
     """
-    Creates a 2D vector diagram from a L{SecondaryStructure} object.
+    Creates 2D vector diagrams from L{SecondaryStructure} objects.
     
     @param ss: source secondary structure (either a SS string or a SS object)
     @type ss: str or L{SecondaryStructure}

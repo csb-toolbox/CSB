@@ -1,5 +1,37 @@
 """
-FASTA format sequence parsers.
+FASTA format sequence I/O.
+
+This module provides parsers and writers for sequences and alignments in
+FASTA format. The most basic usage is:
+
+    >>> parser = SequenceParser()
+    >>> parser.parse_file('sequences.fa')
+    <SequenceCollection>   # collection of L{AbstractSequence}s
+
+This will load all sequences in memory. If you are parsing a huge file,
+then you could efficiently read the file sequence by sequence:
+
+    >>> for seq in parser.read('sequences.fa'):
+            ...            # seq is an L{AbstractSequence}
+            
+L{BaseSequenceParser} is the central class in this module, which defines a
+common infrastructure for all sequence readers. L{SequenceParser} is a standard
+implementation, and L{PDBSequenceParser} is specialized to read FASTA sequences
+with PDB headers.
+
+For parsing alignments, have a look at L{SequenceAlignmentReader} and
+L{StructureAlignmentFactory}.
+
+Finally, this module provides a number of L{OutputBuilder}s, which know how to
+write L{AbstractSequence} and L{AbstractAlignment} objects to FASTA files:
+
+    >>> with open('file.fa', 'w') as out:
+            builder = OutputBuilder.create(AlignmentFormats.FASTA, out)
+            builder.add_alignment(alignment)
+            builder.add_sequence(sequence)
+            ...
+
+or you could instantiate any of the L{OutputBuilder}s directly.
 """
 
 import csb.io

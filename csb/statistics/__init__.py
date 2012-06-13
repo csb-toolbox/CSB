@@ -1,5 +1,9 @@
 """
 Statistics root package.
+
+This package contains a number of common statistical utilities. Sub-packages
+provide more specialized APIs, for example L{csb.statistics.pdf} defines the
+probability density object model.
 """
 
 class Cumulative(object):

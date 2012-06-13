@@ -143,6 +143,20 @@ clean object-oriented interface of our L{Chart<csb.io.plotting.Chart>}. See
 L{csb.io.plotting} and maybe also L{csb.io.tsv} to get started.
 
 
+Development
+===========
+
+When contributing code to CSB, please take into account the following:
+
+    1. New features or bug fixes should always be accompanied by test cases.
+       Also, always run the complete test suite before committing. For more
+       details on this topic, see L{csb.test}.
+       
+    2. The source code of CSB must be cross-platform and cross-interpreter
+       compatible. L{csb.pyutils} and L{csb.io} will give you all necessary
+       details on how to use the CSB compatibility layer.
+
+
 License
 =======
 

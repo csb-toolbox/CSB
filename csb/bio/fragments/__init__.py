@@ -1,7 +1,13 @@
 """
 APIs for working with protein structure fragments and libraries.
 
-@note: internal or legacy objects are intentionally left undocumented. 
+This package contains the nuts and bolts of HHfrag. Everything here revolves
+around the L{Target} class, which describes a protein structure prediction
+target. One typically assigns fragments (L{Assignment}s) to the target and then
+builds a fragment library with L{RosettaFragsetFactory}.
+
+@note: Internal or legacy objects are intentionally left undocumented.
+       This typically indicates experimental code.
 """
 
 import os

@@ -1,5 +1,44 @@
 """
 Probability density functions.
+
+This module defines L{AbstractDensity}: a common interface for all PDFs.
+Each L{AbstractDensity} describes a specific type of probability distribution,
+for example L{Normal} is an implementation of the Gaussian distribution:
+
+    >>> pdf = Normal(mu=10, sigma=1.1)
+    >>> pdf.mu, pdf['sigma']
+    10.0, 1.1
+
+Every PDF provides an implementation of the L{AbstractDensity.evaluate} 
+method, which evaluates the PDF for a list of input data points:
+
+    >>> pdf.evaluate([10, 9, 11, 12])
+    array([ 0.3626748 ,  0.2399147 ,  0.2399147 ,  0.06945048])
+    
+PDF instances also behave like functions:
+    
+    >>> pdf(data)    # the same as pdf.evaluate(data)
+    
+Some L{AbstractDensity} implementations may support drawing random numbers from
+the distribution (or raise an exception otherwise):
+
+    >>> pdf.random(2)
+    array([ 9.86257083,  9.73760515])
+    
+Each implementation of L{AbstractDensity} may support infinite number of estimators,
+used to estimate and re-initialize the PDF parameters from a set of observed data
+points:
+
+    >>> pdf.estimate([5, 5, 10, 10])
+    >>> pdf.mu, pdf.sigma
+    (7.5, 2.5)
+    >>> pdf.estimator
+    <csb.statistics.pdf.GaussianMLEstimator>
+    
+Estimators implement the L{AbstractEstimator} interface. They are treated as
+pluggable tools, which can be exchanged through the L{AbstractDensity.estimator}
+property (you could create, initialize and plug your own estimator as well).
+This is a classic Strategy pattern.  
 """
 
 import numpy.random
@@ -195,6 +234,10 @@ class AbstractDensity(object):
     """
     Defines the interface and common operations for all probability density
     functions.
+    
+    Subclasses must complete the implementation by implementing the
+    L{AbstractDensity.log_prob} method. Subclasses could also consider--but
+    are not obliged to--override the L{AbstractDensity.random} method. 
     """
 
     __metaclass__ = ABCMeta

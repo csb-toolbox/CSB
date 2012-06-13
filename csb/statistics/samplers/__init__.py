@@ -9,7 +9,6 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class DimensionError(TypeError):
-    
     pass
 
 class AbstractSampler(object):

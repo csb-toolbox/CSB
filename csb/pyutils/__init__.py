@@ -1,12 +1,32 @@
 """
-Common high-level Python code utilities.
- 
-@warning: This module will try to use an OrderedDict from Python 2.7+'s 
-          collections module. If such class is missing, the importer will
-          silently fallback to ActiveState's OrderedDict implementation.
-          
-@todo: Remove the backup OrderedDict once CSB is officially migrated to Python
-       version 2.7+ 
+Generic containers, data structures and language extensions.
+
+This module has several functions:
+
+    1. provides a set of reusable, probably encapsulated collection containers
+       and supporting infrastructure: L{BaseDictionaryContainer},
+       L{BaseCollectionContainer}; also L{AbstractIndexer}
+    
+    2. provides some missing generic data structures or data types:
+       L{OrderedDict}, L{Stack}; also the heavily used, type-safe L{enum} class
+       and some generic pattern implementations like L{singleton} or L{Proxy}
+    
+    3. serves as a compatibility layer, making it possible to develop CSB as
+       platform- and Python version-independent: string, L{iterable}, L{metaclass}
+
+In order to ensure cross-interpreter compatibility, checking for string instances
+in CSB must always be implemented like this:
+
+    >>> isinstance("s", string)
+
+because "basestring" is not available in Python 3. Also, metaclass definitions
+other than abstract classes must be implemented as follows:
+
+    >>> MyClassBase = metaclass(MetaClass, base=BaseClass)
+    >>> class MyClass(MyClassBase):
+            pass
+            
+See also the notes about compatibility in L{csb.io}.             
 """
 
 import re
@@ -820,9 +840,10 @@ class BaseCollectionContainer(AbstractIndexer):
 
         except IndexError:
             if len(self) > 0:
-                raise self._exception('List index {0} out of range: {1}..{2}'.format(i, self.start_index, self.last_index))
+                raise self._exception('Position {0} is out of range [{1}, {2}]'.format(
+                                                            i, self.start_index, self.last_index))
             else:
-                raise self._exception('List index out of range. The collection is empty.')
+                raise self._exception('This collection is empty.')
     
     def _getinternal(self, i):
         return self._items[i]
@@ -866,7 +887,8 @@ class BaseCollectionContainer(AbstractIndexer):
 
         if self._type:
             if not isinstance(item, self._type):
-                raise TypeError("Item {0} is not of the required {1} type.".format(item, self._type.__name__))
+                raise TypeError("Item {0} is not of the required {1} type.".format(
+                                                                item, self._type.__name__))
         self._items.append(item)
 
         return len(self) + self._start - 1
@@ -876,7 +898,8 @@ class BaseCollectionContainer(AbstractIndexer):
         if self._type:
             for a in new_items:
                 if not isinstance(a, self._type):
-                    raise TypeError("Item {0} is not of the required {1} type.".format(a, self._type.__name__))
+                    raise TypeError("Item {0} is not of the required {1} type.".format(
+                                                                    a, self._type.__name__))
         self._items = list(new_items)
         
     def _sort(self):

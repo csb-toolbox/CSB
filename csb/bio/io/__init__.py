@@ -1,5 +1,5 @@
 """
-Biological file format parser classes. 
+I/O for various biological file formats.
 """
 
 from csb.bio.io.hhpred import HHOutputParser, HHProfileParser

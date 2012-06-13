@@ -1,5 +1,8 @@
 """
 Computational utility functions. 
+
+This module defines a number of low-level, numerical, high-performance utility
+functions like L{rmsd} for example.
 """
 
 import numpy

@@ -1,5 +1,5 @@
 """
-Numeric / math utilities.
+Low level numeric / math utility functions.
 """
 
 import sys
@@ -278,7 +278,6 @@ def psi(x):
         res += sum([coef[i] * exp(-2 * (i + 1) * logx) for i in range(7)])
         return res
 
-
 def approx_psi(x):
     from numpy import log, clip, where
 
@@ -292,8 +291,6 @@ def approx_psi(x):
             return -EULER_MASCHERONI - 1 / clip(x, 1e-154, 1e308)
         else:
             return log(x - 0.5)
-
-        
 
 def d_approx_psi(x):
     from numpy import clip, where
@@ -335,9 +332,6 @@ def inv_psi(y, tol=1e-10, n_iter=100, psi=psi):
         x -= z / d_approx_psi(x)
 
     return x
-
-
-
 
 def log_trapezoidal(log_y, x=None):
     """
