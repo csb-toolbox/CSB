@@ -68,6 +68,14 @@ class TestClansParams(test.Case):
         
         super(TestClansParams, self).setUp()
 
+    def testInstatiation(self):
+        cp = ClansParams()
+        for attribute_name, default_value in cp._DEFAULTS.items():
+            if attribute_name == 'colors':
+                continue
+            self.assertEqual(cp.__getattribute__(attribute_name),
+                             default_value)
+
     def testUnknownParamFail(self):
         self.assertRaises(KeyError, ClansParams, **{'unknownParam': True})
 
