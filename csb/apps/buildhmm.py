@@ -73,7 +73,7 @@ class BuildProfileApp(csb.apps.Application):
         except BuildIOError as ioe:
             BuildProfileApp.exit(str(ioe), ExitCodes.IO_ERROR)
             
-        except csb.pyutils.InvalidCommandError as ose:
+        except csb.io.InvalidCommandError as ose:
             msg = '{0!s}: {0.cmd}'.format(ose)
             BuildProfileApp.exit(msg, ExitCodes.IO_ERROR)            
 
@@ -81,7 +81,7 @@ class BuildProfileApp(csb.apps.Application):
             msg = 'Expected file {0} not produced by: {1.cmd}.\nSTDERR: {1.stderr}\nSTDOUT: {1.stdout}'.format(noe.expected, noe.context)
             BuildProfileApp.exit(msg, ExitCodes.EXT_TOOL_FAILURE)  
             
-        except csb.pyutils.ProcessError as pe:
+        except csb.io.ProcessError as pe:
             msg = 'Bad exit code #{0.code} from: {0.cmd}.\nSTDERR: {0.stderr}\nSTDOUT: {0.stdout}'.format(pe.context)
             BuildProfileApp.exit(msg, ExitCodes.EXT_TOOL_FAILURE)              
 
@@ -174,11 +174,11 @@ class ProfileBuilder(object):
         else:
             noss = ''        
         cmd = 'perl {0} {1} -cpu {2} {3}'.format(program, noss, self.cpu, self._input)
-        bali = csb.pyutils.Shell.run(cmd)
+        bali = csb.io.Shell.run(cmd)
         
         ali = self.target_id + '.a3m'
         if bali.code != 0:
-            raise csb.pyutils.ProcessError(bali)
+            raise csb.io.ProcessError(bali)
         if not os.path.isfile(ali):
             raise NoOutputError(ali, bali)        
         
@@ -195,9 +195,9 @@ class ProfileBuilder(object):
         if self.pseudo:
             cmd = '{0} {1} {2}'.format(cmd, ProfileBuilder.EMISSION_PSEUDO, ProfileBuilder.TRANSITION_PSEUDO)
                     
-        nnmake = csb.pyutils.Shell.run(cmd)
+        nnmake = csb.io.Shell.run(cmd)
         if nnmake.code != 0:
-            raise csb.pyutils.ProcessError(nnmake)
+            raise csb.io.ProcessError(nnmake)
         if not os.path.isfile(hhm):
             raise NoOutputError(hhm, nnmake)
         
@@ -211,7 +211,7 @@ class ProfileBuilder(object):
         caldb = os.path.join(self.tk_root, 'databases', 'hhpred', 'cal.hhm')
           
         cmd = '{0} -i {1}.hhm -d {2} -cal -cpu {3}'.format(program, self.target_id, caldb, self.cpu)
-        csb.pyutils.Shell.runstrict(cmd)
+        csb.io.Shell.runstrict(cmd)
 
 
 class FASTAProfileBuilder(ProfileBuilder):

@@ -55,7 +55,7 @@ import tarfile
 
 import csb
 
-from csb.pyutils import Shell
+from csb.io import Shell
 
 
 class BuildTypes(object):
