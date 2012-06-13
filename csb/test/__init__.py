@@ -131,7 +131,7 @@ decorators you need in order to write tests for CSB.
     
        Follow these guidelines when making changes to the repository:
     
-           - No Bugs in Repository: after fixing a bug or implementing a new
+           - No Bugs in the Repository: after fixing a bug or implementing a new
              feature, make sure at least the default test set passes by running
              the test console without any arguments. This is equivalent to:
              app.py -t any "csb.test.cases.*". (If no test case from this set covers
@@ -141,7 +141,7 @@ decorators you need in order to write tests for CSB.
            - No Recurrent Issues: when a bug is observed, first write a regression
              test with a proper "@see: BugID" tag in the docstring. Run the test
              to make sure it fails. After fixing the bug, run the test again before
-             you commit, as required by the "No Bugs in Repository" policy
+             you commit, as required by the "No Bugs in the Repository" policy
              
            - Test New Features: there should be a test case for every new feature
              we implement. One possible approach is to write a test case first and

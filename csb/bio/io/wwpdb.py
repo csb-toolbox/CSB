@@ -1,5 +1,50 @@
 """
-PDB structure parsers.
+PDB structure parsers, format builders and database providers.
+
+The most basic usage is:
+
+    >>> parser = StructureParser('structure.pdb')
+    >>> parser.parse_structure()
+    <Structure>     # a Structure object (model)
+
+or if this is an NMR ensemble:
+    
+    >>> parser.parse_models()
+    <Ensemble>      # an Ensemble object (collection of alternative Structure-s)
+    
+This module introduces a family of PDB file parsers. The common interface of all
+parsers is defined in L{AbstractStructureParser}. This class has several
+implementations:
+
+    - L{RegularStructureParser} - handles normal PDB files with SEQRES fields
+    - L{LegacyStructureParser} - reads structures from legacy or malformed PDB files,
+      which are lacking SEQRES records (initializes all residues from the ATOMs instead)
+    - L{PDBHeaderParser} - reads only the headers of the PDB files and produces structures
+      without coordinates. Useful for reading metadata (e.g. accession numbers or just
+      plain SEQRES sequences) with minimum overhead
+      
+Unless you have a special reason, you should use the L{StructureParser} factory,
+which returns a proper L{AbstractStructureParser} implementation, depending on the
+input PDB file. If the input file looks like a regular PDB file, the factory
+returns a L{RegularStructureParser}, otherwise it instantiates L{RegularStructureParser}.
+L{StructureParser} is in fact an alias for L{AbstractStructureParser.create_parser}.
+
+Another important abstraction in this module is L{StructureProvider}. It has several
+implementations which can be used to retrieve PDB L{Structure}s from various sources:
+file system directories, remote URLs, etc. You can easily create your own provider as
+well. See L{StructureProvider} for details.
+
+Finally, this module gives you some L{FileBuilder}s, used for text serialization 
+of L{Structure}s and L{Ensemble}s:
+
+    >>> builder = PDBFileBuilder(stream)
+    >>> builder.add_header(structure)
+    >>> builder.add_structure(structure)
+
+where stream is any Python stream, e.g. an open file or sys.stdout.
+
+See L{Ensemble} and L{Structure} from L{csb.bio.structure} for details on these
+objects.
 """
 
 import re

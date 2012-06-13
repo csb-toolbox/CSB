@@ -1,5 +1,15 @@
 """
-Rosetta fragments and libraries.
+Rosetta fragment libraries.
+
+This module defines the L{RosettaFragmentMap} objects, which describes a
+fragment library in Rosetta NNmake format. L{RosettaFragmentMap} has a 
+static factory method for building a library from a fragment file:
+    
+    >>> RosettaFragmentMap.read('fragments.txt')
+    <RosettaFragmentMap>
+    
+@note: Consider extracting L{RosettaFragmentMap.read} as a Rosetta
+       fragment parser which naturally belongs to csb.bio.io.      
 """
 
 from csb.bio.structure import TorsionAnglesCollection, TorsionAngles

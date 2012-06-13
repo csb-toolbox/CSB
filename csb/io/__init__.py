@@ -1,5 +1,19 @@
 """
-Common IO-related utility functions and classes. 
+Generic I/O utility objects.
+
+Here is a brief list of the most essential classes in this module:
+This module defines a few groups of essential IO objects:
+
+    1. temporary file system objects: L{TempFile}, L{TempFolder} 
+    2. special/decorated streams: L{MemoryStream}, L{AutoFlushStream}
+    3. reusable stream readers and writers: L{EntryReader}, L{EntryWriter}
+
+In addition, csb.io is also part of the CSB compatibility layer. In order to
+ensure cross-interpreter compatibility, always use the following csb.io objects:
+
+    - L{MemoryStream} instead of (c)StringIO
+    - csb.io.Pickle instead of pickle or cPickle
+    - csb.io.urllib instead of urllib or urllib.request
 """
 
 import os
@@ -30,7 +44,7 @@ NEWLINE = '\n'
 
 class MemoryStream(StringIO):
     """
-    In-memory stream object.
+    In-memory stream object. Can be used in a context manager.
     """
     def __enter__(self):
         return self
@@ -62,6 +76,9 @@ class TempFile(csb.pyutils.Proxy):
     Create a temporary file and take care of deleting it upon object
     destruction. The file can be opened multiple times on any platform, unlike
     the case with tempfile.NamedTemporaryFile (does not work on Windows).
+    
+        >>> with TempFile() as tmp:
+                tmp.write(...)
     
     @param dispose: automatically delete the file
     @type dispose: bool
@@ -125,6 +142,9 @@ class TempFolder(object):
     """
     Create a temporary directory which is automatically wiped when the object
     is closed.
+
+        >>> with TempFolder() as tmp:
+                # put some files in tmp.name...
     
     @param dispose: automaticlaly delete the folder and its contents
     @type dispose: bool                

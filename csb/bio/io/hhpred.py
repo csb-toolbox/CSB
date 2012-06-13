@@ -1,5 +1,20 @@
 """
 HHpred-related format parsers.
+
+This module defines two HHpred format parsers: L{HHProfileParser} and
+L{HHOutputParser}. The first one is used to read HMM (*.hhm) files:
+
+    >>> HHProfileParser("profile.hhm", "profile.pdb").parse()
+    <ProfileHMM>            # ProfileHMM object
+    
+while the latter parses HHsearch results files (*.hhr):
+
+    >>> HHOutputParser().parse_file("hits.hhr"):
+    <HHpredHitList>        # collection of HHpredHit-s
+    
+See L{ProfileHMM}, L{HHpredHitList} and L{HHpredHit} from L{csb.bio.hmm}
+for details. For text serialization of HMM profiles, see L{HHMFileBuilder}
+in this module.
 """
 
 import os
@@ -593,6 +608,12 @@ class HHMFileBuilder(object):
         self.write('\n')
 
     def add_hmm(self, hmm):
+        """
+        Append a new HMM to the destination stream.
+        
+        @param hmm: profile HMM to serialize
+        @type hmm: L{ProfileHMM}
+        """
 
         if hmm.score_units != ScoreUnits.LogScales:
             raise ValueError('Scores must be converted to LogScales first.')
@@ -694,8 +715,7 @@ PCT   {0.pseudocounts}'''.format(hmm))
         
 class HHOutputParser(object):
     """
-    Parser that is HHsearch's hhr ('HHsearch Result') format aware.
-    HHsearch Result
+    Parser for HHsearch result (*.hhr) files.
 
     @param alignments: if set to False, the parser will skip the
                        alignments section of the file

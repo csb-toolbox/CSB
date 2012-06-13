@@ -1,5 +1,5 @@
 """
-Cryo-EM density map IO
+Cryo-EM density map I/O
 
 @warning: dragons ahead, this module is experimental
 """

@@ -1,5 +1,61 @@
 """
-Sequence (FASTA) and alignment classes. 
+Sequence and sequence alignment APIs.
+
+This module defines the base interfaces for biological sequences and alignments:
+L{AbstractSequence} and L{AbstractAlignment}. These are the central abstractions
+here. This module provides also a number of useful enumerations, like L{SequenceTypes}
+and L{SequenceAlphabets}.
+
+Sequences
+=========
+L{AbstractSequence} has a number of implementations. These are of course interchangeable,
+but have different intents and may differ significantly in performance. The standard
+L{Sequence} implementation is what you are after if all you need is high performance
+and efficient storage (e.g. when you are parsing big files). L{Sequence} objects store
+their underlying sequences as strings. L{RichSequence}s on the other hand will store
+their residues as L{ResidueInfo} objects, which have the same basic interface as the 
+L{csb.bio.structure.Residue} objects. This of course comes at the expense of degraded
+performance. A L{ChainSequence} is a special case of a rich sequence, whose residue
+objects are I{actually} real L{csb.bio.structure.Residue}s.
+
+Basic usage:
+
+    >>> seq = RichSequence('id', 'desc', 'sequence', SequenceTypes.Protein)
+    >>> seq.residues[1]
+    <ResidueInfo [1]: SER>
+    >>> seq.dump(sys.stdout)
+    >desc
+    SEQUENCE
+
+See L{AbstractSequence} for details.    
+
+Alignments
+==========
+L{AbstractAlignment} defines a table-like interface to access the data in an
+alignment:
+
+    >>> ali = SequenceAlignment.parse(">a\\nABC\\n>b\\nA-C")
+    >>> ali[0, 0]
+    <SequenceAlignment>   # a new alignment, constructed from row #1, column #1
+    >>> ali[0, 1:3]
+    <SequenceAlignment>   # a new alignment, constructed from row #1, columns #2..#3
+
+which is just a shorthand for using the standard 1-based interface:
+
+    >>> ali.rows[1]
+    <AlignedSequenceAdapter: a, 3>                        # row #1 (first sequence)
+    >>> ali.columns[1]
+    (<ColumnInfo a [1]: ALA>, <ColumnInfo b [1]: ALA>)    # residues at column #1
+
+See L{AbstractAlignment} for all details and more examples.
+
+There are a number of L{AbstractAlignment} implementations defined here.
+L{SequenceAlignment} is the default one, nothing surprising. L{A3MAlignment}
+is a more special one: the first sequence in the alignment is a master sequence.
+This alignment is usually used in the context of HHpred. More important is the
+L{StructureAlignment}, which is an alignment of L{csb.bio.structure.Chain} objects.
+The residues in every aligned sequence are really the L{csb.bio.structure.Residue}
+objects taken from those chains.
 """
 
 import re

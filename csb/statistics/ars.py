@@ -11,7 +11,6 @@ be concave.
 The user must also supply initial guesses.  It is not
 essential that these values be very accurate, but performance
 will generally depend on their accuracy.
-
 """
 
 from numpy import exp, log
