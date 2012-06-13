@@ -43,10 +43,10 @@ This is a classic Strategy pattern.
 
 import numpy.random
 import scipy.special
-import csb.pyutils
+import csb.core
 
 from abc import ABCMeta, abstractmethod
-from csb.pyutils import OrderedDict
+from csb.core import OrderedDict
 
 from csb.numeric import log, exp, psi, inv_psi
 from scipy.special import gammaln
@@ -260,7 +260,7 @@ class AbstractDensity(object):
     def __setitem__(self, param, value):
         
         if param in self._params: 
-            if csb.pyutils.iterable(value):
+            if csb.core.iterable(value):
                 value = array(value)
             else:
                 value = float(value)

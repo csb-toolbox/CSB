@@ -7,7 +7,7 @@ MPI fuer Entwicklungsbiologie, Tuebingen
 import os
 import re
 import operator
-import csb.pyutils
+import csb.core
 
 from numpy import array, float64, eye, random
 
@@ -1002,7 +1002,7 @@ class ClansParams(object):
 
     @blastpath.setter
     def blastpath(self, value):
-        if not isinstance(value, csb.pyutils.string):
+        if not isinstance(value, csb.core.string):
             raise ValueError(('blastpath cannot be {0} (accepted values: '
                               + 'strings)').format(value))
         
@@ -1021,7 +1021,7 @@ class ClansParams(object):
 
     @formatdbpath.setter
     def formatdbpath(self, value):
-        if not isinstance(value, csb.pyutils.string):
+        if not isinstance(value, csb.core.string):
             raise ValueError(('formatdbpath cannot be {0} (accepted values: '
                               + 'strings)').format(value))
               
@@ -1582,7 +1582,7 @@ class ClansEntry(object):
 
     @name.setter
     def name(self, value):
-        if not isinstance(value, csb.pyutils.string):
+        if not isinstance(value, csb.core.string):
             raise ValueError(('name cannot be {0} (accepted values: '
                               + 'strings)').format(value))
 
@@ -1601,7 +1601,7 @@ class ClansEntry(object):
 
     @seq.setter
     def seq(self, value):
-        if not isinstance(value, csb.pyutils.string):
+        if not isinstance(value, csb.core.string):
             raise ValueError(('seq cannot be {0} (accepted values: '
                               + 'strings)').format(value))
 
@@ -1808,7 +1808,7 @@ class ClansSeqgroup(object):
 
     @name.setter
     def name(self, value):
-        if not isinstance(value, csb.pyutils.string):
+        if not isinstance(value, csb.core.string):
             raise ValueError('name must be a string')
         self._name = value
     
@@ -1880,7 +1880,7 @@ class ClansSeqgroup(object):
             self._color = value
             return
 
-        if isinstance(value, csb.pyutils.string):
+        if isinstance(value, csb.core.string):
             if value.count(separator) != 2:
                 raise ValueError(
                     ('separator \'{0}\' count in color \'{1}\': {2}. '

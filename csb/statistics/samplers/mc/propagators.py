@@ -4,7 +4,7 @@ Provides various deterministic and stochastic propagators.
 
 import numpy
 
-import csb.pyutils
+import csb.core
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 from csb.statistics.samplers import AbstractState
@@ -87,7 +87,7 @@ class PropagationResult(AbstractPropagationResult):
     def heat(self, value):
         self._heat = float(value)    
     
-class Trajectory(csb.pyutils.CollectionContainer, AbstractPropagationResult):
+class Trajectory(csb.core.CollectionContainer, AbstractPropagationResult):
     """
     Ordered collection of states, representing a phase-space trajectory.
 

@@ -1,5 +1,5 @@
 import csb.test as test
-import csb.pyutils
+import csb.core
 
 from csb.bio.io.wwpdb import FileSystemStructureProvider
 from csb.bio.io.fasta import SequenceParser, PDBSequenceParser, SequenceAlignmentReader, StructureAlignmentFactory, OutputBuilder
@@ -198,7 +198,7 @@ class TestOutputBuilder(test.Case):
         sequence = Sequence('s1', 's1', 'ABC', SequenceTypes.Protein) 
         
         with self.config.getTempStream() as tmp:
-            for format in csb.pyutils.Enum.members(AlignmentFormats):
+            for format in csb.core.Enum.members(AlignmentFormats):
                 
                 builder = OutputBuilder.create(format, tmp, True)
                 builder.add_sequence(sequence)

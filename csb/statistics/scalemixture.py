@@ -4,7 +4,7 @@ Approximation of a distribution as a mixture of gaussians with a zero mean but d
 
 import numpy.random
 
-import csb.pyutils
+import csb.core
 import csb.statistics.ars
 import csb.statistics.rand
 
@@ -113,7 +113,7 @@ class ScaleMixture(AbstractDensity):
 
     @scales.setter
     def scales(self, value):
-        if not isinstance(value, csb.pyutils.string) and \
+        if not isinstance(value, csb.core.string) and \
            isinstance(value, (numpy.ndarray, list, tuple)):
             self['scales'] = numpy.array(value)
         else:

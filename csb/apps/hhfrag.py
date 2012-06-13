@@ -15,7 +15,7 @@ import csb.bio.fragments.rosetta as rosetta
 import csb.bio.structure
 
 import csb.io
-import csb.pyutils
+import csb.core
 
 
 class ExitCodes(csb.apps.ExitCodes):
@@ -349,7 +349,7 @@ class SliceContext(hhsearch.Context):
         self.start = start
         self.end = end
         
-        if not isinstance(segment, csb.pyutils.string):
+        if not isinstance(segment, csb.core.string):
             segment = segment.to_hmm(convert_scores=True)
         
         super(SliceContext, self).__init__(segment)

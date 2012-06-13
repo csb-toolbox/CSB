@@ -2,7 +2,7 @@
 VASCO Chemical Shift format parser.
 """
 
-import csb.pyutils
+import csb.core
 
 
 class ShiftInfo(object):
@@ -23,7 +23,7 @@ class ShiftInfo(object):
     __repr__ = __str__
 
         
-class ChemicalShiftContainer(csb.pyutils.DictionaryContainer):
+class ChemicalShiftContainer(csb.core.DictionaryContainer):
 
     def __init__(self, bmrb_id='', pdb_id='', sequence='',
                  chain='', exptype=''):
@@ -116,7 +116,7 @@ class VascoStructureParser(object):
                              nucleus_element, res_ss)
 
             if not chain_id in data:
-                data.append(chain_id, csb.pyutils.OrderedDict())
+                data.append(chain_id, csb.core.OrderedDict())
 
             if not res_code in data[chain_id]:
                 data[chain_id][res_code] = {}

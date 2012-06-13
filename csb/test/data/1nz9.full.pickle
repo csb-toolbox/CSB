@@ -52,7 +52,7 @@ NsS'_StructureChainsTable__container'
 p23
 g15
 sg13
-ccsb.pyutils
+ccsb.core
 OrderedDict
 p24
 ((lp25
@@ -69,7 +69,7 @@ S'_structure'
 p30
 g15
 sg11
-ccsb.pyutils
+ccsb.core
 _deserialize_enum
 p31
 (ccsb.bio.sequence

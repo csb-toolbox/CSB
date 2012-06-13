@@ -166,7 +166,7 @@ import tempfile
 import traceback
 
 import csb.io
-import csb.pyutils
+import csb.core
 
 try:
     from unittest import skip, skipIf
@@ -467,7 +467,7 @@ class AbstractTestBuilder(object):
         @return: a C{unittest.TestSuite} ready for the test runner
         @rtype: C{unittest.TestSuite} 
         """
-        if not csb.pyutils.iterable(namespaces):
+        if not csb.core.iterable(namespaces):
             raise TypeError(namespaces)
         
         return unittest.TestSuite(self.loadTests(n) for n in namespaces)
@@ -528,7 +528,7 @@ class AbstractTestBuilder(object):
         Extract test cases recursively from a test C{obj} container. 
         """   
         cases = []
-        if isinstance(obj, unittest.TestSuite) or csb.pyutils.iterable(obj):
+        if isinstance(obj, unittest.TestSuite) or csb.core.iterable(obj):
             for item in obj:
                 cases.extend(self._recurse(item))
         else:
@@ -787,7 +787,7 @@ Options:
         return self._namespace
     @namespace.setter
     def namespace(self, value):    
-        if csb.pyutils.iterable(value):
+        if csb.core.iterable(value):
             self._namespace = list(value)
         else:
             self._namespace = [value]

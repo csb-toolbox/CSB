@@ -53,24 +53,24 @@ for details.
 import sys
 import math
 
-import csb.pyutils
+import csb.core
 import csb.io
 import csb.bio.structure as structure
 import csb.bio.sequence as sequence
 
-from csb.pyutils import Enum
+from csb.core import Enum
 
 
 class UnobservableStateError(AttributeError):
     pass
 
-class StateNotFoundError(csb.pyutils.ItemNotFoundError):
+class StateNotFoundError(csb.core.ItemNotFoundError):
     pass
 
 class TransitionNotFoundError(StateNotFoundError):
     pass
 
-class LayerIndexError(csb.pyutils.CollectionIndexError):
+class LayerIndexError(csb.core.CollectionIndexError):
     pass
 
 class StateExistsError(KeyError):
@@ -86,13 +86,13 @@ class HMMArgumentError(ValueError):
     pass
 
 
-class States(csb.pyutils.enum):
+class States(csb.core.enum):
     """
     Enumeration of HMM state types
     """
     Match='M'; Insertion='I'; Deletion='D'; Start='S'; End='E'
 
-class ScoreUnits(csb.pyutils.enum):
+class ScoreUnits(csb.core.enum):
     """
     Enumeration of HMM emission and transition score units
     """
@@ -324,7 +324,7 @@ class ProfileHMM(object):
     @property
     def residues(self):
         res = [layer.residue for layer in self.layers]
-        return csb.pyutils.ReadOnlyCollectionContainer(
+        return csb.core.ReadOnlyCollectionContainer(
                             res, type=structure.Residue, start_index=1)
 
     @property
@@ -517,7 +517,7 @@ class ProfileHMM(object):
 
         @param units: the target units for the conversion (a member of
                       L{ScoreUnits}).
-        @type units: L{csb.pyutils.EnumItem}
+        @type units: L{csb.core.EnumItem}
         @param method: if defined, implements the exact mathematical
                        transformation that will be applied. It must be a
                        function or lambda expression with the following
@@ -623,7 +623,7 @@ class ProfileHMM(object):
                     s_state = s_layer[States.Match]
                 else:
                     s_state = s_layer[States.Insertion]
-            except csb.pyutils.ItemNotFoundError:
+            except csb.core.ItemNotFoundError:
                 raise ValueError('Query and subject must contain observable states '
                                  'at each layer')
 
@@ -673,7 +673,7 @@ class ProfileHMMSegment(ProfileHMM):
         if end < hmm.layers.start_index or end > hmm.layers.last_index:
             raise IndexError('End position {0} is out of range'.format(end))
         
-        #hmm = csb.pyutils.deepcopy(hmm)       
+        #hmm = csb.core.deepcopy(hmm)       
                 
         super(ProfileHMMSegment, self).__init__(units=hmm.score_units,
                                                 scale=hmm.scale, logbase=hmm.logbase)
@@ -691,7 +691,7 @@ class ProfileHMMSegment(ProfileHMM):
             self.alignment = hmm.alignment.hmm_subregion(start, end)
             self.consensus = hmm.consensus.subregion(start, end)
 
-        layers = csb.pyutils.deepcopy(hmm.layers[start : end + 1])
+        layers = csb.core.deepcopy(hmm.layers[start : end + 1])
         max_score = 1.0
         if hmm.score_units != ScoreUnits.Probability:
             max_score = hmm._convert_scores(hmm.score_units,
@@ -835,7 +835,7 @@ class EVDParameters(object):
         return (self.lamda is not None or self.mu is not None)
 
 
-class EmissionTable(csb.pyutils.DictionaryContainer):        
+class EmissionTable(csb.core.DictionaryContainer):        
     """ 
     Represents a lookup table of emission probabilities. Provides dictionary-like
     access:
@@ -859,7 +859,7 @@ class EmissionTable(csb.pyutils.DictionaryContainer):
         
         @param residue: residue name (type) - a member of
                         L{csb.bio.sequence.ProteinAlphabet}
-        @type residue: L{csb.pyutils.EnumItem}
+        @type residue: L{csb.core.EnumItem}
         @param probability: emission score
         @type probability: float
         
@@ -884,14 +884,14 @@ class EmissionTable(csb.pyutils.DictionaryContainer):
         Update the emission C{probability} of a given emission C{residue}.
         
         @param residue: name (type) of the residue to be updated
-        @type residue: L{csb.pyutils.EnumItem}
+        @type residue: L{csb.core.EnumItem}
         @param probability: new emission score
         @type probability: float
         """                
         super(EmissionTable, self)._update({residue: probability})
 
 
-class TransitionTable(csb.pyutils.DictionaryContainer):        
+class TransitionTable(csb.core.DictionaryContainer):        
     """ 
     Represents a lookup table of transitions that are possible from within a given state. 
     
@@ -951,7 +951,7 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
         state of the specified L{States} kind.
         
         @param target_statekind: the key of the transition to be updated
-        @type target_statekind: L{csb.pyutils.EnumItem}
+        @type target_statekind: L{csb.core.EnumItem}
         @param transition: new transition info object
         @type transition: L{Transition}
         
@@ -964,7 +964,7 @@ class TransitionTable(csb.pyutils.DictionaryContainer):
         super(TransitionTable, self)._update({target_statekind: transition})  
 
 
-class HMMLayersCollection(csb.pyutils.CollectionContainer):
+class HMMLayersCollection(csb.core.CollectionContainer):
     """
     Provides consecutive, 1-based access to all of the layers in the profile.
     Each profile layer contains a catalog of available states at that index, e.g.:
@@ -984,7 +984,7 @@ class HMMLayersCollection(csb.pyutils.CollectionContainer):
     def _exception(self):
         return LayerIndexError         
 
-class HMMLayer(csb.pyutils.DictionaryContainer):
+class HMMLayer(csb.core.DictionaryContainer):
     """
     Provides a dictionary-like catalog of the available states at this layer.
     Lookup keys are members of the L{States} enumeration, e.g.:
@@ -1073,7 +1073,7 @@ class HMMLayer(csb.pyutils.DictionaryContainer):
         Update the sate of the specified kind under the current layer.
         
         @param state_kind: state type (key) - a member of L{States}
-        @type state_kind: L{csb.pyutils.EnumItem}
+        @type state_kind: L{csb.core.EnumItem}
         @param state: the new state info
         @type state: L{State}
         
@@ -1090,7 +1090,7 @@ class State(object):
     Describes a Hidden Markov Model state.
     
     @param type: one of the L{States} enumeration values, e.g. States.Match
-    @type type: L{csb.pyutils.EnumItem}
+    @type type: L{csb.core.EnumItem}
     @param emit: a collection of emittable state names allowed for the state, 
                  e.g. the members of I{SequenceAlphabets.Protein}. If not defined, 
                  the state will be created as a silent (unobservable).

@@ -28,7 +28,7 @@ p12
 g4
 sS'_items'
 p13
-ccsb.pyutils
+ccsb.core
 OrderedDict
 p14
 ((lp15
@@ -46,7 +46,7 @@ p20
 g4
 sS'_type'
 p21
-ccsb.pyutils
+ccsb.core
 _deserialize_enum
 p22
 (ccsb.bio.sequence

@@ -24,7 +24,7 @@ import csb.io
 import csb.bio.io
 import csb.bio.structure as structure
 
-from csb.pyutils import Enum, CollectionIndexError, ItemNotFoundError
+from csb.core import Enum, CollectionIndexError, ItemNotFoundError
 from csb.bio.sequence import Sequence, ProteinAlphabet, A3MAlignment
 
 from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, ProfileLength
@@ -128,7 +128,7 @@ class HHProfileParser(object):
 
         @param units: also convert the profile score units to the specified
                       L{csb.bio.hmm.ScoreUnits} kind
-        @type units: L{csb.pyutils.EnumItem}
+        @type units: L{csb.core.EnumItem}
 
         @return: a L{ProfileHMM} instance
         @rtype: L{ProfileHMM}

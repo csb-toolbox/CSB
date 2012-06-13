@@ -13,7 +13,7 @@ import csb.bio.io.wwpdb  as wwpdb
 import csb.bio.structure as structure
 import csb.bio.fragments
 import csb.bio.fragments.rosetta as rosetta
-import csb.pyutils
+import csb.core
 import csb.io.plotting
 
 
@@ -75,7 +75,7 @@ class PrecisionApp(csb.apps.Application):
             except (structure.Broken3DStructureError, wwpdb.PDBParseError) as se:
                 raise ArgumentError("Can't parse native structure: " + str(se))
             
-            except (csb.pyutils.ItemNotFoundError) as ce:
+            except (csb.core.ItemNotFoundError) as ce:
                 raise ArgumentError("Chain {0!s} not found in native structure".format(ce))            
 
             self.log('Superimposing fragments...\n')
@@ -175,7 +175,7 @@ class LibrarySuperimposer(object):
         
         for task in tasks:
             for match in task.get():
-                if isinstance(match, csb.pyutils.string):       # error
+                if isinstance(match, csb.core.string):       # error
                     self._out.write(' [E] ')                    
                     self._out.write(match.rstrip())
                     self._out.write('\n')

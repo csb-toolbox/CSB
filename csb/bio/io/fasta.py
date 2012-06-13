@@ -35,7 +35,7 @@ or you could instantiate any of the L{OutputBuilder}s directly.
 """
 
 import csb.io
-import csb.pyutils
+import csb.core
 
 from abc import ABCMeta, abstractmethod
 
@@ -113,7 +113,7 @@ class BaseSequenceParser(object):
         @return: a list of L{Sequence}s
         @rtype: L{SequenceCollection}
         """
-        if isinstance(fasta_file, csb.pyutils.string):
+        if isinstance(fasta_file, csb.core.string):
             stream = open(fasta_file)
         else:
             stream = fasta_file
@@ -136,7 +136,7 @@ class BaseSequenceParser(object):
         @return: efficient cursor over all L{Sequence}s (parse on demand)
         @rtype: iterator
         """
-        if isinstance(fasta_file, csb.pyutils.string):
+        if isinstance(fasta_file, csb.core.string):
             stream = open(fasta_file)
         else:
             stream = fasta_file
@@ -182,8 +182,8 @@ class PDBSequenceParser(SequenceParser):
         seq.id = seq.id.replace('_', '')
         stype = seq.header.partition('mol:')[2].partition(' ')[0]
         try:
-            seq.type = csb.pyutils.Enum.parse(SequenceTypes, stype)
-        except csb.pyutils.EnumValueError:
+            seq.type = csb.core.Enum.parse(SequenceTypes, stype)
+        except csb.core.EnumValueError:
             seq.type = SequenceTypes.Unknown
 
         return seq

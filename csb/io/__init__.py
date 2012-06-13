@@ -25,7 +25,7 @@ import shutil
 import tempfile
 import subprocess
 
-import csb.pyutils
+import csb.core
 
 
 try:
@@ -66,7 +66,7 @@ class Shell(object):
         @raise TimeoutError: when the timeout is expired
         """
         
-        if isinstance(cmd, csb.pyutils.string):
+        if isinstance(cmd, csb.core.string):
             cmd = shlex.split(cmd)
         
         try:
@@ -152,7 +152,7 @@ class InvalidCommandError(ValueError):
     def __init__(self, message, cmd):
         
         self.program = cmd[0]
-        if csb.pyutils.iterable(cmd):
+        if csb.core.iterable(cmd):
             cmd = ' '.join(cmd)
         self.cmd = cmd
         self.msg = message
@@ -188,7 +188,7 @@ class MemoryStream(StringIO):
         except:
             pass
     
-class AutoFlushStream(csb.pyutils.Proxy):
+class AutoFlushStream(csb.core.Proxy):
     """
     Wrapper around a buffered stream which automatically calls flush()
     after each write(). This is essentially a proxy/decorator. 
@@ -204,7 +204,7 @@ class AutoFlushStream(csb.pyutils.Proxy):
         self._subject.write(data)
         self._subject.flush()
         
-class TempFile(csb.pyutils.Proxy):
+class TempFile(csb.core.Proxy):
     """
     Create a temporary file and take care of deleting it upon object
     destruction. The file can be opened multiple times on any platform, unlike
@@ -410,7 +410,7 @@ class EntryWriter(object):
         self.newline = newline
         self.autoclose = close
         
-        if isinstance(destination, csb.pyutils.string):
+        if isinstance(destination, csb.core.string):
             self._stream = open(destination, 'w')
             self.autoclose = True
             

@@ -2,7 +2,7 @@ import numpy
 
 import csb.test as test
 import csb.bio.structure as structure
-import csb.pyutils
+import csb.core
 
 import csb.bio.sequence as sequence
     
@@ -270,7 +270,7 @@ class TestStructure(test.Case):
         self.assertFalse('A' in self.structure2.chains)
         
         for c in ['.', 'A']:
-            self.assertRaises(csb.pyutils.ItemNotFoundError, self.structure2.chains.remove, c)       
+            self.assertRaises(csb.core.ItemNotFoundError, self.structure2.chains.remove, c)       
             
     def testAccession(self):
         
@@ -456,8 +456,8 @@ class TestChain(test.Case):
         self.assertEqual(self.chain.find('127', 'X'), self.chain[0])
         
         self.chain[0].id = 127, None
-        self.assertRaises(csb.pyutils.ItemNotFoundError, self.chain.find, 127, 'X')
-        self.assertRaises(csb.pyutils.ItemNotFoundError, self.chain.find, 999999)
+        self.assertRaises(csb.core.ItemNotFoundError, self.chain.find, 127, 'X')
+        self.assertRaises(csb.core.ItemNotFoundError, self.chain.find, 999999)
         
     def testComputeTorsion(self):
         
@@ -583,8 +583,8 @@ class TestChain(test.Case):
         
         self.assertEqual(self.chain.residues[1], self.chain[0])
         
-        self.assertRaises(csb.pyutils.CollectionIndexError, lambda:self.chain.residues[0])
-        self.assertRaises(csb.pyutils.CollectionIndexError, lambda:self.chain.residues[59])
+        self.assertRaises(csb.core.CollectionIndexError, lambda:self.chain.residues[0])
+        self.assertRaises(csb.core.CollectionIndexError, lambda:self.chain.residues[59])
         self.assertRaises(IndexError, lambda:self.chain[58])
 
         self.assertEqual(self.chain[0].type, structure.SequenceAlphabets.Protein.ALA)       

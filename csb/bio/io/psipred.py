@@ -2,7 +2,7 @@
 PSIPRED Parser
 """
 
-import csb.pyutils
+import csb.core
 
 from csb.bio.structure import SecondaryStructure, SecStructures, UnknownSecStructureError
 
@@ -76,8 +76,8 @@ class PSIPredParser(object):
                 residue = line[1]
                                 
                 try:
-                    ss = csb.pyutils.Enum.parse(SecStructures, line[2])  
-                except csb.pyutils.EnumValueError as e:
+                    ss = csb.core.Enum.parse(SecStructures, line[2])  
+                except csb.core.EnumValueError as e:
                     raise UnknownSecStructureError(str(e))
                 
                 coil, helix, strand = map(float, line[3:6])

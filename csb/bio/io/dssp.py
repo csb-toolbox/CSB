@@ -2,7 +2,7 @@
 DSSP Parser
 """
 
-import csb.pyutils
+import csb.core
 import csb.io
 
 from csb.bio.structure import SecStructures, UnknownSecStructureError
@@ -63,8 +63,8 @@ class DSSPParser(object):
                     if ss == '':
                         ss = SecStructures.Gap
                     else:
-                        ss = csb.pyutils.Enum.parse(SecStructures, ss)  
-                except csb.pyutils.EnumValueError as e:
+                        ss = csb.core.Enum.parse(SecStructures, ss)  
+                except csb.core.EnumValueError as e:
                     raise UnknownSecStructureError(str(e)) 
                 phi = float(line[104 + offset : 109 + offset])
                 psi = float(line[110 + offset : 115 + offset])
@@ -101,8 +101,8 @@ class StrideParser(object):
                 chain = fields[2]
                 accession = fields[-1].lower()
                 try:
-                    ss = csb.pyutils.Enum.parse(SecStructures, fields[5])  
-                except csb.pyutils.EnumValueError as e:
+                    ss = csb.core.Enum.parse(SecStructures, fields[5])  
+                except csb.core.EnumValueError as e:
                     raise UnknownSecStructureError(str(e)) 
                 phi = float(fields[7])
                 psi = float(fields[8])

@@ -54,7 +54,7 @@ import datetime
 import multiprocessing
 
 import csb.bio.structure
-import csb.pyutils
+import csb.core
 import csb.io
 
 from abc import ABCMeta, abstractmethod
@@ -356,7 +356,7 @@ class AbstractStructureParser(object):
         @type residue_name: str
 
         @return: a L{SequenceTypes} enum member
-        @rtype: L{csb.pyutils.EnumItem}
+        @rtype: L{csb.core.EnumItem}
 
         @raise UnknownPDBResidueError: when there is no such PDB residue name
                                        in the catalog tables
@@ -378,7 +378,7 @@ class AbstractStructureParser(object):
         @param residue_name: a PDB-conforming name of a residue
         @type residue_name: str
         @param as_type: suggest a sequence type (L{SequenceTypes} member)
-        @type L{scb.pyutils.EnumItem}
+        @type L{scb.core.EnumItem}
 
         @return: a normalized residue name
         @rtype: str
@@ -407,7 +407,7 @@ class AbstractStructureParser(object):
         @param residue_name: a PDB-conforming name of a residue
         @type residue_name: str
         @param as_type: suggest a sequence type (L{SequenceTypes} member)
-        @type L{scb.pyutils.EnumItem}
+        @type L{scb.core.EnumItem}
 
         @return: a normalized residue name
         @rtype: str
@@ -632,8 +632,8 @@ class AbstractStructureParser(object):
                     element = line[76:78].strip()
                     if element:
                         try:
-                            element = csb.pyutils.Enum.parsename(ChemElements, element)
-                        except csb.pyutils.EnumMemberError:
+                            element = csb.core.Enum.parsename(ChemElements, element)
+                        except csb.core.EnumMemberError:
                             if element in ('D', 'X'):
                                 element = ChemElements.x                            
                             else:
@@ -666,9 +666,9 @@ class AbstractStructureParser(object):
                     residue_name = line[17:20].strip()
                     residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[atom._chain].type)
                     if structure.chains[atom._chain].type == SequenceTypes.NucleicAcid:                               
-                        atom._residue_name = csb.pyutils.Enum.parsename(SequenceAlphabets.Nucleic, residue_name)
+                        atom._residue_name = csb.core.Enum.parsename(SequenceAlphabets.Nucleic, residue_name)
                     else:
-                        atom._residue_name = csb.pyutils.Enum.parsename(SequenceAlphabets.Protein, residue_name)
+                        atom._residue_name = csb.core.Enum.parsename(SequenceAlphabets.Protein, residue_name)
 
                     atom.occupancy = float(line[54:60])
                     atom.temperature = float(line[60:66])
@@ -825,7 +825,7 @@ class AbstractStructureParser(object):
                 try:
                     startres = chain.find(line[21:25].strip(), line[25].strip())                
                     endres = chain.find(line[33:37].strip(), line[37].strip())
-                except csb.pyutils.ItemNotFoundError as ex:
+                except csb.core.ItemNotFoundError as ex:
                     if self._check_ss:
                         raise SecStructureFormatError(
                                 'Helix {0} refers to an undefined residue ID: {1}'.format(line[7:10], str(ex)))
@@ -852,7 +852,7 @@ class AbstractStructureParser(object):
                 try:
                     startres = chain.find(line[22:26].strip(), line[26].strip())                
                     endres = chain.find(line[33:37].strip(), line[37].strip())
-                except csb.pyutils.ItemNotFoundError as ex:
+                except csb.core.ItemNotFoundError as ex:
                     if self._check_ss:                    
                         raise SecStructureFormatError(
                                 'Sheet {0} refers to an undefined residue ID: {1}'.format(line[7:10], str(ex)))
@@ -964,7 +964,7 @@ class RegularStructureParser(AbstractStructureParser):
                         new_chain.molecule_id = mol_id
                         try:
                             structure.chains.append(new_chain)
-                        except csb.pyutils.DuplicateKeyError:
+                        except csb.core.DuplicateKeyError:
                             raise HeaderFormatError('Chain {0} is already defined.'.format(new_chain.id))
                         
             elif line.startswith('SEQRES'):
@@ -1040,7 +1040,7 @@ class LegacyStructureParser(AbstractStructureParser):
         self._stream.seek(0)
         in_atom = False
         has_atoms = False
-        chains = csb.pyutils.OrderedDict()
+        chains = csb.core.OrderedDict()
 
         header = next(self._stream)
         if header.startswith('HEADER'):
@@ -1076,7 +1076,7 @@ class LegacyStructureParser(AbstractStructureParser):
                     chain_id = line[21].strip()
                     
                     if chain_id not in chains:
-                        chains[chain_id] = csb.pyutils.OrderedDict()
+                        chains[chain_id] = csb.core.OrderedDict()
                         
                         new_chain = csb.bio.structure.Chain(
                                             chain_id, 
@@ -1362,10 +1362,10 @@ class FileSystemStructureProvider(StructureProvider):
     def __init__(self, paths=None):
         
         self._templates = ['pdb{id}.ent', 'pdb{id}.pdb', '{id}.pdb', '{id}.ent']
-        self._paths = csb.pyutils.OrderedDict()
+        self._paths = csb.core.OrderedDict()
         
         if paths is not None:
-            if isinstance(paths, csb.pyutils.string):
+            if isinstance(paths, csb.core.string):
                 paths = [paths]
                             
             for path in paths:

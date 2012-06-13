@@ -66,7 +66,7 @@ except ImportError:
 import os
 
 import csb.io
-import csb.pyutils
+import csb.core
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 
@@ -331,7 +331,7 @@ class DataRow(object):
         
     def __getitem__(self, i):
         
-        if isinstance(i, csb.pyutils.string):            
+        if isinstance(i, csb.core.string):            
             return self._row[self._columns[i]]
         else:
             return self._row[i]            
@@ -404,7 +404,7 @@ class Table(object):
             if isinstance(definition[0], ColumnInfo):
                 self._metadata = [ c.copy() for c in definition ]
             else:
-                if isinstance(definition, csb.pyutils.string):
+                if isinstance(definition, csb.core.string):
                     definition = [ (d.split(':')[0], getattr(builtins, d.split(':')[1])) for d in definition.split() ]
                 self._metadata = [ ColumnInfo(c[0], c[1]) for c in definition ]
             if len(self._metadata) < 1:
@@ -539,7 +539,7 @@ class Table(object):
         
         if len(exp.select) != 1:
             raise NotImplementedError('single-column expression expected')
-        if csb.pyutils.iterable(value):
+        if csb.core.iterable(value):
             raise NotImplementedError("single-value assignment expected")     
         
         exp.data = value
@@ -560,7 +560,7 @@ class Table(object):
         @rtype: L{Expression}
         """
         
-        if not csb.pyutils.iterable(i):
+        if not csb.core.iterable(i):
             i = [i, slice(None, None)]        
         else:
             i = list(i)
@@ -579,11 +579,11 @@ class Table(object):
         
         if isinstance(i[0], int):
             self._checkrow(i[0])
-            if len(columns) == 1 and isinstance(i[1], (int, csb.pyutils.string)):
+            if len(columns) == 1 and isinstance(i[1], (int, csb.core.string)):
                 exp.scalar = True
             exp.predicate = Equals(i[0] + 1)
             
-        elif csb.pyutils.iterable(i[0]):
+        elif csb.core.iterable(i[0]):
             params = list(i[0])
             self._checkrow(params)
             params = list(map(lambda x: x + 1, params))
@@ -617,7 +617,7 @@ class Table(object):
         if isinstance(i, int):
             if i < 0:
                 raise NotImplementedError('Negative row indices are not supported')
-        elif csb.pyutils.iterable(i):
+        elif csb.core.iterable(i):
             for j in i:
                 self._checkrow(j)
         else:
@@ -636,7 +636,7 @@ class Table(object):
             except:
                 raise IndexError('Column {0} out of range'.format(spec))
             
-        elif isinstance(spec, csb.pyutils.string):
+        elif isinstance(spec, csb.core.string):
             if spec in columns:
                 return [spec]
             else:
@@ -653,7 +653,7 @@ class Table(object):
                 
             return [columns[i] for i in range(start, end, spec.step or 1)]
         
-        elif csb.pyutils.iterable(spec):
+        elif csb.core.iterable(spec):
             return [self._getcols(i)[0] for i in spec]
         
         else:
@@ -839,7 +839,7 @@ class Expression(object):
     
     @staticmethod
     def array(args):
-        if len(args) == 1 and csb.pyutils.iterable(args[0]):
+        if len(args) == 1 and csb.core.iterable(args[0]):
             args = args[0]
         return list(args)
     
@@ -863,7 +863,7 @@ class Expression(object):
         if not value:
             self._select = list(self.all)
         else:        
-            if not csb.pyutils.iterable(value):
+            if not csb.core.iterable(value):
                 value = [value]        
             for i in value:
                 if i == '*':
@@ -986,11 +986,11 @@ class Predicate(object):
         
         self._params = []
         
-        if not csb.pyutils.iterable(params):
+        if not csb.core.iterable(params):
             params = [params]
         
         for p in params:
-            if csb.pyutils.iterable(p):
+            if csb.core.iterable(p):
                 self._params.extend(p)
             else:
                 self._params.append(p)

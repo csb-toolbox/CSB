@@ -44,7 +44,7 @@ or simply use the chart in a context manager:
 """
 
 import time
-import csb.pyutils
+import csb.core
 
 from abc import ABCMeta, abstractmethod
 
@@ -528,7 +528,7 @@ class Chart(object):
         self._canvas = FigureCanvasAgg(self._figure)
         
         formats = [ (f.upper(), f) for f in self._canvas.get_supported_filetypes() ]
-        self._formats = csb.pyutils.Enum.create('OutputFormats', **dict(formats))
+        self._formats = csb.core.Enum.create('OutputFormats', **dict(formats))
     
     def __getitem__(self, i):
         if i in self._plots:
@@ -644,7 +644,7 @@ class Chart(object):
         @param file: destination file name
         @type file: str
         @param format: output image format; see C{chart.formats} for enumeration
-        @type format: str or L{csb.pyutils.EnumItem}
+        @type format: str or L{csb.core.EnumItem}
         @param crop: if True, crop the image (equivalent to MPL's bbox=tight)
         @type crop: bool
                 

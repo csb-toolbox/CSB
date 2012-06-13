@@ -1,6 +1,6 @@
 import csb.test as test
 
-from csb.pyutils import Enum
+from csb.core import Enum
 
 from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, ProfileLength, StateFactory, ProfileHMMSegment
 from csb.bio.hmm import StateExistsError, UnobservableStateError, EmissionExistsError

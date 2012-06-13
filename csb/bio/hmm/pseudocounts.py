@@ -1,5 +1,5 @@
 import sys
-import csb.pyutils
+import csb.core
 import csb.bio.sequence as sequence
 
 from csb.bio.hmm import States, ScoreUnits, Transition, State
@@ -71,7 +71,7 @@ class PseudocountBuilder(object):
         if not self.hmm.score_units == ScoreUnits.Probability:
             self.hmm.convert_scores(units=ScoreUnits.Probability)
 
-        alphabet = csb.pyutils.Enum.values(sequence.StdProteinAlphabet)
+        alphabet = csb.core.Enum.values(sequence.StdProteinAlphabet)
         
         ## S = SubstitutionMatrix(substitution_matrix)
         s_mat = array(GONNET)
@@ -139,7 +139,7 @@ class PseudocountBuilder(object):
                     elif state is States.Insertion:
                         # Add a new Deletion state
                         insertion = State(States.Insertion,
-                                          emit=csb.pyutils.Enum.members(
+                                          emit=csb.core.Enum.members(
                                           sequence.SequenceAlphabets.Protein))
                         insertion.background.set(background) 
                         insertion.emission.set(background)
@@ -148,7 +148,7 @@ class PseudocountBuilder(object):
 
         if not self.hmm.start_insertion:
             insertion = State(States.Insertion,
-                                          emit=csb.pyutils.Enum.members(
+                                          emit=csb.core.Enum.members(
                                           sequence.SequenceAlphabets.Protein))
             insertion.background.set(background) 
             insertion.emission.set(background)
