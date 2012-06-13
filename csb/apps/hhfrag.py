@@ -13,6 +13,8 @@ import csb.bio.io.hhpred
 import csb.bio.fragments
 import csb.bio.fragments.rosetta as rosetta
 import csb.bio.structure
+
+import csb.io
 import csb.pyutils
 
 
@@ -95,7 +97,7 @@ class HHfragApp(csb.apps.Application):
         except ArgumentError as ae:
             HHfragApp.exit(str(ae), code=ExitCodes.INVALID_DATA, usage=True)
 
-        except csb.pyutils.InvalidCommandError as ose:
+        except csb.io.InvalidCommandError as ose:
             msg = '{0!s}: {0.program}'.format(ose)
             HHfragApp.exit(msg, ExitCodes.IO_ERROR)
 
@@ -103,7 +105,7 @@ class HHfragApp(csb.apps.Application):
             msg = 'Corrupt HMM: {0!s}'.format(hfe)
             HHfragApp.exit(msg, code=ExitCodes.INVALID_DATA)           
                               
-        except csb.pyutils.ProcessError as pe:
+        except csb.io.ProcessError as pe:
             message = 'Bad exit code from HHsearch: #{0.code}.\nSTDERR: {0.stderr}\nSTDOUT: {0.stdout}'.format(pe.context)
             HHfragApp.exit(message, ExitCodes.HHSEARCH_FAILURE)            
         

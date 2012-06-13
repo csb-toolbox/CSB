@@ -11,6 +11,25 @@ from csb.bio.io.wwpdb import LegacyStructureParser
 # Workaround I just need some class  which I can abuse to create a graph
 from csb.statistics.pdf import Gamma as Node
 
+
+@test.unit
+class TestShell(test.Case):
+    
+    def setUp(self):
+        
+        super(TestShell, self).setUp()
+        self.output = csb.io.Shell.run('echo TeST')
+        
+    def testSTDOUT(self):
+        self.assertEquals(self.output.stdout.strip(), 'TeST')
+        
+    def testSTDERR(self):
+        self.assertEquals(self.output.stderr, '')
+        
+    def testExitCode(self):
+        self.assertEquals(self.output.code, 0)  
+        
+        
 @test.unit
 class TestTable(test.Case):
 

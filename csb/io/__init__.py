@@ -7,6 +7,7 @@ This module defines a few groups of essential IO objects:
     1. temporary file system objects: L{TempFile}, L{TempFolder} 
     2. special/decorated streams: L{MemoryStream}, L{AutoFlushStream}
     3. reusable stream readers and writers: L{EntryReader}, L{EntryWriter}
+    4. convenient communication with the shell: L{Shell}
 
 In addition, csb.io is also part of the CSB compatibility layer. In order to
 ensure cross-interpreter compatibility, always use the following csb.io objects:
@@ -19,9 +20,13 @@ ensure cross-interpreter compatibility, always use the following csb.io objects:
 import os
 import time
 import errno
+import shlex
 import shutil
 import tempfile
+import subprocess
+
 import csb.pyutils
+
 
 try:
     from StringIO import StringIO
@@ -41,6 +46,134 @@ except ImportError:
 
 NEWLINE = '\n'
 
+
+class Shell(object):
+    
+    POLL = 1.0
+
+    @staticmethod        
+    def run(cmd, timeout=None):
+        """
+        Run a shell command and return the output.
+        
+        @param cmd: shell command with its arguments
+        @param cmd: tuple or str
+        @param timeout: maximum duration in seconds
+        @type timeout: float or None
+        
+        @rtype: L{ShellInfo}
+        @raise InvalidCommandError: on invalid executable
+        @raise TimeoutError: when the timeout is expired
+        """
+        
+        if isinstance(cmd, csb.pyutils.string):
+            cmd = shlex.split(cmd)
+        
+        try:
+            cmd = tuple(cmd)
+            start = time.time()    
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+            if timeout is not None:
+                while True:
+                    if process.poll() == 0:
+                        break
+                    elif time.time() >= (start + timeout):
+                        try:
+                            process.kill()
+                        except:
+                            pass
+                        raise TimeoutError(cmd, timeout)
+                    else:
+                        time.sleep(Shell.POLL)
+    
+            stdout, stderr = process.communicate()                
+            code = process.returncode
+            
+        except OSError as oe:
+            if oe.errno == 2:
+                raise InvalidCommandError(oe.strerror, cmd)
+            else:
+                raise
+                
+        return ShellInfo(code, stdout.decode() or '', stderr.decode() or '', cmd)
+
+    @staticmethod
+    def runstrict(cmd, timeout=None):
+        """
+        Same as L{Shell.run()}, but raises L{ProcessError} on bad exit code.
+        
+        @param cmd: shell command with its arguments
+        @param cmd: tuple or str
+        @param timeout: maximum duration in seconds
+        @type timeout: float or None        
+        
+        @rtype: L{ShellInfo}
+        @raise ProcessError: on bad exit code
+        @raise TimeoutError: when the timeout is expired        
+        """
+        si = Shell.run(cmd, timeout=timeout)
+        
+        if si.code == 0:
+            return si
+        else:
+            raise ProcessError(si)            
+   
+class ProcessError(Exception):
+    """
+    Raised on L{Shell.run()} failures.
+    @type context: L{ShellInfo} 
+    """    
+    def __init__(self, context, *args):
+        self.context = context
+        super(ProcessError, self).__init__(context, [])
+        
+    def __str__(self):
+        return 'Bad exit code: #{0.code}'.format(self.context)
+
+class TimeoutError(ProcessError):
+    """
+    Raised on L{Shell.run()} timeouts. 
+    """    
+    def __init__(self, cmd, timeout):
+        
+        self.timeout = timeout
+        context = ShellInfo(None, '', '', cmd)
+        
+        super(TimeoutError, self).__init__(context)
+        
+    def __str__(self):
+        return 'The process "{0.context.cmd}" did not finish in {0.timeout}s'.format(self)
+        
+class InvalidCommandError(ValueError):
+    """
+    Raised when L{Shell.run()} encounters an OSError.
+    """
+    def __init__(self, message, cmd):
+        
+        self.program = cmd[0]
+        if csb.pyutils.iterable(cmd):
+            cmd = ' '.join(cmd)
+        self.cmd = cmd
+        self.msg = message
+        
+        super(InvalidCommandError, self).__init__(message, cmd)
+        
+    def __str__(self):
+        return self.msg
+
+class ShellInfo(object):
+    """
+    Shell command execution info
+    """
+    
+    def __init__(self, code, stdout, stderr, cmd):
+        
+        self.code = code
+        self.stdout = stdout or ''
+        self.stderr = stderr or ''
+        self.cmd = ' '.join(cmd)
+        
 
 class MemoryStream(StringIO):
     """

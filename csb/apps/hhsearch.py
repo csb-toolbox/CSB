@@ -8,7 +8,6 @@ import multiprocessing as mp
 import csb.apps
 import csb.io
 import csb.bio.io
-import csb.pyutils
 
 
 class ExitCodes(csb.apps.ExitCodes):
@@ -56,11 +55,11 @@ class HHsearchApp(csb.apps.Application):
         except IOError as io:
             HHsearchApp.exit(str(io), ExitCodes.IO_ERROR)
 
-        except csb.pyutils.InvalidCommandError as ose:
+        except csb.io.InvalidCommandError as ose:
             msg = '{0!s}: {0.program}'.format(ose)
             HHsearchApp.exit(msg, ExitCodes.IO_ERROR)   
                               
-        except csb.pyutils.ProcessError as pe:
+        except csb.io.ProcessError as pe:
             message = 'Bad exit code from HHsearch: #{0.code}.\nSTDERR: {0.stderr}\nSTDOUT: {0.stdout}'.format(pe.context)
             HHsearchApp.exit(message, ExitCodes.EXT_TOOL_FAILURE)
 
@@ -248,7 +247,7 @@ class HHsearch(object):
             with csb.io.TempFile() as o:
                 
                 cmd = '{0.program} -i {1} -d {0.db} -o {2} {3}'.format(self, q.name, o.name, self._options())                    
-                csb.pyutils.Shell.runstrict(cmd)
+                csb.io.Shell.runstrict(cmd)
                 
                 context.result = self.parser.parse_file(o.name)
                 return context

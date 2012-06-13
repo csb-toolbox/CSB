@@ -6,7 +6,7 @@ import re
 import os
 import shutil
 
-from csb.pyutils import Shell
+from csb.io import Shell
 from csb.io import TempFolder
 
 class WhatCheckParser(object):

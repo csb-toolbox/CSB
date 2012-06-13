@@ -5,7 +5,7 @@ import os
 import re
 import shutil
 
-from csb.pyutils import Shell
+from csb.io import Shell
 from csb.io import TempFolder
 
 class ProcheckParser():

@@ -9,23 +9,6 @@ from csb.io import Pickle
 
 
 @test.unit
-class TestShell(test.Case):
-    
-    def setUp(self):
-        
-        super(TestShell, self).setUp()
-        self.output = utils.Shell.run('echo TeST')
-        
-    def testSTDOUT(self):
-        self.assertEquals(self.output.stdout.strip(), 'TeST')
-        
-    def testSTDERR(self):
-        self.assertEquals(self.output.stderr, '')
-        
-    def testExitCode(self):
-        self.assertEquals(self.output.code, 0)        
-
-@test.unit
 class TestDeepCopy(test.Case):
     
     def runTest(self):
