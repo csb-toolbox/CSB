@@ -56,6 +56,8 @@ The data contained in a Table can be extracted in several ways:
     - by treating the table as an iterator; each cycle will then yield a L{DataRow}
     object
     - with text (TSV) serialization: simply call C{table.dump(file)}.
+    
+See L{Table} for full API details.
 """
 
 try:
@@ -365,7 +367,7 @@ class DataRow(object):
                 
 class Table(object):
     """
-    Build and query a TSV Table. See the documentation of B{csb.io.tsv} for
+    Build and query a TSV Table. See the documentation of L{csb.io.tsv} for
     details and examples.
     
     @param definition: column definition string: C{ColA:typeA colB:typeB ...},

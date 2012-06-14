@@ -258,7 +258,7 @@ Options:
         argv = sys.argv    
         sys.argv = ['epydoc', '--html', '-o', self._apidocs,
                     '--name', '{0} v{1}'.format(ROOT.upper(), version),
-                    '--no-private', '--exclude', 'csb.test.cases',
+                    '--no-private', '--introspect-only', '--exclude', 'csb.test.cases',
                     '--css', os.path.join(self._temp, 'epydoc.css'),
                     '--fail-on-error', '--fail-on-warning', '--fail-on-docstring-warning',
                     self._root]

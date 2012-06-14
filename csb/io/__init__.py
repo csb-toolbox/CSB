@@ -15,7 +15,7 @@ ensure cross-interpreter compatibility, always use the following csb.io objects:
     - csb.io.Pickle instead of pickle or cPickle
     - csb.io.urllib instead of urllib or urllib.request
     
-See also B{csb.core} for additional notes on compatibility.    
+See also L{csb.core} for additional notes on compatibility.    
 """
 
 import os
