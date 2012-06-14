@@ -26,7 +26,7 @@ other than abstract classes must be implemented as follows:
     >>> class MyClass(MyClassBase):
             pass
             
-See also the notes about compatibility in B{csb.io}.             
+See also the notes about compatibility in L{csb.io}.             
 """
 
 import re
