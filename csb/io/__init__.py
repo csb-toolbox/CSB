@@ -1,8 +1,7 @@
 """
 Generic I/O utility objects.
 
-Here is a brief list of the most essential classes in this module:
-This module defines a few groups of essential IO objects:
+Here is a list of the most essential classes in this module:
 
     1. temporary file system objects: L{TempFile}, L{TempFolder} 
     2. special/decorated streams: L{MemoryStream}, L{AutoFlushStream}
@@ -15,6 +14,8 @@ ensure cross-interpreter compatibility, always use the following csb.io objects:
     - L{MemoryStream} instead of (c)StringIO
     - csb.io.Pickle instead of pickle or cPickle
     - csb.io.urllib instead of urllib or urllib.request
+    
+See also L{csb.core} for additional notes on compatibility.    
 """
 
 import os

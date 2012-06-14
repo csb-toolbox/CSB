@@ -1,3 +1,3 @@
 """
-Core bioinformatical abstractions, utilities and I/O.
+Core bioinformatics abstractions and I/O.
 """
