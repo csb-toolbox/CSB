@@ -200,11 +200,10 @@ class ImplicitWHAM(AbstractWHAM):
 
     def log_g(self, normalize=True):
 
-        e_ij = -numpy.array([ensemble.energy(self._e)
+        e_ij = numpy.array([ensemble.energy(self._e)
                               for ensemble in self._ensembles]).T
-        
-        log_g = -e_ij - self._f + log(self._n)
-        log_g = -log_sum_exp(log_g.T, 0)
+
+        log_g = -log_sum_exp((-e_ij - self._f + log(self._n)).T, 0)
 
         if normalize:
             log_g -= log_sum_exp(log_g)
@@ -215,11 +214,6 @@ class ImplicitWHAM(AbstractWHAM):
 
         from numpy import multiply
 
-        e_ij = numpy.array([ensemble.energy(self._e)
-                              for ensemble in self._ensembles]).T
-
-        x = log_sum_exp((-e_ij - self._f + log(self._n)).T, 0)
-
         if ensembles is not None:
             e_ij_prime = numpy.array([ensemble.energy(self._e)
                                       for ensemble in ensembles])
@@ -227,7 +221,7 @@ class ImplicitWHAM(AbstractWHAM):
             e_ij_prime = multiply.outer(beta, self._e)
         
         
-        log_z = log_sum_exp((-e_ij_prime - x).T, 0)
+        log_z = log_sum_exp((-e_ij_prime + self.log_g()).T, 0)
 
         return log_z
 
