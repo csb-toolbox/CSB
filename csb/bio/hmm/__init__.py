@@ -160,6 +160,9 @@ class ProfileHMM(object):
 
     @property
     def name(self):
+        """
+        Profile name (NAME)
+        """
         return self._name
     @name.setter
     def name(self, value):
@@ -167,6 +170,9 @@ class ProfileHMM(object):
     
     @property
     def id(self):
+        """
+        Profile entry ID (FILE)
+        """        
         return self._id
     @id.setter
     def id(self, value):
@@ -174,6 +180,9 @@ class ProfileHMM(object):
     
     @property
     def family(self):
+        """
+        Alternative entry ID (FAM)    
+        """        
         return self._family
     @family.setter
     def family(self, value):
@@ -181,6 +190,10 @@ class ProfileHMM(object):
     
     @property
     def length(self):
+        """
+        Profile length
+        @rtype: L{ProfileLength}
+        """
         return self._length
     @length.setter
     def length(self, value):
@@ -190,6 +203,10 @@ class ProfileHMM(object):
     
     @property
     def alignment(self):
+        """
+        Source multiple alignment
+        @rtype: L{A3MAlignment}
+        """
         return self._alignment
     @alignment.setter
     def alignment(self, value):
@@ -199,6 +216,10 @@ class ProfileHMM(object):
     
     @property
     def consensus(self):
+        """
+        Consensus sequence
+        @rtype: L{AbstractSequence}
+        """
         return self._consensus
     @consensus.setter
     def consensus(self, value):
@@ -208,6 +229,10 @@ class ProfileHMM(object):
     
     @property
     def dssp(self):
+        """
+        DSSP (calculated) secondary structure
+        @rtype: L{SecondaryStructure}
+        """
         return self._dssp
     @dssp.setter
     def dssp(self, value):
@@ -217,6 +242,9 @@ class ProfileHMM(object):
     
     @property
     def dssp_solvent(self):
+        """
+        Solvent accessibility values
+        """
         return self._dssp_solvent
     @dssp_solvent.setter
     def dssp_solvent(self, value):
@@ -224,6 +252,10 @@ class ProfileHMM(object):
     
     @property
     def psipred(self):
+        """
+        PSIPRED (predicted) secondary structure
+        @rtype: L{SecondaryStructure}        
+        """
         return self._psipred
     @psipred.setter
     def psipred(self, value):
@@ -233,6 +265,9 @@ class ProfileHMM(object):
     
     @property
     def effective_matches(self):
+        """
+        Number of effective matches (NEFF)
+        """
         return self._effective_matches
     @effective_matches.setter
     def effective_matches(self, value):
@@ -240,6 +275,10 @@ class ProfileHMM(object):
     
     @property
     def evd(self):
+        """
+        Extreme-value distribution parameters (EVD)
+        @rtype: L{EVDParameters}
+        """
         return self._evd
     @evd.setter
     def evd(self, value):
@@ -249,6 +288,9 @@ class ProfileHMM(object):
     
     @property
     def version(self):
+        """
+        Format version number (HHsearch)
+        """
         return self._version
     @version.setter
     def version(self, value):
@@ -256,6 +298,9 @@ class ProfileHMM(object):
     
     @property
     def pseudocounts(self):
+        """
+        @rtype: bool
+        """
         return self._pseudocounts
     @pseudocounts.setter
     def pseudocounts(self, value):
@@ -263,6 +308,9 @@ class ProfileHMM(object):
     
     @property
     def emission_pseudocounts(self):
+        """
+        @rtype: bool
+        """        
         return self._emission_pseudocounts
     @emission_pseudocounts.setter
     def emission_pseudocounts(self, value):
@@ -270,6 +318,9 @@ class ProfileHMM(object):
     
     @property
     def transition_pseudocounts(self):
+        """
+        @rtype: bool
+        """        
         return self._transition_pseudocounts
     @transition_pseudocounts.setter
     def transition_pseudocounts(self, value):
@@ -277,10 +328,18 @@ class ProfileHMM(object):
     
     @property
     def layers(self):
+        """
+        List-like access to the HMM's layers
+        @rtype: L{HMMLayersCollection}
+        """        
         return self._layers
     
     @property
     def start(self):
+        """
+        Start state (at the start layer)
+        @rtype: L{State}
+        """           
         return self._start
     @start.setter
     def start(self, value):
@@ -291,6 +350,10 @@ class ProfileHMM(object):
     
     @property
     def start_insertion(self):
+        """
+        Insertion state at the start layer
+        @rtype: L{State}
+        """
         return self._start_insertion
     @start_insertion.setter
     def start_insertion(self, value):
@@ -301,6 +364,10 @@ class ProfileHMM(object):
     
     @property
     def end(self):
+        """
+        Final state (at the end layer)
+        @rtype: L{State}
+        """             
         return self._end
     @end.setter
     def end(self, value):
@@ -311,18 +378,31 @@ class ProfileHMM(object):
     
     @property
     def scale(self):
+        """
+        Score scaling factor 
+        """
         return self._scale
     
     @property
     def logbase(self):
+        """
+        Base of the logarithm used for score scaling 
+        """        
         return self._logbase
     
     @property
     def score_units(self):
+        """
+        Current score units
+        @rtype: L{ScoreUnits} member
+        """
         return self._score_units
     
     @property
     def residues(self):
+        """
+        List of representative residues, attached to each layer
+        """
         res = [layer.residue for layer in self.layers]
         return csb.core.ReadOnlyCollectionContainer(
                             res, type=structure.Residue, start_index=1)
@@ -345,6 +425,9 @@ class ProfileHMM(object):
 
     @property
     def has_structure(self):
+        """
+        True if this profile contains structural data
+        """
         has = False
         for layer in self.layers:
             if layer.residue.has_structure:
@@ -710,10 +793,16 @@ class ProfileHMMSegment(ProfileHMM):
 
     @property
     def source_start(self):
+        """
+        Start position of this segment in its source HMM
+        """
         return self._source_start
 
     @property
     def source_end(self):
+        """
+        End position of this segment in its source HMM
+        """        
         return self._source_end
             
     def _build_graph(self, source_layers, max_score):
@@ -808,10 +897,16 @@ class ProfileHMMRegion(ProfileHMM):
 
     @property
     def source_start(self):
+        """
+        Start position of this segment in its source HMM
+        """        
         return self._source_start
     
     @property
     def source_end(self):
+        """
+        End position of this segment in its source HMM
+        """            
         return self._source_end
 
             
@@ -1018,6 +1113,9 @@ class HMMLayer(csb.core.DictionaryContainer):
 
     @property
     def rank(self):
+        """
+        Layer's position
+        """
         return self._rank
     @rank.setter
     def rank(self, value):
@@ -1025,6 +1123,10 @@ class HMMLayer(csb.core.DictionaryContainer):
 
     @property
     def residue(self):
+        """
+        Representative residue
+        @rtype: L{Residue}
+        """        
         return self._residue
     @residue.setter
     def residue(self, residue):
@@ -1034,6 +1136,9 @@ class HMMLayer(csb.core.DictionaryContainer):
         
     @property
     def effective_matches(self):
+        """
+        Number of effective matches at this layer
+        """
         return self._effective_matches
     @effective_matches.setter
     def effective_matches(self, value):
@@ -1041,6 +1146,9 @@ class HMMLayer(csb.core.DictionaryContainer):
     
     @property
     def effective_insertions(self):
+        """
+        Number of effective insertions at this layer
+        """        
         return self._effective_insertions
     @effective_insertions.setter
     def effective_insertions(self, value):
@@ -1048,6 +1156,9 @@ class HMMLayer(csb.core.DictionaryContainer):
     
     @property
     def effective_deletions(self):
+        """
+        Number of effective deletions at this layer
+        """        
         return self._effective_deletions
     @effective_deletions.setter
     def effective_deletions(self, value):
@@ -1118,6 +1229,9 @@ class State(object):
 
     @property
     def type(self):
+        """
+        State type: one of the L{States}
+        """
         return self._type
     @type.setter
     def type(self, value):
@@ -1126,7 +1240,7 @@ class State(object):
         self._type = value
     
     @property
-    def rank(self):
+    def rank(self):        
         return self._rank
     @rank.setter
     def rank(self, value):
@@ -1134,20 +1248,36 @@ class State(object):
     
     @property
     def transitions(self):
+        """
+        Lookup table with available transitions to other states
+        @rtype: L{TransitionTable}
+        """        
         return self._transitions
     
     @property
     def emission(self):
+        """
+        Lookup table with available emission probabilities
+        @rtype: L{EmissionTable}
+        """         
         if self._emission is None:
             raise UnobservableStateError('Silent {0!r} state'.format(self.type))
         return self._emission
     
     @property
     def background(self):
+        """
+        Lookup table with background probabilities
+        @rtype: L{EmissionTable}
+        """         
         return self._background
         
     @property
     def silent(self):
+        """
+        Whether this state can emit something
+        @rtype: bool
+        """
         try:
             return self.emission is None
         except UnobservableStateError:
@@ -1217,14 +1347,25 @@ class Transition(object):
     
     @property
     def predecessor(self):
+        """
+        Transition source state
+        @rtype: L{State}
+        """
         return self._predecessor
     
     @property
     def successor(self):
+        """
+        Transition target state
+        @rtype: L{State}
+        """        
         return self._successor
     
     @property
     def probability(self):
+        """
+        Transition score
+        """
         return self._probability
     @probability.setter
     def probability(self, value):
@@ -1234,6 +1375,10 @@ class Transition(object):
 
     @property
     def type(self):
+        """
+        Struct, containing information about the source and target state types
+        @rtype: L{TransitionType}
+        """
         return self._type
     
                 
@@ -1265,10 +1410,16 @@ class HHpredHitAlignment(sequence.SequenceAlignment):
 
     @property
     def query(self):
+        """
+        Query sequence (with gaps)
+        """
         return self.rows[1].sequence
 
     @property
     def subject(self):
+        """
+        Subject sequence (with gaps)
+        """        
         return self.rows[2].sequence
     
     @property
@@ -1369,6 +1520,16 @@ class HHpredHit(object):
         self._qlength = None
         self._alignment = None
 
+        self._slength = None
+        self._evalue = None
+        self._pvalue = None
+        self._score = None
+        self._ss_score = None
+        self._identity = None
+        self._similarity = None
+        self._prob_sum = None        
+
+        # managed properties
         self.rank = rank
         self.id = id
         self.start = start
@@ -1377,16 +1538,6 @@ class HHpredHit(object):
         self.qend = qend
         self.probability = probability
         self.qlength = qlength
-
-        # unmanaged fields, should be encapsulated in the future
-        self.slength = None
-        self.evalue = None
-        self.pvalue = None
-        self.score = None
-        self.ss_score = None
-        self.identity = None
-        self.similarity = None
-        self.prob_sum = None
 
     def __str__(self):
         return "{0.id} {0.probability} {0.start}-{0.end}".format(self)
@@ -1568,6 +1719,62 @@ class HHpredHit(object):
             return self.end - self.start + 1
         except:
             return 0
+        
+    @property
+    def slength(self):
+        return self._slength
+    @slength.setter
+    def slength(self, value):
+        self._slength = value
+
+    @property
+    def evalue(self):
+        return self._evalue
+    @evalue.setter
+    def evalue(self, value):
+        self._evalue = value
+
+    @property
+    def pvalue(self):
+        return self._pvalue
+    @pvalue.setter
+    def pvalue(self, value):
+        self._pvalue = value
+
+    @property
+    def score(self):
+        return self._score
+    @score.setter
+    def score(self, value):
+        self._score = value
+
+    @property
+    def ss_score(self):
+        return self._ss_score
+    @ss_score.setter
+    def ss_score(self, value):
+        self._ss_score = value
+
+    @property
+    def identity(self):
+        return self._identity
+    @identity.setter
+    def identity(self, value):
+        self._identity = value
+
+    @property
+    def similarity(self):
+        return self._similarity
+    @similarity.setter
+    def similarity(self, value):
+        self._similarity = value
+
+    @property
+    def prob_sum(self):
+        return self._prob_sum
+    @prob_sum.setter
+    def prob_sum(self, value):
+        self._prob_sum = value        
 
 
 class HHpredHitList(object):
@@ -1579,6 +1786,14 @@ class HHpredHitList(object):
                  neff=-1., searched_hmms=-1, date='', command=''):
         self._hits = list(hits)
 
+        self._query_name = None
+        self._match_columns = None
+        self._no_of_seqs = None
+        self._neff = None
+        self._searched_hmms = None
+        self._date = None
+        self._command = None
+        
         self.query_name = query_name
         self.match_columns = match_columns
         self.no_of_seqs = no_of_seqs
@@ -1586,6 +1801,55 @@ class HHpredHitList(object):
         self.searched_hmms = searched_hmms
         self.date = date
         self.command = command
+        
+    @property
+    def query_name(self):
+        return self._query_name
+    @query_name.setter
+    def query_name(self, value):
+        self._query_name = value
+
+    @property
+    def match_columns(self):
+        return self._match_columns
+    @match_columns.setter
+    def match_columns(self, value):
+        self._match_columns = value
+
+    @property
+    def no_of_seqs(self):
+        return self._no_of_seqs
+    @no_of_seqs.setter
+    def no_of_seqs(self, value):
+        self._no_of_seqs = value
+
+    @property
+    def neff(self):
+        return self._neff
+    @neff.setter
+    def neff(self, value):
+        self._neff = value
+
+    @property
+    def searched_hmms(self):
+        return self._searched_hmms
+    @searched_hmms.setter
+    def searched_hmms(self, value):
+        self._searched_hmms = value
+
+    @property
+    def date(self):
+        return self._date
+    @date.setter
+    def date(self, value):
+        self._date = value
+
+    @property
+    def command(self):
+        return self._command
+    @command.setter
+    def command(self, value):
+        self._command = value        
 
     def __str__(self):
         return "HHpredHitList\n\tquery={0.query_name}\n\tmatch_columns={0.match_columns}\n\tno_of_seqs={0.no_of_seqs}\n\tneff={0.neff}\n\tsearched_hmms={0.searched_hmms}\n\tdate={0.date}\n\tcommand={0.command}".format(self)
