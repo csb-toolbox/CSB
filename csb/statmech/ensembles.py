@@ -50,6 +50,34 @@ class BoltzmannEnsemble(StatisticalEnsemble):
     def energy(self, raw_energies):
         return raw_energies * self._beta
         
+class FermiEnsemble(BoltzmannEnsemble):
+
+    def __init__(self, beta=1., e_max=0.):
+
+        super(FermiEnsemble, self).__init__(beta)
+        self._e_max = float(e_max)
+
+    @property
+    def e_max(self):
+        """
+        Maximum energy
+        """
+        return self._e_max
+    @e_max.setter
+    def e_max(self, value):
+        self._e_max = float(value)
+
+    def energy(self, raw_energies):
+
+        from numpy import isinf
+        from csb.numeric import EXP_MAX
+        
+        if isinf(self.beta):
+            m = (raw_energies >= self.e_max).astype('f')
+            return - m * log(0.)
+        else:
+            x = 1 + exp(self.beta * (raw_energies - self.e_max))
+            return log(x)
 
 class TsallisEnsemble(StatisticalEnsemble):
 
