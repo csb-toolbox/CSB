@@ -79,6 +79,7 @@ class AbstractSingleChainMC(AbstractMC):
         self._pdf = pdf
         self._nmoves = 0
         self._accepted = 0
+        self._last_move_accepted = None
         
     def _checkstate(self, state):
         if not isinstance(state, State):
@@ -130,8 +131,10 @@ class AbstractSingleChainMC(AbstractMC):
         if numpy.random.random() < pacc:
             self.state = proposal
             self._accepted += 1
+            self._last_move_accepted = True
             return True
         else:
+            self._last_move_accepted = False
             return False
 
     @property
@@ -148,6 +151,13 @@ class AbstractSingleChainMC(AbstractMC):
         Acceptance rate.
         """
         return float(self._accepted) / float(self._nmoves)
+
+    @property
+    def last_move_accepted(self):
+        """
+        Information whether the last MC move was accepted or not.
+        """
+        return self._last_move_accepted
 
 class MCCollection(csb.core.BaseCollectionContainer):
     """

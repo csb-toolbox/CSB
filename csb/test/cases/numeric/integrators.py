@@ -3,7 +3,7 @@ import csb.test as test
 
 from math import cos
 
-from csb.numeric.integrators import LeapFrog, VelocityVerlet, AbstractGradient
+from csb.numeric.integrators import LeapFrog, FastLeapFrog, VelocityVerlet, AbstractGradient
 from csb.statistics.samplers import State
 
 
@@ -35,6 +35,11 @@ class TestIntegrators(test.Case):
     def testLeapFrog(self):
         
         algorithm = LeapFrog(self.dt, self.grad)
+        self._run(algorithm)
+
+    def testFastLeapFrog(self):
+
+        algorithm = FastLeapFrog(self.dt, self.grad)
         self._run(algorithm)
 
     def testVelocityVerlet(self):

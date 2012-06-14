@@ -80,7 +80,10 @@ class AbstractIntegrator(object):
 
 class LeapFrog(AbstractIntegrator):
     """
-    Leap Frog integration scheme implementation.
+    Leap Frog integration scheme implementation that calculates position and
+    momenta at equal times. Slower than FastLeapFrog, but intermediate points
+    in trajectories obtained using
+    LeapFrog.integrate(init_state, length, return_trajectoy=True) are physical.
     """
     
     def integrate_once(self, state, current_step):
@@ -96,6 +99,57 @@ class LeapFrog(AbstractIntegrator):
         state.momentum = momentumhalf - 0.5 * self._timestep * self._oldgrad
 
         return state
+
+class FastLeapFrog(LeapFrog):
+    """
+    Leap Frog integration scheme implementation that calculates position and
+    momenta at unequal times by concatenating the momentum updates of two
+    successive integration steps.
+    WARNING: intermediate points in trajectories obtained by
+    FastLeapFrog.integrate(init_state, length, return_trajectories=True)
+    are NOT to be interpreted as phase-space trajectories, because
+    position and momenta are not given at equal times! In the initial and the
+    final state, positions and momenta are given at equal times.
+    """
+
+    def integrate(self, init_state, length, return_trajectory=False):
+        """
+        Integrates equations of motion starting from an initial state a certain
+        number of steps.
+
+        @param init_state: Initial state from which to start integration
+        @type init_state: L{State}
+        
+        @param length: Nubmer of integration steps to be performed
+        @type length: int
+        
+        @param return_trajectory: Return complete L{Trajectory} instead of the initial
+                                  and final states only (L{PropagationResult}). This reduces
+                                  performance.
+        @type return_trajectory: boolean
+
+        @rtype: L{AbstractPropagationResult}
+        """
+        
+        builder = TrajectoryBuilder.create(full=return_trajectory)
+            
+        builder.add_initial_state(init_state)
+        state = init_state.clone()
+
+        state.momentum = state.momentum - 0.5 * self._timestep * self._gradient(state.position, 0.)
+        
+        for i in range(length):
+            state.position = state.position + self._timestep * state.momentum
+            if i != length - 1:
+                state.momentum = state.momentum - self._timestep * \
+                                 self._gradient(state.position, (i + 1) * self._timestep)
+                builder.add_intermediate_state(state)
+
+        state.momentum = state.momentum - 0.5 * self._timestep * \
+                         self._gradient(state.position, length * self._timestep)
+        builder.add_final_state(state)
+        
+        return builder.product
 
 class VelocityVerlet(AbstractIntegrator):
     """
