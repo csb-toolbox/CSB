@@ -19,35 +19,35 @@ part in the development of the library:
        ("protocols"), which consume objects from the core library.
        The framework ensures that each CSB application is also reusable
        and can be instantiated as a regular python object without any
-       ugly side effects (sys.exit() and friends). See L{csb.apps} for more
+       ugly side effects (sys.exit() and friends). See B{csb.apps} for more
        details. 
        
     3. Test framework -- built on top of the standard unittest as a thin
        wrapping layer. Provides some sugar like transparent management of
-       test data files, and modular test execution. L{csb.test} will give
+       test data files, and modular test execution. B{csb.test} will give
        you all the details. 
 
 The core library is roughly composed of:
 
-    - bioinformatics API: L{csb.bio}, which includes stuff like
-      L{csb.bio.io}, L{csb.bio.structure}, L{csb.bio.sequence},
-      L{csb.bio.hmm}
+    - bioinformatics API: B{csb.bio}, which includes stuff like
+      B{csb.bio.io}, B{csb.bio.structure}, B{csb.bio.sequence},
+      B{csb.bio.hmm}
     
-    - statistics API: L{csb.statistics}, L{csb.numeric}
+    - statistics API: B{csb.statistics}, B{csb.numeric}
     
-    - utilities - L{csb.io}, L{csb.core}
+    - utilities - B{csb.io}, B{csb.core}
 
 
 Getting started
 ===============
     
 Perhaps one of the most frequently used parts of the library is the
-L{csb.bio.structure} module, which provides the L{Structure}, L{Chain},
+B{csb.bio.structure} module, which provides the L{Structure}, L{Chain},
 L{Residue} and L{Atom} objects. You could easily build a L{Structure}
 from scratch, but a far more common scenario is parsing a structure from
 a PDB file using one of the L{AbstractStructureParser}s. All bio IO
 objects, including the StructureParser factory, are defined in
-L{csb.bio.io} and sub-packages:
+B{csb.bio.io} and sub-packages:
 
     >>> from csb.bio.io.wwpdb import StructureParser
     >>> p = StructureParser("/some/file/pdb1x80.ent")
@@ -115,32 +115,32 @@ Finally, you would probably want to save your structure back to a PDB file:
 Where to go from here
 =====================
 
-If you want to dive into statistics, you could peek inside L{csb.statistics}
-and its sub-packages. For example, L{csb.statistics.pdf} contains a collection
+If you want to dive into statistics, you could peek inside B{csb.statistics}
+and its sub-packages. For example, B{csb.statistics.pdf} contains a collection
 of L{probability density objects<csb.statistics.pdf.AbstractDensity>},
 like L{Gaussian<csb.statistics.pdf.Normal>} or L{Gamma<csb.statistics.pdf.Gamma>}.
 
 But chances are you would first like to try reading some files, so you could
-start exploring L{csb.bio.io} right now. As we have already seen,
-L{csb.bio.io.wwpdb} provides PDB L{Structure<csb.bio.structure.Structure>}
+start exploring B{csb.bio.io} right now. As we have already seen,
+B{csb.bio.io.wwpdb} provides PDB L{Structure<csb.bio.structure.Structure>}
 parsers, for example L{csb.bio.io.wwpdb.RegularStructureParser} and
 L{csb.bio.io.wwpdb.LegacyStructureParser}.
 
-L{csb.bio.io.fasta} is all about reading FASTA
+B{csb.bio.io.fasta} is all about reading FASTA
 L{Sequence<csb.bio.sequence.AbstractSequence>}s and
 L{SequenceAlignment<csb.bio.sequence.AbstractAlignment>}s. Be sure to check out 
 L{csb.bio.io.fasta.SequenceParser}, L{csb.bio.io.fasta.SequenceAlignmentReader}
 and L{csb.bio.io.fasta.StructureAlignmentFactory}.
 
 If you are working with HHpred (L{ProfileHMM<csb.bio.hmm.ProfileHMM>}s,
-L{HHpredHit<csb.bio.hmm.HHpredHit>}s), then L{csb.bio.io.hhpred} is for you.
+L{HHpredHit<csb.bio.hmm.HHpredHit>}s), then B{csb.bio.io.hhpred} is for you.
 This package provides L{csb.bio.io.hhpred.HHProfileParser} and
 L{csb.bio.io.hhpred.HHOutputParser}, which are used to read *.hhm and *.hhr
 files.
 
 Finally, if you want to make some nice plots with matplotlib, you may like the
 clean object-oriented interface of our L{Chart<csb.io.plotting.Chart>}. See
-L{csb.io.plotting} and maybe also L{csb.io.tsv} to get started.
+B{csb.io.plotting} and maybe also B{csb.io.tsv} to get started.
 
 
 Development
@@ -150,10 +150,10 @@ When contributing code to CSB, please take into account the following:
 
     1. New features or bug fixes should always be accompanied by test cases.
        Also, always run the complete test suite before committing. For more
-       details on this topic, see L{csb.test}.
+       details on this topic, see B{csb.test}.
        
     2. The source code of CSB must be cross-platform and cross-interpreter
-       compatible. L{csb.core} and L{csb.io} will give you all necessary
+       compatible. B{csb.core} and B{csb.io} will give you all necessary
        details on how to use the CSB compatibility layer.
 
 
