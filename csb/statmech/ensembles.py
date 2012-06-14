@@ -70,7 +70,6 @@ class FermiEnsemble(BoltzmannEnsemble):
     def energy(self, raw_energies):
 
         from numpy import isinf
-        from csb.numeric import EXP_MAX
         
         if isinf(self.beta):
             m = (raw_energies >= self.e_max).astype('f')
