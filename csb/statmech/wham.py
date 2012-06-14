@@ -165,9 +165,9 @@ class WHAM(AbstractWHAM):
             return log_z
 
     
-class ImplicitWHAM(AbstractWHAM):
+class NonparametricWHAM(AbstractWHAM):
     """
-    Implementation of the implicit WHAM outlined in Habeck 2012, in which histograms
+    Implementation of the nonparametric WHAM outlined in Habeck 2012, in which histograms
     are reduced to delta peaks, this allows to use energies samples at different orders 
     of magnitude, improving the accuracy of the DOS estimates.
     """
@@ -175,7 +175,7 @@ class ImplicitWHAM(AbstractWHAM):
     def estimate(self, n_iter=10000, tol=1e-10):
 
         e_ij = numpy.array([ensemble.energy(self._e)
-                             for ensemble in self._ensembles]).T
+                            for ensemble in self._ensembles]).T
 
         f = self._f
         log_n = log(self._n)
@@ -201,7 +201,7 @@ class ImplicitWHAM(AbstractWHAM):
     def log_g(self, normalize=True):
 
         e_ij = numpy.array([ensemble.energy(self._e)
-                              for ensemble in self._ensembles]).T
+                            for ensemble in self._ensembles]).T
 
         log_g = -log_sum_exp((-e_ij - self._f + log(self._n)).T, 0)
 

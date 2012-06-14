@@ -2,7 +2,7 @@ import numpy
 import csb.test as test
 
 from csb.statmech.ensembles import BoltzmannEnsemble
-from csb.statmech.wham import WHAM, ImplicitWHAM
+from csb.statmech.wham import WHAM, NonparametricWHAM
 
 
 class FunnyGaussian(object):
@@ -79,9 +79,9 @@ class TestWHAM(test.Case):
                                          w.log_z(numpy.array([1., 0.]))),
                                self.log_z, delta=0.5)
 
-    def testImplicitWHAM(self):
+    def testNonparametricWHAM(self):
         
-        w = ImplicitWHAM(self.ensembles,
+        w = NonparametricWHAM(self.ensembles,
                          numpy.ravel(self.raw_energies),
                          [self.n] * len(self.betas))
         w.estimate()
