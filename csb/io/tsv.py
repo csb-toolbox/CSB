@@ -365,7 +365,7 @@ class DataRow(object):
                 
 class Table(object):
     """
-    Build and query a TSV Table. See the documentation of L{csb.io.tsv} for
+    Build and query a TSV Table. See the documentation of B{csb.io.tsv} for
     details and examples.
     
     @param definition: column definition string: C{ColA:typeA colB:typeB ...},

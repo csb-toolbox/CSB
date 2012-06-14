@@ -12,7 +12,7 @@ while the latter parses HHsearch results files (*.hhr):
     >>> HHOutputParser().parse_file("hits.hhr"):
     <HHpredHitList>        # collection of HHpredHit-s
     
-See L{ProfileHMM}, L{HHpredHitList} and L{HHpredHit} from L{csb.bio.hmm}
+See L{ProfileHMM}, L{HHpredHitList} and L{HHpredHit} from B{csb.bio.hmm}
 for details. For text serialization of HMM profiles, see L{HHMFileBuilder}
 in this module.
 """
