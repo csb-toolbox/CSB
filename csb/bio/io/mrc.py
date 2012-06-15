@@ -141,6 +141,9 @@ class DensityMapReader(object):
         
     @property
     def filename(self):
+        """
+        Input MRC file name
+        """
         return self._filename
     
     def _rawheader(self, stream):

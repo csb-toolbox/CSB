@@ -90,6 +90,9 @@ class RepositoryImp(object):
     
     @property
     def table(self):
+        """
+        Table name
+        """
         return self._table    
     
     def query(self, sql, params=None):
@@ -297,10 +300,16 @@ class ColumnInfo(object):
     
     @property
     def name(self):
+        """
+        Colulmn name
+        """
         return self._name
     
     @property
     def type(self):
+        """
+        Python data type
+        """        
         return self._type    
     
     def __str__(self):
@@ -358,11 +367,17 @@ class DataRow(object):
     
     @property
     def columns(self):
+        """
+        Tuple of available column names
+        """
         c = dict((self._columns[cn], cn) for cn in self._columns)
         return tuple(c[i] for i in sorted(c))
     
     @property
     def number(self):
+        """
+        Row number
+        """
         return self._number
                 
 class Table(object):
@@ -663,10 +678,16 @@ class Table(object):
 
     @property
     def name(self):
+        """
+        Table name
+        """
         return self._name
 
     @property
     def columns(self):
+        """
+        Tuple with all column names
+        """
         return tuple(i.name for i in self._metadata)
     
     @property
@@ -834,8 +855,8 @@ class Expression(object):
         self._select = []
         self._where = None
         self._predicate = None
-        self.data = None
-        self.scalar = False
+        self._data = None
+        self._scalar = False
         
         self.select = '*'
     
@@ -855,7 +876,7 @@ class Expression(object):
             return self.predicate.params
         else:
             return None
-    
+        
     @property
     def select(self):
         return self._select
@@ -896,6 +917,20 @@ class Expression(object):
             self._predicate = None
         else:
             self._predicate = value
+
+    @property
+    def data(self):
+        return self._data
+    @data.setter
+    def data(self, value):
+        self._data = value
+
+    @property
+    def scalar(self):
+        return self._scalar
+    @scalar.setter
+    def scalar(self, value):
+        self._scalar = value             
       
 class Step(object):
     

@@ -10,9 +10,14 @@ import os
 import abc
 
 import csb.apps
-import csb.io
-import csb.bio.io
 import csb.core
+import csb.io
+
+from csb.bio.io.wwpdb import StructureParser
+from csb.bio.io.hhpred import HHProfileParser
+from csb.bio.io.fasta import FASTAOutputBuilder
+from csb.bio.sequence import ChainSequence
+
 
 
 class ExitCodes(csb.apps.ExitCodes):
@@ -236,7 +241,7 @@ class PDBProfileBuilder(ProfileBuilder):
     def configure_input(self):
         
         try:
-            s = csb.bio.io.StructureParser(self.query).parse()            
+            s = StructureParser(self.query).parse()            
             chain = s.chains[self.chain]
         except csb.core.ItemNotFoundError:
             raise BuildArgError('Chain {0.chain} not found in {0.query}'.format(self))
@@ -245,9 +250,9 @@ class PDBProfileBuilder(ProfileBuilder):
         
         fasta = self.target_id + '.fa'
         
-        with csb.io.EntryWriter(fasta) as f:
-            f.writeline(chain.header)
-            f.writeline(chain.sequence)
+        with open(fasta, 'w') as f:
+            sequence = ChainSequence.create(chain)
+            FASTAOutputBuilder(f).add_sequence(sequence)
             
         self._input = fasta
         return fasta
@@ -262,7 +267,7 @@ class PDBProfileBuilder(ProfileBuilder):
         
         pdb = self.target_id + '.pdb'
                 
-        parser = csb.bio.io.HHProfileParser(self._hhm)
+        parser = HHProfileParser(self._hhm)
         parser.format_structure(self.query, self.chain, pdb)
         
         self._pdb = pdb

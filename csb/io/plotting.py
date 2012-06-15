@@ -134,10 +134,16 @@ class Backend(Thread):
         
     @property
     def started(self):
+        """
+        True if the service had been started
+        """
         return self._started.isSet()
     
     @property
     def running(self):
+        """
+        True if the service had been started and is currently running
+        """        
         return self._running.isSet()    
                 
     @abstractmethod
@@ -314,21 +320,21 @@ class WxBackendImpl(Backend):
         import wx
         from matplotlib.backends.backend_wx import FigureFrameWx
         
-        self.wx = wx
-        self.FigureFrameWx = FigureFrameWx
+        self._wx = wx
+        self._FigureFrameWx = FigureFrameWx
         
         super(WxBackendImpl, self).__init__()
     
     @property
     def _app(self):
         if WxBackendImpl._wxapp is None:
-            WxBackendImpl._wxapp = self.wx.PySimpleApp()
+            WxBackendImpl._wxapp = self._wx.PySimpleApp()
         return WxBackendImpl._wxapp
                     
     def _initapp(self):
       
         dummy = self._app
-        frame = self.wx.Frame(None)
+        frame = self._wx.Frame(None)
         frame.Show()
         frame.Hide()
         
@@ -338,8 +344,8 @@ class WxBackendImpl(Backend):
         
     def _add(self, figure):
                 
-        wx = self.wx
-        FigureFrameWx = self.FigureFrameWx
+        wx = self._wx
+        FigureFrameWx = self._FigureFrameWx
         
         if figure not in self._figures:
             
@@ -366,7 +372,7 @@ class WxBackendImpl(Backend):
             w = figure.get_figwidth() * figure.get_dpi()
             h = figure.get_figheight() * figure.get_dpi()
             
-            size = self.wx.Size(w, h)
+            size = self._wx.Size(w, h)
             frame.canvas.SetInitialSize(size)
             frame.GetSizer().Fit(frame)
         
@@ -385,7 +391,7 @@ class WxBackendImpl(Backend):
                 
     def _invoke(self, callable, *args):
         
-        wx = self.wx
+        wx = self._wx
         wx.CallAfter(callable, *args)
                     
     def _exit(self):
@@ -552,30 +558,52 @@ class Chart(object):
       
     @property
     def title(self):
+        """
+        Chart title
+        """
         return self._title
         
     @property
     def number(self):
+        """
+        Chart number
+        """        
         return self._number
     
     @property
     def plots(self):
+        """
+        Index-based access to the plots in this chart
+        @rtype: L{PlotsCollection}
+        """
         return self._plots
     
     @property
     def plot(self):
+        """
+        First plot
+        """
         return self._plots[0]
     
     @property
     def rows(self):
+        """
+        Number of rows in this chart
+        """
         return self._rows
     
     @property
     def columns(self):
+        """
+        Number of columns in this chart
+        """        
         return self._columns
     
     @property
     def width(self):
+        """
+        Chart's width in inches
+        """
         return self._figure.get_figwidth()
     @width.setter
     def width(self, inches):
@@ -585,6 +613,9 @@ class Chart(object):
 
     @property
     def height(self):
+        """
+        Chart's height in inches
+        """        
         return self._figure.get_figheight()
     @height.setter
     def height(self, inches):
@@ -594,6 +625,9 @@ class Chart(object):
                 
     @property
     def dpi(self):
+        """
+        Chart's DPI
+        """        
         return self._figure.get_dpi()
     @dpi.setter
     def dpi(self, dpi):
@@ -602,6 +636,10 @@ class Chart(object):
             
     @property
     def formats(self):
+        """
+        Supported output file formats
+        @rtype: L{csb.core.enum}
+        """
         return self._formats
             
     def show(self):

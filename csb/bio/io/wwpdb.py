@@ -193,14 +193,23 @@ class EntryID(object):
         
     @property
     def accession(self):
+        """
+        Accession number part of the Entry ID
+        """
         return self._accession
 
     @property
     def chain(self):
+        """
+        Chain ID part of the Entry ID        
+        """
         return self._chain
     
     @property
     def entry_id(self):
+        """
+        Accession number + Chain ID        
+        """        
         return "{0.accession}{0.chain}".format(self)
     
     def __str__(self):
@@ -306,6 +315,9 @@ class AbstractStructureParser(object):
 
     @property
     def filename(self):
+        """
+        Current input PDB file name
+        """
         return self._file
     @filename.setter
     def filename(self, name):
@@ -1153,10 +1165,16 @@ class FileBuilder(object):
         
     @property
     def output(self):
+        """
+        Destination stream
+        """
         return self._out
     
     @property
     def isnull(self):
+        """
+        ISNULL(X, Y) function
+        """
         return self._isnull
     
     def write(self, text):
@@ -1373,10 +1391,17 @@ class FileSystemStructureProvider(StructureProvider):
                 
     @property
     def paths(self):
+        """
+        Current search paths
+        @rtype: tuple
+        """
         return tuple(self._paths)
     
     @property
     def templates(self):
+        """
+        Current file name match templates
+        """
         return tuple(self._templates)
         
     def add(self, path):
@@ -1453,6 +1478,9 @@ class RemoteStructureProvider(StructureProvider):
         
     @property
     def prefix(self):
+        """
+        Current URL prefix
+        """
         return self._prefix
     @prefix.setter
     def prefix(self, value):
@@ -1460,6 +1488,9 @@ class RemoteStructureProvider(StructureProvider):
         
     @property
     def suffix(self):
+        """
+        Current URL suffix
+        """        
         return self._suffix
     @suffix.setter
     def suffix(self, value):
@@ -1516,10 +1547,18 @@ class CustomStructureProvider(StructureProvider):
             
     @property
     def paths(self):
+        """
+        List of currently registered file names
+        @rtype: tuple
+        """        
         return tuple(self._files.values())            
 
     @property
     def identifiers(self):
+        """
+        List of currently registered structure identifiers
+        @rtype: tuple
+        """          
         return tuple(self._files)
             
     def add(self, id, path):

@@ -188,6 +188,9 @@ class ResidueInfo(object):
                 
     @property
     def type(self):
+        """
+        Residue type - a member of sequence alhabet
+        """
         return self._type
     @type.setter
     def type(self, type):
@@ -221,8 +224,10 @@ class SequenceIndexer(object):
         self._container = container
 
     def __getitem__(self, rank):
+        
         if not 1 <= rank <= self._container.length:
-            raise SequencePositionError(rank, 1, self._container.length)        
+            raise SequencePositionError(rank, 1, self._container.length)
+              
         return self._container._get(rank)
     
     def __iter__(self):
@@ -253,7 +258,7 @@ class ColumnIndexer(SequenceIndexer):
 
 class SequenceCollection(csb.core.ReadOnlyCollectionContainer):
     """
-    Represents a list of L{AbstractSequence}-s.
+    Represents a list of L{AbstractSequence}s.
     """
 
     def __init__(self, sequences):
@@ -423,10 +428,16 @@ class AbstractSequence(object):
         
     @property
     def length(self):
+        """
+        Number of residues
+        """
         return len(self._residues)
     
     @property
     def id(self):
+        """
+        Sequence identifier
+        """        
         return self._id
     @id.setter
     def id(self, value):
@@ -436,6 +447,9 @@ class AbstractSequence(object):
             
     @property
     def header(self):
+        """
+        Sequence description
+        """        
         return self._header
     @header.setter
     def header(self, value):
@@ -447,6 +461,9 @@ class AbstractSequence(object):
     
     @property  
     def type(self):
+        """
+        Sequence type - a member of L{SequenceTypes}
+        """
         return self._type
     @type.setter
     def type(self, value):
@@ -458,14 +475,26 @@ class AbstractSequence(object):
 
     @property
     def sequence(self): 
+        """
+        The actual sequence
+        @rtype: str
+        """
         return ''.join([str(r.type) for r in self._residues])
     
     @property
     def alphabet(self):
+        """
+        The sequence alphabet corresponding to the current sequence type
+        @rtype: L{csb.core.enum}
+        """
         return SequenceAlphabets.get(self._type)
     
     @property
     def residues(self):
+        """
+        Rank-based access to the underlying L{residues<csb.bio.sequence.ResidueInfo>}
+        @rtype: L{SequenceIndexer}
+        """
         return SequenceIndexer(self)
 
     def __len__(self):
@@ -999,23 +1028,31 @@ class AbstractAlignment(object):
     @property
     def length(self):
         """
-        Get the number of columns in the alignment
+        Number of columns in the alignment
         """
         return self._length or 0
 
     @property
     def size(self):
         """
-        Get the number of rows (sequences) in the alignment
+        Number of rows (sequences) in the alignment
         """        
         return self._msa.length    
             
     @property
     def rows(self):
+        """
+        1-based access to the alignment entries (sequences)
+        @rtype: L{AlignmentRowsTable}
+        """
         return self._msa 
         
     @property
     def columns(self):
+        """
+        1-based access to the alignment columns
+        @rtype: L{ColumnIndexer}
+        """
         return self._colview
     
     def gap_at(self, column):
@@ -1203,6 +1240,10 @@ class A3MAlignment(AbstractAlignment):
     
     @property
     def master(self):
+        """
+        The master sequence
+        @rtype: L{AbstractSequence}
+        """
         return self._master
     
     def insertion_at(self, column):
@@ -1235,7 +1276,7 @@ class A3MAlignment(AbstractAlignment):
     @property
     def matches(self):
         """
-        Get the number of match states (residues in the ungapped master).
+        Number of match states (residues in the ungapped master).
         """
         return self._matches
     

@@ -45,7 +45,7 @@ except ImportError:
     import urllib
         
 
-NEWLINE = '\n'
+NEWLINE = os.linesep
 
 
 class Shell(object):
@@ -213,6 +213,7 @@ class TempFile(csb.core.Proxy):
     
         >>> with TempFile() as tmp:
                 tmp.write(...)
+                open(tmp.name)...
     
     @param dispose: automatically delete the file
     @type dispose: bool
@@ -270,6 +271,9 @@ class TempFile(csb.core.Proxy):
             
     @property
     def name(self):
+        """
+        Full path and file name
+        """
         return self.__file
     
 class TempFolder(object):
@@ -314,6 +318,9 @@ class TempFolder(object):
             
     @property
     def name(self):
+        """
+        Full directory name
+        """        
         return self.__name    
 
 class EntryReader(object):
@@ -323,22 +330,42 @@ class EntryReader(object):
     
     @param stream: the source data stream to read
     @type stream: file
-    @param start_marker: a string marker which denotes the beginning of a new entry
+    @param start_marker: a string marker which marks the beginning of a new entry
     @type start_marker: str
     @param end_marker: a string marker which signals the end of the file
     @type end_marker: str, None
     """
-    def __init__(self, stream, start_marker, end_marker):
+    def __init__(self, stream, start_marker, end_marker=None):
 
         if not (hasattr(stream, 'seek') and hasattr(stream, 'readline')):
             raise TypeError('The entry reader requires an opened stream.')
 
         stream.seek(0)
         self._stream = stream
+        self._start_marker = None
+        self._end_marker = None
 
         self.start_marker = start_marker
-        self.end_marker = end_marker
+        self.end_marker = end_marker        
         
+    @property
+    def start_marker(self):
+        return self._start_marker
+    @start_marker.setter
+    def start_marker(self, value):
+        if value is not None:
+            value = str(value)        
+        self._start_marker = value
+
+    @property
+    def end_marker(self):
+        return self._end_marker
+    @end_marker.setter
+    def end_marker(self, value):
+        if value is not None:
+            value = str(value)
+        self._end_marker = value
+                
     def __del__(self):
         
         try:
@@ -408,8 +435,11 @@ class EntryWriter(object):
     def __init__(self, destination, close=True, newline=NEWLINE):
         
         self._stream = None
+        self._newline = NEWLINE
+        self._autoclose = True
+
         self.newline = newline
-        self.autoclose = close
+        self.autoclose = close        
         
         if isinstance(destination, csb.core.string):
             self._stream = open(destination, 'w')
@@ -434,7 +464,24 @@ class EntryWriter(object):
     
     @property
     def stream(self):
+        """
+        Destination stream
+        """
         return self._stream
+    
+    @property
+    def newline(self):
+        return self._newline
+    @newline.setter
+    def newline(self, value):
+        self._newline = str(value)
+
+    @property
+    def autoclose(self):
+        return self._autoclose
+    @autoclose.setter
+    def autoclose(self, value):
+        self._autoclose = bool(value)        
     
     def close(self):
         """

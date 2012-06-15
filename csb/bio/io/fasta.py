@@ -71,10 +71,16 @@ class BaseSequenceParser(object):
         
     @property
     def product_factory(self):
+        """
+        Factory used to build sequence products
+        """        
         return self._product
     
     @property
     def product_type(self):
+        """
+        Default sequence type of the products - a member of L{SequenceTypes}
+        """
         return self._type
         
     @abstractmethod
@@ -254,10 +260,16 @@ class SequenceAlignmentReader(object):
 
     @property
     def product_type(self):
+        """
+        Default sequence type of the alignment entries - a member of L{SequenceTypes}
+        """        
         return self._type
 
     @property
     def strict(self):
+        """
+        True if strict mode is enabled
+        """
         return self._strict
             
     def read_fasta(self, string):
@@ -354,18 +366,30 @@ class StructureAlignmentFactory(object):
 
     @property
     def product_type(self):
+        """
+        Default sequence type of the alignment rows - a member of L{SequenceTypes}
+        """        
         return self._type
     
     @property
     def provider(self):
+        """
+        Current L{csb.bio.io.wwpdb.StructureProvider} instance in use
+        """
         return self._provider  
     
     @property
     def id_factory(self):
+        """
+        Current L{csb.bio.io.wwpdb.EntryID} factory instance in use
+        """        
         return self._id_factory
 
     @property
     def strict(self):
+        """
+        True if strict mode is enabled
+        """        
         return self._strict
             
     def make_alignment(self, string):
@@ -495,10 +519,16 @@ class OutputBuilder(object):
 
     @property
     def output(self):
+        """
+        Destination stream
+        """
         return self._out
     
     @property
     def headers(self):
+        """
+        True if sequence headers will be written to the destination
+        """
         return self._headers
 
     def write(self, text):
