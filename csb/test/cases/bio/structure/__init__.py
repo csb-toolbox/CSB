@@ -399,7 +399,7 @@ class TestChain(test.Case):
         self.assertEqual(self.chain.sequence, 'AQVAFREGDQVRVVSGPFADFTGTVTEINPERGKVKVMVTIFGRETPVELDFSQVVKA')
         
     def testHeader(self):
-        self.assertTrue(self.chain.header.startswith('>1nz9_A'))
+        self.assertTrue(self.chain.header.startswith('1nz9_A'))
         
     def testLength(self):
         self.assertEqual(self.chain.length, 58)

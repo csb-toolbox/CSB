@@ -167,7 +167,7 @@ class Abstract3DEntity(object):
         """
         Return an iterator over all descendants of the entity.
         
-        @param klass: return entities the specified L{Abstract3DEntity} subclass
+        @param klass: return entities of the specified L{Abstract3DEntity} subclass
                       only. If None, traverse the hierarchy down to the lowest level.
         @param klass: class
         """
@@ -317,6 +317,10 @@ class Ensemble(csb.core.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def models(self):
+        """
+        Access Ensembles's models by model ID
+        @rtype: L{EnsembleModelsCollection}
+        """
         return self._models
     
     @property
@@ -325,6 +329,10 @@ class Ensemble(csb.core.AbstractNIContainer, Abstract3DEntity):
         
     @property
     def first_model(self):
+        """
+        The first L{Structure} in the ensemble (if available)
+        @rtype: L{Structure} or None
+        """
         if len(self._models) > 0:
             return self[0]
         return None
@@ -368,6 +376,12 @@ class EnsembleModelsCollection(csb.core.CollectionContainer):
         self._models = set()
         
     def append(self, structure):
+        """
+        Add a new model
+        
+        @param structure: model to append
+        @type structure: L{Structure}
+        """
         
         if not structure.model_id or not str(structure.model_id).strip():
             raise ValueError("Invalid model identifier: '{0.model_id}'".format(structure))
@@ -399,7 +413,7 @@ class Structure(csb.core.AbstractNIContainer, Abstract3DEntity):
                         
         self._accession = None
         self._chains = StructureChainsTable(self)
-        self.model_id = None
+        self._model_id = None
         
         self.accession = accession
 
@@ -412,6 +426,10 @@ class Structure(csb.core.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def chains(self):
+        """
+        Access chains by their chain identifiers
+        @rtype: L{StructureChainsTable}
+        """
         return self._chains
     
     @property
@@ -421,12 +439,19 @@ class Structure(csb.core.AbstractNIContainer, Abstract3DEntity):
                 
     @property
     def first_chain(self):
+        """
+        The first L{Chain} in the structure (if available)
+        @rtype: L{Chain} or None
+        """        
         if len(self._chains) > 0:
             return next(self.items)
         return None
         
     @property
     def accession(self):
+        """
+        Accession number
+        """        
         return self._accession
     @accession.setter
     def accession(self, accession):
@@ -435,6 +460,16 @@ class Structure(csb.core.AbstractNIContainer, Abstract3DEntity):
         self._accession = str(accession).strip().lower()
         for c in self.chains:
             self.chains[c]._accession = self._accession
+            
+    @property
+    def model_id(self):
+        """
+        Model ID
+        """        
+        return self._model_id
+    @model_id.setter
+    def model_id(self, value):
+        self._model_id = value
             
     def define_molecule(self, molecule_id, chains):
         """
@@ -468,11 +503,10 @@ class Structure(csb.core.AbstractNIContainer, Abstract3DEntity):
         """
         fasta = []
         
-        for chain_id in self.chains:
+        for chain in self.items:
 
-            chain = self.chains[chain_id]
             if chain.length > 0:
-                fasta.append(chain.header)
+                fasta.append('>{0}'.format(chain.header))
                 fasta.append(chain.sequence)
         
         return os.linesep.join(fasta)
@@ -514,7 +548,7 @@ class StructureChainsTable(csb.core.DictionaryContainer):
         
     def __repr__(self):
         if len(self) > 0:
-            return "<StructureChains: {0}>".format(', '.join(self.keys()))
+            return "<StructureChains: {0}>".format(', '.join(self))
         else:
             return "<StructureChains: empty>"
         
@@ -644,6 +678,9 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
 
     @property
     def id(self):
+        """
+        Chain's ID
+        """
         return self._id
     @id.setter
     def id(self, id):
@@ -656,17 +693,23 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def accession(self):
+        """
+        Accession number
+        """        
         return self._accession
     @accession.setter
     def accession(self, accession):
         if self._structure:
-            raise InvalidOperation("Only structure's accession can be altered in this case")
+            raise InvalidOperation("Only the accession of the parent structure can be altered")
         if accession is None:
             raise ValueError(accession)
         self._accession = str(accession).strip()
         
     @property
     def type(self):
+        """
+        Chain type - any member of L{SequenceTypes}
+        """
         return self._type
     @type.setter
     def type(self, type):
@@ -676,6 +719,10 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
 
     @property
     def residues(self):
+        """
+        Rank-based access to Chain's L{Residue}s
+        @rtype: L{ChainResiduesCollection}
+        """
         return self._residues
     
     @property
@@ -684,8 +731,13 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def torsion(self):
+        """
+        Torsion angles
+        @rtype: L{TorsionAnglesCollection}
+        """
         if not self._torsion_computed:
-            raise InvalidOperation('The correctness of the data is not guaranteed until chain.compute_torsion() is invoked.')
+            raise InvalidOperation('The correctness of the data is not guaranteed '
+                                   'until chain.compute_torsion() is invoked.')
             
         torsion = TorsionAnglesCollection()
         
@@ -699,14 +751,23 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def has_torsion(self):
+        """
+        True if C{Chain.compute_torsion} had been invoked
+        """
         return self._torsion_computed
 
     @property
     def length(self):
+        """
+        Number of residues
+        """
         return self._residues.length
     
     @property
     def entry_id(self):
+        """
+        Accession number + chain ID
+        """
         if self._accession and self._id:
             return self._accession + self._id
         else:
@@ -714,29 +775,42 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def header(self):
-        return ">{0._accession}_{0._id} mol:{1} length:{0.length} {0.name}".format(self, str(self.type).lower())
+        """
+        FASTA header in PDB format
+        """
+        header = "{0._accession}_{0._id} mol:{1} length:{0.length} {0.name}"
+        return header.format(self, str(self.type).lower())
 
     @property
-    def sequence(self):        
+    def sequence(self):
+        """
+        Chain sequence
+        @rtype: str
+        """    
         sequence = []
-        for residue in self._residues:
+        gap = str(self.alphabet.GAP)
+        
+        for residue in self.residues:
             if residue and residue.type:
                 sequence.append(str(residue.type))
             else:
-                sequence.append('-')
+                sequence.append(gap)
+                
         return ''.join(sequence)
     
     @property
     def alphabet(self):
-        if self._type == SequenceTypes.Protein:                                                 
-            return SequenceAlphabets.Protein
-        elif self._type in (SequenceTypes.NucleicAcid, SequenceTypes.DNA, SequenceTypes.RNA):   
-            return SequenceAlphabets.Nucleic            
-        else:
-            raise NotImplementedError()
+        """
+        Sequence alphabet corresponding to the current chain type
+        """
+        return SequenceAlphabets.get(self.type)
         
     @property
     def secondary_structure(self):
+        """
+        Secondary structure (if available)
+        @rtype: L{SecondaryStructure}
+        """
         return self._secondary_structure
     @secondary_structure.setter
     def secondary_structure(self, ss):
@@ -744,7 +818,7 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
             raise TypeError(ss)
         if len(ss) > 0:
             if (ss[ss.last_index].end > self._residues.last_index):
-                raise ValueError('The secondary structure is out of range')
+                raise ValueError('Secondary structure out of range')
         self._secondary_structure = ss        
         
     def clone(self):
@@ -1098,6 +1172,9 @@ class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
         
     @property
     def type(self):
+        """
+        Residue type - a member of any sequence alphabet
+        """
         return self._type
     @type.setter
     def type(self, type):
@@ -1111,6 +1188,10 @@ class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def secondary_structure(self):
+        """
+        Secondary structure element this residue is part of
+        @rtype: L{SecondaryStructureElement}        
+        """
         return self._secondary_structure
     @secondary_structure.setter
     def secondary_structure(self, structure):
@@ -1120,6 +1201,10 @@ class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
         
     @property
     def torsion(self):
+        """
+        Torsion angles
+        @rtype: L{TorsionAngles}
+        """
         return self._torsion
     @torsion.setter
     def torsion(self, torsion):
@@ -1129,6 +1214,10 @@ class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def atoms(self):
+        """
+        Access residue's atoms by atom name
+        @rtype: L{ResidueAtomsTable}
+        """
         return self._atoms
     
     @property
@@ -1138,14 +1227,24 @@ class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
 
     @property
     def sequence_number(self):
+        """
+        PDB sequence number (if residue.has_structure is True)
+        @rtype: int
+        """
         return self._sequence_number
 
     @property
     def insertion_code(self):
+        """
+        PDB insertion code (if defined)
+        """
         return self._insertion_code
     
     @property
     def id(self):
+        """
+        PDB sequence number [+ insertion code]
+        """
         if self._sequence_number is None:
             return None
         elif self._insertion_code is not None:
@@ -1177,6 +1276,9 @@ class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
     
     @property
     def has_structure(self):
+        """
+        True if this residue has any atoms
+        """
         return len(self.atoms) > 0
         
     def list_coordinates(self, what=None, skip=False):
@@ -1208,7 +1310,7 @@ class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
         return clone
         
     @staticmethod
-    def create(sequence_type, *arguments, **keyword_arguments):
+    def create(sequence_type, *a, **k):
         """
         Residue factory method, which returns the proper L{Residue} instance based on 
         the specified C{sequence_type}. All additional arguments are used to initialize
@@ -1223,11 +1325,11 @@ class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
         @raise ValueError: if the sequence type is not known
         """        
         if sequence_type == SequenceTypes.Protein:                                      
-            return ProteinResidue(*arguments, **keyword_arguments)
+            return ProteinResidue(*a, **k)
         elif sequence_type == SequenceTypes.NucleicAcid:                                
-            return NucleicResidue(*arguments, **keyword_arguments)
+            return NucleicResidue(*a, **k)
         elif sequence_type == SequenceTypes.Unknown:
-            return UnknownResidue(*arguments, **keyword_arguments)
+            return UnknownResidue(*a, **k)
         else:
             raise ValueError(sequence_type)        
            
@@ -1358,8 +1460,9 @@ class NucleicResidue(Residue):
 class UnknownResidue(Residue):
     
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
-        super(UnknownResidue, self).__init__(
-                        rank, SequenceAlphabets.Unknown.UNK, sequence_number, insertion_code)
+
+        super(UnknownResidue, self).__init__(rank, SequenceAlphabets.Unknown.UNK,
+                                             sequence_number, insertion_code)
             
 class ResidueAtomsTable(csb.core.DictionaryContainer):
     """ 
@@ -1393,7 +1496,7 @@ class ResidueAtomsTable(csb.core.DictionaryContainer):
         atom will be appended to the L{DisorderedAtom}'s list of children. If a disordered atom 
         with that name already exists, the atom will be appended to its children only.
         If an atom with the same name exists, but it was erroneously not marked as disordered,
-        that terrible condition will be fixed too :-(
+        that terrible condition will be fixed too.
         
         @param atom: the new atom to append
         @type atom: L{Atom}
@@ -1526,6 +1629,9 @@ class Atom(Abstract3DEntity):
 
     @property
     def serial_number(self):
+        """
+        PDB serial number
+        """        
         return self._serial_number
     @serial_number.setter
     def serial_number(self, number):
@@ -1535,14 +1641,24 @@ class Atom(Abstract3DEntity):
     
     @property
     def name(self):
+        """
+        PDB atom name (trimmed)
+        """
         return self._name
         
     @property
     def element(self):
+        """
+        Chemical element - a member of L{ChemElements}
+        """
         return self._element
     
     @property
     def residue(self):
+        """
+        Residue instance that owns this atom (if available)
+        @rtype: L{Residue}
+        """
         return self._residue
     @residue.setter
     def residue(self, residue):
@@ -1554,6 +1670,10 @@ class Atom(Abstract3DEntity):
     
     @property
     def vector(self):
+        """
+        Atom's 3D coordinates (x, y, z)
+        @rtype: numpy.array
+        """
         return self._vector
     @vector.setter
     def vector(self, vector):
@@ -1563,6 +1683,9 @@ class Atom(Abstract3DEntity):
         
     @property
     def alternate(self):
+        """
+        Alternative location flag
+        """
         return self._alternate
     @alternate.setter
     def alternate(self, value):
@@ -1570,6 +1693,9 @@ class Atom(Abstract3DEntity):
     
     @property
     def temperature(self):
+        """
+        Temperature factor
+        """
         return self._temperature
     @temperature.setter
     def temperature(self, value):
@@ -1577,6 +1703,9 @@ class Atom(Abstract3DEntity):
     
     @property
     def occupancy(self):
+        """
+        Occupancy number
+        """        
         return self._occupancy
     @occupancy.setter
     def occupancy(self, value):
@@ -1584,6 +1713,9 @@ class Atom(Abstract3DEntity):
     
     @property
     def charge(self):
+        """
+        Charge
+        """         
         return self._charge
     @charge.setter
     def charge(self, value):
@@ -1681,17 +1813,17 @@ class SecondaryStructureElement(object):
     def __init__(self, start, end, type, score=None):
         
         if not (0 < start <= end):
-            raise IndexError('Element coordinates are out of range: 0 < start <= end.')
-        if isinstance(type, csb.core.string):
-            type = csb.core.Enum.parse(SecStructures, type)
-        if type.enum is not SecStructures:
-            raise TypeError(type)
+            raise IndexError('Element coordinates are out of range: 1 <= start <= end.')
                 
+        self._start = None
+        self._end = None
+        self._type = None
+        self._score = None
+
         self.start = start
         self.end = end
         self.type = type
-        self._score = None
-        
+                
         if score is not None: 
             self.score = score
             
@@ -1708,13 +1840,53 @@ class SecondaryStructureElement(object):
     
     def __repr__(self):
         return "<{0.type!r}: {0.start}-{0.end}>".format(self)
+    
+    @property
+    def start(self):
+        return self._start
+    @start.setter
+    def start(self, value):
+        if value is not None:
+            value = int(value)
+            if value < 1:
+                raise ValueError(value)
+        self._start = value
+    
+    @property
+    def end(self):
+        return self._end
+    @end.setter
+    def end(self, value):
+        if value is not None:
+            value = int(value)
+            if value < 1:
+                raise ValueError(value)            
+        self._end = value 
+    
+    @property
+    def type(self):
+        return self._type
+    @type.setter
+    def type(self, value):
+        if isinstance(value, csb.core.string):
+            value = csb.core.Enum.parse(SecStructures, value)
+        if not value.enum is SecStructures:
+            raise TypeError(value)
+        self._type = value
             
     @property
     def length(self):
+        """
+        Number of residues covered by this element
+        """
         return self.end - self.start + 1
     
     @property
     def score(self):
+        """
+        Secondary structure confidence values for each residue
+        @rtype: L{CollectionContainer}
+        """
         return self._score
     @score.setter
     def score(self, scores):
@@ -1806,7 +1978,7 @@ class SecondaryStructure(csb.core.CollectionContainer):
     
     def append(self, element):
         """
-        Add a new SecondaryStructureElement. Then sort all added elements by
+        Add a new SecondaryStructureElement. Then sort all elements by
         their start position.
         """
         super(SecondaryStructure, self).append(element)
@@ -1869,10 +2041,16 @@ class SecondaryStructure(csb.core.CollectionContainer):
     
     @property
     def start(self):
+        """
+        Start position of the leftmost element
+        """
         return self._minstart
         
     @property
     def end(self):
+        """
+        End position of the rightmost element
+        """        
         return self._maxend
     
     def clone(self):
@@ -1919,11 +2097,15 @@ class SecondaryStructure(csb.core.CollectionContainer):
         return ''.join(ss)
     
     def at(self, rank, type=None):
+        """
+        @return: all secondary structure elements covering the specifid position
+        @rtype: tuple of L{SecondaryStructureElement}s 
+        """
         return self.scan(start=rank, end=rank, filter=type, loose=True, cut=True)
     
     def scan(self, start, end, filter=None, loose=True, cut=True):
         """
-        Get all secondary structure elements within the specified start..end region.
+        Get all secondary structure elements within the specified [start, end] region.
         
         @param start: the start position of the region, 1-based, inclusive
         @type start: int
@@ -1942,7 +2124,7 @@ class SecondaryStructure(csb.core.CollectionContainer):
 
         @return: a list of deep-copied L{SecondaryStructureElement}s, sorted by their 
                  start position
-        @rtype: list
+        @rtype: tuple of L{SecondaryStructureElement}s
         """        
         matches = [ ]
         
@@ -1966,7 +2148,7 @@ class SecondaryStructure(csb.core.CollectionContainer):
                     matches.append(copy.deepcopy(m))                                    
 
         matches.sort()
-        return matches
+        return tuple(matches)
     
     def q3(self, reference, relaxed=True):
         """
@@ -2054,7 +2236,9 @@ class TorsionAnglesCollection(csb.core.CollectionContainer):
     @type items: list
     """  
     def __init__(self, items=None, start=1):
-        super(TorsionAnglesCollection, self).__init__(items, type=TorsionAngles, start_index=start)
+        
+        super(TorsionAnglesCollection, self).__init__(
+                                items,type=TorsionAngles, start_index=start)
 
     def __repr__(self):
         if len(self) > 0:
@@ -2063,15 +2247,24 @@ class TorsionAnglesCollection(csb.core.CollectionContainer):
             return "<TorsionAnglesList: empty>"        
         
     @property
-    def phi(self):       
+    def phi(self):
+        """
+        List of all phi angles
+        """   
         return [a.phi for a in self]
 
     @property
-    def psi(self):       
+    def psi(self):
+        """
+        List of all psi angles
+        """           
         return [a.psi for a in self]            
 
     @property
-    def omega(self):       
+    def omega(self):  
+        """
+        List of all omega angles
+        """                
         return [a.omega for a in self] 
     
     def update(self, angles):
@@ -2173,6 +2366,9 @@ class TorsionAngles(object):
 
     @property
     def units(self):
+        """
+        Current torsion angle units - a member of L{AngleUnits}
+        """
         return self._units
     
     @property
