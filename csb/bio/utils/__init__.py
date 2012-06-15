@@ -417,9 +417,9 @@ def tm_superimpose(x, y, fit_method=fit, L=None, d0=None, L_ini_min=4, iL_step=1
                 if score > best[-1]:
                     best = R, t, score
 
+                mask_prev = mask
                 cutoff = d0_search + (-1 if i == 0 else 1)
                 while True:
-                    mask_prev = mask
                     mask = d < cutoff
                     if sum(mask) >= 3 or 3 >= len(mask):
                         break
