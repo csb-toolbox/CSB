@@ -283,14 +283,7 @@ class TestStructure(test.Case):
             self.assertEqual(chain.accession, self.structure.accession)
 
         self.structure.accession = '1nz9'            
-            
-    def testDefineMolecule(self):
-        
-        mol_id = self.structure['A'].molecule_id
-        self.structure.define_molecule(999, ['A'])
-        self.assertEqual(self.structure['A'].molecule_id, 999)
-        self.structure.define_molecule(mol_id, ['A'])   
-                
+                    
     def testToFASTA(self):
         
         fasta = self.structure.to_fasta().splitlines()

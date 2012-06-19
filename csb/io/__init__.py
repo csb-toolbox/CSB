@@ -580,7 +580,7 @@ def dump(this, filename, gzip=False, lock=None, timeout=None):
         try:
             os.rmdir(lockdir)
         except:
-            raise IOError('missing lockfile %s' % lockdir)
+            raise IOError('missing lockfile {0}'.format(lockdir))
 
 def load(filename, gzip=False, lock=None, timeout=None):
     """
@@ -652,7 +652,7 @@ def load(filename, gzip=False, lock=None, timeout=None):
         try:
             os.rmdir(lockdir)
         except:
-            raise IOError('missing lockfile %s' % lockdir)
+            raise IOError('missing lockfile {0}'.format(lockdir))
 
     return this
 
