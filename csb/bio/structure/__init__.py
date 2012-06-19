@@ -470,26 +470,6 @@ class Structure(csb.core.AbstractNIContainer, AbstractEntity):
     @model_id.setter
     def model_id(self, value):
         self._model_id = value
-            
-    def define_molecule(self, molecule_id, chains):
-        """
-        Group C{chains}, defined by their IDs, to a polymer with id = C{molecule_id}.
-        
-        @param molecule_id: ID of the new polymer
-        @param chains: a list of chain IDs
-        @type chains: list
-        
-        @raise ValueError: if an invalid chain ID is provided
-        """
-        assert molecule_id is not None
-        cs = [ ]
-        
-        for c in chains:
-            if c not in self.chains:
-                raise ValueError('No such chain {0} in structure'.format(c))
-            cs.append(self.chains[c])
-        for chain in cs:
-            chain.molecule_id = molecule_id
                     
     def to_fasta(self):
         """
@@ -637,9 +617,9 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
         self._type = None
         self._residues = ChainResiduesCollection(self, residues)
         self._secondary_structure = None
-        self.molecule_id = molecule_id
+        self._molecule_id = molecule_id
         self._torsion_computed = False
-        self.name = str(name).strip()
+        self._name = str(name).strip()
         
         self._structure = None
         
@@ -773,6 +753,28 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
         else:
             return None
     
+    @property
+    def name(self):
+        """
+        Chain name
+        """
+        return self._name
+    @name.setter
+    def name(self, value):
+        if value is not None:
+            value = str(value).strip()
+        self._name = value
+
+    @property
+    def molecule_id(self):
+        """
+        PDB MOL ID of this chain
+        """
+        return self._molecule_id
+    @molecule_id.setter
+    def molecule_id(self, value):
+        self._molecule_id = value
+                
     @property
     def header(self):
         """

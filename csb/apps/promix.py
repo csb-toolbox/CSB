@@ -62,11 +62,11 @@ class ProMixApp(csb.apps.Application):
     def main_segments(self, ensemble, X):
 
         mixture = mixtures.SegmentMixture.from_coords(X, self.args.components)
-        self.log('Number of segments: %d' % (mixture.K))
+        self.log('Number of segments: {0}'.format(mixture.K))
 
         for k,(sigma,w) in enumerate(zip(mixture.sigma, mixture.w)):
-            outfile = 'promix_segment_%d.pdb' % (k+1)
-            self.log('  %d: sigma = %6.3f, w = %.3f, file = %s' % (k+1, sigma, w, outfile))
+            outfile = 'promix_segment_{0}.pdb'.format(k+1)
+            self.log('  {0}: sigma = {1:6.3f}, w = {2:.3f}, file = {3}'.format(k+1, sigma, w, outfile))
 
             for model, R, t in zip(ensemble, mixture.R, mixture.t):
                 if k > 0:
@@ -80,13 +80,13 @@ class ProMixApp(csb.apps.Application):
     def main_conformers(self, ensemble, X):
 
         mixture = mixtures.ConformerMixture.from_coords(X, self.args.components)
-        self.log('Number of conformers: %d' % (mixture.K))
+        self.log('Number of conformers: {0}'.format(mixture.K))
 
         membership = mixture.membership
 
         for k,(sigma,w) in enumerate(zip(mixture.sigma, mixture.w)):
-            outfile = 'promix_conformer_%d.pdb' % (k+1)
-            self.log('  %d: sigma = %6.3f, w = %.3f, file = %s' % (k+1, sigma, w, outfile))
+            outfile = 'promix_conformer_{0}.pdb'.format(k+1)
+            self.log('  {0}: sigma = {1:6.3f}, w = {2:.3f}, file = {3}'.format(k+1, sigma, w, outfile))
 
             ek = csb.bio.structure.Ensemble()
 
