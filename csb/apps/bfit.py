@@ -139,7 +139,7 @@ class BFitApp(csb.apps.Application):
             R, t = probabilistic_fit(X, Y, mixture.scales)
             
 
-        m.apply_transformation(R, t)
+        m.transform(R, t)
         m.to_pdb(self.args.outfile)
         
 

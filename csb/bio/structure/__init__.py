@@ -8,11 +8,11 @@ Composite aggregation. The root node in this Composite is a L{Structure} (or
 L{Ensemble}). L{Structure}s are composed of L{Chain}s, and each L{Chain} is a
 collection of L{Residue}s. The leaf node is L{Atom}. 
 
-All of these objects implement the base L{Abstract3DEntity} interface. Therefore,
+All of these objects implement the base L{AbstractEntity} interface. Therefore,
 every node in the Composite can be transformed:
     
     >>> r, t = [rotation matrix], [translation vector]
-    >>> entity.apply_transformation(r, t)
+    >>> entity.transform(r, t)
     
 and it knows its immediate children:
 
@@ -21,7 +21,7 @@ and it knows its immediate children:
     
 If you want to traverse the complete Composite tree, starting at arbitrary level,
 and down to the lowest level, use one of the L{CompositeEntityIterator}s. Or just
-call L{Abstract3DEntity.components}:
+call L{AbstractEntity.components}:
 
     >>> entity.components()
     <iterator>   # over all descendants, of any type, at any level
@@ -146,7 +146,7 @@ class BrokenSecStructureError(ValueError):
 class UnknownSecStructureError(BrokenSecStructureError):
     pass
 
-class Abstract3DEntity(object):
+class AbstractEntity(object):
     """
     Base class for all protein structure entities.
     
@@ -167,7 +167,7 @@ class Abstract3DEntity(object):
         """
         Return an iterator over all descendants of the entity.
         
-        @param klass: return entities of the specified L{Abstract3DEntity} subclass
+        @param klass: return entities of the specified L{AbstractEntity} subclass
                       only. If None, traverse the hierarchy down to the lowest level.
         @param klass: class
         """
@@ -175,7 +175,7 @@ class Abstract3DEntity(object):
             if klass is None or isinstance(entity, klass):
                 yield entity
         
-    def apply_transformation(self, rotation, translation):
+    def transform(self, rotation, translation):
         """
         Apply in place RotationMatrix and translation Vector to all atoms.
         
@@ -183,7 +183,7 @@ class Abstract3DEntity(object):
         @type translation: numpy array 
         """
         for node in self.items:
-            node.apply_transformation(rotation, translation)
+            node.transform(rotation, translation)
     
     def list_coordinates(self, what=None, skip=False):
         """
@@ -214,15 +214,15 @@ class Abstract3DEntity(object):
     
 class CompositeEntityIterator(object):
     """
-    Iterates over composite L{Abstract3DEntity} hierarchies.
+    Iterates over composite L{AbstractEntity} hierarchies.
     
     @param node: root entity to traverse
-    @type node: L{Abstract3DEntity}
+    @type node: L{AbstractEntity}
     """
     
     def __init__(self, node):
             
-        if not isinstance(node, Abstract3DEntity):
+        if not isinstance(node, AbstractEntity):
             raise TypeError(node)
             
         self._node = node
@@ -273,17 +273,17 @@ class CompositeEntityIterator(object):
                 
 class ConfinedEntityIterator(CompositeEntityIterator):
     """
-    Iterates over composite L{Abstract3DEntity} hierarchies, but terminates
+    Iterates over composite L{AbstractEntity} hierarchies, but terminates
     the traversal of a branch once a specific node type is encountered.
     
     @param node: root entity to traverse
-    @type node: L{Abstract3DEntity}
-    @param leaf: traverse the hierarchy down to the specified L{Abstract3DEntity}
+    @type node: L{AbstractEntity}
+    @param leaf: traverse the hierarchy down to the specified L{AbstractEntity}
     @type leaf: class
     """
     def __init__(self, node, leaf):
         
-        if not issubclass(leaf, Abstract3DEntity):
+        if not issubclass(leaf, AbstractEntity):
             raise TypeError(leaf)
         
         self._leaf = leaf
@@ -294,7 +294,7 @@ class ConfinedEntityIterator(CompositeEntityIterator):
         if not isinstance(node, self._leaf):
             self._stack.push(node.items)
             
-class Ensemble(csb.core.AbstractNIContainer, Abstract3DEntity):
+class Ensemble(csb.core.AbstractNIContainer, AbstractEntity):
     """
     Represents an ensemble of multiple L{Structure} models.
     Provides a list-like access to these models:
@@ -394,7 +394,7 @@ class EnsembleModelsCollection(csb.core.CollectionContainer):
     def _exception(self):
         return EntityIndexError
 
-class Structure(csb.core.AbstractNIContainer, Abstract3DEntity):
+class Structure(csb.core.AbstractNIContainer, AbstractEntity):
     """
     Represents a single model of a PDB 3-Dimensional molecular structure.
     Provides access to the L{Chain} objects, contained in the model:
@@ -601,7 +601,7 @@ class StructureChainsTable(csb.core.DictionaryContainer):
         
         super(StructureChainsTable, self).append(new_id, chain)
         
-class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
+class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     """
     Represents a polymeric chain. Provides list-like and rank-based access to
     the residues in the chain:
@@ -923,7 +923,7 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
         Find the optimal fit between C{self} and C{other}. Return L{SuperimposeInfo}
         (RotationMatrix, translation Vector and RMSD), such that:
         
-            >>> other.apply_transformation(rotation_matrix, translation_vector)
+            >>> other.transform(rotation_matrix, translation_vector)
             
         will result in C{other}'s coordinates superimposed over C{self}.
         
@@ -963,7 +963,7 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
         and translation vector in L{SuperimposeInfo}. Alias for::
         
             R, t = self.superimpose(other, what=['CA'])
-            other.apply_transformation(R, t)
+            other.transform(R, t)
             
         @param other: the subject (movable) chain
         @type other: L{Chain}
@@ -977,7 +977,7 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
         @rtype: L{SuperimposeInfo}        
         """
         result = self.superimpose(other, what=what, how=how)
-        other.apply_transformation(result.rotation, result.translation)
+        other.transform(result.rotation, result.translation)
         
         return result
     
@@ -1010,7 +1010,7 @@ class Chain(csb.core.AbstractNIContainer, Abstract3DEntity):
         Find the optimal fit between C{self} and C{other}. Return L{SuperimposeInfo}
         (RotationMatrix, translation Vector and TM-score), such that:
         
-            >>> other.apply_transformation(rotation_matrix, translation_vector)
+            >>> other.transform(rotation_matrix, translation_vector)
             
         will result in C{other}'s coordinates superimposed over C{self}.
         
@@ -1126,7 +1126,7 @@ class ChainResiduesCollection(csb.core.CollectionContainer):
         except KeyError:
             raise csb.core.ItemNotFoundError(id)
         
-class Residue(csb.core.AbstractNIContainer, Abstract3DEntity):
+class Residue(csb.core.AbstractNIContainer, AbstractEntity):
     """
     Base class representing a single residue. Provides a dictionary-like
     access to the atoms contained in the residue:
@@ -1546,7 +1546,7 @@ class ResidueAtomsTable(csb.core.DictionaryContainer):
         
         super(ResidueAtomsTable, self)._update({atom_name: atom})  
     
-class Atom(Abstract3DEntity):
+class Atom(AbstractEntity):
     """
     Represents a single atom in space.
     
@@ -1601,7 +1601,7 @@ class Atom(Abstract3DEntity):
     def __lt__(self, other):
         return self.serial_number < other.serial_number
     
-    def apply_transformation(self, rotation, translation):
+    def transform(self, rotation, translation):
         
         vector = numpy.dot(self.vector, numpy.transpose(rotation)) + translation
         self.vector = vector
@@ -1753,10 +1753,10 @@ class DisorderedAtom(csb.core.CollectionContainer, Atom):
         self.__update_rep(atom)
         super(DisorderedAtom, self).append(atom)
     
-    def apply_transformation(self, rotation, translation):
+    def transform(self, rotation, translation):
         
         for atom in self:
-            atom.apply_transformation(rotation, translation)
+            atom.transform(rotation, translation)
         self._vector = self._rep._vector
         
     def __update_rep(self, atom):

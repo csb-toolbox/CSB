@@ -108,7 +108,7 @@ class BFitApp(csb.apps.Application):
         out_ensemble = csb.bio.structure.Ensemble()
 
         for i, model in enumerate(ensemble):
-            model.apply_transformation(R[i], t[i])
+            model.transform(R[i], t[i])
             out_ensemble.models.append(model)
 
         out_ensemble.to_pdb(self.args.outfile)

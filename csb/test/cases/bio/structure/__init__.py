@@ -40,7 +40,7 @@ class ChainRegressions(test.Case):
         residue.atoms.append(atom1)
         residue.atoms.append(atom2)
         
-        self.chain.apply_transformation(r, t)
+        self.chain.transform(r, t)
         
         disatom = residue.atoms['Cx']
         self.assertTrue(isinstance(disatom, structure.DisorderedAtom))
@@ -53,7 +53,7 @@ class ChainRegressions(test.Case):
     @test.skip("may fail on slower machines")
     def testListCoordinates(self):
         """
-        Performance tweaks in Abstract3DEntity.list_coordinates()
+        Performance tweaks in AbstractEntity.list_coordinates()
         """
         
         def test():
@@ -64,11 +64,11 @@ class ChainRegressions(test.Case):
 
 
 @test.unit
-class TestAbstract3DEntity(test.Case): 
+class TestAbstractEntity(test.Case): 
     
     def setUp(self):
         
-        super(TestAbstract3DEntity, self).setUp()
+        super(TestAbstractEntity, self).setUp()
         
         self.e = self.config.getPickle('1nz9.full.pickle')
         self.s = self.e.models[1]
@@ -110,10 +110,10 @@ class TestAbstract3DEntity(test.Case):
         original = self.s['A'].list_coordinates(('CA',))
         assert len(original) > 0
 
-        self.e.apply_transformation(R, t)
+        self.e.transform(R, t)
         translated = self.s['A'].list_coordinates(('CA',))
         
-        self.e.apply_transformation(R, -t)
+        self.e.transform(R, -t)
         restored = self.s['A'].list_coordinates(('CA',))                
         
         self.assertTrue(len(original) == len(translated) == len(restored))
@@ -489,7 +489,7 @@ class TestChain(test.Case):
         for coord in si.translation:
             self.assertAlmostEqual(coord, 0.0)
             
-        clone.apply_transformation(si.rotation, si.translation)
+        clone.transform(si.rotation, si.translation)
         self.assertAlmostEqual(self.chain.rmsd(clone), 0, 5)
         
         # not testable for now, but ensure at least no exception is raised
@@ -551,7 +551,7 @@ class TestChain(test.Case):
         for coord in si.translation:
             self.assertAlmostEqual(coord, 0.0)
             
-        clone.apply_transformation(si.rotation, si.translation)
+        clone.transform(si.rotation, si.translation)
         self.assertEqual(self.chain.tm_score(clone), 1.0)
         
         # not testable for now, but ensure at least no exception is raised
