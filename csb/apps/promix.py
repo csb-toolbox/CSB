@@ -61,7 +61,7 @@ class ProMixApp(csb.apps.Application):
 
     def main_segments(self, ensemble, X):
 
-        mixture = mixtures.SegmentMixture.from_coords(X, self.args.components)
+        mixture = mixtures.SegmentMixture.new(X, self.args.components)
         self.log('Number of segments: {0}'.format(mixture.K))
 
         for k,(sigma,w) in enumerate(zip(mixture.sigma, mixture.w)):
@@ -79,7 +79,7 @@ class ProMixApp(csb.apps.Application):
 
     def main_conformers(self, ensemble, X):
 
-        mixture = mixtures.ConformerMixture.from_coords(X, self.args.components)
+        mixture = mixtures.ConformerMixture.new(X, self.args.components)
         self.log('Number of conformers: {0}'.format(mixture.K))
 
         membership = mixture.membership

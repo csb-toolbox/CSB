@@ -48,7 +48,7 @@ class TestMixtures(test.Case):
         K = len(set(w_ref))
 
         # non-randomized heuristic with BIC
-        m = cls.from_coords(X)
+        m = cls.new(X)
         overlap = m.overlap(w_ref)
 
         self.assertTrue(overlap >= min_overlap, 'mixture not reproduced with heuristic')
