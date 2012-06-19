@@ -58,7 +58,7 @@ class PropagationResult(AbstractPropagationResult):
     """
     
     
-    def __init__(self, initial, final, heat=0.0):
+    def __init__(self, initial, final, heat=0.0, ):
         
         if not isinstance(initial, AbstractState):
             raise TypeError(initial)
@@ -69,6 +69,7 @@ class PropagationResult(AbstractPropagationResult):
         self._initial = initial
         self._final = final
         self._heat = None
+        self._work = None
         
         self.heat = heat
         
@@ -95,14 +96,16 @@ class Trajectory(csb.core.CollectionContainer, AbstractPropagationResult):
     @type items: list of L{AbstractState}
     @param heat: heat produced during the trajectory
     @type heat: float
+    @param work: work produced during the trajectory
+    @type work: float
     """
     
-    def __init__(self, items, heat=0.0):
+    def __init__(self, items, heat=0.0, work=0.0):
         
         super(Trajectory, self).__init__(items, type=AbstractState)
         
-        self._heat = None    
-        self.heat = heat
+        self._heat = heat    
+        self._work = work
     
     @property
     def initial(self):
@@ -117,7 +120,14 @@ class Trajectory(csb.core.CollectionContainer, AbstractPropagationResult):
         return self._heat
     @heat.setter
     def heat(self, value):
-        self._heat = float(value)    
+        self._heat = float(value)
+
+    @property
+    def work(self):
+        return self._work
+    @work.setter
+    def work(self, value):
+        self._work = float(value)  
 
 class TrajectoryBuilder(object):
     """
@@ -125,10 +135,13 @@ class TrajectoryBuilder(object):
 
     @param heat: heat produced over the trajectory
     @type heat: float
+    @param work: work produced during the trajectory
+    @type work: float
     """
     
-    def __init__(self, heat=0.0):
+    def __init__(self, heat=0.0, work=0.0):
         self._heat = heat
+        self._work = work
         self._states = []
         
     @staticmethod
@@ -156,7 +169,7 @@ class TrajectoryBuilder(object):
         The L{Trajectory} instance build by a specific instance of
         this class
         """
-        return Trajectory(self._states, heat=self._heat)
+        return Trajectory(self._states, heat=self._heat, work=self._work)
 
     def add_initial_state(self, state):
         """
