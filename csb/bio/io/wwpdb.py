@@ -550,7 +550,7 @@ class AbstractStructureParser(object):
                     if chain not in asu:
                         raise PDBParseError('chain {0} missing'.format(chain))
                     copy = asu[chain].clone()
-                    copy.apply_transformation(R, t)
+                    copy.transform(R, t)
                     if single:
                         if len(structure.chains) == 62:
                             raise ValueError('too many chains for single=True')

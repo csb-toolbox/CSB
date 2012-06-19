@@ -70,10 +70,10 @@ class ProMixApp(csb.apps.Application):
 
             for model, R, t in zip(ensemble, mixture.R, mixture.t):
                 if k > 0:
-                    model.apply_transformation(R[k-1], t[k-1])
+                    model.transform(R[k-1], t[k-1])
                 R = R[k].T
                 t = -numpy.dot(R, t[k])
-                model.apply_transformation(R, t)
+                model.transform(R, t)
 
             ensemble.to_pdb(outfile)
 
@@ -95,7 +95,7 @@ class ProMixApp(csb.apps.Application):
                     continue
                 R = R[k].T
                 t = -numpy.dot(R, t[k])
-                model.apply_transformation(R, t)
+                model.transform(R, t)
                 ek.models.append(model)
 
             ek.to_pdb(outfile)

@@ -81,7 +81,7 @@ Others behave like collections:
     <ProteinResidue [11]: GLY 11>
     
 But all entities are iterable because they inherit the C{items} iterator
-from L{Abstract3DEntity}. The above loop can be shortened:
+from L{AbstractEntity}. The above loop can be shortened:
 
     >>> for chain in s.items:
             for residue in chain.items:
