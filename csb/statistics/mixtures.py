@@ -323,9 +323,10 @@ class GaussianMixture(object):
             yield mixture
 
     @classmethod
-    def guess_K(cls, X):
+    def new(cls, X, K=0):
         """
-        Factory method which finds best C{K} according to L{BIC<GaussianMixture.BIC>}.
+        Factory method with optional C{K}. If C{K=0}, guess best C{K} according
+        to L{BIC<GaussianMixture.BIC>}.
 
         @param X: multi dimensional input vector with samples along first axis
         @type X: (M,...) numpy array
@@ -333,6 +334,9 @@ class GaussianMixture(object):
         @return: Mixture instance
         @rtype: L{GaussianMixture} subclass
         """
+        if K > 0:
+            return cls(X, K)
+
         mixture_it = cls.series(X)
         mixture = next(mixture_it)
 
@@ -343,18 +347,6 @@ class GaussianMixture(object):
             mixture = candidate
 
         return mixture
-
-    @classmethod
-    def from_coords(cls, X, K=0):
-        """
-        Factory method with optional C{K}. Use C{guess_K} if C{K<1}.
-
-        @return: Mixture instance
-        @rtype: L{GaussianMixture} subclass
-        """
-        if K > 0:
-            return cls(X, K)
-        return cls.guess_K(X)
 
     @property
     def BIC(self):
@@ -428,8 +420,8 @@ class AbstractStructureMixture(GaussianMixture):
     def R(self):
         """
         Rotation matrices
-        @rtype: (M,K,3,3) numpy arra
-        y"""
+        @rtype: (M,K,3,3) numpy array
+        """
         return self._R
 
     @property
