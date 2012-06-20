@@ -1,6 +1,6 @@
 """
 Python application for robust structure superposition of an ensemble of structures.
-bfite models non-rigid displacements in protein ensembles are modelled with outlier-tolerant
+bfite models non-rigid displacements in protein ensembles with outlier-tolerant
 probability distributions.
 """
 import numpy
