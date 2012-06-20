@@ -675,7 +675,7 @@ class Chart(object):
                 service.destroy(self._figure, wait=True)
                 service.client_disposed(self)    
         
-    def save(self, file, format='png', crop=True, dpi=None, *a, **k):
+    def save(self, file, format='png', crop=False, dpi=None, *a, **k):
         """
         Save all plots to an image.
         

@@ -237,7 +237,7 @@ class LibrarySuperimposer(object):
 
             xaxis = chart.plot.axes.xaxis            
             xaxis.set_minor_locator(matplotlib.ticker.IndexLocator(1, 0))
-            xaxis.set_major_locator(matplotlib.ticker.IndexLocator(5, 0))               
+            xaxis.set_major_locator(matplotlib.ticker.IndexLocator(5, 0))   
             
             try:
                 chart.width = 15
