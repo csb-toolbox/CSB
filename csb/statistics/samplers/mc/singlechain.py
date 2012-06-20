@@ -8,6 +8,7 @@ import csb.numeric
 from csb.statistics.samplers import State
 from csb.statistics.samplers.mc import AbstractSingleChainMC
 from csb.statistics.samplers.mc.propagators import MDPropagator
+from csb.numeric.integrators import FastLeapFrog
 
 
 class HMCSampler(AbstractSingleChainMC):
@@ -36,7 +37,7 @@ class HMCSampler(AbstractSingleChainMC):
     @type integrator: type
     """
 
-    def __init__(self, pdf, state, gradient, timestep, nsteps, integrator):
+    def __init__(self, pdf, state, gradient, timestep, nsteps, integrator=FastLeapFrog):
         
         super(HMCSampler, self).__init__(pdf, state)
         
