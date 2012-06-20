@@ -777,8 +777,8 @@ class ProfileHMMSegment(ProfileHMM):
         layers = csb.core.deepcopy(hmm.layers[start : end + 1])
         max_score = 1.0
         if hmm.score_units != ScoreUnits.Probability:
-            max_score = hmm._convert_scores(hmm.score_units,
-                                            max_score, hmm.scale, hmm.logbase)
+            max_score = hmm._convert(hmm.score_units,
+                                     max_score, hmm.scale, hmm.logbase)
         self._build_graph(layers, max_score)
                         
         if hmm.dssp:
