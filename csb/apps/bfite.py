@@ -1,5 +1,7 @@
 """
-Python application for robust structure superposition of an ensemble of structures
+Python application for robust structure superposition of an ensemble of structures.
+bfite models non-rigid displacements in protein ensembles are modelled with outlier-tolerant
+probability distributions.
 """
 import numpy
 
@@ -21,13 +23,8 @@ class AppRunner(csb.apps.AppRunner):
         return BFitApp
 
     def command_line(self):
-        description = "bFit is a probabilistic method for robust superposition" \
-                  + "and comparison of protein structures. To do so, "\
-                  + "non-rigid displacements in protein structures are "\
-                  + "modelled with outlier-tolerant probability "\
-                  + "distributions."
         
-        cmd = csb.apps.ArgHandler(self.program, description)
+        cmd = csb.apps.ArgHandler(self.program, __doc__)
 
         # Input structures
         cmd.add_positional_argument('pdb', str,
