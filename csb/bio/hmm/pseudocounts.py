@@ -117,7 +117,7 @@ class PseudocountBuilder(object):
         from numpy import array
 
         if not self.hmm._score_units == ScoreUnits.Probability:
-            self.hmm.convert(units=ScoreUnits.Probability) 
+            self.hmm.convert_scores(units=ScoreUnits.Probability) 
 
         if self.hmm.pseudocounts or self.hmm.transition_pseudocounts:
             return

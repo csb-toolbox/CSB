@@ -172,11 +172,11 @@ class TestPseudocountBuilder(test.Case):
         self.hmm = HHProfileParser(self.config.getTestFile('d1nz0a_.hhm')).parse()
         
     def runTest(self):
-        
         self.hmm.add_emission_pseudocounts()
+        self.hmm.convert_scores(ScoreUnits.LogScales)
         self.hmm.add_transition_pseudocounts()
         # TODO: some checks here... 
-
+        
 @test.unit
 class TestProfileHMMSegment(test.Case):
 
@@ -197,6 +197,10 @@ class TestProfileHMMSegment(test.Case):
         self.assertEqual(self.segment.start.transitions[States.Match].probability, 1)
         self.assertEqual(self.segment.layers[1][States.Match].emission[ProteinAlphabet.CYS], 0.5)
         self.assertRaises(IndexError, self.hmm.segment, 1, 3)
+        
+        self.hmm.convert_scores(ScoreUnits.LogScales)
+        segment = ProfileHMMSegment(self.hmm, 1, 2)
+        self.assertEqual(segment.source_start, 1)
                     
     def testToHMM(self):
         
