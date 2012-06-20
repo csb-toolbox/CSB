@@ -345,7 +345,7 @@ class HHProfileParser(object):
                     tran_types = line.split()
 
                     line = next(lines)
-                    start_probs = tuple(map(parse_probability, line.split()))
+                    start_probs = list(map(parse_probability, line.split()))
                 except StopIteration:
                     break
 
