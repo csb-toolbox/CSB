@@ -279,7 +279,9 @@ class HHfrag(object):
         for length in sorted(histogram):
             
             percent = histogram[length] * 100.0 / len(self._matches)
-            bar = '{0:3} |{1} {2:5.1f}%'.format(length, '\xe2\x8a\x90' * int(percent), percent)
+            seg = b'\xe2\x9f\xa4'.decode('utf-8')
+            bar = b'{0:3} |{1} {2:5.1f}%'.decode('utf-8')
+            bar = bar.format(length, seg * int(percent), percent)
             self.log(bar, level=2)
     
     def build_fragment_map(self):
@@ -326,8 +328,7 @@ class HHfrag(object):
         self.log('\n# Building complemented map...')
         
         try:
-            from csb.bio.fragments.rosetta import RosettaFragmentMap
-            filling = RosettaFragmentMap.read(fragfile, top=top)
+            filling = rosetta.RosettaFragmentMap.read(fragfile, top=top)
         except IOError as io:
             raise ArgumentIOError(str(io))
 
