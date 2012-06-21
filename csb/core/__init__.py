@@ -549,6 +549,9 @@ class BaseDictionaryContainer(AbstractIndexer):
         return len(self._items)
 
     def __nonzero__(self):
+        return self.__bool__()
+    
+    def __bool__(self):
         return len(self) > 0
     
     @property
@@ -726,6 +729,9 @@ class BaseCollectionContainer(AbstractIndexer):
         return len(self._items)
 
     def __nonzero__(self):
+        return self.__bool__()
+    
+    def __bool__(self):
         return len(self) > 0
     
     @property

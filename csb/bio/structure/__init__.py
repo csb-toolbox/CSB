@@ -2362,9 +2362,12 @@ class TorsionAngles(object):
         return "<TorsionAngles: phi={0.phi}, psi={0.psi}, omega={0.omega}>".format(self)
     
     def __nonzero__(self):
+        return self.__bool__()
+
+    def __bool__(self):
         return  self.phi is not None \
                 or self.psi is not None \
-                or self.omega is not None
+                or self.omega is not None        
 
     @property
     def units(self):
