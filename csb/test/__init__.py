@@ -2,7 +2,7 @@
 This is a top level package, hosting the entire CSB test framework. It is divided
 into several major parts:
 
-    - test cases, located under L{csb.test.cases}
+    - test cases, located under csb.test.cases
     - test data, in C{/csb/test/data} (not a package)
     - test console, in C{/csb/test/app.py}
 
@@ -25,7 +25,7 @@ decorators you would need in order to write tests for CSB.
        L{csb.io.TempFolder}. 
         
        All test data files should be placed in the C{data} folder. All test
-       modules must be placed in the root package: L{csb.test.cases}. There is
+       modules must be placed in the root package: csb.test.cases. There is
        a strict naming convention for test modules: the name of a test module
        should be the same as the name of the CSB API package it tests. For 
        example, if you are writing tests for C{csb/bio/io/__init__.py}, the
