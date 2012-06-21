@@ -3,11 +3,11 @@ import csb.test as test
 
 from csb.statistics.pdf import Normal
 
-from csb.numeric.integrators import AbstractGradient, VelocityVerlet, LeapFrog
+from csb.numeric.integrators import AbstractGradient, VelocityVerlet, LeapFrog, FastLeapFrog
 
 from csb.statistics.samplers import State
 from csb.statistics.samplers.mc import MDRENSSwapParameterInfo, ThermostattedMDRENSSwapParameterInfo
-from csb.statistics.samplers.mc import AlternatingAdjacentSwapper
+from csb.statistics.samplers.mc import AlternatingAdjacentSwapScheme
 from csb.statistics.samplers.mc.singlechain import HMCSampler, RWMCSampler
 from csb.statistics.samplers.mc.multichain import ReplicaExchangeMC, MDRENS, ThermostattedMDRENS
 
@@ -87,10 +87,10 @@ class TestMultichain(test.Case):
         
         self.params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
                                                             self.timesteps[0], self.nsteps[0],
-                                                            self.gradients[0], lambda t: 1.),
+                                                            self.gradients[0]),
                        ThermostattedMDRENSSwapParameterInfo(self.samplers[1], self.samplers[2],
                                                             self.timesteps[1], self.nsteps[1],
-                                                            self.gradients[1], lambda t: 1.)]
+                                                            self.gradients[1])]
 
     def _createGradientL(self, sigma1, sigma2):
         
@@ -103,7 +103,7 @@ class TestMultichain(test.Case):
     def _run(self, algorithm):
         
         samples = []
-        swapper = AlternatingAdjacentSwapper(algorithm)
+        swapper = AlternatingAdjacentSwapScheme(algorithm)
 
         for i in range(self.nits):
             if i % 5 == 0 and i > 0:
@@ -124,7 +124,7 @@ class TestMultichain(test.Case):
 
     def testMDRENS(self):
         
-        algorithm = MDRENS(self.samplers, self.params, VelocityVerlet)
+        algorithm = MDRENS(self.samplers, self.params, FastLeapFrog)
         self._run(algorithm)
 
     def testThermostattedMDRens(self):

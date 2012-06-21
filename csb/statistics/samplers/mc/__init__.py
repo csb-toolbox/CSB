@@ -327,7 +327,7 @@ class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     """
         
     def __init__(self, sampler1, sampler2, timestep, traj_length, gradient,
-                 temperature, collision_probability=0.1, collision_interval=1):
+                 temperature=lambda l: 1., collision_probability=0.1, collision_interval=1):
         
         super(ThermostattedMDRENSSwapParameterInfo, self).__init__(
                                     sampler1, sampler2, timestep, traj_length, gradient)
@@ -758,7 +758,31 @@ class AbstractRENS(AbstractExchangeMC):
         """
         pass
 
-class AlternatingAdjacentSwapper(object):
+class AbstractSwapScheme(object):
+    """
+    Provides the interface for classes defining schemes according to which swaps in
+    Replica Exchange-like simulations are performed.
+
+    @param algorithm: Exchange algorithm that performs the swaps
+    @type algorithm: L{AbstractExchangeMC}
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, algorithm):
+
+        self._algorithm = algorithm
+
+    @abstractmethod
+    def swap_all(self):
+        """
+        Advises the Replica Exchange-like algorithm to perform swaps according to
+        the some schedule defined here.
+        """
+        
+        pass
+
+class AlternatingAdjacentSwapScheme(AbstractSwapScheme):
     """
     Provides a swapping scheme in which tries exchanges between neighbours only
     following the scheme 1 <-> 2, 3 <-> 4, ... and after a sampling period 2 <-> 3, 4 <-> 5, ...
@@ -766,15 +790,16 @@ class AlternatingAdjacentSwapper(object):
     @param algorithm: Exchange algorithm that performs the swaps
     @type algorithm: L{AbstractExchangeMC}
     """
-    
+
     def __init__(self, algorithm):
+
+        super(AlternatingAdjacentSwapScheme, self).__init__(algorithm)
         
-        self._algorithm = algorithm
         self._current_swap_list = None
         self._swap_list1 = []
         self._swap_list2 = []
         self._create_swap_lists()
-
+    
     def _create_swap_lists(self):
         
         i = 0
