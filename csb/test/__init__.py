@@ -1,77 +1,77 @@
 """
-This is the top level package of the CSB's testing framework. It is divided
-into several major components:
+This is a top level package, hosting the entire CSB test framework. It is divided
+into several major parts:
 
-    - test cases, located under csb.test.cases
-    - test data, in /csb/test/data (not a package)
-    - test console, in /csb/test/app.py
+    - test cases, located under L{csb.test.cases}
+    - test data, in C{/csb/test/data} (not a package)
+    - test console, in C{/csb/test/app.py}
 
 This module, csb.test, contains all the glue-code functions, classes and 
-decorators you need in order to write tests for CSB.    
+decorators you would need in order to write tests for CSB.    
 
     1. Configuration and Tree
     
-       csb.test.Config is the common config shared between CSB tests. Each
-       config instance contains properties like:
+       L{Config<csb.test.Config>} is a common config object shared between CSB
+       tests. Each config instance contains properties like:
             
-            - data: the data folder, automatically discovered in 
+            - data: the data folder, automatically discovered and loaded in
               csb.test.Config.DATA at module import time
-            - temp: a default temp folder, which tests may use
+            - temp: a default temp folder, which test cases can use
         
-       Each config instance has a standard method for test file retrieval,
-       called C{config.getTestFile}.
+       Each L{Config<csb.test.Config>} provides a convenient way to retrieve
+       files from C{/csb/test/data}. Be sure to check out L{Config.getTestFile}
+       and L{Config.getPickle}. In case you need a temp file, use
+       L{Config.getTempStream} or have a look at L{csb.io.TempFile} and
+       L{csb.io.TempFolder}. 
         
        All test data files should be placed in the C{data} folder. All test
-       modules must be placed in the root package: C{csb.test.cases}. There is
+       modules must be placed in the root package: L{csb.test.cases}. There is
        a strict naming convention for test modules: the name of a test module
        should be the same as the name of the CSB API package it tests. For 
-       example, if you write a test module for C{csb/bio/io/__init__.py}, the
-       test module must be C{csb/test/cases/bio/io/__init__.py}. Therefore, 
-       C{csb.test.cases} is the "root" package of all test packages.
+       example, if you are writing tests for C{csb/bio/io/__init__.py}, the
+       test module must be C{csb/test/cases/bio/io/__init__.py}. C{csb.test.cases}
+       is the root package of all test modules in CSB.
     
     2. Writing Tests
     
        Writing a test is easy. All you need is to import csb.test and then
-       create your own test cases, derived from csb.test.Case::
+       create your own test cases, derived from L{csb.test.Case}:
        
-           @csb.test.unit
-           class TestSomeClass(csb.test.Case):
-               # test methods here...
+           >>> import csb.test
+           >>> @csb.test.unit
+               class TestSomeClass(csb.test.Case):
+                   def setUp(self):
+                       super(TestSomeClass, self).setUp()
+                       # do something with self.config here...
        
        In this way your test case instance is automatically equipped with a 
-       reference to the test config, so your test method can be::
-       
-           def testSomeMethod(self):
-               myDataFile = self.config.getTestFile('some.file')
-               self.assert...
+       reference to the test config, so your test method can be:
+
+           >>> @csb.test.unit
+               class TestSomeClass(csb.test.Case):
+                   def testSomeMethod(self):
+                       myDataFile = self.config.getTestFile('some.file')
+                       self.assert...
         
-       The "unit" decorator marks the test case as a collection of unit tests.
-       All options are: csb.test.unit, csb.test.functional, csb.test.custom,
-       and csb.test.regression.
-        
-       If you need to add more initialization steps, you can override the
-       default C{csb.test.Case.setUp}::
-        
-           def setUp(self):
-               super(TestSomeClass, self).setUp()       # init the config
-               # do something with self.config here...
+       The "unit" decorator marks a test case as a collection of unit tests.
+       All possibilities are: L{csb.test.unit}, L{csb.test.functional}, L{csb.test.custom},
+       and L{csb.test.regression}.
                    
        Writing custom (a.k.a. "data", "slow", "dynamic") tests is a little bit
        more work. Custom tests must be functions, not classes. Basically a
        custom test is a function, which builds a unittest.TestSuite instance 
        and then returns it when called without arguments.
        
-       Regression tests are closely related with reported bugs. Therefore, 
-       the best practice is to mark each test method with its relevant bug ID::
+       Regression tests are usually created in response to reported bugs. Therefore, 
+       the best practice is to mark each test method with its relevant bug ID:
        
-           @csb.test.regression
-           class SomeClassRegressions(csb.test.Case)
-               
-               def testSomeFeature(self)
-               \"""
-               @see: [CSB 000XXXX] 
-               \"""
-               # regression test body...
+           >>> @csb.test.regression
+               class SomeClassRegressions(csb.test.Case)
+                   def testSomeFeature(self)
+                   \"""
+                   @see: [CSB 000XXXX] 
+                   \"""
+                   # regression test body...
            
     3. Style Guide:
     
@@ -81,42 +81,23 @@ decorators you need in order to write tests for CSB.
        - use camelCase for methods and variables. This applies to all the
          code under csb.test (including test) and does not apply to the rest
          of the library!
-       - for functional tests, you can create only one test method: runTest
-       - for unit tests, you can make test names atomic, for example: 
+       - for functional tests it's okay to define just one test method: runTest
+       - for unit tests you should create more specific test names, for example: 
          "testParseFile" - a unit test for some method called "parse_file"
-       - use csb.test decorators to mark tests as unit, functional or custom
-       - in each test module put::
+       - use csb.test decorators to mark tests as unit, functional, regression, etc.
+       - make every test module executable::
        
            if __name__ == '__main__':
-               csb.test.Console()
+               csb.test.Console()   # Discovers and runs all test cases in the module
     
     4. Test Execution
     
-       The test execution is handled by C{test builders} and a test runner
-       C{app}. Test builders are subclasses of L{AbstractTestBuilder}. 
-       We have one test builder specialized to load a specific test type: 
-       unit, functional, custom. L{AnyTestBuilder} will scan for either unit
-       or functional tests.
-    
-       The test runner app is C{csb/test/app.py} which is simply an instance
-       of L{csb.test.Console}. The app has two major arguments: 
-    
-           - test type, which controls which TestBuilder will handle the test
-             module scan (e.g.: "any" triggers L{AnyTestBuilder}, "unit" - 
-             L{UnitTestBuilder} and so on) 
-           - test namespaces - a list of "dotted" test cases, e.g.::
-    
-                csb.test.cases.bio.io.*   # io and sub-packages
-                csb.test.cases.bio.utils  # only utils
-                __main__                  # current module
-    
-           Run the app with '-h' for full documentation.
-    
-       In addition to running the app from the command line, you can run it
-       also programmatically by instantiating L{csb.test.Console}. You can
-       construct a test console object by supplying target test namespace(s)
-       and a test builder class in the constructor.
-    
+       Test discovery is handled by C{test builders} and a test runner
+       C{app}. Test builders are subclasses of L{AbstractTestBuilder}.  
+       For every test type (unit, functional, regression, custom) there is a
+       corresponding test builder. L{AnyTestBuilder} is a special builder which
+       scans for unit, regression and functional tests at the same time.
+
        Test builder classes inherit the following test discovery methods:
     
            - C{loadTests} - load tests from a test namespace. Wildcard
@@ -126,24 +107,48 @@ decorators you need in order to write tests for CSB.
            - C{loadFromFile} - load tests from an absolute file name
            - C{loadMultipleTests} - calls C{loadTests} for a list of 
              namespaces and combines all loaded tests in a single suite
+             
+       Each of those return test suite objects, which can be directly executed
+       with python's unittest runner.
+       
+       Much simpler way to execute a test suite is to use our test app 
+       (C{csb/test/app.py}), which is simply an instance of L{csb.test.Console}::
+       
+           $ python csb/test/app.py --help
+       
+       The app has two main arguments: 
+    
+           - test type - tells the app which TestBuilder to use for test dicsovery
+             ("any" triggers L{AnyTestBuilder}, "unit" - L{UnitTestBuilder}, etc.) 
+           - test namespaces - a list of "dotted" test modules, for example::
+    
+                csb.test.cases.bio.io.*   # io and sub-packages
+                csb.test.cases.bio.utils  # only utils
+                .                         # current module
+    
+       In addition to running the app from the command line, you can run it
+       also programmatically by instantiating L{csb.test.Console}. You can
+       construct a test console object by passing a list of test namespace(s)
+       and a test builder class to the Console's constructor.
+
     
     5. Commit Policies
     
        Follow these guidelines when making changes to the repository:
     
-           - No Bugs in the Repository: after fixing a bug or implementing a new
+           - B{no bugs in "trunk"}: after fixing a bug or implementing a new
              feature, make sure at least the default test set passes by running
              the test console without any arguments. This is equivalent to:
              app.py -t any "csb.test.cases.*". (If no test case from this set covers
              the affected code, create a test case first, as described in the other
              policies)
     
-           - No Recurrent Issues: when a bug is observed, first write a regression
+           - B{no recurrent issues}: when a bug is found, first write a regression
              test with a proper "@see: BugID" tag in the docstring. Run the test
              to make sure it fails. After fixing the bug, run the test again before
-             you commit, as required by the "No Bugs in the Repository" policy
+             you commit, as required by the previous policy
              
-           - Test New Features: there should be a test case for every new feature
+           - B{test all new features}: there should be a test case for every new feature
              we implement. One possible approach is to write a test case first and
              make sure it fails; when the new feature is ready, run the test again
              to make sure it passes
