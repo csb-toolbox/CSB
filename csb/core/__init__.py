@@ -840,6 +840,14 @@ class AbstractContainer(object):
     def __getitem__(self, i):
         return self._children[i]
     
+    def __len__(self):
+        return len(self._children)
+
+    def __nonzero__(self):
+        return True
+
+    __bool__ = __nonzero__
+
     def __iter__(self):
         for i in self._children:
             yield i
