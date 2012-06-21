@@ -1,58 +1,56 @@
 """
 Various Monte Carlo equilibrium sampling algorithms, which simulate only one Markov chain.
 
-In the following, I will shortly explain how sample from a PDF using the HMCSampler class.
-The follwing short code sniplet draws 5000 samples from a 1D normal distribution and plots
-them using matplotlib:
+Here is how to sample from a PDF using the L{HMCSampler} class. In the following
+snippet we draw 5000 samples from a 1D normal distribution and plot them:
 
 
-import numpy
-import matplotlib.pyplot as plt
-
-from csb.statistics.pdf import Normal
-from csb.statistics.samplers import State
-from csb.statistics.samplers.mc.singlechain import HMCSampler
-
-initial_state = State(numpy.array([1.]))
-grad = lambda q, t: q
-timestep = 1.5
-nsteps = 30
-nsamples = 5000
-
-sampler = HMCSampler(Normal(), initial_state, grad, timestep, nsteps)
-
-states = []
-
-for i in range(nsamples):
-    sampler.sample()
-    states.append(sampler.state)
-
-print 'acceptance rate:', sampler.acceptance_rate
-
-states = [state.position[0]for state in states]
-
-plt.hist([numpy.random.normal(size=5000), states], bins=20, normed=True, \
-         label=['numpy.random.normal', 'HMC'])
-plt.legend()
-plt.show()
+    >>> import numpy
+    >>> from csb.io.plotting import Chart
+    >>> from csb.statistics.pdf import Normal
+    >>> from csb.statistics.samplers import State
+    >>> from csb.statistics.samplers.mc.singlechain import HMCSampler
+    
+    >>> initial_state = State(numpy.array([1.]))
+    >>> grad = lambda q, t: q
+    >>> timestep = 1.5
+    >>> nsteps = 30
+    >>> nsamples = 5000
+    
+    >>> sampler = HMCSampler(Normal(), initial_state, grad, timestep, nsteps)
+    
+    >>> states = []
+    >>> for i in range(nsamples):
+            sampler.sample()
+            states.append(sampler.state)
+    
+    >>> print('acceptance rate:', sampler.acceptance_rate)
+    0.8
+    
+    >>> states = [state.position[0]for state in states]
+    >>> chart = Chart()
+    >>> chart.plot.hist([numpy.random.normal(size=5000), states], bins=20, normed=True,
+                        label=['numpy.random.normal', 'HMC'])
+    >>> chart.plot.legend()
+    >>> chart.show()
 
 
 First, several things which are being needed are imported.
 As every sampler in this module implements a Markov Chain, an initial state has to be
 chosen. In the following lines, several parameters are set:
-- the gradient of the negative log-probability of the PDF under consideration
-- the integration timestep
-- the number of integration steps to be performed in each iteration, that is, the HMC
-  trajectory length
-- the number of samples to be drawn
+    - the gradient of the negative log-probability of the PDF under consideration
+    - the integration timestep
+    - the number of integration steps to be performed in each iteration, that is, the HMC
+      trajectory length
+    - the number of samples to be drawn
 
 The empty list states is initialized. It will serve to store the samples drawn.
-In the loop, sampler.sample() is repeatedly called. After each call of sampler.sample(),
+In the loop, C{sampler.sample()} is repeatedly called. After each call of C{sampler.sample()},
 the current state of the Markov Chain is stored in sampler.state and this state is appended
 to the sample storage list.
 
-Then the acceptance rate is printed, the numeric values are being extracted from the State
-objects in states, a histogram is created and finally plotted.
+Then the acceptance rate is printed, the numeric values are being extracted from the
+L{State} objects in states, a histogram is created and finally plotted.
 """
 
 import numpy
