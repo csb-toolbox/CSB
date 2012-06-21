@@ -158,6 +158,14 @@ class TestDictionaryContainer(test.Case):
         self.assertEqual(self.test['B'], self.dict['B'])     
         self.assertRaises(utils.ItemNotFoundError, lambda k: self.test[k], 66)
         
+    def testLength(self):
+        self.assertEqual(self.test.length, len(self.test))
+        self.assertEqual(self.test.length, 2)
+
+    def testBool(self):
+        self.assertTrue(self.test)
+        self.assertFalse(self.new())        
+        
     def testSet(self):
         new = utils.DictionaryContainer(items=self.dict, restrict=self.keys)
         new._set({'Z': 6})
@@ -208,7 +216,15 @@ class TestCollectionContainer(test.Case):
         self.assertRaises(utils.CollectionIndexError, get, self.start + len(self.items))  # i = end + 1
         if self.start > 0:
             self.assertRaises(utils.CollectionIndexError, get, self.start - 1)            # i = start - 1, i >= 0
-                
+
+    def testLength(self):
+        self.assertEqual(self.test.length, len(self.test))
+        self.assertEqual(self.test.length, len(self.items))
+
+    def testBool(self):
+        self.assertTrue(self.test)
+        self.assertFalse(self.new()) 
+                        
     def testIndices(self):
         new = self.new(items=self.items, type=int, start_index=self.start)
         self.assertEqual(new.start_index, self.start)                

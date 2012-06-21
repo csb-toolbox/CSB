@@ -818,6 +818,10 @@ class TestTorsionAngles(test.Case):
         self.assertEqual(ta.phi, 0)
         self.assertEqual(ta.psi, 90)
         self.assertEqual(ta.omega, 180)
+        
+    def testBool(self):
+        self.assertTrue(structure.TorsionAngles(20, None, None))
+        self.assertFalse(structure.TorsionAngles(None, None, None))
 
 
 
