@@ -10,6 +10,7 @@ from csb.statistics.samplers.mc import MDRENSSwapParameterInfo, ThermostattedMDR
 from csb.statistics.samplers.mc import AlternatingAdjacentSwapScheme
 from csb.statistics.samplers.mc.singlechain import HMCSampler, RWMCSampler
 from csb.statistics.samplers.mc.multichain import ReplicaExchangeMC, MDRENS, ThermostattedMDRENS
+from csb.statistics.samplers.mc.propagators import RWMCPropagator, HMCPropagator
 
 
 class SamplePDF(Normal):
@@ -17,50 +18,47 @@ class SamplePDF(Normal):
     def log_prob(self, x):
         return sum(map(super(SamplePDF, self).log_prob, x))
     
-    
 @test.functional
-class TestSinglechain(test.Case):
+class TestMCPropagators(test.Case):
 
     def setUp(self):
         
-        super(TestSinglechain, self).setUp()
+        super(TestMCPropagators, self).setUp()
 
         self.pdf = SamplePDF()
-        self.grad = self._createGradient(1.)
-        self.dt = 1.2
+        self.gradient = self._createGradient(1.)
+        self.timestep = 1.2
+        self.stepsize = 1.2
         self.nsteps = 25
         self.nits = 15000
         self.state = State(np.random.normal(size=1))
-        
+
     def _createGradient(self, sigma):
         
         class Grad(AbstractGradient):
             def evaluate(self, q, t):
                 return q / (sigma ** 2)
             
-        return Grad()        
+        return Grad()       
 
-    def _run(self, sampler):
-        states = []
+    def check_result(self, trajectory):
 
-        for i in range(self.nits):
-            sampler.sample()
-            states.append(sampler.state.position[0])
-
+        states = [state.position[0] for state in trajectory]
+        
         self.assertWithinDelta(np.array(states).mean(), 0., 1e-1)
         self.assertWithinDelta(np.array(states).var(), 1., 1e-1)
 
-    def testHMCSampler(self):
-        
-        sampler = HMCSampler(self.pdf, self.state, self.grad,
-                                  self.dt, self.nsteps, VelocityVerlet)
-        self._run(sampler)
+    def testRWMCPropagator(self):
 
-    def testRWMCSampler(self):
+        gen = RWMCPropagator(self.pdf, self.stepsize)
 
-        sampler = RWMCSampler(self.pdf, self.state, 1.2)
-        self._run(sampler)
-        
+        self.check_result(gen.generate(self.state, self.nits))
+
+    def testHMCPropagator(self):
+
+        gen = HMCPropagator(self.pdf, self.gradient, self.timestep, self.nsteps)
+
+        self.check_result(gen.generate(self.state, self.nits))
         
 @test.functional
 class TestMultichain(test.Case):
