@@ -58,6 +58,59 @@ class AbstractMC(AbstractSampler):
         """
         pass
 
+class AbstractProposalCommunicator(object):
+    """
+    With the exception of the current state of the Markov chain, this
+    holds all the information needed to calculate the acceptance
+    probability in an AbstractSingleChainMC-derived sampling
+    algorithm.
+
+    @param proposal: Proposal state
+    @type proposal: L{State}
+    """
+
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def __init__(self, proposal):
+
+        self._proposal = proposal
+
+    @property
+    def proposal(self):
+        return self._proposal
+
+class RWMCProposalCommunicator(AbstractProposalCommunicator):
+    """
+    With the exception of the current state of the Markov chain, this
+    holds all the information needed to calculate the acceptance
+    probability of a proposal state in the random walk Metropolis
+    Monte Carlo algorithm, that is, only the proposal state.
+
+    @param proposal: Proposal state
+    @type proposal: L{State}
+    """
+
+    def __init__(self, proposal):
+
+        super(RWMCProposalCommunicator, self).__init__(proposal)
+
+class HMCProposalCommunicator(AbstractProposalCommunicator):
+    """
+    With the exception of the current state of the Markov chain, this
+    holds all the information needed to calculate the acceptance
+    probability of a proposal state in the HMC algorithm, that is,
+    only the proposal state.
+
+    @param proposal: Proposal state
+    @type proposal: L{State}
+    """
+
+    def __init__(self, proposal):
+
+        super(HMCProposalCommunicator, self).__init__(proposal)
+
+
 class AbstractSingleChainMC(AbstractMC):
     """
     Abstract class for Monte Carlo sampling algorithms simulating
@@ -91,27 +144,31 @@ class AbstractSingleChainMC(AbstractMC):
         @rtype: L{State}
         """
         
-        proposal = self._propose()
-        pacc = self._calc_pacc(proposal)
-        self._accept(proposal, pacc)
+        proposal_communicator = self._propose()
+        pacc = self._calc_pacc(proposal_communicator)
+        self._accept(proposal_communicator.proposal, pacc)
 
         return self.state
 
     @abstractmethod
     def _propose(self):
         """
-        Propose new state.
-        @rtype: L{State}
+        Calculate a new proposal state and gather additional information
+        needed to calculate the acceptance probability.
+        
+        @rtype: L{AbstractProposalCommunicator}
         """
         pass
 
     @abstractmethod
-    def _calc_pacc(self, proposal):
+    def _calc_pacc(self, proposal_communicator):
         """
         Calculate probability with which to accept the proposal.
 
-        @param proposal: proposal state
-        @type proposal: L{State}
+        @param proposal_communicator: Contains information about the proposal
+                                      and additional information needed to
+                                      calculate the acceptance probability
+        @type proposal_communicator: L{AbstractProposalCommunicator}
         """
         pass
 
