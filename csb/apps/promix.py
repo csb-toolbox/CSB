@@ -3,6 +3,8 @@ ProMix: Take a protein structure ensemble and find a mixture of rigid
 segments or a mixture of conformers. Writes K copies of the ensemble
 (for segments) or K subsets of the ensemble (for conformers) as PDB
 files, each superposed on different components.
+
+Reference: Hirsch M, Habeck M. - Bioinformatics. 2008 Oct 1;24(19):2184-92
 """
 
 import sys
