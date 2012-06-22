@@ -4,13 +4,12 @@ Provides various deterministic and stochastic propagators.
 
 import numpy
 
-import csb.core
+from abc import ABCMeta, abstractmethod
 
-from abc import ABCMeta, abstractmethod, abstractproperty
-from csb.statistics.samplers import AbstractState, State
-from csb.statistics.samplers.mc import Trajectory, AbstractPropagationResult
-from csb.statistics.samplers.mc import TrajectoryBuilder ,ShortTrajectoryBuilder
+from csb.statistics.samplers import State
+from csb.statistics.samplers.mc import TrajectoryBuilder
 from csb.numeric.integrators import FastLeapFrog, VelocityVerlet
+
 
 class AbstractPropagator(object):
     """
