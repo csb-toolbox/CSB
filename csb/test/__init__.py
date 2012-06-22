@@ -210,8 +210,8 @@ class Config(object):
     def __init__(self):
         
         self.__config = Config
-        self.__data = self.config.DATA
-        self.__temp = self.config.TEMP
+        self.__data = Config.DATA
+        self.__temp = Config.TEMP
 
     @staticmethod
     def setDefaultDataRoot(path):
@@ -225,17 +225,21 @@ class Config(object):
             raise IOError('Path not found: {0}'.format(path))
         
         Config.DATA = os.path.abspath(path)
-        
-    @property
-    def config(self):
-        return self.__config
     
     @property
     def data(self):
+        """
+        Test data directory
+        @rtype: str
+        """
         return self.__data
     
     @property
     def temp(self):
+        """
+        Test temp directory
+        @rtype: str
+        """        
         return self.__temp
         
     def getTestFile(self, fileName, subDir=''):
@@ -335,8 +339,13 @@ class Case(unittest.TestCase):
     Base class, defining a CSB Test Case. Provides a default implementation
     of C{unittest.TestCase.setUp} which grabs a reference to a L{Config}.
     """
+    
     @property
     def config(self):
+        """
+        Test config instance
+        @rtype: L{Config}
+        """
         return self.__config
     
     def setUp(self):

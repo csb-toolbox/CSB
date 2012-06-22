@@ -189,7 +189,8 @@ class ResidueInfo(object):
     @property
     def type(self):
         """
-        Residue type - a member of sequence alhabet
+        Residue type - a member of any sequence alphabet
+        @rtype: enum item
         """
         return self._type
     @type.setter
@@ -200,6 +201,10 @@ class ResidueInfo(object):
         
     @property
     def rank(self):
+        """
+        Residue position (1-based)
+        @rtype: int
+        """
         return self._rank
     
     def __repr__(self):
@@ -430,6 +435,7 @@ class AbstractSequence(object):
     def length(self):
         """
         Number of residues
+        @rtype: int
         """
         return len(self._residues)
     
@@ -437,6 +443,7 @@ class AbstractSequence(object):
     def id(self):
         """
         Sequence identifier
+        @rtype: str
         """        
         return self._id
     @id.setter
@@ -449,6 +456,7 @@ class AbstractSequence(object):
     def header(self):
         """
         Sequence description
+        @rtype: str
         """        
         return self._header
     @header.setter
@@ -463,6 +471,7 @@ class AbstractSequence(object):
     def type(self):
         """
         Sequence type - a member of L{SequenceTypes}
+        @rtype: enum item
         """
         return self._type
     @type.setter
@@ -758,6 +767,7 @@ class AlignedSequenceAdapter(SequenceAdapter):
     def columns(self):
         """
         Provides 1-based access to the respective columns in the MSA.
+        @rtype: L{ColumnIndexer}
         """        
         return ColumnIndexer(self)
 
@@ -766,6 +776,7 @@ class AlignedSequenceAdapter(SequenceAdapter):
         """
         Provides 1-based access to the residues of the unaligned (ungapped)
         sequence.
+        @rtype: L{UngappedSequenceIndexer} 
         """
         return UngappedSequenceIndexer(self)
 
@@ -1029,6 +1040,7 @@ class AbstractAlignment(object):
     def length(self):
         """
         Number of columns in the alignment
+        @rtype: int
         """
         return self._length or 0
 
@@ -1036,6 +1048,7 @@ class AbstractAlignment(object):
     def size(self):
         """
         Number of rows (sequences) in the alignment
+        @rtype: int
         """        
         return self._msa.length    
             
@@ -1277,6 +1290,7 @@ class A3MAlignment(AbstractAlignment):
     def matches(self):
         """
         Number of match states (residues in the ungapped master).
+        @rtype: int
         """
         return self._matches
     

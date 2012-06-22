@@ -600,6 +600,7 @@ class HHMFileBuilder(object):
     def output(self):
         """
         Destination stream
+        @rtype: stream
         """
         return self._out    
 
@@ -737,6 +738,7 @@ class HHOutputParser(object):
     def alignments(self):
         """
         True if hit alignments will be parsed
+        @rtype: bool
         """
         return self._alignments
     @alignments.setter

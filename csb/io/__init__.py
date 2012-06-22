@@ -273,6 +273,7 @@ class TempFile(csb.core.Proxy):
     def name(self):
         """
         Full path and file name
+        @rtype: str
         """
         return self.__file
     
@@ -320,6 +321,7 @@ class TempFolder(object):
     def name(self):
         """
         Full directory name
+        @rtype: str
         """        
         return self.__name    
 
@@ -466,6 +468,7 @@ class EntryWriter(object):
     def stream(self):
         """
         Destination stream
+        @rtype: stream
         """
         return self._stream
     

@@ -218,18 +218,34 @@ class Version(object):
     
     @property
     def major(self):
+        """
+        Major version (huge, incompatible changes)
+        @rtype: int
+        """
         return int(self._major)  
      
     @property
     def minor(self):
+        """
+        Minor version (significant, but compatible changes)
+        @rtype: int
+        """        
         return int(self._minor)
     
     @property
     def micro(self):
+        """
+        Micro version (bug fixes and small enhancements)
+        @rtype: int
+        """        
         return int(self._micro)  
     
     @property
     def revision(self):
+        """
+        Build number (exact repository revision number)
+        @rtype: int
+        """          
         try:
             return int(self._revision)
         except:

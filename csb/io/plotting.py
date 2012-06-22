@@ -136,6 +136,7 @@ class Backend(Thread):
     def started(self):
         """
         True if the service had been started
+        @rtype: bool
         """
         return self._started.isSet()
     
@@ -143,6 +144,7 @@ class Backend(Thread):
     def running(self):
         """
         True if the service had been started and is currently running
+        @rtype: bool
         """        
         return self._running.isSet()    
                 
@@ -560,6 +562,7 @@ class Chart(object):
     def title(self):
         """
         Chart title
+        @rtype: str
         """
         return self._title
         
@@ -567,6 +570,7 @@ class Chart(object):
     def number(self):
         """
         Chart number
+        @rtype: int
         """        
         return self._number
     
@@ -582,6 +586,7 @@ class Chart(object):
     def plot(self):
         """
         First plot
+        @rtype: matplotlib.AxesSubplot
         """
         return self._plots[0]
     
@@ -589,6 +594,7 @@ class Chart(object):
     def rows(self):
         """
         Number of rows in this chart
+        @rtype: int
         """
         return self._rows
     
@@ -596,6 +602,7 @@ class Chart(object):
     def columns(self):
         """
         Number of columns in this chart
+        @rtype: int
         """        
         return self._columns
     
@@ -603,6 +610,7 @@ class Chart(object):
     def width(self):
         """
         Chart's width in inches
+        @rtype: int
         """
         return self._figure.get_figwidth()
     @width.setter
@@ -615,6 +623,7 @@ class Chart(object):
     def height(self):
         """
         Chart's height in inches
+        @rtype: int
         """        
         return self._figure.get_figheight()
     @height.setter
@@ -627,6 +636,7 @@ class Chart(object):
     def dpi(self):
         """
         Chart's DPI
+        @rtype: int
         """        
         return self._figure.get_dpi()
     @dpi.setter

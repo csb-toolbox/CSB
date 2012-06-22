@@ -159,7 +159,8 @@ class AbstractEntity(object):
     @abstractproperty
     def items(self):
         """
-        Return an iterator over all immediate children of the entity.
+        Iterator over all immediate children of the entity
+        @rtype: iterator of L{AbstractEntity}
         """
         pass
 
@@ -393,6 +394,7 @@ class EnsembleModelsCollection(csb.core.CollectionContainer):
     @property
     def _exception(self):
         return EntityIndexError
+    
 
 class Structure(csb.core.AbstractNIContainer, AbstractEntity):
     """
@@ -451,6 +453,7 @@ class Structure(csb.core.AbstractNIContainer, AbstractEntity):
     def accession(self):
         """
         Accession number
+        @rtype: str
         """        
         return self._accession
     @accession.setter
@@ -465,6 +468,7 @@ class Structure(csb.core.AbstractNIContainer, AbstractEntity):
     def model_id(self):
         """
         Model ID
+        @rtype: int
         """        
         return self._model_id
     @model_id.setter
@@ -660,6 +664,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def id(self):
         """
         Chain's ID
+        @rtype: str
         """
         return self._id
     @id.setter
@@ -675,6 +680,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def accession(self):
         """
         Accession number
+        @rtype: str
         """        
         return self._accession
     @accession.setter
@@ -689,6 +695,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def type(self):
         """
         Chain type - any member of L{SequenceTypes}
+        @rtype: enum item
         """
         return self._type
     @type.setter
@@ -733,6 +740,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def has_torsion(self):
         """
         True if C{Chain.compute_torsion} had been invoked
+        @rtype: bool
         """
         return self._torsion_computed
 
@@ -740,6 +748,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def length(self):
         """
         Number of residues
+        @rtype: int
         """
         return self._residues.length
     
@@ -747,6 +756,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def entry_id(self):
         """
         Accession number + chain ID
+        @rtype: str
         """
         if self._accession and self._id:
             return self._accession + self._id
@@ -757,6 +767,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def name(self):
         """
         Chain name
+        @rtype: str
         """
         return self._name
     @name.setter
@@ -769,6 +780,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def molecule_id(self):
         """
         PDB MOL ID of this chain
+        @rtype: int
         """
         return self._molecule_id
     @molecule_id.setter
@@ -779,6 +791,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def header(self):
         """
         FASTA header in PDB format
+        @rtype: str
         """
         header = "{0._accession}_{0._id} mol:{1} length:{0.length} {0.name}"
         return header.format(self, str(self.type).lower())
@@ -804,6 +817,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
     def alphabet(self):
         """
         Sequence alphabet corresponding to the current chain type
+        @rtype: L{csb.core.enum}
         """
         return SequenceAlphabets.get(self.type)
         
@@ -1176,6 +1190,7 @@ class Residue(csb.core.AbstractNIContainer, AbstractEntity):
     def type(self):
         """
         Residue type - a member of any sequence alphabet
+        @rtype: enum item
         """
         return self._type
     @type.setter
@@ -1186,6 +1201,10 @@ class Residue(csb.core.AbstractNIContainer, AbstractEntity):
         
     @property
     def rank(self):
+        """
+        Residue's position in the sequence (1-based)
+        @rtype: int
+        """
         return self._rank
     
     @property
@@ -1239,6 +1258,7 @@ class Residue(csb.core.AbstractNIContainer, AbstractEntity):
     def insertion_code(self):
         """
         PDB insertion code (if defined)
+        @rtype: str
         """
         return self._insertion_code
     
@@ -1246,6 +1266,7 @@ class Residue(csb.core.AbstractNIContainer, AbstractEntity):
     def id(self):
         """
         PDB sequence number [+ insertion code]
+        @rtype: str
         """
         if self._sequence_number is None:
             return None
@@ -1280,6 +1301,7 @@ class Residue(csb.core.AbstractNIContainer, AbstractEntity):
     def has_structure(self):
         """
         True if this residue has any atoms
+        @rtype: bool
         """
         return len(self.atoms) > 0
         
@@ -1633,6 +1655,7 @@ class Atom(AbstractEntity):
     def serial_number(self):
         """
         PDB serial number
+        @rtype: int
         """        
         return self._serial_number
     @serial_number.setter
@@ -1645,6 +1668,7 @@ class Atom(AbstractEntity):
     def name(self):
         """
         PDB atom name (trimmed)
+        @rtype: str
         """
         return self._name
         
@@ -1652,6 +1676,7 @@ class Atom(AbstractEntity):
     def element(self):
         """
         Chemical element - a member of L{ChemElements}
+        @rtype: enum item
         """
         return self._element
     
@@ -1687,6 +1712,7 @@ class Atom(AbstractEntity):
     def alternate(self):
         """
         Alternative location flag
+        @rtype: str
         """
         return self._alternate
     @alternate.setter
@@ -1697,6 +1723,7 @@ class Atom(AbstractEntity):
     def temperature(self):
         """
         Temperature factor
+        @rtype: float
         """
         return self._temperature
     @temperature.setter
@@ -1707,6 +1734,7 @@ class Atom(AbstractEntity):
     def occupancy(self):
         """
         Occupancy number
+        @rtype: float
         """        
         return self._occupancy
     @occupancy.setter
@@ -1717,6 +1745,7 @@ class Atom(AbstractEntity):
     def charge(self):
         """
         Charge
+        @rtype: int
         """         
         return self._charge
     @charge.setter
@@ -1845,6 +1874,10 @@ class SecondaryStructureElement(object):
     
     @property
     def start(self):
+        """
+        Start position (1-based)
+        @rtype: int
+        """
         return self._start
     @start.setter
     def start(self, value):
@@ -1856,6 +1889,10 @@ class SecondaryStructureElement(object):
     
     @property
     def end(self):
+        """
+        End position (1-based)
+        @rtype: int
+        """        
         return self._end
     @end.setter
     def end(self, value):
@@ -1867,6 +1904,10 @@ class SecondaryStructureElement(object):
     
     @property
     def type(self):
+        """
+        Secondary structure type - a member of L{SecStructures}
+        @rtype: enum item
+        """        
         return self._type
     @type.setter
     def type(self, value):
@@ -1880,6 +1921,7 @@ class SecondaryStructureElement(object):
     def length(self):
         """
         Number of residues covered by this element
+        @rtype: int
         """
         return self.end - self.start + 1
     
@@ -2045,6 +2087,7 @@ class SecondaryStructure(csb.core.CollectionContainer):
     def start(self):
         """
         Start position of the leftmost element
+        @rtype: int
         """
         return self._minstart
         
@@ -2052,6 +2095,7 @@ class SecondaryStructure(csb.core.CollectionContainer):
     def end(self):
         """
         End position of the rightmost element
+        @rtype: int
         """        
         return self._maxend
     
@@ -2252,6 +2296,7 @@ class TorsionAnglesCollection(csb.core.CollectionContainer):
     def phi(self):
         """
         List of all phi angles
+        @rtype: list
         """   
         return [a.phi for a in self]
 
@@ -2259,6 +2304,7 @@ class TorsionAnglesCollection(csb.core.CollectionContainer):
     def psi(self):
         """
         List of all psi angles
+        @rtype: list
         """           
         return [a.psi for a in self]            
 
@@ -2266,6 +2312,7 @@ class TorsionAnglesCollection(csb.core.CollectionContainer):
     def omega(self):  
         """
         List of all omega angles
+        @rtype: list
         """                
         return [a.omega for a in self] 
     
@@ -2373,6 +2420,7 @@ class TorsionAngles(object):
     def units(self):
         """
         Current torsion angle units - a member of L{AngleUnits}
+        @rtype: enum item
         """
         return self._units
     
