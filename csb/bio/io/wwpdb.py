@@ -195,20 +195,23 @@ class EntryID(object):
     def accession(self):
         """
         Accession number part of the Entry ID
+        @rtype: str
         """
         return self._accession
 
     @property
     def chain(self):
         """
-        Chain ID part of the Entry ID        
+        Chain ID part of the Entry ID
+        @rtype: str      
         """
         return self._chain
     
     @property
     def entry_id(self):
         """
-        Accession number + Chain ID        
+        Accession number + Chain ID
+        @rtype: str
         """        
         return "{0.accession}{0.chain}".format(self)
     
@@ -317,6 +320,7 @@ class AbstractStructureParser(object):
     def filename(self):
         """
         Current input PDB file name
+        @rtype: str
         """
         return self._file
     @filename.setter
@@ -1167,6 +1171,7 @@ class FileBuilder(object):
     def output(self):
         """
         Destination stream
+        @rtype: stream
         """
         return self._out
     
@@ -1174,6 +1179,7 @@ class FileBuilder(object):
     def isnull(self):
         """
         ISNULL(X, Y) function
+        @rtype: callable
         """
         return self._isnull
     
@@ -1401,6 +1407,7 @@ class FileSystemStructureProvider(StructureProvider):
     def templates(self):
         """
         Current file name match templates
+        @rtype: tuple
         """
         return tuple(self._templates)
         
@@ -1480,6 +1487,7 @@ class RemoteStructureProvider(StructureProvider):
     def prefix(self):
         """
         Current URL prefix
+        @rtype: str
         """
         return self._prefix
     @prefix.setter
@@ -1490,6 +1498,7 @@ class RemoteStructureProvider(StructureProvider):
     def suffix(self):
         """
         Current URL suffix
+        @rtype: str
         """        
         return self._suffix
     @suffix.setter

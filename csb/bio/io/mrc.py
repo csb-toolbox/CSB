@@ -143,6 +143,7 @@ class DensityMapReader(object):
     def filename(self):
         """
         Input MRC file name
+        @rtype: str
         """
         return self._filename
     

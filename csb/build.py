@@ -7,6 +7,11 @@ B{beginning} of sys.path to make sure that all subsequent imports from the
 Test and Doc consoles will import the right thing (think of multiple CSB
 packages installed on the same server).
 
+Here is how to build, test and package the whole project::
+
+    $ svn checkout https://svn.tuebingen.mpg.de/agbs/projects/CSB
+    $ CSB/trunk/csb/build.py -o <output directory>
+
 The Console can also be imported and instantiated as a regular Python class.
 In this case the Console again builds the source tree it is part of, but
 sys.path will remain intact. Therefore, the Console will assume that all

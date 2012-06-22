@@ -162,6 +162,7 @@ class ProfileHMM(object):
     def name(self):
         """
         Profile name (NAME)
+        @rtype: str
         """
         return self._name
     @name.setter
@@ -172,6 +173,7 @@ class ProfileHMM(object):
     def id(self):
         """
         Profile entry ID (FILE)
+        @rtype: str        
         """        
         return self._id
     @id.setter
@@ -181,7 +183,8 @@ class ProfileHMM(object):
     @property
     def family(self):
         """
-        Alternative entry ID (FAM)    
+        Alternative entry ID (FAM)
+        @rtype: str           
         """        
         return self._family
     @family.setter
@@ -244,6 +247,7 @@ class ProfileHMM(object):
     def dssp_solvent(self):
         """
         Solvent accessibility values
+        @rtype: str        
         """
         return self._dssp_solvent
     @dssp_solvent.setter
@@ -290,6 +294,7 @@ class ProfileHMM(object):
     def version(self):
         """
         Format version number (HHsearch)
+        @rtype: str        
         """
         return self._version
     @version.setter
@@ -380,6 +385,7 @@ class ProfileHMM(object):
     def scale(self):
         """
         Score scaling factor 
+        @rtype: float        
         """
         return self._scale
     
@@ -387,6 +393,7 @@ class ProfileHMM(object):
     def logbase(self):
         """
         Base of the logarithm used for score scaling 
+        @rtype: float        
         """        
         return self._logbase
     
@@ -402,6 +409,7 @@ class ProfileHMM(object):
     def residues(self):
         """
         List of representative residues, attached to each layer
+        @rtype: collection of L{Residue}
         """
         res = [layer.residue for layer in self.layers]
         return csb.core.ReadOnlyCollectionContainer(
@@ -411,6 +419,7 @@ class ProfileHMM(object):
     def all_layers(self):
         """
         A list of layers including start and start_insertion
+        @rtype: list of L{HMMLayer}
         """
         complete_layers = []
         first_layer = HMMLayer(rank=0, residue=None)
@@ -427,6 +436,7 @@ class ProfileHMM(object):
     def has_structure(self):
         """
         True if this profile contains structural data
+        @rtype: bool
         """
         has = False
         for layer in self.layers:
@@ -795,6 +805,7 @@ class ProfileHMMSegment(ProfileHMM):
     def source_start(self):
         """
         Start position of this segment in its source HMM
+        @rtype: int
         """
         return self._source_start
 
@@ -802,6 +813,7 @@ class ProfileHMMSegment(ProfileHMM):
     def source_end(self):
         """
         End position of this segment in its source HMM
+        @rtype: int
         """        
         return self._source_end
             
@@ -899,6 +911,7 @@ class ProfileHMMRegion(ProfileHMM):
     def source_start(self):
         """
         Start position of this segment in its source HMM
+        @rtype: int
         """        
         return self._source_start
     
@@ -906,6 +919,7 @@ class ProfileHMMRegion(ProfileHMM):
     def source_end(self):
         """
         End position of this segment in its source HMM
+        @rtype: int
         """            
         return self._source_end
 
@@ -1115,6 +1129,7 @@ class HMMLayer(csb.core.DictionaryContainer):
     def rank(self):
         """
         Layer's position
+        @rtype: int
         """
         return self._rank
     @rank.setter
@@ -1138,6 +1153,7 @@ class HMMLayer(csb.core.DictionaryContainer):
     def effective_matches(self):
         """
         Number of effective matches at this layer
+        @rtype: int
         """
         return self._effective_matches
     @effective_matches.setter
@@ -1148,6 +1164,7 @@ class HMMLayer(csb.core.DictionaryContainer):
     def effective_insertions(self):
         """
         Number of effective insertions at this layer
+        @rtype: int
         """        
         return self._effective_insertions
     @effective_insertions.setter
@@ -1158,6 +1175,7 @@ class HMMLayer(csb.core.DictionaryContainer):
     def effective_deletions(self):
         """
         Number of effective deletions at this layer
+        @rtype: int
         """        
         return self._effective_deletions
     @effective_deletions.setter
@@ -1231,6 +1249,7 @@ class State(object):
     def type(self):
         """
         State type: one of the L{States}
+        @rtype: enum item
         """
         return self._type
     @type.setter
@@ -1365,6 +1384,7 @@ class Transition(object):
     def probability(self):
         """
         Transition score
+        @rtype: float
         """
         return self._probability
     @probability.setter
@@ -1412,6 +1432,7 @@ class HHpredHitAlignment(sequence.SequenceAlignment):
     def query(self):
         """
         Query sequence (with gaps)
+        @rtype: str
         """
         return self.rows[1].sequence
 
@@ -1419,6 +1440,7 @@ class HHpredHitAlignment(sequence.SequenceAlignment):
     def subject(self):
         """
         Subject sequence (with gaps)
+        @rtype: str
         """        
         return self.rows[2].sequence
     

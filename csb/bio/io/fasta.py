@@ -73,6 +73,7 @@ class BaseSequenceParser(object):
     def product_factory(self):
         """
         Factory used to build sequence products
+        @rtype: class
         """        
         return self._product
     
@@ -80,6 +81,7 @@ class BaseSequenceParser(object):
     def product_type(self):
         """
         Default sequence type of the products - a member of L{SequenceTypes}
+        @rtype: enum item
         """
         return self._type
         
@@ -262,6 +264,7 @@ class SequenceAlignmentReader(object):
     def product_type(self):
         """
         Default sequence type of the alignment entries - a member of L{SequenceTypes}
+        @rtype: enum item
         """        
         return self._type
 
@@ -269,6 +272,7 @@ class SequenceAlignmentReader(object):
     def strict(self):
         """
         True if strict mode is enabled
+        @rtype: bool
         """
         return self._strict
             
@@ -368,6 +372,7 @@ class StructureAlignmentFactory(object):
     def product_type(self):
         """
         Default sequence type of the alignment rows - a member of L{SequenceTypes}
+        @rtype: enum item
         """        
         return self._type
     
@@ -375,6 +380,7 @@ class StructureAlignmentFactory(object):
     def provider(self):
         """
         Current L{csb.bio.io.wwpdb.StructureProvider} instance in use
+        @rtype: L{StructureProvider}
         """
         return self._provider  
     
@@ -382,6 +388,7 @@ class StructureAlignmentFactory(object):
     def id_factory(self):
         """
         Current L{csb.bio.io.wwpdb.EntryID} factory instance in use
+        @rtype: L{EntryID}        
         """        
         return self._id_factory
 
@@ -389,6 +396,7 @@ class StructureAlignmentFactory(object):
     def strict(self):
         """
         True if strict mode is enabled
+        @rtype: bool
         """        
         return self._strict
             
@@ -521,6 +529,7 @@ class OutputBuilder(object):
     def output(self):
         """
         Destination stream
+        @rtype: stream
         """
         return self._out
     
@@ -528,6 +537,7 @@ class OutputBuilder(object):
     def headers(self):
         """
         True if sequence headers will be written to the destination
+        @rtype: bool
         """
         return self._headers
 

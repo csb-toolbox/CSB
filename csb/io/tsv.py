@@ -92,6 +92,7 @@ class RepositoryImp(object):
     def table(self):
         """
         Table name
+        @rtype: str
         """
         return self._table    
     
@@ -302,6 +303,7 @@ class ColumnInfo(object):
     def name(self):
         """
         Colulmn name
+        @rtype: str
         """
         return self._name
     
@@ -309,6 +311,7 @@ class ColumnInfo(object):
     def type(self):
         """
         Python data type
+        @rtype: class
         """        
         return self._type    
     
@@ -368,7 +371,8 @@ class DataRow(object):
     @property
     def columns(self):
         """
-        Tuple of available column names
+        Available column names
+        @rtype: tuple
         """
         c = dict((self._columns[cn], cn) for cn in self._columns)
         return tuple(c[i] for i in sorted(c))
@@ -377,6 +381,7 @@ class DataRow(object):
     def number(self):
         """
         Row number
+        @rtype: int
         """
         return self._number
                 
@@ -680,13 +685,15 @@ class Table(object):
     def name(self):
         """
         Table name
+        @rtype: str
         """
         return self._name
 
     @property
     def columns(self):
         """
-        Tuple with all column names
+        All column names
+        @rtype: tuple
         """
         return tuple(i.name for i in self._metadata)
     
