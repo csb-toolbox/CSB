@@ -7,214 +7,10 @@ import numpy
 import csb.core
 
 from abc import ABCMeta, abstractmethod, abstractproperty
-from csb.statistics.samplers import AbstractState
-
-
-class AbstractPropagationResult(object):
-    """
-    Abstract class providing the interface for the result
-    of a deterministic or stochastic propagation of a state.
-    """
-    
-    __metaclass__ = ABCMeta 
-    
-    @abstractproperty
-    def initial(self):
-        """
-        Initial state
-        """
-        pass
-    
-    @abstractproperty
-    def final(self):
-        """
-        Final state
-        """
-        pass
-    
-    @abstractproperty
-    def heat(self):
-        """
-        Heat produced during propagation
-        @rtype: float
-        """        
-        pass    
-
-class PropagationResult(AbstractPropagationResult):
-    """
-    Describes the result of a deterministic or stochastic
-    propagation of a state.
-
-    @param initial: Initial state from which the
-                    propagation started
-    @type initial: L{State}
-
-    @param final: Final state in which the propagation
-                  resulted
-    @type final: L{State}
-
-    @param heat: Heat produced during propagation
-    @type heat: float
-    """
-    
-    
-    def __init__(self, initial, final, heat=0.0, ):
-        
-        if not isinstance(initial, AbstractState):
-            raise TypeError(initial)
-        
-        if not isinstance(final, AbstractState):
-            raise TypeError(final)        
-        
-        self._initial = initial
-        self._final = final
-        self._heat = None
-        self._work = None
-        
-        self.heat = heat
-        
-    @property
-    def initial(self):
-        return self._initial
-    
-    @property
-    def final(self):
-        return self._final
-    
-    @property
-    def heat(self):
-        return self._heat
-    @heat.setter
-    def heat(self, value):
-        self._heat = float(value)    
-    
-class Trajectory(csb.core.CollectionContainer, AbstractPropagationResult):
-    """
-    Ordered collection of states, representing a phase-space trajectory.
-
-    @param items: list of states defining a phase-space trajectory
-    @type items: list of L{AbstractState}
-    @param heat: heat produced during the trajectory
-    @type heat: float
-    @param work: work produced during the trajectory
-    @type work: float
-    """
-    
-    def __init__(self, items, heat=0.0, work=0.0):
-        
-        super(Trajectory, self).__init__(items, type=AbstractState)
-        
-        self._heat = heat    
-        self._work = work
-    
-    @property
-    def initial(self):
-        return self[0]
-    
-    @property
-    def final(self):
-        return self[self.last_index]
-    
-    @property
-    def heat(self):
-        return self._heat
-    @heat.setter
-    def heat(self, value):
-        self._heat = float(value)
-
-    @property
-    def work(self):
-        return self._work
-    @work.setter
-    def work(self, value):
-        self._work = float(value)  
-
-class TrajectoryBuilder(object):
-    """
-    Allows to  build a Trajectory object step by step.
-
-    @param heat: heat produced over the trajectory
-    @type heat: float
-    @param work: work produced during the trajectory
-    @type work: float
-    """
-    
-    def __init__(self, heat=0.0, work=0.0):
-        self._heat = heat
-        self._work = work
-        self._states = []
-        
-    @staticmethod
-    def create(full=True):
-        """
-        Trajectory builder factory.
-
-        @param full: if True, a TrajectoryBuilder instance designed
-                     to build a full trajectory with initial state,
-                     intermediate states and a final state. If False,
-                     a ShortTrajectoryBuilder instance designed to
-                     hold only the initial and the final state is
-                     returned
-        @type full: boolean
-        """
-        
-        if full:
-            return TrajectoryBuilder()
-        else:
-            return ShortTrajectoryBuilder()
-        
-    @property
-    def product(self):
-        """
-        The L{Trajectory} instance build by a specific instance of
-        this class
-        """
-        return Trajectory(self._states, heat=self._heat, work=self._work)
-
-    def add_initial_state(self, state):
-        """
-        Inserts a state at the beginning of the trajectory
-
-        @param state: state to be added
-        @type state: L{State}
-        """
-        self._states.insert(0, state.clone())
-        
-    def add_intermediate_state(self, state):
-        """
-        Adds a state to the end of the trajectory
-
-        @param state: state to be added
-        @type state: L{State}
-        """
-        self._states.append(state.clone())
-    
-    def add_final_state(self, state):
-        """
-        Adds a state to the end of the trajectory
-
-        @param state: state to be added
-        @type state: L{State}
-        """
-        self._states.append(state.clone())
-    
-class ShortTrajectoryBuilder(TrajectoryBuilder):    
-
-    def add_intermediate_state(self, state):
-        pass
-
-    @property
-    def product(self):
-        """
-        The L{PropagationResult} instance built by a specific instance of
-        this class
-        """
-        
-        if len(self._states) != 2:
-            raise ValueError("Can't create a product, two states required")
-        
-        initial, final = self._states
-        return PropagationResult(initial, final, heat=self._heat)
+from csb.statistics.samplers import AbstractState, State
+from csb.statistics.samplers.mc import Trajectory, AbstractPropagationResult
+from csb.statistics.samplers.mc import TrajectoryBuilder ,ShortTrajectoryBuilder
+from csb.numeric.integrators import FastLeapFrog, VelocityVerlet
 
 class AbstractPropagator(object):
     """
@@ -259,7 +55,7 @@ class MDPropagator(AbstractPropagator):
     @type integrator: type
     """
 
-    def __init__(self, gradient, timestep, integrator):
+    def __init__(self, gradient, timestep, integrator=FastLeapFrog):
         
         super(MDPropagator, self).__init__()
 
@@ -303,10 +99,6 @@ class ThermostattedMDPropagator(MDPropagator):
     @param timestep: Timestep to be used for integration
     @type timestep: float
 
-    @param integrator: Subclass of L{AbstractIntegrator} to be used to perform
-                       integration steps between momentum updates
-    @type integrator: type
-
     @param temperature: Time-dependent temperature
     @type temperature: Real-valued function
 
@@ -315,10 +107,14 @@ class ThermostattedMDPropagator(MDPropagator):
 
     @param update_interval: Interval with which momenta are redrawn
     @type update_interval: int
+
+    @param integrator: Subclass of L{AbstractIntegrator} to be used to perform
+                       integration steps between momentum updates
+    @type integrator: type
     """
 
-    def __init__(self, gradient, timestep, integrator, temperature,
-                 collision_probability=0.1, update_interval=1):
+    def __init__(self, gradient, timestep, temperature, collision_probability=0.1,
+                 update_interval=1, integrator=VelocityVerlet):
         
         super(ThermostattedMDPropagator, self).__init__(gradient, timestep, integrator)
         
@@ -406,4 +202,127 @@ class ThermostattedMDPropagator(MDPropagator):
         
         return traj
 
+class AbstractMCPropagator(AbstractPropagator):
+    """
+    Provides the interface for MC trajectory generators. Implementations
+    generate a sequence of states according to some implementation of
+    L{AbstractSingleChainMC}.
 
+    @param pdf: PDF to sample from
+    @type pdf: L{AbstractDensity}
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, pdf):
+
+        self._pdf = pdf
+        self._acceptance_rate = 0.0
+
+    def generate(self, init_state, length, return_trajectory=True):
+
+        self._init_sampler()
+        self._sampler.state = init_state
+
+        builder = TrajectoryBuilder.create(full=return_trajectory)
+
+        builder.add_initial_state(init_state)
+
+        for i in range(length):
+            self._sampler.sample()
+            builder.add_intermediate_state(self._sampler.state)
+
+        self._acceptance_rate = self._sampler.acceptance_rate
+
+        return builder.product
+
+    @abstractmethod
+    def _init_sampler(self):
+        """
+        Initializes the sampler with which to obtain the MC state
+        trajectory.
+        """
+        
+        pass
+
+    @property
+    def acceptance_rate(self):
+        """
+        Acceptance rate of the MC sampler that generated the
+        trajectory.
+        """
+        return self._acceptance_rate
+
+class RWMCPropagator(AbstractMCPropagator):
+    """
+    Draws a number of samples from a PDF using the L{RWMCSampler} and
+    returns them as a L{Trajectory}.
+
+    @param pdf: PDF to sample from
+    @type pdf: L{AbstractDensity}
+    @param stepsize: Serves to set the step size in
+                     proposal_density, e.g. for automatic acceptance
+                     rate adaption
+    @type stepsize: float
+    @param proposal_density: The proposal density as a function f(x, s)
+                             of the current state x and the stepsize s.
+                             By default, the proposal density is uniform,
+                             centered around x, and has width s.
+    @type proposal_density: callable
+    """
+
+    def __init__(self, pdf, stepsize=1., proposal_density=None):
+
+        super(RWMCPropagator, self).__init__(pdf)
+
+        self._stepsize = stepsize
+        self._proposal_density = proposal_density
+
+        self._init_sampler()
+
+    def _init_sampler(self):
+
+        from csb.statistics.samplers.mc.singlechain import RWMCSampler
+
+        dummy_state = State(numpy.array([0.]))
+        self._sampler = RWMCSampler(self._pdf, dummy_state, self._stepsize,
+                                    self._proposal_density)
+
+class HMCPropagator(AbstractMCPropagator):
+    """
+    Draws a number of samples from a PDF using the L{HMCSampler} and
+    returns them as a L{Trajectory}.
+
+    @param pdf: PDF to sample from
+    @type pdf: L{AbstractDensity}
+    @param gradient: Gradient of the negative log-probability
+    @type gradient: L{AbstractGradient}
+
+    @param timestep: Timestep used for integration
+    @type timestep: float
+
+    @param nsteps: Number of integration steps to be performed in
+                   each iteration
+    @type nsteps: int
+
+    @param integrator: Subclass of L{AbstractIntegrator} to be used for
+                       integrating Hamiltionian equations of motion
+    @type integrator: type
+    """
+    
+    def __init__(self, pdf, gradient, timestep, nsteps, integrator=FastLeapFrog):
+
+        super(HMCPropagator, self).__init__(pdf)
+
+        self._gradient = gradient
+        self._timestep = timestep
+        self._nsteps = nsteps
+        self._integrator = integrator
+
+    def _init_sampler(self):
+
+        from csb.statistics.samplers.mc.singlechain import HMCSampler
+        
+        dummy_state = State(numpy.array([0.]))        
+        self._sampler = HMCSampler(self._pdf, dummy_state, self._gradient,
+                                   self._timestep, self._nsteps, self._integrator)

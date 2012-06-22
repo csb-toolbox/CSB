@@ -58,7 +58,7 @@ import csb.numeric
 
 from csb.statistics.samplers import State
 from csb.statistics.samplers.mc import AbstractSingleChainMC
-from csb.statistics.samplers.mc import RWMCProposalCommunicator, HMCProposalCommunicator
+from csb.statistics.samplers.mc import SimpleProposalCommunicator
 from csb.statistics.samplers.mc.propagators import MDPropagator
 from csb.numeric.integrators import FastLeapFrog
 
@@ -107,7 +107,7 @@ class HMCSampler(AbstractSingleChainMC):
         self.state = State(self.state.position, momenta)
         proposal = gen.generate(self.state, self._nsteps).final
         
-        return HMCProposalCommunicator(proposal)
+        return SimpleProposalCommunicator(proposal)
 
     def _calc_pacc(self, proposal_communicator):
 
@@ -170,7 +170,7 @@ class RWMCSampler(AbstractSingleChainMC):
 
     def _propose(self):
         
-        return RWMCProposalCommunicator(State(self._proposal_density(self._state, self.stepsize)))
+        return SimpleProposalCommunicator(State(self._proposal_density(self._state, self.stepsize)))
 
     def _calc_pacc(self, proposal_communicator):
 

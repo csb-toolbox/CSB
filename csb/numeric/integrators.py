@@ -4,8 +4,7 @@ Provides various integration schemes and an abstract gradient class.
 
 from abc import ABCMeta, abstractmethod
 
-from csb.statistics.samplers.mc import State
-from csb.statistics.samplers.mc.propagators import TrajectoryBuilder
+from csb.statistics.samplers.mc import State, TrajectoryBuilder
 
 
 class AbstractIntegrator(object):

@@ -261,10 +261,10 @@ class ThermostattedMDRENS(MDRENS):
         temp = factory.build_temperature(traj_info.param_info.temperature)
         
         gen = ThermostattedMDPropagator(grad,
-                                        traj_info.param_info.timestep, self._integrator,
-                                        temp,
+                                        traj_info.param_info.timestep, temp,
                                         traj_info.param_info.collision_probability,
-                                        traj_info.param_info.collision_interval)
+                                        traj_info.param_info.collision_interval,
+                                        self._integrator)
         
         traj = gen.generate(traj_info.init_state, traj_info.param_info.traj_length)
 
