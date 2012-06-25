@@ -263,7 +263,7 @@ class ClansParser(object):
                     for i in pos]
 
             ## add groups
-            self._clans_instance._seqgroups = []
+            self._clans_instance._seqgroups = ClansSeqgroupCollection()
             if len(seqgroups) > 0:
                 for group_raw_data in seqgroups:
 
@@ -399,7 +399,7 @@ class ClansParser(object):
                  (i.e. name will be a string, size will be an integer, etc)
         """
         if 'seqgroups' not in self._data_block_dict:
-            return []
+            return ClansSeqgroupCollection()
 
         block = self._data_block_dict['seqgroups']
 
@@ -1323,6 +1323,21 @@ class ClansEntryCollection(csb.core.ReadOnlyCollectionContainer):
         """
         self._items.sort(key=lambda entry: entry.name)
 
+
+class ClansSeqgroupCollection(csb.core.ReadOnlyCollectionContainer):
+    
+    def __init__(self):
+        
+        super(ClansSeqgroupCollection, self).__init__(type=ClansSeqgroup)
+
+    def _remove_item(self, item):
+        if self._type:
+            if not isinstance(item, self._type):
+                raise TypeError("Item {0} is not of the required {1} type.".format(
+                    item, self._type.__name__))
+        self._items.remove(item)
+
+
 class Clans(object):
     """
     Class for holding and manipulating data from one CLANS file.
@@ -1337,11 +1352,12 @@ class Clans(object):
         self._rotmtx = None
         self.set_default_rotmtx()
 
-        self._entries = ClansEntryCollection()
-        self._seqgroups = []
-        self._has_good_index = False
-
         self._hsp_att_mode = "hsp"
+
+        self._entries = ClansEntryCollection()
+        self._seqgroups = ClansSeqgroupCollection()
+
+        self._has_good_index = False
 
     def __repr__(self):
         return 'Clans object: {0} sequences; {1} seqgroups'.format(
@@ -1460,10 +1476,8 @@ class Clans(object):
 
         @raise ValueError: if group is no ClansSeqgroup instance
         """
-        if not isinstance(group, ClansSeqgroup):
-            raise ValueError('groups need to be ClansSeqgroup instances')
+        self.seqgroups._append_item(group)
 
-        self.seqgroups.append(group)
         if members is not None:
             [group.add(member) for member in members]
 
@@ -1473,13 +1487,9 @@ class Clans(object):
 
         @param group: the new group
         @type group: L{ClansSeqgroup} instance
-
-        @raise ValueError: if C{group} is no L{ClansSeqgroup} instance
         """
-        if not isinstance(group, ClansSeqgroup):
-            raise ValueError('groups need to be ClansSeqgroup instances')
+        self.seqgroups._remove_item(group)
 
-        self.seqgroups.remove(group)
         [group.remove(member) for member in group.members]
 
     def add_entry(self, entry):
@@ -1524,7 +1534,7 @@ class Clans(object):
             g.remove(entry)
 
         remove_groups = [g for g in self.seqgroups if g.is_empty()]
-        [self.seqgroups.remove(g) for g in remove_groups]
+        [self.seqgroups._remove_item(g) for g in remove_groups]
 
         self.entries._remove_item(entry)
         self._has_good_index = False
