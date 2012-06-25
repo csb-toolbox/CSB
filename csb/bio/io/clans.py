@@ -498,7 +498,7 @@ class ClansFileBuilder(object):
     Defines a common step-wise interface according to the Builder pattern.
     
     @param output: output stream (this is where the product is constructed)
-    @type param: stream
+    @type output: stream
     """
     
     __metaclass__ = ABCMeta
@@ -563,6 +563,10 @@ class ClansFileWriter(ClansFileBuilder):
     @param output: the output stream
     @type output: stream
     """
+
+
+    def __init__(self, output):
+        super(ClansFileWriter, self).__init__(output)
 
     def serialize(self, clans_instance):
         """
@@ -1383,6 +1387,8 @@ class Clans(object):
         self._entries = ClansEntryCollection()
         self._seqgroups = ClansSeqgroupCollection()
 
+        self._idx = None
+        '''Index dict for fast access to entry positions'''
         self._has_good_index = False
 
     def __repr__(self):
