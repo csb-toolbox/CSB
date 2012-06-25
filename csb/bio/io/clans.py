@@ -287,7 +287,6 @@ class ClansParser(object):
                     self._clans_instance.entries[b], value)
                  for ((a, b), value) in hsp.items()]
 
-        self._clans_instance._update_index()
         self._clans_instance._hsp_att_mode = hsp_att_mode
 
         return self._clans_instance
@@ -1302,6 +1301,28 @@ class ClansParams(object):
         return param_block_string
 
 
+class ClansEntryCollection(csb.core.ReadOnlyCollectionContainer):
+    
+    def __init__(self):
+        
+        super(ClansEntryCollection, self).__init__(type=ClansEntry)
+
+    def _remove_item(self, item):
+        if self._type:
+            if not isinstance(item, self._type):
+                raise TypeError("Item {0} is not of the required {1} type.".format(
+                    item, self._type.__name__))
+        self._items.remove(item)
+
+    def _sort(self, clans_instance=None):
+        """
+        Sort entries by their {name}.
+
+        If the L{ClansEntryCollection} is part of a L{Clans} instance, use
+        L{Clans.sort} instead of this to avoid corrupting L{Clans._idx}.
+        """
+        self._items.sort(key=lambda entry: entry.name)
+
 class Clans(object):
     """
     Class for holding and manipulating data from one CLANS file.
@@ -1316,7 +1337,7 @@ class Clans(object):
         self._rotmtx = None
         self.set_default_rotmtx()
 
-        self._entries = []
+        self._entries = ClansEntryCollection()
         self._seqgroups = []
         self._has_good_index = False
 
@@ -1400,15 +1421,17 @@ class Clans(object):
 
     def _update_index(self):
         """
-        Creates a mapping of entry names to entry indices in the L{Clans}
-        instance, speeding up entry.get_id() calls. The Index was introduced
-        to get a better L{Clans}.write() performance, which suffered from
-        excessive entry.get_id() calls during HSP block generation (see clans
-        _hsp_block()).
+        Creates an index of L{ClansEntry}s to their position in the L{Clans}
+        instance.
 
-        @attention: the index needs unique entry names, therefore
-        remove_duplicates is called first and can decrease the number of
-        entries!!!
+        The index is used to allow for fast access via L{ClansEntry.get_id} and
+        was introduced to get a better L{Clans}.write() performance, which
+        suffered from excessive entry.get_id() calls during HSP block generation
+        (see L{ClansFileWriter.add_hsp_block}).
+
+        @attention: the index needs unique entry names. This is ensured with a
+        call to L{Clans.remove_duplicates} and can decrease the number of
+        entries!
         """
         self.remove_duplicates()
 
@@ -1418,13 +1441,12 @@ class Clans(object):
 
     def sort(self):
         """
-        Sorts the L{ClansEntry}s by name.
+        Sorts the L{ClansEntry}s by their {name}.
         """
 
-        self._entries.sort(key=lambda entry: entry.name)
+        self._entries._sort()
 
         self._has_good_index = False
-        self._update_index()
 
     def add_group(self, group, members=None):
         """
@@ -1472,7 +1494,7 @@ class Clans(object):
         if not isinstance(entry, ClansEntry):
             raise ValueError('entries need to be L{ClansEntry} instances')
 
-        self.entries.append(entry)
+        self.entries._append_item(entry)
         entry._parent = self
 
         self._has_good_index = False
@@ -1504,7 +1526,7 @@ class Clans(object):
         remove_groups = [g for g in self.seqgroups if g.is_empty()]
         [self.seqgroups.remove(g) for g in remove_groups]
 
-        self.entries.remove(entry)
+        self.entries._remove_item(entry)
         self._has_good_index = False
 
     def get_entry(self, name, pedantic=True):
@@ -1593,6 +1615,7 @@ class Clans(object):
         @param keep_names: names of entries that shall be kept
         @type keep_names: iterable
         """
+
         [self.remove_entry(entry) for entry in
          [e for e in self.entries if e.name not in keep_names]]
 
@@ -1603,8 +1626,9 @@ class Clans(object):
         @param filename: the target file\'s name
         @type filename: str
         """
-        self._update_index()
+
         writer = ClansFileWriter(open(filename, 'w'))
+
         writer.serialize(self)
 
 
@@ -1742,17 +1766,21 @@ class ClansEntry(object):
         """
         Returns the id of the current entry.
 
+        Note: the first call to this method triggers L{Clans._update_index},
+        which will make it appear slower than successive calls.
+
         @rtype: str
         @return: the entrys\' id is returned unless it has no parent in which
         case -1 is returned
         """
+
         if self.parent is None:
             return -1
 
-        if self.parent._has_good_index:
-            return self.parent._idx[self._get_unique_id()]
+        if not self.parent._has_good_index:
+            self.parent._update_index()
 
-        return self.parent.entries.index(self)
+        return self.parent._idx[self._get_unique_id()]
 
     def _get_unique_id(self):
         """
