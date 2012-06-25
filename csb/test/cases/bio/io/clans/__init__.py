@@ -26,10 +26,9 @@ class TestClansColor(test.Case):
             self.assertRaises(ValueError, color.__setattr__, color_name, 256)
 
     def testParseClansColorWithCorrectInput(self):
-        color = Color()
 
         correct_input = '83;92;3'
-        color.parse_clans_color(correct_input)
+        color = Color.from_string(correct_input)
         self.assertEqual(color.r, 83)
         self.assertEqual(color.g, 92)
         self.assertEqual(color.b, 3)
@@ -38,14 +37,14 @@ class TestClansColor(test.Case):
         color = Color()
 
         wrong_input_1 = (83, 92, 3)
-        self.assertRaises(AttributeError,
-                          color.parse_clans_color, wrong_input_1)
+        self.assertRaises(TypeError,
+                          color.from_string, wrong_input_1)
 
         wrong_input_2 = '83;92;3;'
-        self.assertRaises(ValueError, color.parse_clans_color, wrong_input_2)
+        self.assertRaises(ValueError, color.from_string, wrong_input_2)
 
         wrong_input_3 = '83;92'
-        self.assertRaises(ValueError, color.parse_clans_color, wrong_input_3)
+        self.assertRaises(ValueError, color.from_string, wrong_input_3)
 
     def testToClansColor(self):
         color = Color()
