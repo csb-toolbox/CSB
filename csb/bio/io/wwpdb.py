@@ -1148,7 +1148,7 @@ class FileBuilder(object):
     Defines a common step-wise interface according to the Builder pattern.
     
     @param output: output stream (this is where the product is constructed)
-    @type param: stream
+    @type output: stream
     """
     
     __metaclass__ = ABCMeta
