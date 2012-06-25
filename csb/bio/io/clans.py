@@ -9,6 +9,7 @@ import re
 import operator
 import csb.core
 
+from abc import ABCMeta, abstractmethod
 from numpy import array, float64, eye, random
 
 
@@ -57,7 +58,7 @@ class Color(object):
 
     @staticmethod
     def from_string(color_string, separator=';'):
-        '''
+        """
         Factory for a Color instance created from a string formatted as r{separator}g{separator}b
 
         @param color_string: a string containing colors in format r{separator}g{separator}b
@@ -65,7 +66,7 @@ class Color(object):
 
         @raises TypeError: if {color_string} is not a string
         @raises ValueError: if any value in color is outside of range(256)
-        '''
+        """
         if not isinstance(color_string, csb.core.string):
             raise TypeError('{0} is no string'.format(color_string))
         
@@ -492,72 +493,123 @@ class ClansParser(object):
                      for j, entry in enumerate(line.split(';')[:-1])
                      if float(entry) != 0])
 
-
-class ClansWriter(object):
+class ClansFileBuilder(object):
     """
-    CLANS file format writer for L{Clans} instances.
-
-    @param clans_instance: the L{Clans} instance
-    @type clans_instance: L{Clans}
-
-    @param filename: the output filename
-    @type filename: str
+    Base abstract files for building a file in CLANS format.
+    Defines a common step-wise interface according to the Builder pattern.
+    
+    @param output: output stream (this is where the product is constructed)
+    @type param: stream
     """
+    
+    __metaclass__ = ABCMeta
 
-    def __init__(self, clans_instance, filename):
-        self._clans_instance = clans_instance
-        self._filename = filename
-        self._file = open(os.path.expanduser(filename), 'w')
+    def __init__(self, output):
 
-        self._file.write('sequences={0}\n'.format(len(clans_instance.entries)))
-
-        ## these methods append CLANS format blocks to self._file
-        self._clans_param_block()
-        self._clans_rotmtx_block()
-        self._clans_seq_block()
-        self._clans_seqgroups_block()
-        self._clans_pos_block()
-        self._clans_hsp_block()
-
-        self._file.close()
-
-    def __repr__(self):
-        return "ClansWriter for " + repr(self._clans_instance)
-
-    __str__ = __repr__
+        if not hasattr(output, 'write'):
+            raise TypeError(output)
+        
+        self._out = output
 
     @property
-    def clans_instance(self):
+    def output(self):
         """
-        the L{Clans} instance that resulted from parsing a CLANS file.
+        Destination stream
+        @rtype: stream
+        """
+        return self._out
+    
+    def write(self, text):
+        """
+        Write a chunk of text
+        """
+        self._out.write(text)   
 
-        @rtype: L{Clans} instance
+    def writeline(self, text):
         """
-        return self._clans_instance
+        Write a chunk of text and append a new line terminator
+        """        
+        self._out.write(text)
+        self._out.write('\n')
+                    
+    @abstractmethod
+    def add_param_block(self, block_data):
+        pass
 
-    @property
-    def filename(self):
-        """
-        The output filename.
+    @abstractmethod
+    def add_rotmtx_block(self, block_data):
+        pass
 
-        @rtype: str
-        """
-        return self._filename
+    @abstractmethod
+    def add_seq_block(self, block_data):
+        pass
 
-    def _clans_param_block(self):
-        """
-        Appends a <param>data</param> CLANS file block to stream self._file.
-        """
-        param_block = self._clans_instance.params._to_clans_param_block()
-        self._file.write(param_block)
+    @abstractmethod
+    def add_seqgroups_block(self, block_data):
+        pass
 
-    def _clans_rotmtx_block(self):
+    @abstractmethod
+    def add_pos_block(self, block_data):
+        pass
+
+    @abstractmethod
+    def add_hsp_block(self, block_data):
+        pass
+    
+
+class ClansFileWriter(ClansFileBuilder):
+    """
+    Class for serializing a L{Clans} instance to a file in CLANS format.
+
+    @param output: the output stream
+    @type output: stream
+    """
+
+    def serialize(self, clans_instance):
         """
-        Appends a <rotmtx>data</rotmtx> CLANS file block to stream self._file.
+        Creates a CLANS file containing all data from {clans_instance}
+
+        @param clans_instance: the source of the data to be serialized
+        @type clans_instance: a L{Clans} instance
+        """
+
+        self.add_sequences_line(clans_instance)
+        self.add_param_block(clans_instance)
+        self.add_rotmtx_block(clans_instance)
+        self.add_seq_block(clans_instance)
+        self.add_seqgroups_block(clans_instance)
+        self.add_pos_block(clans_instance)
+        self.add_hsp_block(clans_instance)
+        
+    def add_sequences_line(self, clans_instance):
+        """
+        Appends the \'sequences=<#sequences>\' line to {output}.
+
+        @param clans_instance: the source of the data to be serialized
+        @type clans_instance: a L{Clans} instance
+        """
+        self.writeline('sequences={0}'.format(len(clans_instance.entries)))
+
+    def add_param_block(self, clans_instance):
+        """
+        Appends a <param>data</param> CLANS file block to {output}.
+
+        @param clans_instance: the source of the data to be serialized
+        @type clans_instance: a L{Clans} instance
+        """
+        param_block = clans_instance.params._to_clans_param_block()
+        self.write(param_block)
+
+    def add_rotmtx_block(self, clans_instance):
+        """
+        Appends a <rotmtx>data</rotmtx> CLANS file block to {output}.
+
+        @param clans_instance: the source of the data to be serialized
+        @type clans_instance: a L{Clans} instance
 
         @raise ValueError: if self.clans_instance.rotmtx is no 3x3 numpy.array
         """
-        rotmtx = self._clans_instance.rotmtx
+        rotmtx = clans_instance.rotmtx
 
         if rotmtx is None:
             return
@@ -565,54 +617,76 @@ class ClansWriter(object):
         if rotmtx.shape != (3, 3):
             raise ValueError('rotmtx must be a 3x3 array')
 
-        self._file.write('<rotmtx>\n')
-        self._file.write('\n'.join(
+        self.writeline('<rotmtx>')
+
+        self.write('\n'.join(
             ['{0};{1};{2};'.format(*tuple(rotmtx[i])) for i in range(3)]))
-        self._file.write('\n</rotmtx>\n')
+        self.write('\n')
 
-    def _clans_seq_block(self):
-        """
-        Appends a <seq>data</seq> CLANS file block to stream self._file.
-        """
-        self._file.write('<seq>\n')
-        self._file.write(''.join([e.output_string_seq()
-                                 for e in self._clans_instance.entries]))
-        self._file.write('</seq>\n')
+        self.writeline('</rotmtx>')
 
-    def _clans_seqgroups_block(self):
+    def add_seq_block(self, clans_instance):
         """
-        Appends a <seqgroupsparam>data</seqgroups> CLANS file block to stream
-        self._file.
+        Appends a <seq>data</seq> CLANS file block to {output}.
+
+        @param clans_instance: the source of the data to be serialized
+        @type clans_instance: a L{Clans} instance
         """
-        seqgroups = self._clans_instance.seqgroups
+        self.writeline('<seq>')
+
+        self.write(''.join([e.output_string_seq()
+                            for e in clans_instance.entries]))
+
+        self.writeline('</seq>')
+
+    def add_seqgroups_block(self, clans_instance):
+        """
+        Appends a <seqgroupsparam>data</seqgroups> CLANS file block to {output}.
+
+        @param clans_instance: the source of the data to be serialized
+        @type clans_instance: a L{Clans} instance
+        """
+        seqgroups = clans_instance.seqgroups
 
         if seqgroups is not None and len(seqgroups) > 0:
 
-            self._file.write('<seqgroups>\n')
-            self._file.write('\n'.join([s.output_string() for s in seqgroups]))
-            self._file.write('\n</seqgroups>\n')
+            self.writeline('<seqgroups>')
 
-    def _clans_pos_block(self):
-        """
-        Appends a <pos>data</pos> CLANS file block to stream self._file.
-        """
-        self._file.write('<pos>\n')
-        self._file.write('\n'.join([e.output_string_pos()
-                                   for e in self._clans_instance.entries]))
-        self._file.write('\n</pos>\n')
+            self.write('\n'.join([s.output_string() for s in seqgroups]))
+            self.write('\n')
 
-    def _clans_hsp_block(self):
+            self.writeline('</seqgroups>')
+
+    def add_pos_block(self, clans_instance):
         """
-        Appends a <hsp>data</hsp> CLANS file block to stream self._file.
+        Appends a <pos>data</pos> CLANS file block to {output}.
+
+        @param clans_instance: the source of the data to be serialized
+        @type clans_instance: a L{Clans} instance
+        """
+        self.writeline('<pos>')
+
+        self.write('\n'.join([e.output_string_pos()
+                              for e in clans_instance.entries]))
+        self.write('\n')
+
+        self.writeline('</pos>')
+
+    def add_hsp_block(self, clans_instance):
+        """
+        Appends a <hsp>data</hsp> CLANS file block to {output}.
         If the CLANS instance has hsp_att_mode=="att" we add a <att>data<att>
         block which has the same format.
+
+        @param clans_instance: the source of the data to be serialized
+        @type clans_instance: a L{Clans} instance
         """
 
-        self._file.write('<{0}>\n'.format(self._clans_instance._hsp_att_mode))
-
+        self.writeline('<{0}>'.format(clans_instance._hsp_att_mode))
+        
         ## sorting is not necessary, but makes a nicer looking clans file
         idToEntryMapping = [(e.get_id(), e)
-                            for e in self._clans_instance.entries]
+                            for e in clans_instance.entries]
         idToEntryMapping.sort(key=operator.itemgetter(0))
         entryToIdMapping = dict([(entry, identifier)
                                  for (identifier, entry) in idToEntryMapping])
@@ -629,13 +703,13 @@ class ClansWriter(object):
                     continue
 
                 line_format = '{0} {1}:{2}\n'
-                if self._clans_instance._hsp_att_mode == "att":
+                if clans_instance._hsp_att_mode == "att":
                     line_format = '{0} {1} {2}\n'
 
-                self._file.write(
+                self.write(
                     line_format.format(entry1_id, entry2_id, repr(pvalue)))
 
-        self._file.write('</{0}>\n'.format(self._clans_instance._hsp_att_mode))
+        self.writeline('</{0}>'.format(clans_instance._hsp_att_mode))
 
 
 class ClansEntryGiComparator(object):
@@ -1530,7 +1604,8 @@ class Clans(object):
         @type filename: str
         """
         self._update_index()
-        ClansWriter(self, filename)
+        writer = ClansFileWriter(open(filename, 'w'))
+        writer.serialize(self)
 
 
 class ClansEntry(object):

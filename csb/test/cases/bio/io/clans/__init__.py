@@ -288,11 +288,11 @@ class TestClansParser(test.Case):
 
 
 @test.functional
-class TestClansWriter(test.Case):
+class TestClansFileWriter(test.Case):
 
     def setUp(self):
         
-        super(TestClansWriter, self).setUp()
+        super(TestClansFileWriter, self).setUp()
                 
         self.filename = self.config.getTestFile('out.clans')
         self.temp = self.config.getTempStream()
