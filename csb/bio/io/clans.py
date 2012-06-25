@@ -579,6 +579,8 @@ class ClansFileWriter(ClansFileBuilder):
         self.add_seqgroups_block(clans_instance)
         self.add_pos_block(clans_instance)
         self.add_hsp_block(clans_instance)
+
+        self.output.close()
         
     def add_sequences_line(self, clans_instance):
         """
