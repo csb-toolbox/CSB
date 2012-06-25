@@ -1302,35 +1302,61 @@ class ClansParams(object):
 
 
 class ClansEntryCollection(csb.core.ReadOnlyCollectionContainer):
-    
+    """
+    Read-only container for holding (and internally managing) L{ClansEntry}
+    instances.
+    """
+
     def __init__(self):
         
         super(ClansEntryCollection, self).__init__(type=ClansEntry)
 
     def _remove_item(self, item):
+        """
+        Removes {item} from the collection.
+
+        @param item: the item to be removed
+        @type item: a L{ClansEntry} instance
+
+        @raises TypeError: if {item} is not a L{ClansEntry} instance
+        """
+
         if self._type:
             if not isinstance(item, self._type):
                 raise TypeError("Item {0} is not of the required {1} type.".format(
                     item, self._type.__name__))
         self._items.remove(item)
 
-    def _sort(self, clans_instance=None):
+    def _sort(self):
         """
         Sort entries by their {name}.
 
-        If the L{ClansEntryCollection} is part of a L{Clans} instance, use
-        L{Clans.sort} instead of this to avoid corrupting L{Clans._idx}.
+        Note: If the L{ClansEntryCollection} is part of a L{Clans} instance,
+        use L{Clans.sort} instead of this to avoid corrupting L{Clans._idx}.
         """
         self._items.sort(key=lambda entry: entry.name)
 
 
 class ClansSeqgroupCollection(csb.core.ReadOnlyCollectionContainer):
+    """
+    Read-only container for holding (and internally managing) L{ClansSeqgroup}
+    instances.
+    """
     
     def __init__(self):
         
         super(ClansSeqgroupCollection, self).__init__(type=ClansSeqgroup)
 
     def _remove_item(self, item):
+        """
+        Removes {item} from the collection.
+
+        @param item: the item to be removed
+        @type item: a L{ClansSeqgroup} instance
+
+        @raises TypeError: if {item} is not a L{ClansSeqgroup} instance
+        """
+
         if self._type:
             if not isinstance(item, self._type):
                 raise TypeError("Item {0} is not of the required {1} type.".format(
