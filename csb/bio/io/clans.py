@@ -55,6 +55,28 @@ class Color(object):
 
     __str__ = __repr__
 
+    @staticmethod
+    def from_string(color_string, separator=';'):
+        '''
+        Factory for a Color instance created from a string formatted as r{separator}g{separator}b
+
+        @param color_string: a string containing colors in format r{separator}g{separator}b
+        @type color_string: str
+
+        @raises TypeError: if {color_string} is not a string
+        @raises ValueError: if any value in color is outside of range(256)
+        '''
+        if not isinstance(color_string, csb.core.string):
+            raise TypeError('{0} is no string'.format(color_string))
+        
+        if color_string.count(separator) != 2:
+                raise ValueError(
+                    ('format needs to be \'r{0}g{0}b\' but color_string was ' +
+                     '{1}').format(separator, color_string))
+            
+        r, g, b = map(int, color_string.split(';'))
+        return Color(r, g, b)
+
     @property
     def r(self):
         """
@@ -115,18 +137,6 @@ class Color(object):
             raise ValueError('valid color values are in range(256).')
 
         self._b = value
-
-    def parse_clans_color(self, colorString):
-        """
-        Sets all colors to the values provided in a CLANS color string.
-
-        @param colorString: a CLANS color string; format: {r};{g};{b}
-        @type colorString: str
-
-        @raises ValueError: if any value in color is outside of range(256)
-        """
-
-        self.r, self.g, self.b = map(int, colorString.split(';'))
 
     def to_clans_color(self):
         """
@@ -1868,7 +1878,7 @@ class ClansSeqgroup(object):
         color of the seqgroup
 
         raises ValueError if set to a wrongly formatted string (correct:
-        \'x;y;z\')
+        \'{r};{g};{b}\')
 
         @rtype: L{Color}
         """
@@ -1876,24 +1886,23 @@ class ClansSeqgroup(object):
 
     @color.setter
     def color(self, value, separator=';'):
+        # set values to those of existing Color instance
         if isinstance(value, Color):
             self._color = value
             return
 
+        ## parse color from string in format 'r;g;b'
         if isinstance(value, csb.core.string):
-            if value.count(separator) != 2:
-                raise ValueError(
-                    ('separator \'{0}\' count in color \'{1}\': {2}. '
-                     + 'Expected: 2').format(
-                        separator, value, value.count(separator)))
+            self._color = Color.from_string(value)
+            return
 
-            value = value.split(separator)
+        # parse 3-item iterables like (3, 5, 6)
+        if len(value) == 3:
+            self._color = Color(*tuple(map(int, value)))
+            return
 
-        if len(value) != 3:
-            raise ValueError(
-                'color \'{0}\'was expected to have 3 items'.format(value))
+        raise ValueError('cannot parse color from \'{0}\''.format(value))
 
-        self._color = Color(*tuple(map(int, value)))
 
     @property
     def members(self):
