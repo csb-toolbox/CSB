@@ -6,7 +6,7 @@ snippet we draw 5000 samples from a 1D normal distribution and plot them:
 
 
     >>> import numpy
-    >>> from csb.io.plotting import Chart
+    >>> from csb.io.plots import Chart
     >>> from csb.statistics.pdf import Normal
     >>> from csb.statistics.samplers import State
     >>> from csb.statistics.samplers.mc.singlechain import HMCSampler
@@ -29,9 +29,8 @@ snippet we draw 5000 samples from a 1D normal distribution and plot them:
     
     >>> states = [state.position[0]for state in states]
     >>> chart = Chart()
-    >>> chart.plot.hist([numpy.random.normal(size=5000), states], bins=20, normed=True,
-                        label=['numpy.random.normal', 'HMC'])
-    >>> chart.plot.legend()
+    >>> chart.plot.hist([numpy.random.normal(size=5000), states], bins=20, normed=True)
+    >>> chart.plot.legend(['numpy.random.normal', 'HMC'])
     >>> chart.show()
 
 

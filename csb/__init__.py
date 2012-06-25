@@ -139,8 +139,8 @@ L{csb.bio.io.hhpred.HHOutputParser}, which are used to read *.hhm and *.hhr
 files.
 
 Finally, if you want to make some nice plots with matplotlib, you may like the
-clean object-oriented interface of our L{Chart<csb.io.plotting.Chart>}. See
-L{csb.io.plotting} and maybe also L{csb.io.tsv} to get started.
+clean object-oriented interface of our L{Chart<csb.io.plots.Chart>}. See
+L{csb.io.plots} and maybe also L{csb.io.tsv} to get started.
 
 
 Development
