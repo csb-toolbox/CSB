@@ -14,7 +14,7 @@ import csb.bio.structure as structure
 import csb.bio.fragments
 import csb.bio.fragments.rosetta as rosetta
 import csb.core
-import csb.io.plotting
+import csb.io.plots
 
 
 class ExitCodes(csb.apps.ExitCodes):
@@ -224,7 +224,7 @@ class LibrarySuperimposer(object):
         coverage = len(covered) * 100.0 / len(residues)
         avg_precision = sum(precision) / len(precision)                 
         
-        with csb.io.plotting.Chart() as chart:
+        with csb.io.plots.Chart() as chart:
                         
             chart.plot.bar(residues, background, color='#FFB0B0', linewidth=None, edgecolor='#FFB0B0')
             chart.plot.bar(residues, precision2, color='#50A6DA', linewidth=None, edgecolor='#50A6DA')            

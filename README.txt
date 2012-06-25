@@ -41,7 +41,7 @@ of a few trivial packages, on which CSB depends:
     2. scipy -- mandatory (scipy.org)
 
     3. matplotlib and wxPython -- optional, needed only if you want to
-       use csb.io.plotting
+       use csb.io.plots
        
     4. unittest2 -- needed only if you are using python 2.6
     5. argparse -- may be needed if you are using python 2.6
