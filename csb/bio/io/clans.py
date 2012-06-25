@@ -579,8 +579,6 @@ class ClansFileWriter(ClansFileBuilder):
         self.add_seqgroups_block(clans_instance)
         self.add_pos_block(clans_instance)
         self.add_hsp_block(clans_instance)
-
-        self.output.close()
         
     def add_sequences_line(self, clans_instance):
         """
@@ -1665,9 +1663,9 @@ class Clans(object):
         @type filename: str
         """
 
-        writer = ClansFileWriter(open(filename, 'w'))
-
-        writer.serialize(self)
+	with open(filename, 'w') as stream:
+	        writer = ClansFileWriter(stream)
+	        writer.serialize(self)
 
 
 class ClansEntry(object):
