@@ -1663,9 +1663,9 @@ class Clans(object):
         @type filename: str
         """
 
-	with open(filename, 'w') as stream:
-	        writer = ClansFileWriter(stream)
-	        writer.serialize(self)
+        with open(filename, 'w') as stream:
+            writer = ClansFileWriter(stream)
+            writer.serialize(self)
 
 
 class ClansEntry(object):
