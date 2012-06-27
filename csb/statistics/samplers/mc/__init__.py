@@ -809,7 +809,7 @@ class AbstractExchangeMC(AbstractEnsembleMC):
         """
         param_info = self._param_infos[index]
         swapcom = self._propose_swap(param_info)
-        self._calc_pacc_swap(swapcom)
+        swapcom = self._calc_pacc_swap(swapcom)
         result = self._accept_swap(swapcom)
         
         self.state = EnsembleState([x.state for x in self._samplers])
@@ -836,7 +836,9 @@ class AbstractExchangeMC(AbstractEnsembleMC):
 
         @param swapcom: SwapCommunicator instance holding information to be communicated
                         between distinct swap substeps
-        @type swapcom: L{AbstractSwapCommunicator} 
+        @type swapcom: L{AbstractSwapCommunicator}
+
+        @rtype: L{AbstractSwapCommunicator}
         """
         pass
 
@@ -973,8 +975,10 @@ class AbstractRENS(AbstractExchangeMC):
               0.5 * sum(state1.momentum ** 2) - E1(state1.position) - heat12
         w21 = 0.5 * sum(proposal1.momentum ** 2) + E1(proposal1.position) - \
               0.5 * sum(state2.momentum ** 2) - E2(state2.position) - heat21
-        
+
         swapcom.acceptance_probability = csb.numeric.exp(-w12 - w21)
+
+        return swapcom
 
     @abstractmethod
     def _run_traj_generator(self, traj_info):
