@@ -121,7 +121,3 @@ class EnsembleState(csb.core.BaseCollectionContainer, AbstractState):
     @property
     def momentum(self):
         return np.array([s.momentum for s in self])
-
-
-
-
