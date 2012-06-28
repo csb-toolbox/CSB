@@ -186,6 +186,7 @@ class TestLegacyStructureParser(test.Case):
             
             parser = LegacyStructureParser(tmp.name)
             self.assertRaises(HeaderFormatError, parser.parse_structure)
+            del parser
 
         
 @test.unit
