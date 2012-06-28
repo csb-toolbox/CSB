@@ -45,7 +45,7 @@ except ImportError:
     import urllib
         
 
-NEWLINE = os.linesep
+NEWLINE = "\n"
 
 
 class Shell(object):
