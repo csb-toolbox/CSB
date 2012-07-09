@@ -30,8 +30,8 @@ class UnknownTagError(ValueError):
 class Color(object):
     """
     RGB color handling class.
-    Color is stored as r, g, and b attributes.
-    Default color is C{r}=C{g}=C{b}=0 (i.e. black)
+    Color is stored as r, g, b, and a (i.e. alpha) attributes.
+    Default color is C{r}=C{g}=C{b}=0 (i.e. black) with a=255
 
     @param r: the red value
     @type r: int
@@ -41,15 +41,20 @@ class Color(object):
 
     @param b: the blue value
     @type b: int
+
+    @param a: the alpha value
+    @type a: int
     """
 
-    def __init__(self, r=0, g=0, b=0):
+    def __init__(self, r=0, g=0, b=0, a=255):
         self._r = None
         self.r = r
         self._g = None
         self.g = g
         self._b = None
         self.b = b
+        self._a = None
+        self.a = a
 
     def __repr__(self):
         return 'Color {0}'.format(self.to_clans_color())
@@ -59,9 +64,9 @@ class Color(object):
     @staticmethod
     def from_string(color_string, separator=';'):
         """
-        Factory for a Color instance created from a string formatted as r{separator}g{separator}b
+        Factory for a Color instance created from a string formatted as r{separator}g{separator}b{separator}a, where the final \'{separator}a\' is optional.
 
-        @param color_string: a string containing colors in format r{separator}g{separator}b
+        @param color_string: the color string
         @type color_string: str
 
         @raises TypeError: if {color_string} is not a string
@@ -70,13 +75,18 @@ class Color(object):
         if not isinstance(color_string, csb.core.string):
             raise TypeError('{0} is no string'.format(color_string))
         
-        if color_string.count(separator) != 2:
-                raise ValueError(
-                    ('format needs to be \'r{0}g{0}b\' but color_string was ' +
-                     '{1}').format(separator, color_string))
+        if color_string.count(separator) == 2:
+            r, g, b = map(int, color_string.split(';'))
+            a = 255
+        elif color_string.count(separator) == 3:
+            r, g, b, a  = map(int, color_string.split(';'))
+
+        else:
+            raise ValueError(
+                ('format needs to be \'r{0}g{0}b\' but color_string was ' +
+                 '{1} [optionally with alpha value: \'r{0}g{0}b{0}a\']').format(separator, color_string))
             
-        r, g, b = map(int, color_string.split(';'))
-        return Color(r, g, b)
+        return Color(r, g, b, a)
 
     @property
     def r(self):
@@ -139,14 +149,33 @@ class Color(object):
 
         self._b = value
 
+    @property
+    def a(self):
+        """
+        the alpha value of the RGB color.
+
+        raises ValueError if C{value} is outside of range(256)
+
+        @rtype: int
+        """
+        return self._a
+
+    @a.setter
+    def a(self, value):
+
+        if value < 0 or value > 255:
+            raise ValueError('valid color values are in range(256).')
+
+        self._a = value
+
     def to_clans_color(self):
         """
         Formats the color for use in CLANS files.
 
-        @return: the color formatted for use in CLANS files; format: r;g;b
+        @return: the color formatted for use in CLANS files; format: r;g;b;a
         @rtype: str
         """
-        return '{0.r};{0.g};{0.b}'.format(self)
+        return '{0.r};{0.g};{0.b};{0.a}'.format(self)
 
 
 class ClansParser(object):

@@ -49,12 +49,13 @@ class TestClansColor(test.Case):
     def testToClansColor(self):
         color = Color()
 
-        self.assertEqual(color.to_clans_color(), '0;0;0')
+        self.assertEqual(color.to_clans_color(), '0;0;0;255')
 
-        testValues = (83, 92, 3)
+        testValues = (83, 92, 3, 87)
         color.r = testValues[0]
         color.g = testValues[1]
         color.b = testValues[2]
+        color.a = testValues[3]
 
         self.assertEqual(color.to_clans_color(),
                          ';'.join(map(str, testValues)))
@@ -313,16 +314,55 @@ class TestClansFileWriter(test.Case):
         self.assertEqual(len(original_lines), len(written_lines))
 
         in_hsps = False
+        start_tag_hsp = '<hsp>\n'
+        end_tag_hsp = '</hsp>\n'
+        colorarr_tag = 'colorarr='
+        color_tag = 'color='
+        
         for i, original_line in enumerate(original_lines):
 
-            if original_line == '<hsp>\n':
+            if original_line == start_tag_hsp:
                 in_hsps = True
                 continue
-
-            if original_line == '</hsp>\n':
-                in_hsps = True
+            if original_line == end_tag_hsp:
+                in_hsps = False
                 continue
 
+            if original_line.startswith(colorarr_tag):
+                ## remove colorarr_tag from beginning of line
+                original_line = original_line[len(colorarr_tag):].strip().strip(':')
+                self.assertTrue(written_lines[i].startswith(colorarr_tag))
+                written_line = written_lines[i][len(colorarr_tag):].strip().strip(':')
+
+                original_colors = original_line.replace('(', ''). replace(')', '').split(':')
+                written_colors = written_line.replace('(', ''). replace(')', '').split(':')
+
+                self.assertEqual(len(original_colors), len(written_colors))
+                
+                for j, original_color_string in enumerate(original_colors):
+                    original_color = Color.from_string(original_color_string)
+                    written_color = Color.from_string(written_colors[j])
+                    self.assertEqual(original_color.r, written_color.r)
+                    self.assertEqual(original_color.g, written_color.g)
+                    self.assertEqual(original_color.b, written_color.b)
+                    self.assertEqual(original_color.a, written_color.a)
+
+                continue
+
+            if original_line.startswith(color_tag):
+                original_color_string = original_line[len(color_tag):].strip()
+                self.assertTrue(written_lines[i].startswith(color_tag))
+                written_color_string = written_lines[i][len(color_tag):].strip()
+
+                original_color = Color.from_string(original_color_string)
+                written_color = Color.from_string(written_color_string)
+                self.assertEqual(original_color.r, written_color.r)
+                self.assertEqual(original_color.g, written_color.g)
+                self.assertEqual(original_color.b, written_color.b)
+                self.assertEqual(original_color.a, written_color.a)
+
+                continue
+                
             if in_hsps:
                 original_start_end, original_value \
                                     = original_line.strip().split(':')
@@ -330,6 +370,7 @@ class TestClansFileWriter(test.Case):
                                    = written_lines[i].strip().split(':')
                 self.assertEqual(original_start_end, written_start_end)
                 self.assertTrue((float(original_value) - float(written_value)) < 1e-6)
+
             else:
                 self.assertEqual(original_line, written_lines[i])
             
