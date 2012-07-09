@@ -1528,11 +1528,11 @@ class ResidueAtomsTable(csb.core.DictionaryContainer):
         @raise DuplicateAtomIDError: if an atom with the same sequence number and 
                                      insertion code already exists in that residue
         """
-        if atom._residue and atom._residue is not self.__residue:
+        if atom.residue and atom.residue is not self.__residue:
             raise InvalidOperation('This atom is part of another residue')
         if atom.alternate or (atom.name in self and isinstance(self[atom.name], DisorderedAtom)):
             if atom.name not in self:
-                atom.residue = self.__residue
+                atom._residue = self.__residue
                 dis_atom = DisorderedAtom(atom)
                 super(ResidueAtomsTable, self).append(dis_atom.name, dis_atom)
             else:
@@ -1543,6 +1543,7 @@ class ResidueAtomsTable(csb.core.DictionaryContainer):
                     self.update(atom.name, DisorderedAtom(buggy_atom))
                 if not atom.alternate:
                     atom.alternate = True 
+                atom._residue = self.__residue
                 self[atom.name].append(atom)          
         else:
             if atom.name in self:
@@ -1564,7 +1565,7 @@ class ResidueAtomsTable(csb.core.DictionaryContainer):
         @raise ValueError: if C{atom} has a different name than C{atom_name}
         """
         if atom.name != atom_name:
-            raise ValueError('Atom\'s name differs from the specified update key.')
+            raise ValueError("Atom's name differs from the specified key.")
         if atom.residue is not self.__residue:
             atom._residue = self.__residue
         
@@ -1771,8 +1772,15 @@ class DisorderedAtom(csb.core.CollectionContainer, Atom):
         
     def __init__(self, atom):
         super(DisorderedAtom, self).__init__(type=Atom)
-        self._rep = None
+        self.__rep = None
         self.append(atom)
+
+    def __getattr__(self, name):
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            subject = object.__getattribute__(self, '_DisorderedAtom__rep')
+            return getattr(subject, name)             
             
     def append(self, atom):
         """
@@ -1788,25 +1796,13 @@ class DisorderedAtom(csb.core.CollectionContainer, Atom):
         
         for atom in self:
             atom.transform(rotation, translation)
-        self._vector = self._rep._vector
-        
+                
     def __update_rep(self, atom):
         
-        if self._rep is None or \
-        ((self._rep.occupancy != atom.occupancy) and (self._rep.occupancy < atom.occupancy)):
+        if self.__rep is None or \
+        ((self.__rep.occupancy != atom.occupancy) and (self.__rep.occupancy < atom.occupancy)):
         
-            self._rep = atom      
-
-            self._serial_number = self._rep.serial_number
-            self._name = self._rep.name
-            self._full_name = self._rep._full_name            
-            self._element = self._rep.element
-            self.alternate = self._rep.alternate
-            self._residue = self._rep.residue
-            self._vector = self._rep.vector
-            self.temperature = self._rep.temperature
-            self.occupancy = self._rep.occupancy
-            self.charge = self._rep.charge
+            self.__rep = atom
             
     def __repr__(self):
         return "<DisorderedAtom: {0.length} alternative locations>".format(self)

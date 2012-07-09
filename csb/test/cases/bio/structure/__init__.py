@@ -61,8 +61,23 @@ class ChainRegressions(test.Case):
                 self.structure.list_coordinates(what=['CA'])
                 
         self.assertFasterThan(0.50, test)
-
-
+            
+    def testAppendAtom(self):
+        """
+        @see: [CSB 0000122]
+        """
+        r = structure.ProteinResidue(1, sequence.ProteinAlphabet.ALA)
+        
+        a1 = structure.Atom(1, 'CA', structure.ChemElements.C, [1, 1, 1], alternate='A')
+        a2 = structure.Atom(1, 'CA', structure.ChemElements.C, [1, 1, 1], alternate='B')
+        
+        r.atoms.append(a1)
+        r.atoms.append(a2)
+        
+        self.assertEqual(a1.residue, r)
+        self.assertEqual(a2.residue, r)
+        
+        
 @test.unit
 class TestAbstractEntity(test.Case): 
     
