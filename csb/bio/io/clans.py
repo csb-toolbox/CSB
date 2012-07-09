@@ -299,7 +299,7 @@ class ClansParser(object):
                     group = ClansSeqgroup(name=group_raw_data['name'],
                                           type=group_raw_data['type'],
                                           size=group_raw_data['size'],
-                                          hide=group_raw_data['hide'] == 1,
+                                          hide=group_raw_data['hide'] == '1',
                                           color=group_raw_data['color'])
 
                     ## get members corresponding to the IDs in this group
