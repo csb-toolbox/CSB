@@ -167,7 +167,7 @@ def polar(x):
     
     (d,) = x.shape
     phi = numpy.zeros(d)
-    for i in range(1, d)[::-1]:
+    for i in reversed(range(1, d)):
         phi[i - 1] = numpy.arctan2(x[i] / numpy.cos(phi[i]), x[i - 1])
         
     return numpy.array([norm(x)] + phi[:-1].tolist())
