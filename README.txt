@@ -2,7 +2,7 @@ Computational Structural Biology Toolbox
 ========================================
 
 CSB is a python library and application framework, which can be used
-to solve problems in the field of Computational Structural Biology. If
+to solve problems in the field of structural bioinformatics. If
 you are a bioinformatician, software engineer or a researcher working
 in this field, chances are you may find something useful here. Our
 package consists of a few major components:
@@ -14,17 +14,17 @@ package consists of a few major components:
        which consume objects from the core library in order to build
        something executable (and hopefully useful).
        
-    3. Test framework -- makes sure the library *actually* works.
+    3. Test framework -- ensures that the library *actually* works.
 
 
 Compatibility
 -------------
 
-In short: requires python 2.6 or higher.
+In short: CSB requires python 2.6 or higher.
 
 CSB is being developed on Linux, under python 2.7. However, compatibility
 is a design goal and the package works on any platform, on any modern python
-interpreter since version 2.6 (yes, that includes python 3 support out of
+interpreter since version 2.6 (that includes python 3 support out of
 the box). If you found any issues on a platform/interpreter different from
 our development environment, please let us know. We will kindly apologize,
 fix the problem and write a regression test case to make sure that the
@@ -50,7 +50,7 @@ If you are installing CSB on Windows, numpy, scipy and matplotlib can be
 installed from binary MSI/exe packages, the rest can be installed from
 PyPi. On Debian-like Linux distributions use your package manager::
 
-    $ apt-get install *package*
+    $ apt-get install package
 
 where *package* is one of: python-numpy, python-scipy, python-matplotlib.
 
@@ -58,11 +58,11 @@ Finally, install CSB itself::
 
     $ python setup.py install
     
-CSB has been just installed at the following location::
+CSB has just been installed at the following location::
 
     $ python -c "import csb, os; print(os.path.abspath(os.path.join(csb.__path__[0], '..')))"
 
-Let's call this path *$LIB*.
+Let us call this path *$LIB*.
             
 
 Testing
@@ -85,7 +85,7 @@ For help try::
     $ python $LIB/csb/test/app.py -h    
 
 For more details on our test framework, including guidelines for writing
-unit test, please refer to the API documentation, package "csb.test".
+unit tests, please refer to the API documentation, package "csb.test".
 
 
 Running CSB Applications
@@ -94,7 +94,7 @@ Running CSB Applications
 CSB is bundled with a number of executable console csb.apps. Each app
 provides a standard command line interface. To run any app, try::
 
-    $ python $LIB/csb/apps/*appname*.py --help
+    $ python $LIB/csb/apps/appname.py --help
     
 where *appname* is the name of the application. For more details on
 our app framework, including guidelines for writing new applications,
@@ -116,25 +116,26 @@ distribution package. Simply open docs/api/index.html in your browser.
 Contact
 -------
 
-This library is developed by Michael Habeck's Computational Structural
+This project is developed by Michael Habeck's Computational Structural
 Biology Group, at the Max Planck Institute for Developmental Biology,
 Tuebingen, Germany:
 
     http://www.eb.tuebingen.mpg.de/research/research-groups/michael-habeck.html
     
-The source code of the library is hosted at the following SVN repository:
+The source code of the project is hosted at the following SVN repository:
 
     https://svn.tuebingen.mpg.de/agbs/projects/CSB
         
 Send any requests and feedback to:
     
+    ivan.kalev@tuebingen.mpg.de
     michael.habeck@tuebingen.mpg.de
 
 
 License
 -------
 
-CSB is an open source library, distributed under OSI-approved MIT license.
+CSB is open source and distributed under OSI-approved MIT license.
 ::
 
     Copyright (c) 2012 Michael Habeck

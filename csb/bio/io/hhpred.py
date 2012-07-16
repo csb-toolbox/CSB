@@ -574,7 +574,8 @@ class HHProfileParser(object):
             layer.residue.torsion = residue.torsion.copy()
             
             for atom in residue.items:
-                layer.residue.atoms.append(atom.clone())
+                atom._residue = None    # atom.clone() is much, much slower
+                layer.residue.atoms.append(atom)
 
         return hmm
 

@@ -30,7 +30,7 @@ class TestHHProfileRegressions(test.Case):
         
     def testParseRedundantA3M(self):
         """
-        @see: [CSB 0000068]
+        @see: [CSB 0000068], [CSB 0000128]
         """
         
         def strip(s):
@@ -47,6 +47,9 @@ class TestHHProfileRegressions(test.Case):
             tmp.flush()
             generated = open(tmp.name).read()
             self.assertEqual(strip(content), strip(generated))
+            
+        # should not raise DuplicateSequenceError, see [CSB 0000128]
+        hmm.segment(1, 2)
 
         
 @test.unit
