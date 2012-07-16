@@ -1014,6 +1014,12 @@ class AbstractAlignment(object):
                 
         assert self._length is None
         self._length = rep_sequence.length 
+        
+    def _factory(self, *a, **k):
+        """
+        Return a new sequence of the current L{AbstractAlignment} sub-class.
+        """ 
+        return self.__class__(*a, **k)
       
     def add(self, sequence):
         """
@@ -1103,7 +1109,7 @@ class AbstractAlignment(object):
             if rn in rows:
                 sequences.append(row.extract(cols))
                 
-        return self.__class__(sequences)
+        return self._factory(sequences, strict=self._strict)
     
     def subregion(self, start, end):
         """
@@ -1127,7 +1133,7 @@ class AbstractAlignment(object):
         for row in self.rows:
             sequences.append(row.subregion(start, end))
                 
-        return self.__class__(sequences)
+        return self._factory(sequences, strict=self._strict)
     
     def format(self, format=AlignmentFormats.FASTA, headers=True):
         """

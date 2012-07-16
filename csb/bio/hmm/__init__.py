@@ -579,9 +579,10 @@ class ProfileHMM(object):
             else:
                 chain_id = '_'
                 
-        return structure.Chain(chain_id,
-                               type=sequence.SequenceTypes.Protein,
-                               residues=self.residues)
+        chain = structure.Chain(chain_id, type=sequence.SequenceTypes.Protein,
+                                residues=self.residues)
+        chain._torsion_computed = True
+        return chain
 
     def emission_profile(self):
         """

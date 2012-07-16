@@ -199,6 +199,9 @@ class TestSequenceAlignment(test.Case):
         self.assertRaises(sequence.ColumnPositionError, self.ali.subregion, -1, 2)
         self.assertRaises(sequence.ColumnPositionError, self.ali.subregion, 1, 6)
         
+        # should not raise DuplicateSequenceError
+        self.ali2.subregion(1, 2)
+        
     def testFormat(self):
         
         self.assertEqual(self.ali.format(headers=False).strip(), 'AB-CD\nABX-D')
