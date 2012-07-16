@@ -119,12 +119,17 @@ class GaussianMLEstimator(AbstractEstimator):
         sigma = sqrt(mean((x - mu) ** 2))
         
         return Normal(mu, sigma)
-
-class InverseGammaPosteriorSampler(AbstractEstimator):
-    """
-    Density parameter estimation based on adaptive rejection sampling
-    """
-    pass
+    
+class InverseGaussianMLEstimator(AbstractEstimator):
+    
+    def estimate(self, context, data):
+         
+        x = array(data)
+        
+        mu = mean(x)
+        il = mean((1.0 / x) - (1.0 / mu))
+        
+        return InverseGaussian(mu, 1.0 / il)
 
 class GammaMLEstimator(AbstractEstimator):
 
@@ -465,12 +470,11 @@ class InverseGaussian(AbstractDensity):
         self._register('llambda')
 
         self.set_params(mu=mu, llambda=llambda)
-        self.estimate = NullEstimator()
+        self.estimator = InverseGaussianMLEstimator()
 
     @property
     def mu(self):
         return self['mu']
-
     @mu.setter
     def mu(self, value):
         if value <= 0.:
@@ -479,8 +483,7 @@ class InverseGaussian(AbstractDensity):
 
     @property
     def llambda(self):
-        return self['mu']
-
+        return self['llambda']
     @llambda.setter
     def llambda(self, value):
         if value <= 0.:

@@ -84,7 +84,7 @@ class TestLogProb(test.Case):
         self.assertWithinDelta(mg(numpy.zeros(2)), 1. / (2 * numpy.pi))
         self.assertWithinDelta(mg(numpy.ones(2)), 1. / (2 * numpy.pi) * numpy.exp(-0.5))
     
-    def testGeneralizedInveresseGaussian(self):
+    def testGeneralizedInvereseGaussian(self):
 
         fx = [2.7939e-24, 1.5305e-03, 2.3028e-02, 6.6302e-02, 1.1759e-01, 1.6810e-01,
               2.1365e-01, 2.5255e-01, 2.8438e-01, 3.0937e-01, 3.2806e-01, 3.4111e-01,
@@ -174,11 +174,22 @@ class TestParameterEstimation(test.Case):
         self.assertAlmostEqual(pdf.mu, mu, places=2)
         self.assertAlmostEqual(pdf.sigma, sigma, places=2)
 
+    def testInverseGaussian(self):
+        
+        mu, scale = 1, 3
+        data = numpy.random.wald(mu, scale, 100000)
+        
+        pdf = InverseGaussian(1, 1)
+        pdf.estimate(data)
+        
+        self.assertAlmostEqual(pdf.mu, mu, places=2)
+        self.assertAlmostEqual(pdf.llambda, scale, delta=0.05)
+        
     def testGeneralizedNormal(self):
         
         mu, alpha, beta = -0.04, 2.11, 1.90
         data = [-1.1712, -2.5608, -0.7143, 2.6218, -2.0655, 0.7544, 1.208, -0.5289, 0.0045, 1.1746,
-                - 1.0766, 1.1198, 1.2785, -0.6051, 2.2913, -3.6672, -0.2525, 0.8782, -0.0617, -0.0239]
+                -1.0766, 1.1198, 1.2785, -0.6051, 2.2913, -3.6672, -0.2525, 0.8782, -0.0617, -0.0239]
         
         pdf = GeneralizedNormal(1, 1, 1)
         pdf.estimate(data)
@@ -288,5 +299,6 @@ class TestParameterEstimation(test.Case):
             
 if __name__ == '__main__':
     
+    TestParameterEstimation.execute()
     test.Console()
         
