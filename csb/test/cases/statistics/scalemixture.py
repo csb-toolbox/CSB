@@ -22,8 +22,8 @@ class TestScaleMixture(test.Case):
         mu = numpy.mean(samples)
         var = numpy.var(samples)
         
-        self.assertWithinDelta(0.0, mu, delta=1e-1)
-        self.assertWithinDelta(1., var, delta=1e-1)
+        self.assertAlmostEqual(0.0, mu, delta=1e-1)
+        self.assertAlmostEqual(1., var, delta=1e-1)
 
     def testLogProb(self):
 
@@ -38,7 +38,7 @@ class TestScaleMixture(test.Case):
         gx = normal(x)
 
         for i in range(len(px)):
-            self.assertWithinDelta(px[i], 4 * gx[i], delta=1e-1)
+            self.assertAlmostEqual(px[i], 4 * gx[i], delta=1e-1)
 
     def testGamma(self):
         """
@@ -75,9 +75,9 @@ class TestScaleMixture(test.Case):
         t_opt = numpy.zeros((3,))
         
         for i in range(3):
-            self.assertWithinDelta(t[i], t_opt[i], delta=2.)
+            self.assertAlmostEqual(t[i], t_opt[i], delta=2.)
             for j in range(3):
-                self.assertWithinDelta(R_opt[i, j], R[i, j], delta=1e-1)
+                self.assertAlmostEqual(R_opt[i, j], R[i, j], delta=1e-1)
 
 
     def testGammaMAP(self):
@@ -115,9 +115,9 @@ class TestScaleMixture(test.Case):
         t_opt = numpy.zeros((3,))
         
         for i in range(3):
-            self.assertWithinDelta(t[i], t_opt[i], delta=2.)
+            self.assertAlmostEqual(t[i], t_opt[i], delta=2.)
             for j in range(3):
-                self.assertWithinDelta(R_opt[i, j], R[i, j], delta=1e-1)
+                self.assertAlmostEqual(R_opt[i, j], R[i, j], delta=1e-1)
 
 
     def testInvGamma(self):
@@ -155,9 +155,9 @@ class TestScaleMixture(test.Case):
         t_opt = numpy.zeros((3,))
         
         for i in range(3):
-            self.assertWithinDelta(t[i], t_opt[i], delta=2.)
+            self.assertAlmostEqual(t[i], t_opt[i], delta=2.)
             for j in range(3):
-                self.assertWithinDelta(R_opt[i, j], R[i, j], delta=1e-1)
+                self.assertAlmostEqual(R_opt[i, j], R[i, j], delta=1e-1)
 
 
     def testInvGammaMAP(self):
@@ -198,9 +198,9 @@ class TestScaleMixture(test.Case):
         t_opt = numpy.zeros((3,))
         
         for i in range(3):
-            self.assertWithinDelta(t[i], t_opt[i], delta=2.)
+            self.assertAlmostEqual(t[i], t_opt[i], delta=2.)
             for j in range(3):
-                self.assertWithinDelta(R_opt[i, j], R[i, j], delta=1e-1)
+                self.assertAlmostEqual(R_opt[i, j], R[i, j], delta=1e-1)
 
 
     def testEnsemble(self):
@@ -249,9 +249,9 @@ class TestScaleMixture(test.Case):
         t_opt = numpy.zeros((3,))
         for k in range(m):
             for i in range(3):
-                self.assertWithinDelta(t[k,i], t_opt[i], delta=2.)
+                self.assertAlmostEqual(t[k,i], t_opt[i], delta=2.)
                 for j in range(3):
-                    self.assertWithinDelta(abs(R[k,i, j]), R_opt[i, j], delta=0.15)
+                    self.assertAlmostEqual(abs(R[k,i, j]), R_opt[i, j], delta=0.15)
 
 
 

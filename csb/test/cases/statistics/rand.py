@@ -53,8 +53,8 @@ class TestRand(test.Case):
 
         x = truncated_normal(10000, mu, sigma, x_min, x_max)
 
-        self.assertWithinDelta(numpy.mean(x), mu, delta=1e-1)
-        self.assertWithinDelta(numpy.var(x), sigma, delta=1e-1)
+        self.assertAlmostEqual(numpy.mean(x), mu, delta=1e-1)
+        self.assertAlmostEqual(numpy.var(x), sigma, delta=1e-1)
 
         self.assertTrue((x <= x_max).all())
         self.assertTrue((x >= x_min).all())
@@ -94,8 +94,8 @@ class TestRand(test.Case):
 
         samples = hx[sample_from_histogram(p, n_samples=10000)]
 
-        self.assertWithinDelta(mu, numpy.mean(samples), delta=0.5)
-        self.assertWithinDelta(sigma, numpy.std(samples), delta=0.5)
+        self.assertAlmostEqual(mu, numpy.mean(samples), delta=0.5)
+        self.assertAlmostEqual(sigma, numpy.std(samples), delta=0.5)
 
 
 if __name__ == '__main__':

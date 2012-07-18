@@ -39,7 +39,7 @@ class TestEnergy(test.Case):
         ee = q / (q - 1.) * csb.numeric.log(1 + (q - 1) * (e + 50.)) - 50
         
         for i in range(len(e)):
-            self.assertWithinDelta(ee[i], te[i], delta=1e-5)
+            self.assertAlmostEqual(ee[i], te[i], delta=1e-5)
 
 
     def testComposite(self):
@@ -57,7 +57,7 @@ class TestEnergy(test.Case):
         cee = ce.energy([e1, e2])
         
         for i in range(len(e1)):
-            self.assertWithinDelta(ee[i], cee[i], delta=1e-5)
+            self.assertAlmostEqual(ee[i], cee[i], delta=1e-5)
 
                 
 if __name__ == '__main__':

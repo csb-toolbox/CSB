@@ -14,8 +14,8 @@ class TestARS(test.Case):
         ars.initialize([mu - 1., mu + 1.1], z0=-10., zmax=30)
         samples = numpy.array([ars.sample() for i in range(10000)])
 
-        self.assertWithinDelta(mu, numpy.mean(samples), delta=0.5)
-        self.assertWithinDelta(sigma, numpy.std(samples), delta=0.5)
+        self.assertAlmostEqual(mu, numpy.mean(samples), delta=0.5)
+        self.assertAlmostEqual(sigma, numpy.std(samples), delta=0.5)
     
            
 if __name__ == '__main__':

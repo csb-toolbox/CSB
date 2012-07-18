@@ -383,23 +383,6 @@ class Case(unittest.TestCase):
         
         if execution > duration:
             self.fail('{0}s is slower than {1}s)'.format(execution, duration))
-
-    def assertWithinDelta(self, value, expected, delta=1e-1):
-        """
-        Fail if the difference is larger than delta
-        
-        @param value: input value
-        @type value: float
-
-        @param expected: expected value
-        @type expected: float
-
-        @param delta: allowed deviation
-        @type delta: float
-        """
-        
-        if abs(value - expected) > delta:
-            self.fail('|{0} - {1}| > {2})'.format(value, expected, delta))
             
     @classmethod
     def execute(cls):

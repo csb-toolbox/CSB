@@ -75,7 +75,7 @@ class TestWHAM(test.Case):
                  numpy.array([self.n] * len(self.betas)))
         w.estimate()
         
-        self.assertWithinDelta(numpy.dot(numpy.array([1, -1]), 
+        self.assertAlmostEqual(numpy.dot(numpy.array([1, -1]), 
                                          w.log_z(numpy.array([1., 0.]))),
                                self.log_z, delta=0.5)
 
@@ -87,7 +87,7 @@ class TestWHAM(test.Case):
         w.estimate()
         ens = [BoltzmannEnsemble(beta=1.,),
                BoltzmannEnsemble(beta=0.)]
-        self.assertWithinDelta(numpy.dot(numpy.array([1, -1]),
+        self.assertAlmostEqual(numpy.dot(numpy.array([1, -1]),
                                          w.log_z(ensembles=ens)),
                                self.log_z, delta=0.5)
 

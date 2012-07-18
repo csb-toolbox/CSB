@@ -30,7 +30,7 @@ class TestIntegrators(test.Case):
     def _run(self, algorithm):
         
         result = algorithm.integrate(self.state, self.nsteps).final.position
-        self.assertWithinDelta(result, cos(self.nsteps * self.dt), 0.1)
+        self.assertAlmostEqual(result, cos(self.nsteps * self.dt), delta=0.1)
         
     def testLeapFrog(self):
         
