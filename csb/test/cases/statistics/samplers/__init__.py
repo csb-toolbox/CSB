@@ -45,8 +45,8 @@ class TestMCPropagators(test.Case):
 
         states = [state.position[0] for state in trajectory]
         
-        self.assertWithinDelta(np.array(states).mean(), 0., 1e-1)
-        self.assertWithinDelta(np.array(states).var(), 1., 1e-1)
+        self.assertAlmostEqual(np.array(states).mean(), 0., delta=1e-1)
+        self.assertAlmostEqual(np.array(states).var(), 1., delta=1e-1)
 
     def testRWMCPropagator(self):
 
@@ -112,8 +112,8 @@ class TestMultichain(test.Case):
 
         states = [x[0].position[0] for x in samples]
 
-        self.assertWithinDelta(np.array(states).mean(), 0., 1.5e-1)
-        self.assertWithinDelta(np.array(states).var(), 1., 1.5e-1)
+        self.assertAlmostEqual(np.array(states).mean(), 0., delta=1.5e-1)
+        self.assertAlmostEqual(np.array(states).var(), 1., delta=1.5e-1)
 
     def testReplicaExchangeMC(self):
         

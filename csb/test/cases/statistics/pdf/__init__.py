@@ -59,15 +59,15 @@ class TestLogProb(test.Case):
     def testNormal(self):
         n = Normal(0., 1.)
 
-        self.assertWithinDelta(n(0.), 1. / numpy.sqrt(2 * numpy.pi))
-        self.assertWithinDelta(n(1.), numpy.exp(-0.5) / numpy.sqrt(2 * numpy.pi))
+        self.assertAlmostEqual(n(0.), 1. / numpy.sqrt(2 * numpy.pi), delta=1e-1)
+        self.assertAlmostEqual(n(1.), numpy.exp(-0.5) / numpy.sqrt(2 * numpy.pi), delta=1e-1)
         
 
     def testInverseGaussian(self):
         ig = InverseGaussian(1., 1.)
         
-        self.assertWithinDelta(ig(1.), numpy.sqrt(1 / (2 * numpy.pi)), delta=1e-5)
-        self.assertWithinDelta(ig(2.), (numpy.sqrt(1 / (2 * numpy.pi * 2 ** 3)) * 
+        self.assertAlmostEqual(ig(1.), numpy.sqrt(1 / (2 * numpy.pi)), delta=1e-5)
+        self.assertAlmostEqual(ig(2.), (numpy.sqrt(1 / (2 * numpy.pi * 2 ** 3)) * 
                                         numpy.exp(-1. / 4.)), delta=1e-5)
 
 
@@ -76,35 +76,35 @@ class TestLogProb(test.Case):
 
         gn = GeneralizedNormal(0., 1., 1.)
 
-        self.assertWithinDelta(gn(0.), 1. / 2. / gamma(1), delta=1e-5)
+        self.assertAlmostEqual(gn(0.), 1. / 2. / gamma(1), delta=1e-5)
 
-        self.assertWithinDelta(gn(1.), 1. / 2. / gamma(1) * numpy.exp(-1), delta=1e-5)
+        self.assertAlmostEqual(gn(1.), 1. / 2. / gamma(1) * numpy.exp(-1), delta=1e-5)
 
     def testGamma(self):
         g = Gamma(1., 1.)
-        self.assertWithinDelta(g(1.), numpy.exp(-1.), delta=1e-5)
-        self.assertWithinDelta(g(2.), numpy.exp(-2.), delta=1e-5)
+        self.assertAlmostEqual(g(1.), numpy.exp(-1.), delta=1e-5)
+        self.assertAlmostEqual(g(2.), numpy.exp(-2.), delta=1e-5)
 
         g = Gamma(2., 1.)
-        self.assertWithinDelta(g(1.), 1. * numpy.exp(-1), delta=1e-5)
-        self.assertWithinDelta(g(2.), 2. * numpy.exp(-2), delta=1e-5)
+        self.assertAlmostEqual(g(1.), 1. * numpy.exp(-1), delta=1e-5)
+        self.assertAlmostEqual(g(2.), 2. * numpy.exp(-2), delta=1e-5)
 
 
     def testInverseGamma(self):
         ig = InverseGamma(1., 1.)
-        self.assertWithinDelta(ig(1.), numpy.exp(-1.), delta=1e-5)
-        self.assertWithinDelta(ig(2.), 2 ** -2 * numpy.exp(-0.5), delta=1e-5)
+        self.assertAlmostEqual(ig(1.), numpy.exp(-1.), delta=1e-5)
+        self.assertAlmostEqual(ig(2.), 2 ** -2 * numpy.exp(-0.5), delta=1e-5)
 
         ig = InverseGamma(2., 1.)
-        self.assertWithinDelta(ig(1.), 1. * numpy.exp(-1), delta=1e-5)
-        self.assertWithinDelta(ig(2.), 2.** -3 * numpy.exp(-0.5), delta=1e-5)
+        self.assertAlmostEqual(ig(1.), 1. * numpy.exp(-1), delta=1e-5)
+        self.assertAlmostEqual(ig(2.), 2.** -3 * numpy.exp(-0.5), delta=1e-5)
         
 
     def testMultivariateGaussian(self):
         mg = MultivariateGaussian(numpy.zeros(2), numpy.eye(2))
 
-        self.assertWithinDelta(mg(numpy.zeros(2)), 1. / (2 * numpy.pi))
-        self.assertWithinDelta(mg(numpy.ones(2)), 1. / (2 * numpy.pi) * numpy.exp(-0.5))
+        self.assertAlmostEqual(mg(numpy.zeros(2)), 1. / (2 * numpy.pi), delta=1e-1)
+        self.assertAlmostEqual(mg(numpy.ones(2)), 1. / (2 * numpy.pi) * numpy.exp(-0.5), delta=1e-1)
     
     def testGeneralizedInvereseGaussian(self):
 
@@ -126,7 +126,7 @@ class TestLogProb(test.Case):
         fx2 = gig(x)
 
         for i in range(len(fx)):
-            self.assertWithinDelta(fx[i], fx2[i], delta=1e-1)
+            self.assertAlmostEqual(fx[i], fx2[i], delta=1e-1)
 
 
 @test.functional
@@ -139,8 +139,8 @@ class TestRandom(test.Case):
         mu = numpy.mean(samples)
         var = numpy.var(samples)
         
-        self.assertWithinDelta(ig.mu, mu, delta=1e-1)
-        self.assertWithinDelta(ig.mu ** 3 / ig.shape, var, delta=1e-1)
+        self.assertAlmostEqual(ig.mu, mu, delta=1e-1)
+        self.assertAlmostEqual(ig.mu ** 3 / ig.shape, var, delta=1e-1)
 
         ig = InverseGaussian(3., 6.)
 
@@ -148,8 +148,8 @@ class TestRandom(test.Case):
         mu = numpy.mean(samples)
         var = numpy.var(samples)
         
-        self.assertWithinDelta(ig.mu, mu, delta=1e-1)
-        self.assertWithinDelta(ig.mu ** 3 / ig.shape, var, delta=5e-1)
+        self.assertAlmostEqual(ig.mu, mu, delta=1e-1)
+        self.assertAlmostEqual(ig.mu ** 3 / ig.shape, var, delta=5e-1)
 
     def testGamma(self):
 
@@ -158,8 +158,8 @@ class TestRandom(test.Case):
         mu = numpy.mean(samples)
         var = numpy.var(samples)
         
-        self.assertWithinDelta(gamma.alpha / gamma.beta, mu, delta=1e-1)
-        self.assertWithinDelta(gamma.alpha / gamma.beta ** 2, var, delta=1e-1)
+        self.assertAlmostEqual(gamma.alpha / gamma.beta, mu, delta=1e-1)
+        self.assertAlmostEqual(gamma.alpha / gamma.beta ** 2, var, delta=1e-1)
 
     def testGeneralizedInveresseGaussian(self):
         from scipy.special import kv
@@ -178,8 +178,8 @@ class TestRandom(test.Case):
         mu = numpy.mean(samples)
         var = numpy.var(samples)
         
-        self.assertWithinDelta(mu_analytical, mu, delta=1e-1)
-        self.assertWithinDelta(var_analytical, var, delta=1e-1)
+        self.assertAlmostEqual(mu_analytical, mu, delta=1e-1)
+        self.assertAlmostEqual(var_analytical, var, delta=1e-1)
         
  
 @test.functional
@@ -275,9 +275,9 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(samples)
 
         for i in range(d):
-            self.assertWithinDelta(pdf.mu[i], mu[i], delta=1e-1)
+            self.assertAlmostEqual(pdf.mu[i], mu[i], delta=1e-1)
             for j in range(d):
-                self.assertWithinDelta(pdf.sigma[i, j], sigma[i, j], delta=1e-1)
+                self.assertAlmostEqual(pdf.sigma[i, j], sigma[i, j], delta=1e-1)
                 
 
         d = 3
@@ -289,20 +289,20 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(samples)
 
         for i in range(d):
-            self.assertWithinDelta(pdf.mu[i], mu[i], delta=1e-1)
+            self.assertAlmostEqual(pdf.mu[i], mu[i], delta=1e-1)
             for j in range(d):
-                self.assertWithinDelta(pdf.sigma[i, j], sigma[i, j], delta=1e-1)
+                self.assertAlmostEqual(pdf.sigma[i, j], sigma[i, j], delta=1e-1)
 
     def testDirichlet(self):
 
         alpha = numpy.array([1., 1., 1.])
         pdf = Dirichlet(alpha)
 
-        self.assertWithinDelta(pdf(numpy.array([1., 0., 0])),
+        self.assertAlmostEqual(pdf(numpy.array([1., 0., 0])),
                                pdf(numpy.array([0., 1., 0])),
                                delta=1e-1)
         
-        self.assertWithinDelta(pdf(numpy.array([1. / 3., 1. / 3., 1. / 3])),
+        self.assertAlmostEqual(pdf(numpy.array([1. / 3., 1. / 3., 1. / 3])),
                                pdf(numpy.array([0., 1., 0])),
                                delta=1e-1)
 
@@ -310,11 +310,11 @@ class TestParameterEstimation(test.Case):
         pdf = Dirichlet(alpha)
         
 
-        self.assertWithinDelta(pdf(numpy.array([1., 0., 0])),
+        self.assertAlmostEqual(pdf(numpy.array([1., 0., 0])),
                                pdf(numpy.array([0., 1., 0])),
                                delta=1e-1)
 
-        self.assertWithinDelta(pdf(numpy.array([1., 0., 0])),
+        self.assertAlmostEqual(pdf(numpy.array([1., 0., 0])),
                                pdf(numpy.array([0., 0., 1])),
                                delta=1e-1)
         
@@ -328,7 +328,7 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(samples)
  
         for i in range(len(alpha)):
-            self.assertWithinDelta(pdf.alpha[i], alpha[i], delta=1e-1)
+            self.assertAlmostEqual(pdf.alpha[i], alpha[i], delta=1e-1)
 
  
         alpha = numpy.array([200., 60., 20.])
@@ -338,7 +338,7 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(samples)
  
         for i in range(len(alpha)):
-            self.assertWithinDelta(pdf.alpha[i], alpha[i], delta=1e1)
+            self.assertAlmostEqual(pdf.alpha[i], alpha[i], delta=1e1)
 
             
 if __name__ == '__main__':
