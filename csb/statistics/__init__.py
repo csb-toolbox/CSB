@@ -338,7 +338,7 @@ def running_average(x, w, axis=None):
 def weighted_median(x, w):
     """
     Calculates the weighted median, that is the minimizer of
-    argmin {\sum w_i |x_i - \mu|
+    argmin {\sum w_i |x_i - \mu|}
 
     @param x: input array
     @param w: array of weights

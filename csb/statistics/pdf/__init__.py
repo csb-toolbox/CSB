@@ -48,7 +48,7 @@ import csb.core
 from abc import ABCMeta, abstractmethod
 from csb.core import OrderedDict
 
-from csb.numeric import log, exp, psi, inv_psi
+from csb.numeric import log, exp, psi, inv_psi, EULER_MASCHERONI
 from scipy.special import gammaln
 from numpy import array, fabs, power, sqrt, pi, mean, median, clip
 
@@ -67,8 +67,13 @@ class ParameterValueError(ValueError):
         self.value = value
 
         super(ParameterValueError, self).__init__(param, value)
+        
+    def __str__(self):
+        return '{0} = {1}'.format(self.param, self.value)
 
-
+class EstimationFailureError(ParameterValueError):
+    pass
+        
 class AbstractEstimator(object):
     """
     Density parameter estimation strategy.
@@ -88,6 +93,8 @@ class AbstractEstimator(object):
         
         @return: a new distribution, initialized with the estimated parameters
         @rtype: L{AbstractDensity}
+        
+        @raise EstimationFailureError: if estimation is not possible
         """
         pass
        
@@ -107,7 +114,7 @@ class LaplaceMLEstimator(AbstractEstimator):
         mu = median(x)
         b = mean(fabs(x - mu))
         
-        return Laplace(b, mu)
+        return Laplace(mu, b)
     
 class GaussianMLEstimator(AbstractEstimator):
     
@@ -128,6 +135,9 @@ class InverseGaussianMLEstimator(AbstractEstimator):
         
         mu = mean(x)
         il = mean((1.0 / x) - (1.0 / mu))
+        
+        if il == 0:
+            raise EstimationFailureError('lambda', float('inf'))
         
         return InverseGaussian(mu, 1.0 / il)
 
@@ -208,7 +218,6 @@ class MultivariateGaussianMLEstimator(AbstractEstimator):
     def estimate(self, context, data):
         return MultivariateGaussian(numpy.mean(data, 0), numpy.cov(data.T))
     
-
 class DirichletEstimator(AbstractEstimator):
 
     def __init__(self):
@@ -234,7 +243,29 @@ class DirichletEstimator(AbstractEstimator):
 
         return Dirichlet(a)
         
-            
+class GumbelMinMomentsEstimator(AbstractEstimator):
+    
+    def estimate(self, context, data):
+        
+        x = array(data)
+        
+        beta = sqrt(6 * numpy.var(x)) / pi
+        mu = mean(x) + EULER_MASCHERONI * beta
+        
+        return GumbelMinimum(mu, beta)
+
+class GumbelMaxMomentsEstimator(AbstractEstimator):
+    
+    def estimate(self, context, data):
+        
+        x = array(data)
+        
+        beta = sqrt(6 * numpy.var(x)) / pi
+        mu = mean(x) - EULER_MASCHERONI * beta
+        
+        return GumbelMaximum(mu, beta)    
+    
+                
 class AbstractDensity(object):
     """
     Defines the interface and common operations for all probability density
@@ -242,7 +273,12 @@ class AbstractDensity(object):
     
     Subclasses must complete the implementation by implementing the
     L{AbstractDensity.log_prob} method. Subclasses could also consider--but
-    are not obliged to--override the L{AbstractDensity.random} method. 
+    are not obliged to--override the L{AbstractDensity.random} method. If 
+    any of the density parameters need validation, subclasses are expected to
+    override the L{AbstractDensity._validate} method and raise
+    L{ParameterValueError} on validation failure. Note that implementing
+    parameter validation in property setters has almost no effect and is
+    discouraged.
     """
 
     __metaclass__ = ABCMeta
@@ -303,6 +339,7 @@ class AbstractDensity(object):
     def _validate(self, param, value):
         """
         Parameter value validation hook.
+        @raise ParameterValueError: on failed validation (value not accepted)
         """
         pass
 
@@ -365,31 +402,37 @@ class AbstractDensity(object):
                 
         @raise NotImplementedError: when no estimator is available for this
                                     distribution
+        @raise IncompatibleEstimatorError: when the current estimator is not
+                                           compatible with this pdf
         """
-        pdf = self.estimator.estimate(self, data)
-
+                
         try:
+            pdf = self.estimator.estimate(self, data)
+    
             for param in pdf.parameters:
                 self[param] = pdf[param]
-                    
-        except ParameterNotFoundError:
+        
+        except ParameterNotFoundError as e:
             raise IncompatibleEstimatorError(self.estimator)
+        
+        except ParameterValueError as e:
+            raise EstimationFailureError(e.param, e.value)
 
 class Laplace(AbstractDensity):
         
-    def __init__(self, b, mu):
+    def __init__(self, mu=0, b=1):
         
         super(Laplace, self).__init__()
-        
+
+        self._register('mu')        
         self._register('b')
-        self._register('mu')
         
         self.set_params(b=b, mu=mu)
         self.estimator = LaplaceMLEstimator()
         
     def _validate(self, param, value):
         
-        if param == 'b' and value < 0:
+        if param == 'b' and value <= 0:
             raise ParameterValueError(param, value)
         
     @property
@@ -462,15 +505,20 @@ class Normal(AbstractDensity):
 
 class InverseGaussian(AbstractDensity):
 
-    def __init__(self, mu=1., llambda=1.):
+    def __init__(self, mu=1, shape=1):
 
         super(InverseGaussian, self).__init__()
 
         self._register('mu')
-        self._register('llambda')
+        self._register('shape')
 
-        self.set_params(mu=mu, llambda=llambda)
+        self.set_params(mu=mu, shape=shape)
         self.estimator = InverseGaussianMLEstimator()
+    
+    def _validate(self, param, value):
+        
+        if value <= 0:
+            raise ParameterValueError(param, value)        
 
     @property
     def mu(self):
@@ -482,33 +530,37 @@ class InverseGaussian(AbstractDensity):
         self['mu'] = value
 
     @property
-    def llambda(self):
-        return self['llambda']
-    @llambda.setter
-    def llambda(self, value):
+    def shape(self):
+        return self['shape']
+    @shape.setter
+    def shape(self, value):
         if value <= 0.:
-            raise ValueError("Shape Parameter lambda should be greater than 0")
-        self['llambda'] = value
+            raise ValueError("Shape parameter lambda should be greater than 0")
+        self['shape'] = value
             
     def log_prob(self, x):
 
         mu = self.mu
-        _lambda = self.llambda
+        scale = self.shape
+        x = numpy.array(x)
+        
+        if numpy.min(x) <= 0:
+            raise ValueError('InverseGaussian is defined for x > 0')        
 
-        y = -0.5 * _lambda * (x - mu) ** 2 / (mu ** 2 * x)
-        z = 0.5 * (log(_lambda) - log(2 * pi * x ** 3))
+        y = -0.5 * scale * (x - mu) ** 2 / (mu ** 2 * x)
+        z = 0.5 * (log(scale) - log(2 * pi * x ** 3))
         return  z + y 
 
 
     def random(self, size=None):
 
         mu = self.mu
-        _lambda = self.llambda
+        shape = self.shape
 
-        mu_2l = mu / _lambda / 2.
+        mu_2l = mu / shape / 2.
         Y = numpy.random.standard_normal(size)
         Y = mu * Y ** 2
-        X = mu + mu_2l * (Y - sqrt(4 * _lambda * Y + Y ** 2))
+        X = mu + mu_2l * (Y - sqrt(4 * shape * Y + Y ** 2))
         U = numpy.random.random(size)
 
         m = numpy.less_equal(U, mu / (mu + X))
@@ -517,7 +569,7 @@ class InverseGaussian(AbstractDensity):
  
 class GeneralizedNormal(AbstractDensity):
     
-    def __init__(self, mu, alpha, beta):
+    def __init__(self, mu=0, alpha=1, beta=1):
         
         super(GeneralizedNormal, self).__init__()
         
@@ -527,6 +579,11 @@ class GeneralizedNormal(AbstractDensity):
         
         self.set_params(mu=mu, alpha=alpha, beta=beta)
         self.estimator = GenNormalBruteForceEstimator()
+        
+    def _validate(self, param, value):
+        
+        if param in ('alpha, beta') and value <= 0:
+            raise ParameterValueError(param, value)
 
     @property
     def mu(self):
@@ -559,7 +616,7 @@ class GeneralizedNormal(AbstractDensity):
 
 class GeneralizedInverseGaussian(AbstractDensity):
 
-    def __init__(self, a=1., b=1., p=1.):
+    def __init__(self, a=1, b=1, p=1):
         super(GeneralizedInverseGaussian, self).__init__()
 
         self._register('a')
@@ -568,6 +625,11 @@ class GeneralizedInverseGaussian(AbstractDensity):
         self.set_params(a=a, b=b, p=p)
 
         self.estimator = NullEstimator()
+        
+    def _validate(self, param, value):
+        
+        if value <= 0:
+            raise ParameterValueError(param, value)            
 
     @property
     def a(self):
@@ -655,6 +717,11 @@ class Gamma(AbstractDensity):
 
         self.set_params(alpha=alpha, beta=beta)
         self.estimator = GammaMLEstimator()
+        
+    def _validate(self, param, value):
+        
+        if value <= 0:
+            raise ParameterValueError(param, value)
 
     @property
     def alpha(self):
@@ -691,6 +758,11 @@ class InverseGamma(AbstractDensity):
 
         self.set_params(alpha=alpha, beta=beta)
         self.estimator = NullEstimator()
+        
+    def _validate(self, param, value):
+        
+        if value <= 0:
+            raise ParameterValueError(param, value)
 
     @property
     def alpha(self):
@@ -746,7 +818,7 @@ class MultivariateGaussian(Normal):
 
     def conditional(self, x, dims):
         """
-        Returns the distribution along the dimensions
+        Return the distribution along the dimensions
         dims conditioned on x
 
         @param x: conditional values
@@ -798,3 +870,71 @@ class Dirichlet(AbstractDensity):
         
     def random(self, size=None):
         return numpy.random.mtrand.dirichlet(self.alpha, size)
+
+
+class GumbelMinimum(AbstractDensity):
+    
+    def __init__(self, mu=0, beta=1):
+        super(GumbelMinimum, self).__init__()
+
+        self._register('mu')
+        self._register('beta')
+
+        self.set_params(mu=mu, beta=beta)
+        self.estimator = GumbelMinMomentsEstimator()
+    
+    def _validate(self, param, value):
+        
+        if param == 'beta' and value <= 0:
+            raise ParameterValueError(param, value)
+    
+    @property
+    def mu(self):
+        return self['mu']
+    @mu.setter
+    def mu(self, value):
+        self['mu'] = value
+
+    @property
+    def beta(self):
+        return self['beta']
+    @beta.setter
+    def beta(self, value):
+        self['beta'] = value
+            
+    def log_prob(self, x):
+        
+        mu = self.mu
+        beta = self.beta
+        
+        z = (x - mu) / beta
+        return log(1. / beta) + z - exp(z) 
+    
+    def random(self, size=None):
+        
+        mu = self.mu
+        beta = self.beta
+        
+        return -numpy.random.gumbel(-mu, beta, size)    
+
+class GumbelMaximum(GumbelMinimum):
+    
+    def __init__(self, mu=0, beta=1):
+        
+        super(GumbelMaximum, self).__init__(mu=mu, beta=beta)
+        self.estimator = GumbelMaxMomentsEstimator()
+            
+    def log_prob(self, x):
+        
+        mu = self.mu
+        beta = self.beta
+        
+        z = (x - mu) / beta
+        return log(1. / beta) - z - exp(-z) 
+    
+    def random(self, size=None):
+        
+        mu = self.mu
+        beta = self.beta
+        
+        return numpy.random.gumbel(mu, beta, size)

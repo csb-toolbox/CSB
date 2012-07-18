@@ -4,8 +4,30 @@ import numpy.random
 
 import csb.test as test
 
-from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, InverseGamma
+from csb.statistics.pdf import ParameterValueError, EstimationFailureError,\
+    GumbelMaximum
+from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, InverseGamma, GumbelMinimum
 from csb.statistics.pdf import MultivariateGaussian, Dirichlet, InverseGaussian, GeneralizedInverseGaussian
+
+
+@test.regression
+class TestDensityRegressions(test.Case):
+    
+    def testParameterValidation(self):
+        """
+        @see: [CSB 0000132]
+        """
+        self.assertRaises(ParameterValueError, InverseGaussian, -1, 1)       
+        
+        pdf = InverseGaussian()
+        data = [ 3.1, 1.15, 6.86, 0.69, -1.73, -2.91, -2.2800744]
+        
+        def testMu(v):
+            pdf['mu'] = v
+            pdf.mu = v
+            
+        self.assertRaises(ParameterValueError, testMu, -1)        
+        self.assertRaises(EstimationFailureError, pdf.estimate, data)        
 
 
 @test.functional
@@ -118,7 +140,7 @@ class TestRandom(test.Case):
         var = numpy.var(samples)
         
         self.assertWithinDelta(ig.mu, mu, delta=1e-1)
-        self.assertWithinDelta(ig.mu ** 3 / ig.llambda, var, delta=1e-1)
+        self.assertWithinDelta(ig.mu ** 3 / ig.shape, var, delta=1e-1)
 
         ig = InverseGaussian(3., 6.)
 
@@ -127,7 +149,7 @@ class TestRandom(test.Case):
         var = numpy.var(samples)
         
         self.assertWithinDelta(ig.mu, mu, delta=1e-1)
-        self.assertWithinDelta(ig.mu ** 3 / ig.llambda, var, delta=5e-1)
+        self.assertWithinDelta(ig.mu ** 3 / ig.shape, var, delta=5e-1)
 
     def testGamma(self):
 
@@ -145,7 +167,7 @@ class TestRandom(test.Case):
 
         a = 2.
         b = 1.
-        p = -1
+        p = 1
         gig = GeneralizedInverseGaussian(a, b, p)
         samples = gig.random(10000)
 
@@ -183,7 +205,7 @@ class TestParameterEstimation(test.Case):
         pdf.estimate(data)
         
         self.assertAlmostEqual(pdf.mu, mu, places=2)
-        self.assertAlmostEqual(pdf.llambda, scale, delta=0.05)
+        self.assertAlmostEqual(pdf.shape, scale, delta=0.05)
         
     def testGeneralizedNormal(self):
         
@@ -220,6 +242,28 @@ class TestParameterEstimation(test.Case):
         
         self.assertAlmostEqual(pdf.alpha, alpha, places=2)
         self.assertAlmostEqual(pdf.beta, beta, places=1)
+        
+    def testGumbelMinimum(self):
+        
+        mu, beta = 4, 2
+        data = -numpy.random.gumbel(-mu, beta, 1000000)
+        
+        pdf = GumbelMinimum(1, 1)
+        pdf.estimate(data)
+
+        self.assertAlmostEqual(pdf.mu, mu, delta=0.01)        
+        self.assertAlmostEqual(pdf.beta, beta, delta=0.01)
+
+    def testGumbelMaximum(self):
+        
+        mu, beta = 1, 2
+        data = numpy.random.gumbel(mu, beta, 1000000)
+        
+        pdf = GumbelMaximum(1, 1)
+        pdf.estimate(data)
+        
+        self.assertAlmostEqual(pdf.mu, mu, delta=0.01)
+        self.assertAlmostEqual(pdf.beta, beta, delta=0.01)
 
     def testMultivariateGaussian(self):
         d = 3
@@ -299,6 +343,5 @@ class TestParameterEstimation(test.Case):
             
 if __name__ == '__main__':
     
-    TestParameterEstimation.execute()
     test.Console()
         
