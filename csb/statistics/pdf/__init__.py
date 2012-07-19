@@ -525,8 +525,6 @@ class InverseGaussian(AbstractDensity):
         return self['mu']
     @mu.setter
     def mu(self, value):
-        if value <= 0.:
-            raise ValueError("Mean mu should be greater than 0")
         self['mu'] = value
 
     @property
@@ -534,8 +532,6 @@ class InverseGaussian(AbstractDensity):
         return self['shape']
     @shape.setter
     def shape(self, value):
-        if value <= 0.:
-            raise ValueError("Shape parameter lambda should be greater than 0")
         self['shape'] = value
             
     def log_prob(self, x):
@@ -634,35 +630,23 @@ class GeneralizedInverseGaussian(AbstractDensity):
     @property
     def a(self):
         return self['a']
-
     @a.setter
     def a(self, value):
-        if value <= 0:
-            raise ValueError("Parameter a is nonnegative")
-        else:
-            self['a'] = value
+        self['a'] = value
 
     @property
     def b(self):
         return self['b']
-
     @b.setter
     def b(self, value):
-        if value <= 0:
-            raise ValueError("Parameter b is nonnegative")
-        else:
-            self['b'] = value
+        self['b'] = value
 
     @property
     def p(self):
         return self['p']
-
     @p.setter
     def p(self, value):
-        if value <= 0:
-            raise ValueError("Parameter p is nonnegative")
-        else:
-            self['p'] = value
+        self['p'] = value
 
     def log_prob(self, x):
 
@@ -733,7 +717,6 @@ class Gamma(AbstractDensity):
     @property
     def beta(self):
         return self['beta']
-
     @beta.setter
     def beta(self, value):
         self['beta'] = value
@@ -767,7 +750,6 @@ class InverseGamma(AbstractDensity):
     @property
     def alpha(self):
         return self['alpha']
-
     @alpha.setter
     def alpha(self, value):
         self['alpha'] = value
@@ -775,7 +757,6 @@ class InverseGamma(AbstractDensity):
     @property
     def beta(self):
         return self['beta']
-
     @beta.setter
     def beta(self, value):
         self['beta'] = value
