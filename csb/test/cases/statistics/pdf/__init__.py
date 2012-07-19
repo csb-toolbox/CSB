@@ -4,9 +4,8 @@ import numpy.random
 
 import csb.test as test
 
-from csb.statistics.pdf import ParameterValueError, EstimationFailureError,\
-    GumbelMaximum
-from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, InverseGamma, GumbelMinimum
+from csb.statistics.pdf import ParameterValueError, EstimationFailureError
+from csb.statistics.pdf import Normal, GeneralizedNormal, Laplace, Gamma, InverseGamma, GumbelMaximum, GumbelMinimum
 from csb.statistics.pdf import MultivariateGaussian, Dirichlet, InverseGaussian, GeneralizedInverseGaussian
 
 
@@ -30,83 +29,227 @@ class TestDensityRegressions(test.Case):
         self.assertRaises(EstimationFailureError, pdf.estimate, data)        
 
 
-@test.functional
-class TestLogProb(test.Case):
+@test.unit
+class TestNormal(test.Case):    
+    
+    def testParameters(self):
+    
+        pdf = Normal(2.5, 1.5)
+        pdf.mu = 33
+        pdf.sigma = 44
+        
+        self.assertEqual(pdf.mu, 33)
+        self.assertEqual(pdf.sigma, 44)
+        self.assertEqual(pdf.sigma, pdf['sigma'])        
+        
+    def testLogProb(self):
 
-    def testDirichlet(self):
-
-        alpha = numpy.array([2, 2])
-        pdf = Dirichlet(alpha)
-
-        x = numpy.array([0.5, 0.5])
-        self.assertAlmostEqual(pdf(x), 1.5, places=2)
-
-        x = numpy.array([0.1, 0.9])
-        self.assertAlmostEqual(pdf(x), .54, places=2)
-
-        x = numpy.array([0.9, 0.1])
-        self.assertAlmostEqual(pdf(x), .54, places=2)
-
-        x = numpy.array([[0.9, 0.1],
-                          [0.1, 0.9],
-                          [0.5, 0.5]])
-
-        self.assertAlmostEqual(pdf(x)[0], .54, places=2)
-        self.assertAlmostEqual(pdf(x)[1], .54, places=2)
-        self.assertAlmostEqual(pdf(x)[2], 1.5, places=2)
-
-
-    def testNormal(self):
-        n = Normal(0., 1.)
+        n = Normal(0, 1)
 
         self.assertAlmostEqual(n(0.), 1. / numpy.sqrt(2 * numpy.pi), delta=1e-1)
         self.assertAlmostEqual(n(1.), numpy.exp(-0.5) / numpy.sqrt(2 * numpy.pi), delta=1e-1)
         
+    def testParameterEstimation(self):
+        
+        mu, sigma = 2.2, 0.3
+        data = numpy.random.normal(mu, sigma, 100000)
+        
+        pdf = Normal(1, 1)
+        pdf.estimate(data)
+        
+        self.assertAlmostEqual(pdf.mu, mu, delta=0.05)
+        self.assertAlmostEqual(pdf.sigma, sigma, delta=0.05)
 
-    def testInverseGaussian(self):
+    def testRandom(self):
+        
+        pdf = Normal(4, 2)
+        data = pdf.random(100000)
+         
+        self.assertAlmostEqual(numpy.mean(data), pdf.mu, delta=0.05)
+        self.assertAlmostEqual(numpy.std(data), pdf.sigma, delta=0.05)    
+
+
+@test.unit
+class TestLaplace(test.Case):        
+    
+    def testParameters(self):
+    
+        pdf = Laplace(1.5, 2.5)
+        pdf.mu = 33
+        pdf.b = 44
+        
+        self.assertEqual(pdf.mu, 33)
+        self.assertEqual(pdf.b, 44)
+        self.assertEqual(pdf.b, pdf['b'])
+        
+        def propertyAssignment():
+            pdf.b = -1
+        def directAssignment():
+            pdf['b'] = -1
+        
+        self.assertRaises(ParameterValueError, propertyAssignment)
+        self.assertRaises(ParameterValueError, directAssignment)
+        
+    def testLogProb(self):
+
+        pdf = Laplace(0, 2)
+        self.assertEqual(pdf(0), 1.0 / (2 * pdf.b))
+        self.assertEqual(pdf(1), 1 / (2 * pdf.b) * numpy.exp(-1 / pdf.b))
+        
+    def testParameterEstimation(self):
+        
+        mu, b = 2.2, 2
+        data = numpy.random.laplace(mu, b, 100000)
+        
+        pdf = Laplace(1, 1)
+        pdf.estimate(data)
+        
+        self.assertAlmostEqual(pdf.mu, mu, places=1)
+        self.assertAlmostEqual(pdf.b, b, places=1)
+
+    def testRandom(self):
+        
+        pdf = Laplace(4, 2)
+        data = pdf.random(100000)
+         
+        self.assertAlmostEqual(numpy.median(data), pdf.mu, delta=0.05)   
+
+
+@test.unit
+class TestInverseGaussian(test.Case):        
+    
+    def testParameters(self):
+    
+        pdf = InverseGaussian(1.5, 2.5)
+        pdf.mu = 3
+        pdf.shape = 4
+        
+        self.assertEqual(pdf.mu, 3)
+        self.assertEqual(pdf.shape, 4)
+        self.assertEqual(pdf.mu, pdf['mu'])
+        
+        def propertyAssignment():
+            pdf.shape = -1
+        def directAssignment():
+            pdf['shape'] = -1
+        
+        self.assertRaises(ParameterValueError, propertyAssignment)
+        self.assertRaises(ParameterValueError, directAssignment)
+        
+    def testLogProb(self):
+
         ig = InverseGaussian(1., 1.)
         
         self.assertAlmostEqual(ig(1.), numpy.sqrt(1 / (2 * numpy.pi)), delta=1e-5)
         self.assertAlmostEqual(ig(2.), (numpy.sqrt(1 / (2 * numpy.pi * 2 ** 3)) * 
                                         numpy.exp(-1. / 4.)), delta=1e-5)
-
-
-    def testGeneralizedNormal(self):
-        from scipy.special import gamma
-
-        gn = GeneralizedNormal(0., 1., 1.)
-
-        self.assertAlmostEqual(gn(0.), 1. / 2. / gamma(1), delta=1e-5)
-
-        self.assertAlmostEqual(gn(1.), 1. / 2. / gamma(1) * numpy.exp(-1), delta=1e-5)
-
-    def testGamma(self):
-        g = Gamma(1., 1.)
-        self.assertAlmostEqual(g(1.), numpy.exp(-1.), delta=1e-5)
-        self.assertAlmostEqual(g(2.), numpy.exp(-2.), delta=1e-5)
-
-        g = Gamma(2., 1.)
-        self.assertAlmostEqual(g(1.), 1. * numpy.exp(-1), delta=1e-5)
-        self.assertAlmostEqual(g(2.), 2. * numpy.exp(-2), delta=1e-5)
-
-
-    def testInverseGamma(self):
-        ig = InverseGamma(1., 1.)
-        self.assertAlmostEqual(ig(1.), numpy.exp(-1.), delta=1e-5)
-        self.assertAlmostEqual(ig(2.), 2 ** -2 * numpy.exp(-0.5), delta=1e-5)
-
-        ig = InverseGamma(2., 1.)
-        self.assertAlmostEqual(ig(1.), 1. * numpy.exp(-1), delta=1e-5)
-        self.assertAlmostEqual(ig(2.), 2.** -3 * numpy.exp(-0.5), delta=1e-5)
         
+    def testParameterEstimation(self):
+        
+        mu, shape = 1, 3
+        data = numpy.random.wald(mu, shape, 100000)
+        
+        pdf = InverseGaussian(1, 1)
+        pdf.estimate(data)
+        
+        self.assertAlmostEqual(pdf.mu, mu, places=2)
+        self.assertAlmostEqual(pdf.shape, shape, delta=0.05)
 
-    def testMultivariateGaussian(self):
-        mg = MultivariateGaussian(numpy.zeros(2), numpy.eye(2))
+    def testRandom(self):
+        
+        ig = InverseGaussian(1., 1.)
+        samples = ig.random(1000000)
+        mu = numpy.mean(samples)
+        var = numpy.var(samples)
+        
+        self.assertAlmostEqual(ig.mu, mu, delta=1e-1)
+        self.assertAlmostEqual(ig.mu ** 3 / ig.shape, var, delta=1e-1)
 
-        self.assertAlmostEqual(mg(numpy.zeros(2)), 1. / (2 * numpy.pi), delta=1e-1)
-        self.assertAlmostEqual(mg(numpy.ones(2)), 1. / (2 * numpy.pi) * numpy.exp(-0.5), delta=1e-1)
+        ig = InverseGaussian(3., 6.)
+
+        samples = ig.random(1000000)
+        mu = numpy.mean(samples)
+        var = numpy.var(samples)
+        
+        self.assertAlmostEqual(ig.mu, mu, delta=1e-1)
+        self.assertAlmostEqual(ig.mu ** 3 / ig.shape, var, delta=5e-1)
+
+
+@test.unit
+class TestGeneralizedNormal(test.Case):        
     
-    def testGeneralizedInvereseGaussian(self):
+    def testParameters(self):
+    
+        pdf = GeneralizedNormal(0, 1, 1)
+        pdf.mu = 11
+        pdf.alpha = 2
+        pdf.beta = 3
+        
+        self.assertEqual(pdf.mu, 11)
+        self.assertEqual(pdf.alpha, 2)
+        self.assertEqual(pdf.beta, 3)
+        self.assertEqual(pdf.beta, pdf['beta'])
+        
+        def propertyAssignment():
+            pdf.beta = -1
+        def directAssignment(p):
+            pdf[p] = -1
+        
+        self.assertRaises(ParameterValueError, propertyAssignment)
+        self.assertRaises(ParameterValueError, directAssignment, 'alpha')
+        self.assertRaises(ParameterValueError, directAssignment, 'beta')        
+        
+    def testLogProb(self):
+
+        from scipy.special import gamma
+        
+        pdf = GeneralizedNormal(0, 1, 1)
+        a = pdf.alpha        
+        b = pdf.beta
+        
+        self.assertEqual(pdf(0), b / (2 * a * gamma(1 / b)))
+        self.assertAlmostEqual(pdf(1), 1. / (2 * gamma(1)) * numpy.exp(-1), delta=1e-5)        
+        
+    def testParameterEstimation(self):
+        
+        mu, alpha, beta = -0.04, 2.11, 1.90
+        data = [-1.1712, -2.5608, -0.7143, 2.6218, -2.0655, 0.7544, 1.208, -0.5289, 0.0045, 1.1746,
+                -1.0766, 1.1198, 1.2785, -0.6051, 2.2913, -3.6672, -0.2525, 0.8782, -0.0617, -0.0239]
+        
+        pdf = GeneralizedNormal(1, 1, 1)
+        pdf.estimate(data)
+        
+        self.assertAlmostEqual(pdf.mu, mu, places=2)
+        self.assertAlmostEqual(pdf.alpha, alpha, places=2)
+        self.assertAlmostEqual(pdf.beta, beta, places=1) 
+
+
+@test.unit
+class TestGeneralizedInverseGaussian(test.Case):        
+    
+    def testParameters(self):
+    
+        pdf = GeneralizedInverseGaussian(1, 1, 1)
+        pdf.a = 2
+        pdf.b = 3
+        pdf.p = 4
+        
+        self.assertEqual(pdf.a, 2)
+        self.assertEqual(pdf.b, 3)
+        self.assertEqual(pdf.p, 4)
+        self.assertEqual(pdf.p, pdf['p'])
+        
+        def propertyAssignment():
+            pdf.a = -1
+        def directAssignment(p):
+            pdf[p] = -1
+        
+        self.assertRaises(ParameterValueError, propertyAssignment)
+        self.assertRaises(ParameterValueError, directAssignment, 'a')
+        self.assertRaises(ParameterValueError, directAssignment, 'b')
+        self.assertRaises(ParameterValueError, directAssignment, 'p')        
+        
+    def testLogProb(self):
 
         fx = [2.7939e-24, 1.5305e-03, 2.3028e-02, 6.6302e-02, 1.1759e-01, 1.6810e-01,
               2.1365e-01, 2.5255e-01, 2.8438e-01, 3.0937e-01, 3.2806e-01, 3.4111e-01,
@@ -128,40 +271,8 @@ class TestLogProb(test.Case):
         for i in range(len(fx)):
             self.assertAlmostEqual(fx[i], fx2[i], delta=1e-1)
 
-
-@test.functional
-class TestRandom(test.Case):
-
-    def testInverseGaussian(self):
-
-        ig = InverseGaussian(1., 1.)
-        samples = ig.random(1000000)
-        mu = numpy.mean(samples)
-        var = numpy.var(samples)
+    def testRandom(self):
         
-        self.assertAlmostEqual(ig.mu, mu, delta=1e-1)
-        self.assertAlmostEqual(ig.mu ** 3 / ig.shape, var, delta=1e-1)
-
-        ig = InverseGaussian(3., 6.)
-
-        samples = ig.random(1000000)
-        mu = numpy.mean(samples)
-        var = numpy.var(samples)
-        
-        self.assertAlmostEqual(ig.mu, mu, delta=1e-1)
-        self.assertAlmostEqual(ig.mu ** 3 / ig.shape, var, delta=5e-1)
-
-    def testGamma(self):
-
-        gamma = Gamma(1., 1.)
-        samples = gamma.random(10000)
-        mu = numpy.mean(samples)
-        var = numpy.var(samples)
-        
-        self.assertAlmostEqual(gamma.alpha / gamma.beta, mu, delta=1e-1)
-        self.assertAlmostEqual(gamma.alpha / gamma.beta ** 2, var, delta=1e-1)
-
-    def testGeneralizedInveresseGaussian(self):
         from scipy.special import kv
         from numpy import sqrt
 
@@ -181,58 +292,41 @@ class TestRandom(test.Case):
         self.assertAlmostEqual(mu_analytical, mu, delta=1e-1)
         self.assertAlmostEqual(var_analytical, var, delta=1e-1)
         
- 
-@test.functional
-class TestParameterEstimation(test.Case):
         
-    def testNormal(self):
+@test.unit
+class TestGamma(test.Case):        
+    
+    def testParameters(self):
+    
+        pdf = Gamma(1, 1)
+        pdf.alpha = 2
+        pdf.beta = 3
         
-        mu, sigma = 2.2, 0.3
-        data = numpy.random.normal(mu, sigma, 100000)
+        self.assertEqual(pdf.alpha, 2)
+        self.assertEqual(pdf.beta, 3)
+        self.assertEqual(pdf.beta, pdf['beta'])
         
-        pdf = Normal(1, 1)
-        pdf.estimate(data)
+        def propertyAssignment():
+            pdf.beta = -1
+        def directAssignment(p):
+            pdf[p] = -1
         
-        self.assertAlmostEqual(pdf.mu, mu, places=2)
-        self.assertAlmostEqual(pdf.sigma, sigma, places=2)
+        self.assertRaises(ParameterValueError, propertyAssignment)
+        self.assertRaises(ParameterValueError, directAssignment, 'alpha')
+        self.assertRaises(ParameterValueError, directAssignment, 'beta')        
+        
+    def testLogProb(self):
 
-    def testInverseGaussian(self):
-        
-        mu, scale = 1, 3
-        data = numpy.random.wald(mu, scale, 100000)
-        
-        pdf = InverseGaussian(1, 1)
-        pdf.estimate(data)
-        
-        self.assertAlmostEqual(pdf.mu, mu, places=2)
-        self.assertAlmostEqual(pdf.shape, scale, delta=0.05)
-        
-    def testGeneralizedNormal(self):
-        
-        mu, alpha, beta = -0.04, 2.11, 1.90
-        data = [-1.1712, -2.5608, -0.7143, 2.6218, -2.0655, 0.7544, 1.208, -0.5289, 0.0045, 1.1746,
-                -1.0766, 1.1198, 1.2785, -0.6051, 2.2913, -3.6672, -0.2525, 0.8782, -0.0617, -0.0239]
-        
-        pdf = GeneralizedNormal(1, 1, 1)
-        pdf.estimate(data)
-        
-        self.assertAlmostEqual(pdf.mu, mu, places=2)
-        self.assertAlmostEqual(pdf.alpha, alpha, places=2)
-        self.assertAlmostEqual(pdf.beta, beta, places=1)
-        
-    def testLaplace(self):
-        
-        mu, b = 2.2, 2
-        data = numpy.random.laplace(mu, b, 100000)
-        
-        pdf = Laplace(1, 1)
-        pdf.estimate(data)
-        
-        self.assertAlmostEqual(pdf.mu, mu, places=1)
-        self.assertAlmostEqual(pdf.b, b, places=1)
+        g = Gamma(1., 1.)
+        self.assertAlmostEqual(g(1.), numpy.exp(-1.), delta=1e-5)
+        self.assertAlmostEqual(g(2.), numpy.exp(-2.), delta=1e-5)
 
-    def testGamma(self):
-
+        g = Gamma(2., 1.)
+        self.assertAlmostEqual(g(1.), 1. * numpy.exp(-1), delta=1e-5)
+        self.assertAlmostEqual(g(2.), 2. * numpy.exp(-2), delta=1e-5)
+        
+    def testParameterEstimation(self):
+        
         alpha = 0.1
         beta = 0.1
 
@@ -242,30 +336,73 @@ class TestParameterEstimation(test.Case):
         
         self.assertAlmostEqual(pdf.alpha, alpha, places=2)
         self.assertAlmostEqual(pdf.beta, beta, places=1)
-        
-    def testGumbelMinimum(self):
-        
-        mu, beta = 4, 2
-        data = -numpy.random.gumbel(-mu, beta, 1000000)
-        
-        pdf = GumbelMinimum(1, 1)
-        pdf.estimate(data)
 
-        self.assertAlmostEqual(pdf.mu, mu, delta=0.01)        
-        self.assertAlmostEqual(pdf.beta, beta, delta=0.01)
+    def testRandom(self):
+        
+        gamma = Gamma(1., 1.)
+        samples = gamma.random(10000)
+        mu = numpy.mean(samples)
+        var = numpy.var(samples)
+        
+        self.assertAlmostEqual(gamma.alpha / gamma.beta, mu, delta=1e-1)
+        self.assertAlmostEqual(gamma.alpha / gamma.beta ** 2, var, delta=1e-1)  
+        
 
-    def testGumbelMaximum(self):
+@test.unit
+class TestInverseGamma(test.Case):        
+    
+    def testParameters(self):
+    
+        pdf = InverseGamma(1, 1)
+        pdf.alpha = 2
+        pdf.beta = 3
         
-        mu, beta = 1, 2
-        data = numpy.random.gumbel(mu, beta, 1000000)
+        self.assertEqual(pdf.alpha, 2)
+        self.assertEqual(pdf.beta, 3)
+        self.assertEqual(pdf.beta, pdf['beta'])
         
-        pdf = GumbelMaximum(1, 1)
-        pdf.estimate(data)
+        def propertyAssignment():
+            pdf.beta = -1
+        def directAssignment(p):
+            pdf[p] = -1
         
-        self.assertAlmostEqual(pdf.mu, mu, delta=0.01)
-        self.assertAlmostEqual(pdf.beta, beta, delta=0.01)
+        self.assertRaises(ParameterValueError, propertyAssignment)
+        self.assertRaises(ParameterValueError, directAssignment, 'alpha')
+        self.assertRaises(ParameterValueError, directAssignment, 'beta')        
+        
+    def testLogProb(self):
 
-    def testMultivariateGaussian(self):
+        ig = InverseGamma(1., 1.)
+        self.assertAlmostEqual(ig(1.), numpy.exp(-1.), delta=1e-5)
+        self.assertAlmostEqual(ig(2.), 2 ** -2 * numpy.exp(-0.5), delta=1e-5)
+
+        ig = InverseGamma(2., 1.)
+        self.assertAlmostEqual(ig(1.), 1. * numpy.exp(-1), delta=1e-5)
+        self.assertAlmostEqual(ig(2.), 2.** -3 * numpy.exp(-0.5), delta=1e-5)
+
+
+@test.unit
+class TestMultivariateGaussian(test.Case):    
+    
+    def testParameters(self):
+    
+        pdf = MultivariateGaussian(numpy.zeros(3), numpy.eye(3))
+        d = 2
+        pdf.mu = numpy.zeros(d)
+        pdf.sigma = numpy.eye(d)
+        
+        self.assertEqual(list(pdf.mu), [0, 0])
+        self.assertEqual(pdf.sigma.tolist(), numpy.eye(d).tolist())    
+        
+    def testLogProb(self):
+
+        mg = MultivariateGaussian(numpy.zeros(2), numpy.eye(2))
+
+        self.assertAlmostEqual(mg(numpy.zeros(2)), 1. / (2 * numpy.pi), delta=1e-1)
+        self.assertAlmostEqual(mg(numpy.ones(2)), 1. / (2 * numpy.pi) * numpy.exp(-0.5), delta=1e-1)
+        
+    def testParameterEstimation(self):
+        
         d = 3
         mu = numpy.ones(d)
         sigma = numpy.eye(d)
@@ -292,9 +429,45 @@ class TestParameterEstimation(test.Case):
             self.assertAlmostEqual(pdf.mu[i], mu[i], delta=1e-1)
             for j in range(d):
                 self.assertAlmostEqual(pdf.sigma[i, j], sigma[i, j], delta=1e-1)
+                
+                
+@test.unit
+class TestDirichlet(test.Case):        
+    
+    def testParameters(self):
+    
+        pdf = Dirichlet([1, 1])
+        
+        alpha = numpy.array([2, 2])        
+        pdf.alpha = numpy.array([2, 2])
+        
+        self.assertEqual(pdf.alpha.tolist(), alpha.tolist())
+        self.assertEqual(pdf.alpha.tolist(), pdf['alpha'].tolist())
+        
+    def testLogProb(self):
 
-    def testDirichlet(self):
+        alpha = numpy.array([2, 2])
+        pdf = Dirichlet(alpha)
 
+        x = numpy.array([0.5, 0.5])
+        self.assertAlmostEqual(pdf(x), 1.5, places=2)
+
+        x = numpy.array([0.1, 0.9])
+        self.assertAlmostEqual(pdf(x), .54, places=2)
+
+        x = numpy.array([0.9, 0.1])
+        self.assertAlmostEqual(pdf(x), .54, places=2)
+
+        x = numpy.array([[0.9, 0.1],
+                          [0.1, 0.9],
+                          [0.5, 0.5]])
+
+        self.assertAlmostEqual(pdf(x)[0], .54, places=2)
+        self.assertAlmostEqual(pdf(x)[1], .54, places=2)
+        self.assertAlmostEqual(pdf(x)[2], 1.5, places=2)
+        
+    def testParameterEstimation(self):
+        
         alpha = numpy.array([1., 1., 1.])
         pdf = Dirichlet(alpha)
 
@@ -339,6 +512,75 @@ class TestParameterEstimation(test.Case):
  
         for i in range(len(alpha)):
             self.assertAlmostEqual(pdf.alpha[i], alpha[i], delta=1e1)
+        
+        
+@test.unit
+class TestGumbelMinimum(test.Case):
+    
+    @property
+    def klass(self):
+        return GumbelMinimum 
+    
+    def testParameters(self):
+    
+        pdf = self.klass(1, 1)
+        pdf.mu = 2
+        pdf.beta = 3
+        
+        self.assertEqual(pdf.mu, 2)
+        self.assertEqual(pdf.beta, 3)
+        self.assertEqual(pdf.beta, pdf['beta'])
+        
+        def propertyAssignment():
+            pdf.beta = -1
+        def directAssignment():
+            pdf['beta'] = -1
+        
+        self.assertRaises(ParameterValueError, propertyAssignment)
+        self.assertRaises(ParameterValueError, directAssignment)
+        
+    def testLogProb(self):
+
+        pdf = self.klass(0, 2)
+        self.assertAlmostEqual(pdf(0), 1.0 / (pdf.beta * numpy.e))
+        
+    def testParameterEstimation(self):
+        
+        mu, beta = 4, 2
+        data = -numpy.random.gumbel(-mu, beta, 1000000)
+        
+        pdf = GumbelMinimum(1, 1)
+        pdf.estimate(data)
+
+        self.assertAlmostEqual(pdf.mu, mu, delta=0.01)        
+        self.assertAlmostEqual(pdf.beta, beta, delta=0.01)
+
+    def testRandom(self):
+        
+        pdf = self.klass(4, 2)
+        data = pdf.random(100000)
+         
+        beta = numpy.sqrt(6 * numpy.var(data)) / numpy.pi
+        self.assertAlmostEqual(pdf.beta, beta, delta=0.05)          
+        
+        
+@test.unit
+class TestGumbelMaximum(TestGumbelMinimum):
+    
+    @property
+    def klass(self):
+        return GumbelMaximum   
+            
+    def testParameterEstimation(self):
+        
+        mu, beta = 1, 2
+        data = numpy.random.gumbel(mu, beta, 1000000)
+        
+        pdf = GumbelMaximum(1, 1)
+        pdf.estimate(data)
+        
+        self.assertAlmostEqual(pdf.mu, mu, delta=0.01)
+        self.assertAlmostEqual(pdf.beta, beta, delta=0.01)
 
             
 if __name__ == '__main__':
