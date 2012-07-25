@@ -174,7 +174,7 @@ class Trajectory(csb.core.CollectionContainer, AbstractPropagationResult):
         return self._work
     @work.setter
     def work(self, value):
-        self._work = float(value)  
+        self._work = float(value)
 
 class TrajectoryBuilder(object):
     """
@@ -296,15 +296,22 @@ class AbstractSingleChainMC(AbstractMC):
 
     @param state: Initial state
     @type state: L{State}
+
+    @param temperature: Pseudo-temperature of the Boltzmann ensemble
+                        M{p(x) = 1/N * exp(-1/T * E(x))} with the
+                        pseudo-energy defined as M{E(x) = -log(p(x))}
+                        where M{p(x)} is the PDF under consideration
+    @type temperature: float
     """
     
     __metaclass__ = ABCMeta
 
-    def __init__(self, pdf, state):
+    def __init__(self, pdf, state, temperature=1.):
         
         super(AbstractSingleChainMC, self).__init__(state)
         
         self._pdf = pdf
+        self._temperature = temperature
         self._nmoves = 0
         self._accepted = 0
         self._last_move_accepted = None
@@ -390,6 +397,10 @@ class AbstractSingleChainMC(AbstractMC):
         Information whether the last MC move was accepted or not.
         """
         return self._last_move_accepted
+
+    @property
+    def temperature(self):
+        return self._temperature
 
 class MCCollection(csb.core.BaseCollectionContainer):
     """
@@ -623,6 +634,8 @@ class AbstractSwapCommunicator(object):
         
         self._proposal1 = proposal1
         self._proposal2 = proposal2
+
+        self._param_info = param_info
         
         self._acceptance_probability = None
         self._accepted = False
@@ -664,6 +677,10 @@ class AbstractSwapCommunicator(object):
     @accepted.setter
     def accepted(self, value):
         self._accepted = value
+
+    @property
+    def param_info(self):
+        return self._param_info
 
 class RESwapCommunicator(AbstractSwapCommunicator):
     """
@@ -940,11 +957,16 @@ class AbstractRENS(AbstractExchangeMC):
     __metaclass__ = ABCMeta
 
     def _propose_swap(self, param_info):
+
+        T1 = param_info.sampler1.temperature
+        T2 = param_info.sampler2.temperature
         
         init_state1 = State(param_info.sampler1.state.position,
-                            numpy.random.normal(size=param_info.sampler1.state.position.shape))
+                            numpy.random.normal(size=param_info.sampler1.state.position.shape,
+                                                scale=numpy.sqrt(T1)))
         init_state2 = State(param_info.sampler2.state.position,
-                            numpy.random.normal(size=param_info.sampler2.state.position.shape))
+                            numpy.random.normal(size=param_info.sampler2.state.position.shape,
+                                                scale=numpy.sqrt(T2)))
         
         param_info.sampler1.state = init_state1
         param_info.sampler2.state = init_state2
@@ -955,9 +977,12 @@ class AbstractRENS(AbstractExchangeMC):
         traj12 = self._run_traj_generator(trajinfo12)
         traj21 = self._run_traj_generator(trajinfo21)
 
-        return RENSSwapCommunicator(param_info, traj21.final, traj12.final, traj21.heat, traj12.heat)
+        return RENSSwapCommunicator(param_info, traj21.final, traj12.final, traj12.heat, traj21.heat)
 
     def _calc_pacc_swap(self, swapcom):
+
+        T1 = swapcom.param_info.sampler1.temperature
+        T2 = swapcom.param_info.sampler2.temperature
         
         heat12 = swapcom.heat12
         heat21 = swapcom.heat21
@@ -971,10 +996,14 @@ class AbstractRENS(AbstractExchangeMC):
         E1 = lambda x:-swapcom.sampler1._pdf.log_prob(x)
         E2 = lambda x:-swapcom.sampler2._pdf.log_prob(x)
         
-        w12 = 0.5 * sum(proposal2.momentum ** 2) + E2(proposal2.position) - \
-              0.5 * sum(state1.momentum ** 2) - E1(state1.position) - heat12
-        w21 = 0.5 * sum(proposal1.momentum ** 2) + E1(proposal1.position) - \
-              0.5 * sum(state2.momentum ** 2) - E2(state2.position) - heat21
+        w12 = (0.5 * sum(proposal2.momentum ** 2) + E2(proposal2.position)) \
+               / T2 - \
+               (0.5 * sum(state1.momentum ** 2) + E1(state1.position)) \
+               / T1 - heat12 
+        w21 = (0.5 * sum(proposal1.momentum ** 2) + E1(proposal1.position)) \
+               / T1 - \
+              (0.5 * sum(state2.momentum ** 2) + E2(state2.position)) \
+               / T2 - heat21
 
         swapcom.acceptance_probability = csb.numeric.exp(-w12 - w21)
 

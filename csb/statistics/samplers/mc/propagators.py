@@ -9,8 +9,6 @@ from abc import ABCMeta, abstractmethod
 from csb.statistics.samplers import State
 from csb.statistics.samplers.mc import TrajectoryBuilder
 from csb.numeric.integrators import FastLeapFrog, VelocityVerlet
-
-
 class AbstractPropagator(object):
     """
     Abstract propagator class. Subclasses serve to propagate
@@ -112,7 +110,7 @@ class ThermostattedMDPropagator(MDPropagator):
     @type integrator: type
     """
 
-    def __init__(self, gradient, timestep, temperature, collision_probability=0.1,
+    def __init__(self, gradient, timestep, temperature=lambda t: 1., collision_probability=0.1,
                  update_interval=1, integrator=VelocityVerlet):
         
         super(ThermostattedMDPropagator, self).__init__(gradient, timestep, integrator)
@@ -146,7 +144,7 @@ class ThermostattedMDPropagator(MDPropagator):
             ke_old = 0.5 * sum(momentum ** 2)
             for k in range(len(momentum)):
                 if k in update_list: momentum[k] = numpy.random.normal(scale=numpy.sqrt(T))
-            heat = 0.5 * sum(momentum ** 2) - ke_old
+            heat = (0.5 * sum(momentum ** 2) - ke_old) / T
 
         return momentum, heat
     
@@ -167,7 +165,6 @@ class ThermostattedMDPropagator(MDPropagator):
         @param integrator: integration scheme used to evolve the state deterministically
         @type integrator: L{AbstractIntegrator}
         """
-
         state = integrator.integrate_once(state, i)
         
         if i % self._update_interval == 0:
@@ -209,13 +206,17 @@ class AbstractMCPropagator(AbstractPropagator):
 
     @param pdf: PDF to sample from
     @type pdf: L{AbstractDensity}
+
+    @param temperature: See documentation of L{AbstractSingleChainMC}
+    @type temperature: float
     """
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, pdf):
+    def __init__(self, pdf, temperature=1.):
 
         self._pdf = pdf
+        self._temperature = temperature
         self._acceptance_rate = 0.0
 
     def generate(self, init_state, length, return_trajectory=True):
@@ -268,11 +269,14 @@ class RWMCPropagator(AbstractMCPropagator):
                              By default, the proposal density is uniform,
                              centered around x, and has width s.
     @type proposal_density: callable
+
+    @param temperature: See documentation of L{AbstractSingleChainMC}
+    @type temperature: float
     """
 
-    def __init__(self, pdf, stepsize=1., proposal_density=None):
+    def __init__(self, pdf, stepsize=1., proposal_density=None, temperature=1.):
 
-        super(RWMCPropagator, self).__init__(pdf)
+        super(RWMCPropagator, self).__init__(pdf, temperature)
 
         self._stepsize = stepsize
         self._proposal_density = proposal_density
@@ -285,7 +289,7 @@ class RWMCPropagator(AbstractMCPropagator):
 
         dummy_state = State(numpy.array([0.]))
         self._sampler = RWMCSampler(self._pdf, dummy_state, self._stepsize,
-                                    self._proposal_density)
+                                    self._proposal_density, self._temperature)
 
 class HMCPropagator(AbstractMCPropagator):
     """
@@ -307,11 +311,14 @@ class HMCPropagator(AbstractMCPropagator):
     @param integrator: Subclass of L{AbstractIntegrator} to be used for
                        integrating Hamiltionian equations of motion
     @type integrator: type
+
+    @param temperature: See documentation of L{AbstractSingleChainMC}
+    @type temperature: float
     """
     
-    def __init__(self, pdf, gradient, timestep, nsteps, integrator=FastLeapFrog):
+    def __init__(self, pdf, gradient, timestep, nsteps, integrator=FastLeapFrog, temperature=1.):
 
-        super(HMCPropagator, self).__init__(pdf)
+        super(HMCPropagator, self).__init__(pdf, temperature)
 
         self._gradient = gradient
         self._timestep = timestep
@@ -324,4 +331,5 @@ class HMCPropagator(AbstractMCPropagator):
         
         dummy_state = State(numpy.array([0.]))        
         self._sampler = HMCSampler(self._pdf, dummy_state, self._gradient,
-                                   self._timestep, self._nsteps, self._integrator)
+                                   self._timestep, self._nsteps, self._integrator,
+                                   self._temperature)

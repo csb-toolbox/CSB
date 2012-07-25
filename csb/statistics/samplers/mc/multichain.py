@@ -183,6 +183,9 @@ class ReplicaExchangeMC(AbstractExchangeMC):
         
         E1 = lambda x:-swapcom.sampler1._pdf.log_prob(x)
         E2 = lambda x:-swapcom.sampler2._pdf.log_prob(x)
+
+        T1 = swapcom.sampler1.temperature
+        T2 = swapcom.sampler2.temperature
         
         state1 = swapcom.sampler1.state
         state2 = swapcom.sampler2.state
@@ -190,8 +193,8 @@ class ReplicaExchangeMC(AbstractExchangeMC):
         proposal1 = swapcom.proposal1
         proposal2 = swapcom.proposal2
         
-        swapcom.acceptance_probability = csb.numeric.exp(-E1(proposal1.position) + E1(state1.position) - \
-                                                 E2(proposal2.position) + E2(state2.position))
+        swapcom.acceptance_probability = csb.numeric.exp(-E1(proposal1.position) / T1 + E1(state1.position) / T1 - \
+                                                 E2(proposal2.position) / T2 + E2(state2.position) / T2)
 
         return swapcom
 
