@@ -361,7 +361,7 @@ class ClansParser(object):
         colorarr = [Color(*map(int, color_definition)) for color_definition in
                     [color.split(';') for color in colors]]
 
-        tmp_params['colors'] = dict(zip(colorcutoffs, colorarr))
+        tmp_params['colors'] = tuple(zip(colorcutoffs, colorarr))
 
         ## convert 'true' and 'false' into Python bools
         for k, v in tmp_params.items():
@@ -859,16 +859,16 @@ class ClansParams(object):
                  'avgfoldchange': False,
                  'blastpath': 'blastall -p blastp',
                  'cluster2d': False,
-                 'colors': {0.0: (230, 230, 230),
-                            0.1: (207, 207, 207),
-                            0.2: (184, 184, 184),
-                            0.3: (161, 161, 161),
-                            0.4: (138, 138, 138),
-                            0.5: (115, 115, 115),
-                            0.6: (92, 92, 92),
-                            0.7: (69, 69, 69),
-                            0.8: (46, 46, 46),
-                            0.9: (23, 23, 23)},
+                 'colors': ((0.0, (230, 230, 230)),
+                            (0.1, (207, 207, 207)),
+                            (0.2, (184, 184, 184)),
+                            (0.3, (161, 161, 161)),
+                            (0.4, (138, 138, 138)),
+                            (0.5, (115, 115, 115)),
+                            (0.6, (92, 92, 92)),
+                            (0.7, (69, 69, 69)),
+                            (0.8, (46, 46, 46)),
+                            (0.9, (23, 23, 23))),
                 'complexatt': True,
                 'cooling': 1.0,
                 'currcool': 1.0,
@@ -1264,18 +1264,23 @@ class ClansParams(object):
     @property
     def colors(self):
         """
-        colors that the coloring for different p-values/attractions
+        colors that define the coloring for different p-values/attractions
 
-        raises ValueError if set to s.th. else than a dict
+        raises ValueError if set to s.th. else than a 10-tuple of 2-tuples
 
-        @rtype: dict
+        @rtype: tuple
         """
         return self._colors
 
     @colors.setter
     def colors(self, value):
-        if not isinstance(value, dict):
-            raise ValueError('colors must be a dict')
+        if not isinstance(value, tuple):
+            raise ValueError('colors must be a tuple')
+        if len(value) != 10:
+            raise ValueError('colors must be a 10-tuple')
+        lengths = map(len, value)
+        if len(set(lengths)) != 1 or lengths[0] != 2:
+            raise ValueError('each item of colors must be a 2-tuple')
         self._colors = value
 
     def set_default_params(self):
@@ -1289,9 +1294,10 @@ class ClansParams(object):
             
             self.__setattr__(k, v)
 
-        self._colors = {}
-        for i, color in ClansParams._DEFAULTS['colors'].items():
-            self.colors[i] = Color(*color)
+        tmp_list = []
+        for i, (cutoff, color) in enumerate(ClansParams._DEFAULTS['colors']):
+            tmp_list.append((cutoff, Color(*color)))
+        self.colors = tuple(tmp_list)
 
     def _to_clans_param_block(self):
         """
@@ -1307,12 +1313,12 @@ class ClansParams(object):
             if param_name == 'colors':
 
                 ## divide 'colors' into 'colorcutoffs' and 'colorarr'
-                cutoffs = sorted(self.colors)
                 param_dict['colorcutoffs'] = ''.join(
-                    ['{0:.2f};'.format(cutoff) for cutoff in cutoffs])
+                    ['{0:.2f};'.format(cutoff) for cutoff, color in self.colors])
+
                 param_dict['colorarr'] = ''.join(
-                    ['({0}):'.format(self.colors[cutoff].to_clans_color())
-                     for cutoff in cutoffs])
+                    ['({0}):'.format(color.to_clans_color())
+                     for cutoff, color in self.colors])
 
                 continue
 
