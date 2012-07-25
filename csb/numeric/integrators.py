@@ -134,16 +134,16 @@ class FastLeapFrog(LeapFrog):
             
         builder.add_initial_state(init_state)
         state = init_state.clone()
-
+        
         state.momentum = state.momentum - 0.5 * self._timestep * self._gradient(state.position, 0.)
         
-        for i in range(length):
+        for i in range(length-1):
             state.position = state.position + self._timestep * state.momentum
-            if i != length - 1:
-                state.momentum = state.momentum - self._timestep * \
-                                 self._gradient(state.position, (i + 1) * self._timestep)
-                builder.add_intermediate_state(state)
+            state.momentum = state.momentum - self._timestep * \
+                             self._gradient(state.position, (i + 1) * self._timestep)
+            builder.add_intermediate_state(state)
 
+        state.position = state.position + self._timestep * state.momentum
         state.momentum = state.momentum - 0.5 * self._timestep * \
                          self._gradient(state.position, length * self._timestep)
         builder.add_final_state(state)

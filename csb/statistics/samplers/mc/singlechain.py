@@ -86,11 +86,17 @@ class HMCSampler(AbstractSingleChainMC):
     @param integrator: Subclass of L{AbstractIntegrator} to be used for
                        integrating Hamiltionian equations of motion
     @type integrator: type
+
+    @param temperature: Pseudo-temperature of the Boltzmann ensemble
+                        M{p(x) = 1/N * exp(-1/T * E(x))} with the
+                        pseudo-energy defined as M{E(x) = -log(p(x))}
+                        where M{p(x)} is the PDF under consideration
+    @type temperature: float
     """
 
-    def __init__(self, pdf, state, gradient, timestep, nsteps, integrator=FastLeapFrog):
+    def __init__(self, pdf, state, gradient, timestep, nsteps, integrator=FastLeapFrog, temperature=1.):
         
-        super(HMCSampler, self).__init__(pdf, state)
+        super(HMCSampler, self).__init__(pdf, state, temperature)
         
         self._timestep = None
         self.timestep = timestep
@@ -102,7 +108,7 @@ class HMCSampler(AbstractSingleChainMC):
     def _propose(self):
         
         gen = MDPropagator(self._gradient, self._timestep, self._integrator)
-        momenta = numpy.random.normal(size=self.state.position.shape)
+        momenta = numpy.random.normal(size=self.state.position.shape, scale=numpy.sqrt(self._temperature))
         self.state = State(self.state.position, momenta)
         proposal = gen.generate(self.state, self._nsteps).final
         
@@ -113,8 +119,8 @@ class HMCSampler(AbstractSingleChainMC):
         proposal = proposal_communicator.proposal
         E = lambda x:-self._pdf.log_prob(x)
         
-        pacc = csb.numeric.exp(-0.5 * sum(proposal.momentum ** 2) - E(proposal.position)
-                               + 0.5 * sum(self.state.momentum ** 2) + E(self.state.position))
+        pacc = csb.numeric.exp((-0.5 * sum(proposal.momentum ** 2) - E(proposal.position)
+                               + 0.5 * sum(self.state.momentum ** 2) + E(self.state.position)) / self.temperature)
 
         return pacc
 
@@ -155,11 +161,17 @@ class RWMCSampler(AbstractSingleChainMC):
                              By default, the proposal density is uniform,
                              centered around x, and has width s.
     @type proposal_density: callable
+
+    @param temperature: Pseudo-temperature of the Boltzmann ensemble
+                        M{p(x) = 1/N * exp(-1/T * E(x))} with the
+                        pseudo-energy defined as M{E(x) = -log(p(x))}
+                        where M{p(x)} is the PDF under consideration
+    @type temperature: float
     """
     
-    def __init__(self, pdf, state, stepsize=1., proposal_density=None):
+    def __init__(self, pdf, state, stepsize=1., proposal_density=None, temperature=1.):
         
-        super(RWMCSampler, self).__init__(pdf, state)
+        super(RWMCSampler, self).__init__(pdf, state, temperature)
         self._stepsize = None
         self.stepsize = stepsize
         if proposal_density == None:
@@ -176,7 +188,7 @@ class RWMCSampler(AbstractSingleChainMC):
         proposal = proposal_communicator.proposal
         E = lambda x:-self._pdf.log_prob(x)
         
-        pacc = csb.numeric.exp(-(E(proposal.position) - E(self.state.position)))
+        pacc = csb.numeric.exp((-(E(proposal.position) - E(self.state.position))) / self.temperature)
         return pacc
 
     @property

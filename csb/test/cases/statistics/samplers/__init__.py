@@ -112,8 +112,8 @@ class TestMultichain(test.Case):
 
         states = [x[0].position[0] for x in samples]
 
-        self.assertAlmostEqual(np.array(states).mean(), 0., delta=1.5e-1)
-        self.assertAlmostEqual(np.array(states).var(), 1., delta=1.5e-1)
+        self.assertAlmostEqual(np.array(states).mean(), 0., delta=1.75e-1)
+        self.assertAlmostEqual(np.array(states).var(), 1., delta=1.75e-1)
 
     def testReplicaExchangeMC(self):
         
