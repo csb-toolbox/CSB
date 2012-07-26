@@ -18,7 +18,7 @@ import csb.core
 import csb.bio.utils
 import csb.bio.structure
 import csb.bio.sequence
-
+import csb.bio.io.wwpdb
 
 class FragmentTypes(object):
     
@@ -1901,7 +1901,7 @@ class BenchmarkAdapter(object):
             if source is None or source.accession != src_accession:
                 try:
                     source = self.structure(src_accession, src_chain)
-                except (IOError, csb.bio.structure.Broken3DStructureError) as ex:
+                except (IOError, csb.bio.io.wwpdb.PDBParseError) as ex:
                     target.errors.append(ex)
                     continue
             
