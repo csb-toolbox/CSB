@@ -1278,7 +1278,7 @@ class ClansParams(object):
             raise ValueError('colors must be a tuple')
         if len(value) != 10:
             raise ValueError('colors must be a 10-tuple')
-        lengths = map(len, value)
+        lengths = [len(v) for v in value]
         if len(set(lengths)) != 1 or lengths[0] != 2:
             raise ValueError('each item of colors must be a 2-tuple')
         self._colors = value
