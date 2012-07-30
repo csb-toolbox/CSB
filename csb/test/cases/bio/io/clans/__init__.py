@@ -2,7 +2,7 @@ import csb.test as test
 
 from csb.bio.io import ClansParser
 from csb.bio.io.clans import Clans, ClansEntry, ClansParams, ClansSeqgroup,\
-     Color
+     Color, ClansEntryCollection, ClansSeqgroupCollection
 
 
 @test.unit
@@ -133,6 +133,9 @@ class TestClans(test.Case):
         self.assertEqual(c.rotmtx.shape, (3, 3))
         self.assertEqual(len(c.entries), 0)
         self.assertEqual(len(c.seqgroups), 0)
+
+        self.assertTrue(isinstance(c.entries, ClansEntryCollection))
+        self.assertTrue(isinstance(c.seqgroups, ClansSeqgroupCollection))
 
     def testClansEntryAddingAndSorting(self):
         c = Clans()
