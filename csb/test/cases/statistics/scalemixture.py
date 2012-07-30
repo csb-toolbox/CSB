@@ -49,8 +49,8 @@ class TestScaleMixture(test.Case):
         """
         pdbfile = self.config.getTestFile('ake-xray-ensemble-ca.pdb')
         ensemble = LegacyStructureParser(pdbfile).parse_models()
-        X = numpy.array(ensemble[0].list_coordinates(['CA'], True))
-        Y = numpy.array(ensemble[13].list_coordinates(['CA'], True))
+        X = numpy.array(ensemble[0].get_coordinates(['CA'], True))
+        Y = numpy.array(ensemble[13].get_coordinates(['CA'], True))
 
                
         mixture = ScaleMixture(scales=X.shape[0],
@@ -89,8 +89,8 @@ class TestScaleMixture(test.Case):
         """
         pdbfile = self.config.getTestFile('ake-xray-ensemble-ca.pdb')
         ensemble = LegacyStructureParser(pdbfile).parse_models()
-        X = numpy.array(ensemble[0].list_coordinates(['CA'], True))
-        Y = numpy.array(ensemble[13].list_coordinates(['CA'], True))
+        X = numpy.array(ensemble[0].get_coordinates(['CA'], True))
+        Y = numpy.array(ensemble[13].get_coordinates(['CA'], True))
 
         prior = GammaPrior()
         prior.estimator = GammaPosteriorMAP()
@@ -129,8 +129,8 @@ class TestScaleMixture(test.Case):
         """
         pdbfile = self.config.getTestFile('ake-xray-ensemble-ca.pdb')
         ensemble = LegacyStructureParser(pdbfile).parse_models()
-        X = numpy.array(ensemble[0].list_coordinates(['CA'], True))
-        Y = numpy.array(ensemble[13].list_coordinates(['CA'], True))
+        X = numpy.array(ensemble[0].get_coordinates(['CA'], True))
+        Y = numpy.array(ensemble[13].get_coordinates(['CA'], True))
 
                
         mixture = ScaleMixture(scales=X.shape[0],
@@ -169,8 +169,8 @@ class TestScaleMixture(test.Case):
         """
         pdbfile = self.config.getTestFile('ake-xray-ensemble-ca.pdb')
         ensemble = LegacyStructureParser(pdbfile).parse_models()
-        X = numpy.array(ensemble[0].list_coordinates(['CA'], True))
-        Y = numpy.array(ensemble[13].list_coordinates(['CA'], True))
+        X = numpy.array(ensemble[0].get_coordinates(['CA'], True))
+        Y = numpy.array(ensemble[13].get_coordinates(['CA'], True))
 
 
                
@@ -213,7 +213,7 @@ class TestScaleMixture(test.Case):
         pdbfile = self.config.getTestFile('ake-xray-ensemble-ca.pdb')
         ensemble = LegacyStructureParser(pdbfile).parse_models()
 
-        X = numpy.array([model.list_coordinates(['CA'], True) for model in ensemble])
+        X = numpy.array([model.get_coordinates(['CA'], True) for model in ensemble])
         x_mu = average_structure(X)
         n =X.shape[1]
         m =X.shape[0]

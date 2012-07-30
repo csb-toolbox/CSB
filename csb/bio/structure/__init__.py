@@ -186,7 +186,7 @@ class AbstractEntity(object):
         for node in self.items:
             node.transform(rotation, translation)
     
-    def list_coordinates(self, what=None, skip=False):
+    def get_coordinates(self, what=None, skip=False):
         """
         Extract the coordinates of the specified kind(s) of atoms and return 
         them as a list.
@@ -959,8 +959,8 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
         if self.length != other.length or self.length < 1:
             raise AlignmentArgumentLengthError('Both chains must be of the same and positive length')
         
-        x = self.list_coordinates(what)
-        y = other.list_coordinates(what) 
+        x = self.get_coordinates(what)
+        y = other.get_coordinates(what) 
         assert len(x) == len(y)
 
         if how == AlignmentTypes.Global:                                    
@@ -1015,8 +1015,8 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
             raise ValueError('Both chains must be of the same and positive length '
                              '(got {0} and {1})'.format(self.length, other.length))
         
-        x = self.list_coordinates(what)
-        y = other.list_coordinates(what)
+        x = self.get_coordinates(what)
+        y = other.get_coordinates(what)
         assert len(x) == len(y)
 
         return csb.bio.utils.rmsd(x, y) 
@@ -1047,8 +1047,8 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
         if self.length != other.length or self.length < 1:
             raise ValueError('Both chains must be of the same and positive length')
         
-        x = self.list_coordinates(what)
-        y = other.list_coordinates(what)
+        x = self.get_coordinates(what)
+        y = other.get_coordinates(what)
         assert len(x) == len(y)
         
         L_ini_min = 0
@@ -1082,8 +1082,8 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
         if self.length != other.length or self.length < 1:
             raise ValueError('Both chains must be of the same and positive length')
         
-        x = self.list_coordinates(what)
-        y = other.list_coordinates(what)
+        x = self.get_coordinates(what)
+        y = other.get_coordinates(what)
         assert len(x) == len(y)
 
         return csb.bio.utils.tm_score(x, y)             
@@ -1305,7 +1305,7 @@ class Residue(csb.core.AbstractNIContainer, AbstractEntity):
         """
         return len(self.atoms) > 0
         
-    def list_coordinates(self, what=None, skip=False):
+    def get_coordinates(self, what=None, skip=False):
         
         coords = []
         
@@ -1595,7 +1595,7 @@ class Atom(AbstractEntity):
         self._residue = None
         self._vector = None
         self._alternate = False        
-        self._temperature = None
+        self._bfactor = None
         self._occupancy = None
         self._charge = None
 
@@ -1631,7 +1631,7 @@ class Atom(AbstractEntity):
         vector = numpy.dot(self.vector, numpy.transpose(rotation)) + translation
         self.vector = vector
     
-    def list_coordinates(self, what=None, skip=False):
+    def get_coordinates(self, what=None, skip=False):
         
         if what is None:
             what = [self.name]
@@ -1721,15 +1721,15 @@ class Atom(AbstractEntity):
         self._alternate = value
     
     @property
-    def temperature(self):
+    def bfactor(self):
         """
         Temperature factor
         @rtype: float
         """
-        return self._temperature
-    @temperature.setter
-    def temperature(self, value):
-        self._temperature = value
+        return self._bfactor
+    @bfactor.setter
+    def bfactor(self, value):
+        self._bfactor = value
     
     @property
     def occupancy(self):
@@ -1771,8 +1771,12 @@ class DisorderedAtom(csb.core.CollectionContainer, Atom):
     """  
         
     def __init__(self, atom):
+        
         super(DisorderedAtom, self).__init__(type=Atom)
+        
         self.__rep = None
+        self.__alt = {}
+        
         self.append(atom)
 
     def __getattr__(self, name):
@@ -1790,7 +1794,27 @@ class DisorderedAtom(csb.core.CollectionContainer, Atom):
         @type atom: L{Atom}
         """
         self.__update_rep(atom)
+        self.__alt[atom.alternate] = atom
+        
         super(DisorderedAtom, self).append(atom)
+        
+    def find(self, altloc):
+        """
+        Retrieve a specific atom by its altloc identifier.
+        
+        @param altloc: alternative location identifier
+        @type altloc: str
+        
+        @rtype: L{Atom}  
+        """
+        if altloc in self.__alt:
+            return self.__alt[altloc]
+        else:
+            for atom in self:
+                if atom.alternate == altloc:
+                    return Atom
+        
+        raise EntityNotFoundError(altloc)
     
     def transform(self, rotation, translation):
         

@@ -52,7 +52,7 @@ class ProMixApp(csb.apps.Application):
             self.exit('PDB file contains only one model', ExitCodes.USAGE_ERROR)
 
         ensemble = parser.parse_models(models)
-        X = numpy.array([model.list_coordinates(['CA'], True) for model in ensemble])
+        X = numpy.array([model.get_coordinates(['CA'], True) for model in ensemble])
 
         if self.args.type == 'segments':
             self.main_segments(ensemble, X)

@@ -53,12 +53,12 @@ class ChainRegressions(test.Case):
     @test.skip("may fail on slower machines")
     def testListCoordinates(self):
         """
-        Performance tweaks in AbstractEntity.list_coordinates()
+        Performance tweaks in AbstractEntity.get_coordinates()
         """
         
         def test():
             for dummy in range(1000):
-                self.structure.list_coordinates(what=['CA'])
+                self.structure.get_coordinates(what=['CA'])
                 
         self.assertFasterThan(0.50, test)
             
@@ -122,14 +122,14 @@ class TestAbstractEntity(test.Case):
         R = numpy.eye(3)
         t = numpy.array([1, 2, 3])
         
-        original = self.s['A'].list_coordinates(('CA',))
+        original = self.s['A'].get_coordinates(('CA',))
         assert len(original) > 0
 
         self.e.transform(R, t)
-        translated = self.s['A'].list_coordinates(('CA',))
+        translated = self.s['A'].get_coordinates(('CA',))
         
         self.e.transform(R, -t)
-        restored = self.s['A'].list_coordinates(('CA',))                
+        restored = self.s['A'].get_coordinates(('CA',))                
         
         self.assertTrue(len(original) == len(translated) == len(restored))
         
@@ -149,12 +149,12 @@ class TestAbstractEntity(test.Case):
                     for a in r.items:
                         original.append(list(a.vector))
         
-        for i in self.e.list_coordinates(what=None):
+        for i in self.e.get_coordinates(what=None):
             listed.append(list(i))
             
         self.assertEqual(original, listed)
-        self.assertEqual([list(i) for i in self.r.list_coordinates()], [list(a.vector) for a in self.r.items])
-        self.assertEqual(list(self.a.list_coordinates()[0]), list(self.a.vector))
+        self.assertEqual([list(i) for i in self.r.get_coordinates()], [list(a.vector) for a in self.r.items])
+        self.assertEqual(list(self.a.get_coordinates()[0]), list(self.a.vector))
         
         # specific atoms
         original, listed = [], []
@@ -164,17 +164,17 @@ class TestAbstractEntity(test.Case):
                 for r in c.items:
                     original.append(list(r.atoms['CA'].vector))
         
-        for i in self.e.list_coordinates(what=['CA']):
+        for i in self.e.get_coordinates(what=['CA']):
             listed.append(list(i))
             
         self.assertEqual(original, listed)
-        self.assertEqual([list(i) for i in self.r.list_coordinates(['CA'])], [list(self.r.atoms['CA'].vector)])
-        self.assertEqual(list(self.a.list_coordinates(['CA'])[0]), list(self.a.vector))
+        self.assertEqual([list(i) for i in self.r.get_coordinates(['CA'])], [list(self.r.atoms['CA'].vector)])
+        self.assertEqual(list(self.a.get_coordinates(['CA'])[0]), list(self.a.vector))
                         
         # other stuff
-        self.assertRaises(structure.Broken3DStructureError, lambda: self.c.list_coordinates(what=['BUG']))
-        self.assertRaises(structure.Broken3DStructureError, lambda: self.r.list_coordinates(what=['BUG']))        
-        self.assertRaises(structure.Broken3DStructureError, lambda: self.a.list_coordinates(what=['BUG']))
+        self.assertRaises(structure.Broken3DStructureError, lambda: self.c.get_coordinates(what=['BUG']))
+        self.assertRaises(structure.Broken3DStructureError, lambda: self.r.get_coordinates(what=['BUG']))        
+        self.assertRaises(structure.Broken3DStructureError, lambda: self.a.get_coordinates(what=['BUG']))
                     
 @test.unit
 class TestEnsemble(test.Case):
@@ -482,11 +482,11 @@ class TestChain(test.Case):
     
     def testListCoordinates(self):
         
-        coords = self.chain.list_coordinates(('CA',))
+        coords = self.chain.get_coordinates(('CA',))
         self.assertEqual(coords[0].tolist(), self.chain[0]['CA'].vector.tolist())
         self.assertEqual(len(coords), self.chain.length)
                 
-        self.assertRaises(structure.Broken3DStructureError, self.chain.list_coordinates, ('H',))
+        self.assertRaises(structure.Broken3DStructureError, self.chain.get_coordinates, ('H',))
         
     def testSuperimpose(self):
         
@@ -768,7 +768,54 @@ class TestAtom(test.Case):
             
         self.assertEqual(self.atom.vector.tolist(), [-0.96399999999999997, -17.864999999999998, -6.46])
         self.assertRaises(ValueError, assign, numpy.array([1]))  
+
+@test.unit
+class TestDisorderedAtom(TestAtom):
+
+    def setUp(self):
+        
+        super(TestDisorderedAtom, self).setUp()
+
+        self.structure = self.config.getPickle('1nz9.model1.pickle')        
+        self.chain = self.structure['A']
+        self.residue = self.chain[0]
+        self.atom = self.residue['CA']
+        
+        self.alt = structure.Atom(999, 'CA', structure.ChemElements.C,
+                                  self.atom.vector.copy(), alternate='B')
+        
+        self.atom.occupancy = 0.9
+        self.alt.occupancy = 0.1
+        self.residue.atoms.append(self.alt)
+        
+        self.disatom = self.residue['CA']
+        
+    def testAppend(self):
+
+        self.assertEqual(self.residue.atoms['CA'].serial_number, 2)
+        
+        alt = structure.Atom(1000, 'CA', structure.ChemElements.C,
+                                  self.atom.vector.copy(), alternate='C')
+        
+        alt.occupancy = 1.0
+        self.residue.atoms.append(alt)
+        
+        self.assertEqual(self.residue.atoms['CA'].serial_number, 1000)
+        self.assertTrue(isinstance(self.residue.atoms['CA'], structure.DisorderedAtom))
+        
+    def testIteration(self):
+        
+        atoms = list(self.residue.atoms['CA'])
+        self.assertEqual(len(atoms), 2)
     
+    def testLength(self):
+        self.assertEqual(self.disatom.length, 2)
+        
+    def testFind(self):
+        self.assertTrue(self.disatom.find('B') is self.alt)
+        self.assertRaises(structure.EntityNotFoundError, self.disatom.find, 'X')
+
+            
 @test.unit
 class TestSecondaryStructure(test.Case):
     """

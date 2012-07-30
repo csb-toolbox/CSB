@@ -204,8 +204,15 @@ class TestRegularStructureParser(test.Case):
         ensemble = self.parser.parse_models()
         self.assertEquals(ensemble.models.length, 10)
         self.assertEquals(ensemble[0].model_id, 1)
-        self.assertEquals(ensemble.models[1].model_id, 1)       
-
+        self.assertEquals(ensemble.models[1].model_id, 1)
+        
+        self.assertRaises(ValueError, self.parser.parse_models, (999, 1000))
+        
+        pdb = self.config.getTestFile('3p1u.pdb')
+        ensemble = RegularStructureParser(pdb).parse_models()
+        self.assertEquals(ensemble.models.length, 1)    
+        self.assertEquals(ensemble[0].model_id, 1)
+    
     def testParseStructure(self):
 
         structure = self.parser.parse(model=2)

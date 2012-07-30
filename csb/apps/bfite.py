@@ -75,7 +75,7 @@ class BFitApp(csb.apps.Application):
             self.exit('PDB file contains only one model', ExitCodes.USAGE_ERROR)
 
         ensemble = parser.parse_models(models)
-        X = numpy.array([model[self.args.chain].list_coordinates(['CA'], True) for model in ensemble])
+        X = numpy.array([model[self.args.chain].get_coordinates(['CA'], True) for model in ensemble])
         x_mu = average_structure(X)
         #n = X.shape[1]
         m = X.shape[0]

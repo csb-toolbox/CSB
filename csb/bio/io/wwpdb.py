@@ -362,7 +362,7 @@ class AbstractStructureParser(object):
                 raise StructureFormatError('Non-consecutive model identifier(s) encountered')                
             return models
         else:
-            return [None]
+            return []
 
     def guess_sequence_type(self, residue_name):
         """
@@ -490,8 +490,14 @@ class AbstractStructureParser(object):
             models = map(int, models)
         
         ensemble = csb.bio.structure.Ensemble()
-        for model_id in models:
-            model = self.parse_structure(model_id)
+        
+        if len(models) > 0:
+            for model_id in models:
+                model = self.parse_structure(model_id)
+                ensemble.models.append(model)
+        else:
+            model = self.parse_structure()
+            model.model_id = 1
             ensemble.models.append(model)
         
         return ensemble
@@ -687,7 +693,7 @@ class AbstractStructureParser(object):
                         atom._residue_name = csb.core.Enum.parsename(SequenceAlphabets.Protein, residue_name)
 
                     atom.occupancy = float(line[54:60])
-                    atom.temperature = float(line[60:66])
+                    atom.bfactor = float(line[60:66])
 
                     charge = line[78:80].strip()
                     if charge:
@@ -1297,7 +1303,7 @@ class PDBFileBuilder(FileBuilder):
                                         atom.serial_number, atom._full_name, isnull(alt, ' '), 
                                         residue._pdb_name, chain.id, 
                                         isnull(residue.sequence_number, residue.rank), isnull(residue.insertion_code, ' '), 
-                                        atom.vector[0], atom.vector[1], atom.vector[2], isnull(atom.occupancy, 0.0), isnull(atom.temperature, 0.0), 
+                                        atom.vector[0], atom.vector[1], atom.vector[2], isnull(atom.occupancy, 0.0), isnull(atom.bfactor, 0.0), 
                                         element, isnull(atom.charge, ' ') ))        
 
             self.writeline('TER')

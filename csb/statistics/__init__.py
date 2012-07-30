@@ -37,7 +37,7 @@ class Cumulative(object):
 
         return c
     
-    def cumulative_desity(self, x, nchunks=None):
+    def cumulative_density(self, x, nchunks=None):
         return 1 - self.__call__(x, nchunks)
 
 def geometric_mean(x, axis=None):

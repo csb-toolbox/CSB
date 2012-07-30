@@ -317,11 +317,12 @@ class Config(object):
         the internal representation of some classes has changed.
         """
         from csb.io import Pickle
-        from csb.bio.io.wwpdb import get
+        from csb.bio.io.wwpdb import RegularStructureParser
         from csb.bio.structure import Ensemble, ChemElements
     
-        model1 = get('1nz9', model=1)
-        model2 = get('1nz9', model=2)
+        parser = RegularStructureParser(self.getTestFile('1nz9.pdb'))
+        model1 = parser.parse_structure(model=1)
+        model2 = parser.parse_structure(model=2)
         
         ensemble = Ensemble()
         ensemble.models.append(model1)

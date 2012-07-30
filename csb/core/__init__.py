@@ -594,7 +594,7 @@ class BaseDictionaryContainer(AbstractIndexer):
         if self._keys and key not in self._keys:
             raise InvalidKeyError("Key {0} is not allowed for this collection.".format(key))
         if key in self:
-            raise DuplicateKeyError("Key {0} already exists in the collection.".format(key))
+            raise DuplicateKeyError("Key {0} already exists in this collection.".format(key))
         self._items[key] = item        
         
     def _remove_item(self, key):

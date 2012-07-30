@@ -534,8 +534,8 @@ class TestDumpLoad(test.Case):
                 elif isinstance(ob, csb.bio.structure.Structure):
                     self.assertEqual(ob.to_fasta(),
                                      ob2.to_fasta())
-                    self.assertTrue(numpy.all(ob.list_coordinates()
-                                              == ob2.list_coordinates()))
+                    self.assertTrue(numpy.all(ob.get_coordinates()
+                                              == ob2.get_coordinates()))
                 else:
                     self.assertEqual(ob, ob2)
 

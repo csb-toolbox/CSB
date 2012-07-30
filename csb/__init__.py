@@ -62,7 +62,7 @@ which is a composite hierarchical object:
             chain = s.chains[chain_id]
             for residue in chain.residues:
                 for atom_id in residue.atoms:
-                    atom = residue.atoms[atom.id]
+                    atom = residue.atoms[atom_id]
                     print(atom.vector)
 
 Some of the inner objects in this hierarchy behave just like dictionaries
