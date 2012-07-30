@@ -26,7 +26,7 @@ class TestMixtures(test.Case):
 
         pdbfile = self.config.getTestFile('ake-xray-ensemble-ca.pdb')
         ensemble = LegacyStructureParser(pdbfile).parse_models()
-        X = array([model.list_coordinates(['CA'], True) for model in ensemble])
+        X = array([model.get_coordinates(['CA'], True) for model in ensemble])
 
         self.assertEqual(X.shape, (16, 211, 3))
 

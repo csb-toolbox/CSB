@@ -88,8 +88,8 @@ class BFitApp(csb.apps.Application):
         except IOError as e:
             self.exit('PDB file parsing failed\n' + str(e.value), ExitCodes.IO_ERROR)
 
-        X = numpy.array(r[self.args.chain1].list_coordinates(['CA'], True))
-        Y = numpy.array(m[self.args.chain2].list_coordinates(['CA'], True))
+        X = numpy.array(r[self.args.chain1].get_coordinates(['CA'], True))
+        Y = numpy.array(m[self.args.chain2].get_coordinates(['CA'], True))
 
         if self.args.alignment is not None:
             align = SequenceAlignment.parse(file(self.args.alignment).read())
