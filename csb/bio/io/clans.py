@@ -1,31 +1,29 @@
 """
 Classes for parsing/manipulating/writing CLANS (by Tancred Frickey) files
 
-This module defines L{ClansParser} and L{ClansFileWriter} for parsing writing CLANS format files.
-Further class L{Clans} (and several helper classes) are used to hold and handle the parsed data.
+This module defines L{ClansParser} and L{ClansFileWriter} for parsing and writing CLANS format files, respectively.
+Further, class L{Clans} and several helper classes are used to hold and handle the parsed data.
 
-The most commenly used CLANS data is organized as follows:
-<L{Clans}>
---> .seqgroups <:{ClansSeqgroupCollection} containing L{ClansSeqgroup} instances>
---> .entries <L{ClansEntryCollection} containing L{ClansEntry} instances>
-....--> .hsps <dict(L{ClansEntry}=C{value})  # contains pairs with connections to this L{ClansEntry}
-....--> .groups <list of L{ClansSeqgroup}s the entry belongs to>
---> .params <L{ClansParams}>
+The most commenly used CLANS data can be accessed in an L{Clans} instance via
+ - .entries <L{ClansEntryCollection} containing L{ClansEntry} instances>
+  - .name
+  - .seq <the amino acid sequence>
+  - .hsps <connections of this L{ClansEntry} to others>
+  - .groups <L{ClansSeqgroup}s the entry belongs to>
+ - .seqgroups <L{ClansSeqgroupCollection} containing L{ClansSeqgroup} instances>
+ - .params <L{ClansParams}>
 
-A file can be parsed by
-    >>> ClansParser().parse_file('input.clans')
-    <Clans>        # create Clans instance from input.clans
+Parse a file into L{Clans} instance C{clans_instance} by
+    >>> clans_instance = ClansParser().parse_file('input.clans')
 
-Create a new entry
+Create a new entry C{e} with name \"C{my entry}\", sequence C{AAAA} and coordinates C{(x=1, y=1, z=1)}
     >>> e = ClansEntry(name='my entry', seq='AAAA', coords=(1, 1, 1))
-    <ClansEntry>        # with name 'my entry', sequence 'AAAA' and coordinates (x=1, y=1, z=1)
 
-and add it to an existing L{Clans} instance clans_instance{c}
+and add it to an existing L{Clans} instance C{clans_instance}
     >>> clans_instance.add_entry(e)
 
-Entries can be accessed using
-    >>> clans_instance[0]
-    <ClansEntry>        # access to ClansEntry
+Entries can be accessed using indices of C{Clans} instances
+    >>> clans_instance[0]  # access to first entry
 
 and deleted by
     >>> clans_instance.remove_entry(e)
