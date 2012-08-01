@@ -487,7 +487,7 @@ class AbstractStructureParser(object):
         if not models:
             models = self.models()
         else:
-            models = map(int, models)
+            models = list(map(int, models))
         
         ensemble = csb.bio.structure.Ensemble()
         
