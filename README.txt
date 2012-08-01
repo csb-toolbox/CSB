@@ -26,35 +26,25 @@ CSB is being developed on Linux, under python 2.7. However, compatibility
 is a design goal and the package works on any platform, on any modern python
 interpreter since version 2.6 (that includes python 3 support out of
 the box). If you found any issues on a platform/interpreter different from
-our development environment, please let us know. We will kindly apologize,
-fix the problem and write a regression test case to make sure that the
-problem will be solved once and forever.
+our development environment, please let us know.
 
 
 Installation 
 ------------
 
-Is your interpreter *Compatible*? If yes, proceed with the installation
-of a few trivial packages, on which CSB depends:
+Full installation instructions can be found in the INSTALL file packaged with
+this release, as well as on the project's web site:
 
-    1. numpy -- mandatory (numpy.scipy.org)
-    2. scipy -- mandatory (scipy.org)
+    http://csb.codeplex.com/documentation
 
-    3. matplotlib and wxPython -- optional, needed only if you want to
-       use csb.io.plots
-       
-    4. unittest2 -- needed only if you are using python 2.6
-    5. argparse -- may be needed if you are using python 2.6
-
-If you are installing CSB on Windows, numpy, scipy and matplotlib can be
-installed from binary MSI/exe packages, the rest can be installed from
-PyPi. On Debian-like Linux distributions use your package manager::
-
-    $ apt-get install package
-
-where *package* is one of: python-numpy, python-scipy, python-matplotlib.
-
-Finally, install CSB itself::
+Here we provide only a brief summary of the installation procedure.
+First, make sure all required dependencies are installed:
+    
+    1. numpy, scipy -- required
+    2. matplotlib and wxPython -- optional, needed only if you want to use csb.io.plots
+    3. unittest2, argparse -- needed only if you are running python 2.6
+    
+Next, install CSB::     
 
     $ python setup.py install
     
@@ -104,33 +94,37 @@ please refer to the API documentation, package "csb.apps".
 Documentation
 -------------
 
-A quick introduction/tutorial is available in the root package "csb".
-Try::
+The project's web site at `CodePlex <http://csb.codeplex.com>`_ contains
+online documentation and samples. Be sure to check
+    
+    http://csb.codeplex.com/documentation
+
+Detailed API documentation can be found in the "docs/api" directory in the
+distribution package (docs/api/index.html). Many packages contain
+introductory module level documentation and samples/tutorials. These are also
+available in the HTML docs, but a quick way to access them is by using
+the built-in python help system. For example, for a general introduction
+see the module documentation of the root package::
 
     $ python -c "import csb; help(csb)"
 
-Detailed API documentation can be found in the "docs/api" directory in the
-distribution package. Simply open docs/api/index.html in your browser.
+If you are interested in a specific package, such as cs.bio.sequence,
+try::    
+    
+    $ python -c "import csb.bio.sequence; help(csb.bio.sequence)"
 
 
 Contact
 -------
 
-This project is developed by Michael Habeck's Computational Structural
-Biology Group, at the Max Planck Institute for Developmental Biology,
-Tuebingen, Germany:
-
-    http://www.eb.tuebingen.mpg.de/research/research-groups/michael-habeck.html
+CSB is developed by Michael Habeck's Computational Structural Biology
+`research group <http://www.eb.tuebingen.mpg.de/research/research-groups/michael-habeck.html>`_.
     
-The source code of the project is hosted at the following SVN repository:
-
-    https://svn.tuebingen.mpg.de/agbs/projects/CSB
-        
-Send any requests and feedback to:
+For complete source code, contribution, support or bug reports please visit
+our web site at CodePlex:
+  
+    `csb.codeplex.com <http://csb.codeplex.com>`_
     
-    ivan.kalev@tuebingen.mpg.de
-    michael.habeck@tuebingen.mpg.de
-
 
 License
 -------
