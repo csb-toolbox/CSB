@@ -163,8 +163,8 @@ Options:
         
         self._init()        
         v = self._revision()
-        #self._doc(v)
-        #self._test()
+        self._doc(v)
+        self._test()
         vn = self._package()     
         
         self.log('\n# Done ({0}).\n'.format(vn.full))         
