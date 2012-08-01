@@ -9,8 +9,8 @@ packages installed on the same server).
 
 Here is how to build, test and package the whole project::
 
-    $ svn checkout https://svn.tuebingen.mpg.de/agbs/projects/CSB
-    $ CSB/trunk/csb/build.py -o <output directory>
+    $ hg clone https://hg.codeplex.com/csb CSB
+    $ CSB/csb/build.py -o <output directory>
 
 The Console can also be imported and instantiated as a regular Python class.
 In this case the Console again builds the source tree it is part of, but
@@ -60,6 +60,7 @@ import tarfile
 
 import csb
 
+from abc import ABCMeta, abstractmethod
 from csb.io import Shell
 
 
@@ -209,8 +210,8 @@ Options:
         root = os.path.join(self._root, '__init__.py')
         
         self.log('Retrieving revision number from {0}'.format(root), level=2)               
-        rh = RevisionHandler(root)        
-        revision = rh.read().maxrevision
+        rh = MercurialHandler(root)        
+        revision = rh.read().revision
         
         self.log('Writing back revision number {0}'.format(revision), level=2)        
         version = rh.write(revision, root)
@@ -425,52 +426,43 @@ class RevisionError(RuntimeError):
 
 class RevisionHandler(object):
     """
-    Determines the current SVN revision number of a working copy.
+    Determines the current repository revision number of a working copy.
     
     @param path: a local checkout path to be examined
     @type path: str
-    @param svn: name of the svn program
-    @type svn: str 
+    @param sc: name of the source control program
+    @type sc: str 
     """    
     
-    def __init__(self, path, svn='svn'):
+    def __init__(self, path, sc):
         
-        self.path = None
-        self.svn = None
+        self._path = None
+        self._sc = None
         
         if os.path.exists(path):
-            self.path = path
+            self._path = path
         else:
             raise IOError('Path not found: {0}'.format(path))
-        if Shell.run([svn, 'help']).code is 0:
-            self.svn = svn
+        if Shell.run([sc, 'help']).code is 0:
+            self._sc = sc
         else:
-            raise RevisionError('SVN probe failed', None, None)   
+            raise RevisionError('Source control binary probe failed', None, None)
+        
+    @property
+    def path(self):
+        return self._path
     
+    @property
+    def sc(self):
+        return self._sc
+    
+    @abstractmethod
     def read(self):
         """
         Return the current revision information.
         @rtype: L{RevisionInfo}
-        
-        @todo: we can easily extend the svn output parser to grab more attributes,
-               say URL, author, etc. RevisionInfo would also has to be extended
         """
-        cmd = '{0.svn} info {0.path}'.format(self)
-        revision = 0
-        maxrevision = 0
-        
-        for line in self._run(cmd):
-            if line.startswith('Revision:'):
-                revision = int(line[9:] .strip())
-                break
-            
-        for line in self._run(cmd + ' -R'):
-            if line.startswith('Revision:'):
-                rev = int(line[9:] .strip())
-                if rev > maxrevision:
-                    maxrevision = rev
-        
-        return RevisionInfo(self.path, revision, maxrevision)
+        pass
     
     def write(self, revision, sourcefile):
         """
@@ -501,7 +493,7 @@ class RevisionHandler(object):
         
         si = Shell.run(cmd)
         if si.code > 0:
-            raise RevisionError('SVN failed ({0.code}): {0.stderr}'.format(si), si.code, si.cmd)
+            raise RevisionError('SC failed ({0.code}): {0.stderr}'.format(si), si.code, si.cmd)
         
         return si.stdout.splitlines()
     
@@ -514,14 +506,53 @@ class RevisionHandler(object):
         pycache = os.path.join(os.path.dirname(compiled), '__pycache__')
         if os.path.isdir(pycache): 
             shutil.rmtree(pycache)
-                
+            
+class SubversionHandler(RevisionHandler):
+
+    def __init__(self, path, sc='svn'):
+        super(SubversionHandler, self).__init__(path, sc)    
+
+    def read(self):
+
+        cmd = '{0.sc} info {0.path} -R'.format(self)
+        maxrevision = None
+            
+        for line in self._run(cmd):
+            if line.startswith('Revision:'):
+                rev = int(line[9:] .strip())
+                if rev > maxrevision:
+                    maxrevision = rev
+        
+        return RevisionInfo(self.path, maxrevision)
+
+class MercurialHandler(RevisionHandler):  
+
+    def __init__(self, path, sc='hg'):
+        super(MercurialHandler, self).__init__(path, sc)
+        
+    def read(self):
+
+        cmd = '{0.sc} log -r tip {0.path}'.format(self)
+
+        revision = None
+        changeset = ''
+        
+        for line in self._run(cmd):
+            if line.startswith('changeset:'):
+                items = line[10:].split(':')
+                revision = int(items[0])
+                changeset = items[1].strip()
+                break
+
+        return RevisionInfo(self.path, revision, changeset)  
+                    
 class RevisionInfo(object):
     
-    def __init__(self, item, revision, maxrevision):
+    def __init__(self, item, revision, id=None):
         
         self.item = item
         self.revision = revision
-        self.maxrevision = maxrevision
+        self.id = id
 
         
 def main():
