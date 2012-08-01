@@ -509,7 +509,7 @@ class RevisionHandler(object):
             
 class SubversionHandler(RevisionHandler):
 
-    def __init__(self, path, sc='svn'):
+    def __init__(self, path, sc='svn'):   
         super(SubversionHandler, self).__init__(path, sc)    
 
     def read(self):
@@ -523,11 +523,18 @@ class SubversionHandler(RevisionHandler):
                 if rev > maxrevision:
                     maxrevision = rev
         
+        if maxrevision is None:
+            raise RevisionError('No revision number found', code=0, cmd=cmd)
+        
         return RevisionInfo(self.path, maxrevision)
 
 class MercurialHandler(RevisionHandler):  
 
     def __init__(self, path, sc='hg'):
+        
+        if os.path.isfile(path):
+            path = os.path.dirname(path)
+                         
         super(MercurialHandler, self).__init__(path, sc)
         
     def read(self):
@@ -544,6 +551,9 @@ class MercurialHandler(RevisionHandler):
                 changeset = items[1].strip()
                 break
 
+        if revision is None:
+            raise RevisionError('No revision number found', code=0, cmd=cmd)
+        
         return RevisionInfo(self.path, revision, changeset)  
                     
 class RevisionInfo(object):
