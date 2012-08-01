@@ -11,20 +11,20 @@ except IOError:
 
 
 LOCATION        = os.path.abspath(os.path.dirname(__file__))
-JUNK            = ['.svn']
+JUNK            = ['.svn', '.hg', '.hgtags']
 
 NAME            = ROOT
 VERSION         = imp.load_source('____csb', os.path.join(LOCATION, ROOT, '__init__.py')).Version()
 AUTHOR          = "Michael Habeck et al."
-EMAIL           = "michael.habeck@tuebingen.mpg.de"
-URL             = "http://www.eb.tuebingen.mpg.de/research/research-groups/michael-habeck.html"
+EMAIL           = "ivan.kalev@gmail.com"
+URL             = "csb.codeplex.com"
 SUMMARY         = "Computational Structural Biology Toolbox"
 DESCRIPTION     = __doc__
 LICENSE         = 'MIT'
 REQUIRES        = ['numpy', 'scipy']
 
 
-def sourcetree(root='csb', junk=('.svn',)):
+def sourcetree(root='csb', junk=JUNK):
     """
     Since distutils requires to HARD CODE the entire package hierarchy here,
     we need this function to load the source tree structure dynamically.
@@ -65,7 +65,7 @@ def sourcetree(root='csb', junk=('.svn',)):
     return items
 
 
-def datatree(package, dataroot, junk=('.svn',), mask='*.*'):
+def datatree(package, dataroot, junk=JUNK, mask='*.*'):
     """
     Since distutils will crash if the data root folder contains any subfolders,
     we need this function to retrieve the data tree.
