@@ -369,6 +369,29 @@ class Case(unittest.TestCase):
         ex.args = list(ex.args) + list(addArgs) + [''.join(traceback.format_exc())]
         
         raise klass(ex.args)
+
+    def assertAlmostEqual(self, first, second, places=None, msg=None, delta=None):
+
+        if first == second:
+            return
+        if delta is not None and places is not None:
+            raise TypeError("specify delta or places not both")
+            
+        if delta is not None:
+            
+            if abs(first - second) <= delta:
+                return
+            
+            m = '{0} != {1} within {2} delta'.format(first, second, delta)
+            msg = self._formatMessage(msg, m)
+            
+            raise self.failureException(msg)                                                        
+            
+        else:
+            if places is None:
+                places = 7
+                
+            return super(Case, self).assertAlmostEqual(first, second, places=places, msg=msg)    
     
     def assertFasterThan(self, duration, callable, *args, **kargs):
         """
