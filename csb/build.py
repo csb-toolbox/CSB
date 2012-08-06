@@ -538,23 +538,30 @@ class MercurialHandler(RevisionHandler):
         super(MercurialHandler, self).__init__(path, sc)
         
     def read(self):
-
-        cmd = '{0.sc} log -r tip {0.path}'.format(self)
-
-        revision = None
-        changeset = ''
         
-        for line in self._run(cmd):
-            if line.startswith('changeset:'):
-                items = line[10:].split(':')
-                revision = int(items[0])
-                changeset = items[1].strip()
-                break
-
-        if revision is None:
-            raise RevisionError('No revision number found', code=0, cmd=cmd)
+        wd = os.getcwd()
+        os.chdir(self.path)
         
-        return RevisionInfo(self.path, revision, changeset)  
+        try:
+            cmd = '{0.sc} log -r tip'.format(self)
+    
+            revision = None
+            changeset = ''
+            
+            for line in self._run(cmd):
+                if line.startswith('changeset:'):
+                    items = line[10:].split(':')
+                    revision = int(items[0])
+                    changeset = items[1].strip()
+                    break
+    
+            if revision is None:
+                raise RevisionError('No revision number found', code=0, cmd=cmd)
+            
+            return RevisionInfo(self.path, revision, changeset)  
+        
+        finally:
+            os.chdir(wd)
                     
 class RevisionInfo(object):
     
