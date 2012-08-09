@@ -26,7 +26,7 @@ implementations:
 Unless you have a special reason, you should use the L{StructureParser} factory,
 which returns a proper L{AbstractStructureParser} implementation, depending on the
 input PDB file. If the input file looks like a regular PDB file, the factory
-returns a L{RegularStructureParser}, otherwise it instantiates L{RegularStructureParser}.
+returns a L{RegularStructureParser}, otherwise it instantiates L{LegacyStructureParser}.
 L{StructureParser} is in fact an alias for L{AbstractStructureParser.create_parser}.
 
 Another important abstraction in this module is L{StructureProvider}. It has several
