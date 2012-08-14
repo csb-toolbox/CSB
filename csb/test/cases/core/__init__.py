@@ -49,7 +49,16 @@ class TestEnum(test.Case):
                 
         self.assertRaises(utils.EnumValueError, test)
         self.assertEqual(self.enum.__name__, 'SampleEnum')
+        
+    def testIterator(self):
 
+        result = list(self.enum)
+        members = [self.enum.A, self.enum.B, self.enum.C]
+        self.assertEquals(set(result), set(members))        
+
+    def testInOperator(self):
+        self.assertTrue(self.enum.C in self.enum)
+        
     def testMutability(self):
         
         def test():

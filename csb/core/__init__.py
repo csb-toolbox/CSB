@@ -305,6 +305,13 @@ class EnumMeta(type):
     
     def __str__(self):
         return repr(self)
+    
+    def __iter__(self):
+        return iter(self.__dict__[i] for i in self._names)
+    
+    def __contains__(self, item):
+        return item.enum is self
+    
 
 EnumBase = metaclass(EnumMeta)
  
