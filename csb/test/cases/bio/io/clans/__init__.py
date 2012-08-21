@@ -2,7 +2,7 @@ import csb.test as test
 
 from csb.bio.io import ClansParser
 from csb.bio.io.clans import Clans, ClansEntry, ClansParams, ClansSeqgroup,\
-     Color, ClansEntryCollection, ClansSeqgroupCollection
+     Color, ClansEntryCollection, ClansSeqgroupCollection, DuplicateEntryError
 
 
 @test.unit
@@ -172,6 +172,15 @@ class TestClans(test.Case):
 
         self.assertRaises(ValueError, c.get_entry, 'a', True)
 
+    def testDuplicateEntryError(self):
+        c = Clans()
+        e = ClansEntry(name='a', seq='A', coords=(1., 1., 1.))
+        c.add_entry(e)
+        c.add_entry(e)
+        original_length = len(c)
+
+        self.assertRaises(DuplicateEntryError, c._update_index)
+        self.assertEqual(original_length, len(c))
 
 @test.functional
 class TestClansSeqgroup(test.Case):
