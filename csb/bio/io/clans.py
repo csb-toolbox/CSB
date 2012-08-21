@@ -43,6 +43,13 @@ from abc import ABCMeta, abstractmethod
 from numpy import array, float64, eye, random
 
 
+class DuplicateEntryError(Exception):
+    """
+    Raised during L{Clans._update_index} if two entries are identical in name, sequence, and coordinates.
+    """
+    pass
+    
+
 class MissingBlockError(Exception):
     """
     Raised if an expected tag is not found during parsing of a CLANS file.
@@ -773,105 +780,6 @@ class ClansFileWriter(ClansFileBuilder):
         self.writeline('</{0}>'.format(clans_instance._hsp_att_mode))
 
 
-class ClansEntryGiComparator(object):
-    """
-    Comparator for two L{ClansEntry}s.
-    Comparison is based on \'gi|\' numbers and residue ranges parsed from
-    L{ClansEntry}.name attributes if they can be parsed from it. Otherwise
-    the complete name is used.
-
-    @raise ValueError: if a residue range contains no terminal residue
-    """
-
-    def __init__(self):
-        self._mapping = {}  # mapping cache for faster access
-
-    def __call__(self, entry1, entry2):
-        if entry1.name in self._mapping:
-            entry1_parsed = self._mapping[entry1.name]
-        else:
-            entry1_parsed = self._parse_entry_name(entry1.name)
-            self._mapping[entry1.name] = entry1_parsed
-
-        if entry2.name in self._mapping:
-            entry2_parsed = self._mapping[entry2.name]
-        else:
-            entry2_parsed = self._parse_entry_name(entry2.name)
-            self._mapping[entry2.name] = entry2_parsed
-
-        if entry1_parsed == entry2_parsed:
-            return True
-
-        if len(entry1_parsed) == 3 and len(entry2_parsed) == 3:
-            A = dict(zip(('gi', 'start', 'end'), entry1_parsed))
-            B = dict(zip(('gi', 'start', 'end'), entry2_parsed))
-
-            if A['gi'] != B['gi']:  # different gi numbers
-                return False
-
-            ## switch so that A is the one that starts earlier
-
-            if A['start'] > B['start']:
-                A, B = B, A
-
-            common_residues = A['end'] - B['start']
-            if common_residues < 0:
-                return False  # B starts after A ends
-
-            if B['end'] < A['end']:
-                return True  # A starts before B and ends after it => B is in A
-
-            ## > 75% of length of the shorter one are shared => identical
-            if common_residues > 0.75 * min(A['end'] - A['start'],
-                                            B['end'] - B['start']):
-                return True
-        return False
-
-    def _parse_entry_name(self, name):
-        start = name.find('gi|')
-        if start == -1:
-            return name
-        real_start = start + 3
-        name = name[real_start:]
-
-        gi_number = name.split('|', 1)[0]
-
-        next_gi_start = name[real_start:].find('gi|')
-
-        if next_gi_start != -1:
-            name = name[:next_gi_start]
-
-        initial_residue_number = name.find('(')
-        if initial_residue_number == -1:
-            return gi_number
-
-        start = name[initial_residue_number + 1:].split('-')
-        ## if start is no integer, assume '(' is not the start of a range
-        try:
-            start = int(start[0])
-        except ValueError:
-            return gi_number
-
-        residues_end = name.find(':')
-        if residues_end == -1:
-            ## some entries are not (x-y:z), but only (x-y)
-            residues_end = name.find(')')
-            if residues_end == -1:
-                raise ValueError(
-                    'no end residue found in name\n\t{0}'.format(name))
-
-        potential_start_and_end = name[:residues_end].split('-')
-
-        if len(potential_start_and_end) != 2:
-            return gi_number
-        try:
-            first_res, last_res = [int(val) for val in potential_start_and_end]
-        except ValueError:
-            return gi_number
-
-        return (gi_number, int(first_res), int(last_res))
-
-
 class ClansParams(object):
     """
     Class for handling L{Clans} parameters.
@@ -1541,14 +1449,18 @@ class Clans(object):
         suffered from excessive entry.get_id() calls during HSP block generation
         (see L{ClansFileWriter.add_hsp_block}).
 
-        @attention: the index needs unique entry names. This is ensured with a
-        call to L{Clans.remove_duplicates} and can decrease the number of
-        entries!
+        @raises DuplicateEntryError: if two entries have the same name, sequence, and coordinates
         """
-        self.remove_duplicates()
+        unique_ids = [e._get_unique_id() for e in self]
+        
+        if len(unique_ids) != len(set(unique_ids)):
+            for i, entry in enumerate(unique_ids):
+                if unique_ids.count(entry) != 1:
+                    raise DuplicateEntryError(
+                        '{0} is contained multiple times in this Clans instance'.format(
+                            repr(self.entries[i])))
 
-        self._idx = dict([(e._get_unique_id(), i)
-                          for i, e in enumerate(self.entries)])
+        self._idx = dict(zip(unique_ids, range(len(self))))
         self._has_good_index = True
 
     def sort(self):
@@ -1669,27 +1581,6 @@ class Clans(object):
         else:
             raise ValueError('ClansEntry {0} does not exist.'.format(name))
 
-    def remove_duplicates(self, identity_function=None):
-        """
-        Determines and removes duplicates using C{identity_function}.
-
-        @param identity_function: callable to compare two L{ClansEntry}s as
-        parameters. Defaults to L{ClansEntryGiComparator}.
-        @type identity_function: callable
-
-        @return: the removed entries
-        @rtype: list of L{ClansEntry}s
-        """
-        if identity_function is None:
-            identity_function = ClansEntryGiComparator()
-
-        remove_us = list(set([e2 for i, e in enumerate(self.entries)
-                              for e2 in self.entries[i + 1:]
-                              if identity_function(e, e2)]))
-
-        [self.remove_entry(e) for e in remove_us]
-
-        return remove_us
 
     def restrict_to_max_pvalue(self, cutoff):
         """
@@ -1753,7 +1644,6 @@ class ClansEntry(object):
 
     @param parent: parent of this entry
     @type parent: L{Clans} instance
-    
     """
 
     def __init__(self, name=None, seq='', coords=None, parent=None):
@@ -1890,14 +1780,15 @@ class ClansEntry(object):
 
     def _get_unique_id(self):
         """
-        Returns a >>more<< unique ID (however this is not guaranteed to be
-        really unique) than get_id. This ID determines which entries are deemed
-        duplets by L{Clans}.remove_duplicates.
+        Returns a >>more or less<< unique ID (however this is not guaranteed to be
+        really unique) consisting of the name, sequence, and coordinates of the entry.
+        If two entries have the same 'unique' id,L{Clans._update_index} will raise a
+        DuplicateEntryError.
 
         @rtype: str
         @return: a more or less unique id
         """
-        return self.name + '<###>' + self.seq
+        return '{0.name}<###>{0.seq}<###>{0.coords}'.format(self)
 
     def add_hsp(self, other, value):
         """
