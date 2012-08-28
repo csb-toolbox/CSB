@@ -1463,6 +1463,10 @@ class Clans(object):
         self._idx = dict(zip(unique_ids, range(len(self))))
         self._has_good_index = True
 
+    def initialize(self):
+        """Initializes the coordinates of all entries with random numbers in [-1, 1]."""
+        [entry.initialize_coordinates() for entry in self]
+        
     def sort(self):
         """
         Sorts the L{ClansEntry}s by their {name}.
@@ -1651,8 +1655,9 @@ class ClansEntry(object):
         self._seq = seq
 
         if coords is None:
-            coords = random.random(3) * 2 - 1  # each CLANS coord is -1.<x<1.
-        self._coords = coords
+            self.initialize_coordinates()
+        else:
+            self._coords = coords
 
         self._parent = parent
 
@@ -1790,6 +1795,10 @@ class ClansEntry(object):
         """
         return '{0.name}<###>{0.seq}<###>{0.coords}'.format(self)
 
+    def initialize_coordinates(self):
+        """Sets the coordinates to random numbers in [-1, 1]"""
+        self.coords = random.random(3) * 2 - 1
+        
     def add_hsp(self, other, value):
         """
         Creates an HSP from self to other with the given value.
