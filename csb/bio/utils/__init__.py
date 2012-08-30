@@ -10,12 +10,11 @@ import numpy.random
 
 import csb.numeric
 
-
 def fit(X, Y):
     """
     Return the translation vector and the rotation matrix
-    minimizing the RMSD between two sets of vectors, i.e.
-    if
+    minimizing the RMSD between two sets of d-dimensional
+    vectors, i.e. if
      
         >>> R,t = fit(X,Y)
         
@@ -25,13 +24,13 @@ def fit(X, Y):
         
     will be the fitted configuration.
 
-    @param X: 3 x n input vector
+    @param X: (n, d) input vector
     @type X: numpy array
 
-    @param Y: 3 x n  input vector
+    @param Y: (n, d) input vector
     @type Y: numpy array
 
-    @return: 3 x 3 rotation matrix and 3 x 1 translation vector
+    @return: (d, d) rotation matrix and (d,) translation vector
     @rtype: tuple
     """
 
@@ -62,10 +61,10 @@ def fit(X, Y):
 def wfit(X, Y, w):
     """
     Return the translation vector and the rotation matrix
-    minimizing the weighted RMSD between two sets of vectors, i.e.
-    if
+    minimizing the weighted RMSD between two sets of d-dimensional
+    vectors, i.e. if
      
-        >>> R,t = wfit(X,Y,w)
+        >>> R,t = fit(X,Y)
         
     then
     
@@ -73,21 +72,21 @@ def wfit(X, Y, w):
         
     will be the fitted configuration.
 
-    @param X: 3 x n input vector
+    @param X: (n, d) input vector
     @type X: numpy array
 
-    @param Y: 3 x n  input vector
+    @param Y: (n, d) input vector
     @type Y: numpy array
 
     @param w: input weights
     @type w: numpy array
 
-    @return: 3 x 3 rotation matrix and 3 x 1 translation vector
+    @return: (d, d) rotation matrix and (d,) translation vector
     @rtype: tuple
     """
 
     from numpy.linalg import svd, det
-    from numpy import dot, transpose, average
+    from numpy import dot, sum, average
 
     ## center configurations
 
@@ -97,7 +96,7 @@ def wfit(X, Y, w):
 
     ## SVD of correlation matrix
 
-    V, _L, U = svd(dot(transpose(X - x) * w, Y - y))
+    V, _L, U = svd(dot((X - x).T * w, Y - y))
 
     ## calculate rotation and translation
 
@@ -111,9 +110,58 @@ def wfit(X, Y, w):
 
     return R, t
 
+def scale_and_fit(X, Y, check_mirror_image=False):
+    """
+    Return the translation vector, the rotation matrix and a
+    global scaling factor minimizing the RMSD between two sets
+    of d-dimensional vectors, i.e. if
+     
+        >>> R, t, s = scale_and_fit(X, Y)
+        
+    then
+    
+        >>> Y = s * (dot(Y, R.T) + t)
+        
+    will be the fitted configuration.
+
+    @param X: (n, d) input vector
+    @type X: numpy array
+
+    @param Y: (n, d) input vector
+    @type Y: numpy array
+
+    @return: (d, d) rotation matrix and (d,) translation vector
+    @rtype: tuple
+    """
+    from numpy.linalg import svd, det
+    from numpy import dot, trace
+
+    ## centers
+
+    x, y = X.mean(0), Y.mean(0)
+
+    ## SVD of correlation matrix
+
+    V, L, U = svd(dot((X - x).T, Y - y))
+
+    ## calculate rotation, scale and translation
+
+    R = dot(V, U)
+    
+    if check_mirror_image and det(R) < 0:
+
+        U[-1] *= -1
+        L[-1] *= -1
+        R = dot(V, U)
+        
+    s = (L.sum() / ((Y-y)**2).sum())
+    t = x / s - dot(R, y)
+
+    return R, t, s
+
 def probabilistic_fit(X, Y, w=None, niter=10):
     """
-    Generate a superposition of X,Y where::
+    Generate a superposition of X, Y where::
     
         R ~ exp(trace(dot(transpose(dot(transpose(X-t), Y)), R)))
         t ~ N(t_opt, 1 / sqrt(N))
@@ -151,16 +199,16 @@ def probabilistic_fit(X, Y, w=None, niter=10):
 def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
                     tol_stdv=0.05, full_output=False):
     """
-    Matche two arrays onto each other by iteratively throwing out
+    Match two arrays onto each other by iteratively throwing out
     highly deviating entries.
     
     (Reference: Nilges et al.: Delineating well-ordered regions in
     protein structure ensembles).
 
-    @param X: 3 x n input vector
+    @param X: (n, d) input vector
     @type X: numpy array
 
-    @param Y: 3 x n  input vector
+    @param Y: (n, d) input vector
     @type Y: numpy array
 
     @param n_stdv: number of standard deviations above which points are considered to be outliers
@@ -169,8 +217,7 @@ def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
     @param full_output: also return full history of values calculated by the algorithm
     """
 
-    from numpy import ones, compress, dot, transpose, sqrt, sum, nonzero, std, average
-
+    from numpy import ones, compress, dot, sqrt, sum, nonzero, std, average
 
     rmsd_list = []
 
@@ -190,7 +237,7 @@ def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
 
         ## calculate RMSD profile
 
-        d = sqrt(sum((X - dot(Y, transpose(R)) - t) ** 2, 1))
+        d = sqrt(sum((X - dot(Y, R.T) - t) ** 2, 1))
 
         ## calculate rmsd and stdv
 
@@ -238,25 +285,26 @@ def rmsd(X, Y):
     """
     Calculate the root mean squared deviation (RMSD) using Kabsch' formula.
 
-    @param X: 3 x n input vector
+    @param X: (n, d) input vector
     @type X: numpy array
-    @param Y: 3 x n  input vector
+
+    @param Y: (n, d) input vector
     @type Y: numpy array
 
     @return: rmsd value between the input vectors
     @rtype: float
     """
 
-    from numpy import sum, dot, transpose, sqrt, clip, average
+    from numpy import sum, dot, sqrt, clip, average
     from numpy.linalg import svd
 
-    X = X - average(X, 0)
-    Y = Y - average(Y, 0)
+    X = X - X.mean(0)
+    Y = Y - Y.mean(0)
 
     R_x = sum(X ** 2)
     R_y = sum(Y ** 2)
 
-    L = svd(dot(transpose(Y), X))[1]
+    L = svd(dot(Y.T, X))[1]
 
     return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300) / len(X))
 
@@ -275,10 +323,12 @@ def wrmsd(X, Y, w):
     Calculate the weighted root mean squared deviation (wRMSD) using Kabsch'
     formula.
 
-    @param X: 3 x n input vector
+    @param X: (n, d) input vector
     @type X: numpy array
-    @param Y: 3 x n  input vector
+
+    @param Y: (n, d) input vector
     @type Y: numpy array
+
     @param w: input weights
     @type w: numpy array
 
@@ -286,7 +336,7 @@ def wrmsd(X, Y, w):
     @rtype: float
     """
 
-    from numpy import sum, dot, transpose, sqrt, clip, average
+    from numpy import sum, dot, sqrt, clip, average
     from numpy.linalg import svd
 
     ## normalize weights
@@ -299,7 +349,7 @@ def wrmsd(X, Y, w):
     R_x = sum(X.T ** 2 * w)
     R_y = sum(Y.T ** 2 * w)
 
-    L = svd(dot(transpose(Y) * w, X))[1]
+    L = svd(dot(Y.T * w, X))[1]
 
     return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300))
 
@@ -593,7 +643,6 @@ def average_structure(X):
         x[:, i] *= -1
         i += 1
     return x
-
 
 def is_mirror_image(X, Y):
     """
