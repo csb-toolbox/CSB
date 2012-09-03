@@ -1038,7 +1038,7 @@ class Assignment(FragmentMatch):
             s = other.backbone_at(qstart, qend)
             
             if len(q) > 0 and len(s) > 0:
-                return csb.bio.utils.rmsd(q, s)
+                return csb.bio.utils.rmsd(numpy.array(q), numpy.array(s))
             
         return None
     
