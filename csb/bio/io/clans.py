@@ -106,7 +106,7 @@ class Color(object):
         @param color_string: the color string
         @type color_string: str
 
-        @raises TypeError: if {color_string} is not a string
+        @raises TypeError: if C{color_string} is not a string
         @raises ValueError: if any value in color is outside of range(256)
         """
         if not isinstance(color_string, csb.core.string):
@@ -635,7 +635,7 @@ class ClansFileWriter(ClansFileBuilder):
 
     def serialize(self, clans_instance):
         """
-        Creates a CLANS file containing all data from {clans_instance}
+        Creates a CLANS file containing all data from C{clans_instance}
 
         @param clans_instance: the source of the data to be serialized
         @type clans_instance: a L{Clans} instance
@@ -651,7 +651,7 @@ class ClansFileWriter(ClansFileBuilder):
         
     def add_sequences_line(self, clans_instance):
         """
-        Appends the \'sequences=<#sequences>\' line to {output}.
+        Appends the \'sequences=<#sequences>\' line to the output.
 
         @param clans_instance: the source of the data to be serialized
         @type clans_instance: a L{Clans} instance
@@ -660,7 +660,7 @@ class ClansFileWriter(ClansFileBuilder):
 
     def add_param_block(self, clans_instance):
         """
-        Appends a <param>data</param> CLANS file block to {output}.
+        Appends a <param>data</param> CLANS file block to the output.
 
         @param clans_instance: the source of the data to be serialized
         @type clans_instance: a L{Clans} instance
@@ -670,7 +670,7 @@ class ClansFileWriter(ClansFileBuilder):
 
     def add_rotmtx_block(self, clans_instance):
         """
-        Appends a <rotmtx>data</rotmtx> CLANS file block to {output}.
+        Appends a <rotmtx>data</rotmtx> CLANS file block to the output.
 
         @param clans_instance: the source of the data to be serialized
         @type clans_instance: a L{Clans} instance
@@ -695,7 +695,7 @@ class ClansFileWriter(ClansFileBuilder):
 
     def add_seq_block(self, clans_instance):
         """
-        Appends a <seq>data</seq> CLANS file block to {output}.
+        Appends a <seq>data</seq> CLANS file block to the output.
 
         @param clans_instance: the source of the data to be serialized
         @type clans_instance: a L{Clans} instance
@@ -709,7 +709,7 @@ class ClansFileWriter(ClansFileBuilder):
 
     def add_seqgroups_block(self, clans_instance):
         """
-        Appends a <seqgroupsparam>data</seqgroups> CLANS file block to {output}.
+        Appends a <seqgroupsparam>data</seqgroups> CLANS file block to the output.
 
         @param clans_instance: the source of the data to be serialized
         @type clans_instance: a L{Clans} instance
@@ -727,7 +727,7 @@ class ClansFileWriter(ClansFileBuilder):
 
     def add_pos_block(self, clans_instance):
         """
-        Appends a <pos>data</pos> CLANS file block to {output}.
+        Appends a <pos>data</pos> CLANS file block to the output.
 
         @param clans_instance: the source of the data to be serialized
         @type clans_instance: a L{Clans} instance
@@ -742,7 +742,7 @@ class ClansFileWriter(ClansFileBuilder):
 
     def add_hsp_block(self, clans_instance):
         """
-        Appends a <hsp>data</hsp> CLANS file block to {output}.
+        Appends a <hsp>data</hsp> CLANS file block to the output.
         If the CLANS instance has hsp_att_mode=="att" we add a <att>data<att>
         block which has the same format.
 
