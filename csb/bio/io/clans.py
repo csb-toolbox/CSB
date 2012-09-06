@@ -1520,6 +1520,39 @@ class Clans(object):
 
         [group.remove(member) for member in group.members]
 
+    def append_groups_from(self, other):
+        '''
+        Append the L{ClansSeqgroup}-s of C{other} that contain at least one entry
+        that corresponds to an entry in this instance. Entries are compared by
+        their name only! Groups without any matching members in this instance are
+        not created in the local instance.
+
+        @param other: the source of the new group definitions
+        @type other: L{Clans} instance
+        '''
+
+        for group in other.seqgroups:
+            new_group = ClansSeqgroup(name=group.name,
+                                      type=group.type,
+                                      size=group.size,
+                                      hide=group.hide,
+                                      color=group.color)
+
+            for member in group.members:
+                try:
+                    new_member = self.get_entry(member.name, pedantic=True)
+
+                except ValueError:  # no entry with this name found
+                    continue
+
+                except DuplicateEntryNameError:
+                    raise DuplicateEntryNameError('multiple entries with identical name: {0}'.format(member.name))
+
+                new_group.add(new_member)
+
+            if len(new_group.members) > 0:
+                self.add_group(new_group)
+ 
     def add_entry(self, entry):
         """
         Adds an new entry.
@@ -2052,6 +2085,9 @@ class ClansSeqgroup(object):
         """
         Adds entry C{new_member} to this L{ClansSeqgroup}.
 
+        @Note: L{ClansEntry}-s added using this method that are not part of the
+        main L{Clans} instance need to be added to the L{Clans} instance manually.
+        
         @param new_member: the member that shall be added to this
         L{ClansSeqgroup}
         @type new_member: L{ClansEntry} instance

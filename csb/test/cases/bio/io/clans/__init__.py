@@ -230,6 +230,46 @@ class TestClansSeqgroup(test.Case):
         self.assertRaises(TypeError, testGroup.add, 23)
         self.assertRaises(TypeError, testGroup.remove, 23)
 
+
+    def testAppendingSeqgroupsFromOtherInstance(self):
+        source = Clans()
+        source_entry1 = ClansEntry(name='X', seq='S')
+        source_entry2 = ClansEntry(name='A', seq='S')
+        source.add_entry(source_entry1)
+        source.add_entry(source_entry2)
+
+        seqgroup_names_to_transfer = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+        for i, name in enumerate(seqgroup_names_to_transfer):
+            sg = ClansSeqgroup(name=name)
+            sg.add(source_entry1)
+            source.add_group(sg)
+
+        seqgroup_names_to_omit = ['x', 'y', 'z']
+        for i, name in enumerate(seqgroup_names_to_omit):
+            sg = ClansSeqgroup(name=name)
+            sg.add(source_entry2)
+            source.add_group(sg)
+
+        target = Clans()
+
+        # different seq is tolerated, only name identity is checked
+        target_entry = ClansEntry(name='X', seq='Q')
+        target.add_entry(target_entry)
+        self.assertEqual(source[0].name, target[0].name)
+
+        target.append_groups_from(source)
+
+        ## each group should have exactly one member
+        self.assertEqual(len(set([len(group.members) for group in target.seqgroups])), 1)
+
+        ## all groups of seqgroup_names should have been transferred
+        self.assertEqual(len(target.seqgroups), len(seqgroup_names_to_transfer))
+        self.assertEqual([group.name for group in target.seqgroups], seqgroup_names_to_transfer)
+
+        ## the ones from seqgroup_names_to_omit should not be there
+        self.assertEqual(len([group.name for group in target.seqgroups
+                                 if group.name in seqgroup_names_to_omit]), 0)
+        
     def testAddingClansEntries(self):
         c = Clans()
 
