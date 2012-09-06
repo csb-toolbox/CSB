@@ -43,6 +43,13 @@ from abc import ABCMeta, abstractmethod
 from numpy import array, float64, eye, random
 
 
+class DuplicateEntryNameError(Exception):
+    """
+    Raised during L{Clans.get_entry} if two entries have identical names.
+    """
+    pass
+
+
 class DuplicateEntryError(Exception):
     """
     Raised during L{Clans._update_index} if two entries are identical in name, sequence, and coordinates.
@@ -1574,8 +1581,8 @@ class Clans(object):
         @type pedantic: bool
 
         @raise ValueError: if no entry with name C{name} is found
-        @raise ValueError: if multiple entries with name C{name} are found and
-        C{pedantic == True}
+        @raise DuplicateEntryNameError: if multiple entries with name C{name}
+        are found and C{pedantic == True}
 
         @rtype: L{ClansEntry}
         @return: entry with name C{name}
@@ -1588,7 +1595,7 @@ class Clans(object):
 
         elif len(hits) > 1:
             if pedantic:
-                raise ValueError(
+                raise DuplicateEntryNameError(
                     'multiple entries have name \'{0}\''.format(name))
             return hits[0]
 
