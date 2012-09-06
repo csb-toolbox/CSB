@@ -1303,14 +1303,21 @@ class ClansEntryCollection(csb.core.ReadOnlyCollectionContainer):
                     item, self._type.__name__))
         self._items.remove(item)
 
-    def _sort(self):
+    def _sort(self, key=None):
         """
-        Sort entries by their {name}.
+        Sort entries by their {name} or by a custom key function.
 
-        Note: If the L{ClansEntryCollection} is part of a L{Clans} instance,
-        use L{Clans.sort} instead of this to avoid corrupting L{Clans._idx}.
+        @Note: If the L{ClansEntryCollection} is part of a L{Clans} instance,
+        use L{Clans.sort} instead to avoid silently corrupting the index in
+        L{Clans._idx}.
+
+        @param key: None to sort by name, a custom key function else
+        @type key: function
         """
-        self._items.sort(key=lambda entry: entry.name)
+        if key is None:
+            key = lambda entry: entry.name
+
+        self._items.sort(key=key)
 
 
 class ClansSeqgroupCollection(csb.core.ReadOnlyCollectionContainer):
@@ -1467,12 +1474,14 @@ class Clans(object):
         """Initializes the coordinates of all entries with random numbers in [-1, 1]."""
         [entry.initialize_coordinates() for entry in self]
         
-    def sort(self):
+    def sort(self, key=None):
         """
-        Sorts the L{ClansEntry}s by their {name}.
-        """
+        Sorts the L{ClansEntry}s by their name or by a custom comparison function.
 
-        self._entries._sort()
+        @param key: a custom key function
+        @type key: function
+        """
+        self._entries._sort(key)
 
         self._has_good_index = False
 
@@ -1542,7 +1551,8 @@ class Clans(object):
         for other_entry in entry.hsp.keys():
             other_entry.remove_hsp(entry)
 
-        for g in entry.groups:
+        groups = [g for g in entry.groups]
+        for g in groups:
             g.remove(entry)
 
         remove_groups = [g for g in self.seqgroups if g.is_empty()]

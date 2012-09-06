@@ -151,6 +151,21 @@ class TestClans(test.Case):
         for i, e in enumerate(c):
             self.assertEqual(e.name, names[i])
 
+    def testClansEntrySortingWithCustomKeyFunction(self):
+        c = Clans()
+
+        sequences = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+        shuffled_sequences = ['g', 'f', 'b', 'd', 'e', 'c', 'a']
+
+        for i, sequence in enumerate(sequences):
+            c.add_entry(ClansEntry(name=str(i), seq=shuffled_sequences[i]))
+
+        custom_key_function = lambda e: e.seq  # sort by sequence instead of name
+        c.sort(key=custom_key_function)
+
+        for i, e in enumerate(c):
+            self.assertEqual(e.seq, sequences[i])
+
     def testGetEntry(self):
         c = Clans()
 
