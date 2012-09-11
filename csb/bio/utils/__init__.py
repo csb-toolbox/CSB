@@ -165,6 +165,8 @@ def probabilistic_fit(X, Y, w=None, niter=10):
     
         R ~ exp(trace(dot(transpose(dot(transpose(X-t), Y)), R)))
         t ~ N(t_opt, 1 / sqrt(N))
+
+    @rtype: tuple
     """
         
     from csb.statistics.rand import random_rotation
@@ -215,6 +217,8 @@ def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
     @param tol_rmsd: tolerance in rmsd
     @param tol_stdv: tolerance in standard deviations
     @param full_output: also return full history of values calculated by the algorithm
+
+    @rtype: tuple
     """
 
     from numpy import ones, compress, dot, sqrt, sum, nonzero, std, average
@@ -280,6 +284,124 @@ def fit_wellordered(X, Y, n_iter=None, n_stdv=2, tol_rmsd=.5,
         return (R, t), rmsd_list
     else:
         return (R, t)
+
+def bfit(X, Y, n_iter=10, distribution='student', em=False, full_output=False):
+    """
+    Robust superposition of two coordinate arrays. Models non-rigid
+    displacements with outlier-tolerant probability distributions.
+
+    @param X: (n, 3) input vector
+    @type X: numpy.array
+    @param Y: (n, 3) input vector
+    @type Y: numpy.array
+    @param n_iter: number of iterations
+    @type n_iter: int
+    @param distribution: student or k
+    @type distribution: str
+    @param em: use maximum a posteriori probability (MAP) estimator
+    @type em: bool
+    @param full_output: if true, return ((R, t), scales)
+    @type full_output: bool
+    @rtype: tuple
+    """
+    from csb.statistics import scalemixture as sm
+
+    if distribution == 'student':
+        prior = sm.GammaPrior()
+        if em:
+            prior.estimator = sm.GammaPosteriorMAP()
+    elif distribution == 'k':
+        prior = sm.InvGammaPrior()
+        if em:
+            prior.estimator = sm.InvGammaPosteriorMAP()
+    else:
+        raise AttributeError('distribution')
+
+    mixture = sm.ScaleMixture(scales=X.shape[0], prior=prior, d=3)
+
+    R, t = fit(X, Y)
+
+    for _ in range(n_iter):
+        data = distance(X, transform(Y, R, t))
+        mixture.estimate(data)
+        R, t = probabilistic_fit(X, Y, mixture.scales)
+
+    if full_output:
+        return (R, t), mixture.scales
+    else:
+        return (R, t)
+
+def xfit(X, Y, n_iter=10, seed=False, full_output=False):
+    """
+    Maximum likelihood superposition of two coordinate arrays. Works similar
+    to U{Theseus<http://theseus3d.org>} and to L{bfit}.
+
+    @param X: (n, 3) input vector
+    @type X: numpy.array
+    @param Y: (n, 3) input vector
+    @type Y: numpy.array
+    @param n_iter: number of EM iterations
+    @type n_iter: int
+    @type seed: bool
+    @param full_output: if true, return ((R, t), scales)
+    @type full_output: bool
+    @rtype: tuple
+    """
+    if seed:
+        R, t = numpy.identity(3), numpy.zeros(3)
+    else:
+        R, t = fit(X, Y)
+
+    for _ in range(n_iter):
+        data = distance_sq(X, transform(Y, R, t))
+        scales = 1.0 / data.clip(1e-9)
+        R, t = wfit(X, Y, scales)
+
+    if full_output:
+        return (R, t), scales
+    else:
+        return (R, t)
+
+def transform(Y, R, t, s=None, invert=False):
+    """
+    Transform C{Y} by rotation C{R} and translation C{t}. Optionally scale by C{s}.
+
+        >>> R, t = fit(X, Y)
+        >>> Y_fitted = transform(Y, R, t)
+
+    @param Y: (n, d) input vector
+    @type Y: numpy.array
+    @param R: (d, d) rotation matrix
+    @type R: numpy.array
+    @param t: (d,) translation vector
+    @type t: numpy.array
+    @param s: scaling factor
+    @type s: float
+    @param invert: if True, apply the inverse transformation
+    @type invert: bool
+    @return: transformed input vector
+    @rtype: numpy.array
+    """
+    if invert:
+        x = numpy.dot(Y - t, R)
+        if s is not None:
+            s = 1. / s
+    else:
+        x = numpy.dot(Y, R.T) + t
+    if s is not None:
+        x *= s
+    return x
+
+def fit_transform(X, Y, fit=fit, *args):
+    """
+    Return Y superposed on X.
+
+    @type X: (n,3) numpy.array
+    @type Y: (n,3) numpy.array
+    @type fit: function
+    @rtype: (n,3) numpy.array
+    """
+    return transform(Y, *fit(X, Y, *args))
 
 def rmsd(X, Y):
     """
