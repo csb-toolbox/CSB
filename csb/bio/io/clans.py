@@ -1922,11 +1922,11 @@ class ClansSeqgroup(object):
 
     @kwparam size: size of the symbol used to represent the seqgroup in the
     graphical output
-    @type name: int
+    @type size: int
 
     @kwparam hide: if True, the seqgroup\'s symbols in the graphical output are
     not drawn; default: False
-    @type name: bool
+    @type hide: bool
 
     @kwparam color: color of the seqgroup
     @type color: L{Color} or string formatted like \'x;y;z\'
