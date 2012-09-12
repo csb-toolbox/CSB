@@ -232,6 +232,11 @@ class GaussianMixture(object):
         else:
             s = random(self.scales.shape)
             self.scales = s / s.sum(0)
+
+        if 0.0 in self.w:
+            self.randomize_scales(ordered)
+            return
+
         self.estimate_means()
 
     def e_step(self, beta=1.0):
