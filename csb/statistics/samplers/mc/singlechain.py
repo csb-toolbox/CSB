@@ -83,6 +83,11 @@ class HMCSampler(AbstractSingleChainMC):
                    each iteration
     @type nsteps: int
 
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional numpy array with n being the dimension
+                               of the configuration space, that is, the dimension of
+                               the position / momentum vectors
+
     @param integrator: Subclass of L{AbstractIntegrator} to be used for
                        integrating Hamiltionian equations of motion
     @type integrator: type
@@ -94,7 +99,8 @@ class HMCSampler(AbstractSingleChainMC):
     @type temperature: float
     """
 
-    def __init__(self, pdf, state, gradient, timestep, nsteps, integrator=FastLeapFrog, temperature=1.):
+    def __init__(self, pdf, state, gradient, timestep, nsteps,
+				 mass_matrix=None, integrator=FastLeapFrog, temperature=1.):
         
         super(HMCSampler, self).__init__(pdf, state, temperature)
         
@@ -102,13 +108,33 @@ class HMCSampler(AbstractSingleChainMC):
         self.timestep = timestep
         self._nsteps = None
         self.nsteps = nsteps
+        self._mass_matrix = mass_matrix
+
+        d = len(self.state.position)
+
+        self._momentum_covariance_matrix = None
+
+        if self._mass_matrix == None:
+            self._mass_matrix = numpy.eye(d)
+            self._inverse_mass_matrix = self._mass_matrix
+        else:
+            self._mass_matrix = numpy.dot(self._mass_matrix, numpy.eye(d))
+            self._inverse_mass_matrix = numpy.linalg.inv(self._mass_matrix)
+
+        self._momentum_covariance_matrix = self._temperature * self._mass_matrix
+
         self._integrator = integrator
         self._gradient = gradient
-
-    def _propose(self):
+        self._gen = MDPropagator(self._gradient, self._timestep,
+                                 mass_matrix=self._mass_matrix,
+                                 integrator=self._integrator)
         
-        gen = MDPropagator(self._gradient, self._timestep, self._integrator)
-        momenta = numpy.random.normal(size=self.state.position.shape, scale=numpy.sqrt(self._temperature))
+    def _propose(self):
+
+        gen = self._gen
+        momenta = numpy.random.multivariate_normal(mean=numpy.zeros(len(self.state.position)), 
+												   cov=self._momentum_covariance_matrix)
+
         self.state = State(self.state.position, momenta)
         proposal = gen.generate(self.state, self._nsteps).final
         
@@ -117,11 +143,12 @@ class HMCSampler(AbstractSingleChainMC):
     def _calc_pacc(self, proposal_communicator):
 
         proposal = proposal_communicator.proposal
-        E = lambda x:-self._pdf.log_prob(x)
-        
-        pacc = csb.numeric.exp((-0.5 * sum(proposal.momentum ** 2) - E(proposal.position)
-                               + 0.5 * sum(self.state.momentum ** 2) + E(self.state.position)) / self.temperature)
+        E = lambda x: -self._pdf.log_prob(x)
+        K = lambda x: 0.5 * numpy.dot(x.T, numpy.dot(self._inverse_mass_matrix, x))
 
+        pacc = csb.numeric.exp((-K(proposal.momentum) - E(proposal.position)
+                               + K(self.state.momentum) + E(self.state.position)) / self.temperature)
+        
         return pacc
 
     @property

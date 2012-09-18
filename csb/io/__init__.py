@@ -574,7 +574,7 @@ def dump(this, filename, gzip=False, lock=None, timeout=None):
             p = Numeric.Pickler(stream)
             p.dump(this)
         else:
-            Pickle.dump(this, stream, 1)
+            Pickle.dump(this, stream, 2)
     finally:
         stream.close()
 

@@ -68,7 +68,7 @@ class TestMultichain(test.Case):
         super(TestMultichain, self).setUp()
 
         self.sigma1, self.sigma2, self.sigma3 = 1., 1. / np.sqrt(3), 1. / np.sqrt(5)
-        init_state = State(np.random.normal(size=1))
+        init_state = State(np.random.normal(size=2))
 
         self.samplers = [RWMCSampler(SamplePDF(sigma=self.sigma1), init_state, 2),
                          RWMCSampler(SamplePDF(sigma=self.sigma1), init_state, 1.5),
@@ -82,13 +82,15 @@ class TestMultichain(test.Case):
         
         self.gradients = [self._createGradientL(self.sigma1, self.sigma2),
                           self._createGradientL(self.sigma2, self.sigma3)]
+
+        mm = np.array([[1., 0.], [0., 2.]])
         
         self.params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
                                                             self.timesteps[0], self.nsteps[0],
-                                                            self.gradients[0]),
+                                                            self.gradients[0], mass_matrix=mm),
                        ThermostattedMDRENSSwapParameterInfo(self.samplers[1], self.samplers[2],
                                                             self.timesteps[1], self.nsteps[1],
-                                                            self.gradients[1])]
+                                                            self.gradients[1], mass_matrix=mm)]
 
     def _createGradientL(self, sigma1, sigma2):
         
@@ -110,7 +112,7 @@ class TestMultichain(test.Case):
 
             samples.append(algorithm.sample())
 
-        states = [x[0].position[0] for x in samples]
+        states = [x[0].position[1] for x in samples]
 
         self.assertAlmostEqual(np.array(states).mean(), 0., delta=1.75e-1)
         self.assertAlmostEqual(np.array(states).var(), 1., delta=1.75e-1)
@@ -126,7 +128,7 @@ class TestMultichain(test.Case):
         self._run(algorithm)
 
     def testThermostattedMDRens(self):
-        
+
         algorithm = ThermostattedMDRENS(self.samplers, self.params, VelocityVerlet)
         self._run(algorithm)
         

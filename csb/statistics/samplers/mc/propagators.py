@@ -8,6 +8,7 @@ from abc import ABCMeta, abstractmethod
 
 from csb.statistics.samplers import State
 from csb.statistics.samplers.mc import TrajectoryBuilder
+from csb.statistics.pdf import MultivariateGaussian
 from csb.numeric.integrators import FastLeapFrog, VelocityVerlet
 class AbstractPropagator(object):
     """
@@ -47,18 +48,24 @@ class MDPropagator(AbstractPropagator):
     @param timestep: Timestep to be used for integration
     @type timestep: float
 
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional numpy array with n being the dimension
+                               of the configuration space, that is, the dimension of
+                               the position / momentum vectors
+
     @param integrator: Subclass of L{AbstractIntegrator} to be used to integrate
                        Hamiltonian equations of motion
     @type integrator: type
     """
 
-    def __init__(self, gradient, timestep, integrator=FastLeapFrog):
+    def __init__(self, gradient, timestep, mass_matrix=None, integrator=FastLeapFrog):
         
         super(MDPropagator, self).__init__()
 
         self._gradient = None
         self.gradient = gradient
-        
+        self._mass_matrix = None
+        self.mass_matrix = mass_matrix
         self._timestep = None
         self.timestep = timestep
         
@@ -78,12 +85,46 @@ class MDPropagator(AbstractPropagator):
     def timestep(self, value):
         self._timestep = float(value)
 
+    @property
+    def mass_matrix(self):
+        return self._mass_matrix
+    @mass_matrix.setter
+    def mass_matrix(self, value):
+        self._mass_matrix = value
+
     def generate(self, init_state, length, return_trajectory=False):
         
         integrator = self._integrator(self.timestep, self.gradient)
         
-        result = integrator.integrate(init_state, length, return_trajectory)
+        result = integrator.integrate(init_state, length, mass_matrix=self._mass_matrix, return_trajectory=return_trajectory)
         return result
+
+class Looper(object):
+    """
+    Implements an iterable list with a ring-like topology,
+    that is, if the iterator points on the last element,
+    next() returns the first element.
+    """
+    
+    def __init__(self, items):
+        
+        self._items = items
+        self._n_items = len(self._items)
+        self._current = 0
+        
+    def __iter__(self):
+        
+        return self
+    
+    def next(self):
+        
+        if self._current == self._n_items:
+            self._current = 0
+            
+        self._current += 1
+        
+        return self._items[self._current - 1]
+
 
 class ThermostattedMDPropagator(MDPropagator):
     """
@@ -95,6 +136,11 @@ class ThermostattedMDPropagator(MDPropagator):
 
     @param timestep: Timestep to be used for integration
     @type timestep: float
+
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional numpy array with n being the dimension
+                               of the configuration space, that is, the dimension of
+                               the position / momentum vectors
 
     @param temperature: Time-dependent temperature
     @type temperature: Real-valued function
@@ -110,14 +156,17 @@ class ThermostattedMDPropagator(MDPropagator):
     @type integrator: type
     """
 
-    def __init__(self, gradient, timestep, temperature=lambda t: 1., collision_probability=0.1,
-                 update_interval=1, integrator=VelocityVerlet):
+    def __init__(self, gradient, timestep, mass_matrix=None, temperature=lambda t: 1.,
+                 collision_probability=0.1, update_interval=1, integrator=VelocityVerlet):
         
-        super(ThermostattedMDPropagator, self).__init__(gradient, timestep, integrator)
+        super(ThermostattedMDPropagator, self).__init__(gradient, timestep,
+                                                        mass_matrix, integrator)
         
         self._collision_probability = collision_probability
         self._update_interval = update_interval
         self._temperature = temperature
+
+        self._inverse_mass_matrix = numpy.linalg.inv(self.mass_matrix)
 
     def _update(self, momentum, T, collision_probability):
         """
@@ -134,17 +183,19 @@ class ThermostattedMDPropagator(MDPropagator):
 
         @rtype: tuple (updated momentum, heat induced by the update)
         """
+
+        d = len(momentum)
         
         heat = 0.
-        update_list = []
-        for k in range(len(momentum)):
-            if numpy.random.random() < collision_probability:
-                update_list.append(k)
+        update_list = numpy.where(numpy.random.random(d) < collision_probability)[0]
+
         if len(update_list) > 0:
-            ke_old = 0.5 * sum(momentum ** 2)
-            for k in range(len(momentum)):
-                if k in update_list: momentum[k] = numpy.random.normal(scale=numpy.sqrt(T))
-            heat = (0.5 * sum(momentum ** 2) - ke_old) / T
+            K = lambda x: 0.5 * sum(x ** 2)
+            ke_old = K(momentum)
+            
+            updated_momentum = [numpy.sqrt(T) * self._random_loopers[i].next() for i in update_list]
+            momentum[update_list] = updated_momentum
+            heat = (K(momentum) - ke_old) / T
 
         return momentum, heat
     
@@ -165,8 +216,9 @@ class ThermostattedMDPropagator(MDPropagator):
         @param integrator: integration scheme used to evolve the state deterministically
         @type integrator: L{AbstractIntegrator}
         """
-        state = integrator.integrate_once(state, i)
-        
+
+        state = integrator.integrate_once(state, i, inverse_mass_matrix=self._inverse_mass_matrix)
+
         if i % self._update_interval == 0:
             state.momentum, stepheat = self._update(state.momentum,
                                                     self._temperature(i * self.timestep),
@@ -185,6 +237,12 @@ class ThermostattedMDPropagator(MDPropagator):
 
         heat = 0.
         state = init_state.clone()
+
+        d = len(state.position)
+
+        n_randoms = int(1.5 * length * self._collision_probability / float(self._update_interval))
+        randoms = numpy.random.multivariate_normal(mean=numpy.zeros(d), cov=self._mass_matrix, size=n_randoms).T
+        self._random_loopers = [Looper(x) for x in randoms]
         
         for i in range(length - 1):
             state, heat = self._step(i, state, heat, integrator)
@@ -221,7 +279,7 @@ class AbstractMCPropagator(AbstractPropagator):
 
     def generate(self, init_state, length, return_trajectory=True):
 
-        self._init_sampler()
+        self._init_sampler(init_state)
         self._sampler.state = init_state
 
         builder = TrajectoryBuilder.create(full=return_trajectory)
@@ -237,7 +295,7 @@ class AbstractMCPropagator(AbstractPropagator):
         return builder.product
 
     @abstractmethod
-    def _init_sampler(self):
+    def _init_sampler(self, init_state):
         """
         Initializes the sampler with which to obtain the MC state
         trajectory.
@@ -281,14 +339,11 @@ class RWMCPropagator(AbstractMCPropagator):
         self._stepsize = stepsize
         self._proposal_density = proposal_density
 
-        self._init_sampler()
-
-    def _init_sampler(self):
+    def _init_sampler(self, init_state):
 
         from csb.statistics.samplers.mc.singlechain import RWMCSampler
 
-        dummy_state = State(numpy.array([0.]))
-        self._sampler = RWMCSampler(self._pdf, dummy_state, self._stepsize,
+        self._sampler = RWMCSampler(self._pdf, init_state, self._stepsize,
                                     self._proposal_density, self._temperature)
 
 class HMCPropagator(AbstractMCPropagator):
@@ -303,10 +358,16 @@ class HMCPropagator(AbstractMCPropagator):
 
     @param timestep: Timestep used for integration
     @type timestep: float
-
+    
     @param nsteps: Number of integration steps to be performed in
                    each iteration
     @type nsteps: int
+
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional numpy array with n being the dimension
+                               of the configuration space, that is, the dimension of
+                               the position / momentum vectors
+
 
     @param integrator: Subclass of L{AbstractIntegrator} to be used for
                        integrating Hamiltionian equations of motion
@@ -316,20 +377,22 @@ class HMCPropagator(AbstractMCPropagator):
     @type temperature: float
     """
     
-    def __init__(self, pdf, gradient, timestep, nsteps, integrator=FastLeapFrog, temperature=1.):
+    def __init__(self, pdf, gradient, timestep, nsteps, mass_matrix=None,
+                 integrator=FastLeapFrog, temperature=1.):
 
         super(HMCPropagator, self).__init__(pdf, temperature)
 
         self._gradient = gradient
         self._timestep = timestep
         self._nsteps = nsteps
+        self._mass_matrix = mass_matrix
         self._integrator = integrator
 
-    def _init_sampler(self):
+    def _init_sampler(self, init_state):
 
         from csb.statistics.samplers.mc.singlechain import HMCSampler
         
-        dummy_state = State(numpy.array([0.]))        
-        self._sampler = HMCSampler(self._pdf, dummy_state, self._gradient,
-                                   self._timestep, self._nsteps, self._integrator,
-                                   self._temperature)
+        self._sampler = HMCSampler(self._pdf, init_state, self._gradient,
+                                   self._timestep, self._nsteps,
+                                   mass_matrix=self._mass_matrix,
+                                   integrator=self._integrator, temperature=self._temperature)

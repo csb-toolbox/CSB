@@ -101,6 +101,7 @@ import csb.numeric
 
 from csb.statistics.samplers.mc import AbstractExchangeMC, AbstractRENS, RESwapCommunicator
 from csb.statistics.samplers.mc.propagators import MDPropagator, ThermostattedMDPropagator
+from csb.statistics.samplers.mc import Trajectory
 from csb.numeric.integrators import AbstractGradient
 
 
@@ -177,7 +178,10 @@ class ReplicaExchangeMC(AbstractExchangeMC):
         
     def _propose_swap(self, param_info):
         
-        return RESwapCommunicator(param_info, param_info.sampler2.state, param_info.sampler1.state)
+        return RESwapCommunicator(param_info, Trajectory([param_info.sampler2.state,
+                                                          param_info.sampler1.state]),
+                                              Trajectory([param_info.sampler1.state,
+                                                          param_info.sampler2.state]))
     
     def _calc_pacc_swap(self, swapcom):
         
@@ -187,11 +191,11 @@ class ReplicaExchangeMC(AbstractExchangeMC):
         T1 = swapcom.sampler1.temperature
         T2 = swapcom.sampler2.temperature
         
-        state1 = swapcom.sampler1.state
-        state2 = swapcom.sampler2.state
+        state1 = swapcom.traj12.initial
+        state2 = swapcom.traj21.initial
         
-        proposal1 = swapcom.proposal1
-        proposal2 = swapcom.proposal2
+        proposal1 = swapcom.traj21.final
+        proposal2 = swapcom.traj12.final
         
         swapcom.acceptance_probability = csb.numeric.exp(-E1(proposal1.position) / T1 + E1(state1.position) / T1 - \
                                                  E2(proposal2.position) / T2 + E2(state2.position) / T2)
@@ -229,7 +233,9 @@ class MDRENS(AbstractRENS):
         factory = InterpolationFactory(traj_info.protocol, tau)
                 
         gen = MDPropagator(factory.build_gradient(traj_info.param_info.gradient),
-                           traj_info.param_info.timestep, self._integrator)
+                           traj_info.param_info.timestep,
+						   mass_matrix=traj_info.param_info.mass_matrix,
+						   integrator=self._integrator)
         
         traj = gen.generate(traj_info.init_state, int(traj_info.param_info.traj_length))
         return traj
@@ -265,10 +271,11 @@ class ThermostattedMDRENS(MDRENS):
         temp = factory.build_temperature(traj_info.param_info.temperature)
         
         gen = ThermostattedMDPropagator(grad,
-                                        traj_info.param_info.timestep, temp,
-                                        traj_info.param_info.collision_probability,
-                                        traj_info.param_info.collision_interval,
-                                        self._integrator)
+                                        traj_info.param_info.timestep, temperature=temp, 
+										collision_probability=traj_info.param_info.collision_probability,
+                                        update_interval=traj_info.param_info.collision_interval,
+										mass_matrix=traj_info.param_info.mass_matrix,
+                                        integrator=self._integrator)
         
         traj = gen.generate(traj_info.init_state, traj_info.param_info.traj_length)
 
