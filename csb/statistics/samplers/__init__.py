@@ -52,12 +52,14 @@ class State(AbstractState):
         Check whether arguments are flat, one-dimensional numpy arrays.
         """
         
-        for q in args:
-            if not isinstance(q, np.ndarray):
-                raise TypeError(q, 'numpy.ndarray expected!')
+        # for q in args:
+        #     if not isinstance(q, np.ndarray):
+        #         raise TypeError(q, 'numpy.ndarray expected!')
     
-            if not len(q.squeeze().shape) <= 1:
-                raise DimensionError(q, '1d numpy.ndarray expected!')
+        #     if not len(q.squeeze().shape) <= 1:
+        #         raise DimensionError(q, '1d numpy.ndarray expected!')
+
+        pass
         
     @staticmethod
     def check_equal_length(q, p):
@@ -65,8 +67,10 @@ class State(AbstractState):
         Check whether arguments have equal length.
         """
         
-        if len(q) != len(p):
-            raise DimensionError(p, 'momentum needs to have the same dimension as coordinates!')
+        # if len(q) != len(p):
+        #     raise DimensionError(p, 'momentum needs to have the same dimension as coordinates!')
+
+        pass
     
     def __init__(self, position, momentum=None):
         

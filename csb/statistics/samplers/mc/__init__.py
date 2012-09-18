@@ -315,6 +315,7 @@ class AbstractSingleChainMC(AbstractMC):
         self._nmoves = 0
         self._accepted = 0
         self._last_move_accepted = None
+        self.mp = False
         
     def _checkstate(self, state):
         if not isinstance(state, State):
@@ -338,7 +339,7 @@ class AbstractSingleChainMC(AbstractMC):
         Calculate a new proposal state and gather additional information
         needed to calculate the acceptance probability.
         
-        @rtype: L{AbstractProposalCommunicator}
+        @rtype: L{SimpleProposalCommunicator}
         """
         pass
 
@@ -350,7 +351,7 @@ class AbstractSingleChainMC(AbstractMC):
         @param proposal_communicator: Contains information about the proposal
                                       and additional information needed to
                                       calculate the acceptance probability
-        @type proposal_communicator: L{AbstractProposalCommunicator}
+        @type proposal_communicator: L{SimpleProposalCommunicator}
         """
         pass
 
@@ -447,7 +448,7 @@ class AbstractEnsembleMC(AbstractMC):
     def energy(self):
         """
         Total ensemble energy.
-        """        
+        """ 
         return sum([x.energy for x in self._samplers])
 
 class AbstractSwapParameterInfo(object):
@@ -457,7 +458,7 @@ class AbstractSwapParameterInfo(object):
     """
 
     __metaclass__ = ABCMeta
-    
+
     def __init__(self, sampler1, sampler2):
         """
         @param sampler1: First sampler
@@ -466,17 +467,17 @@ class AbstractSwapParameterInfo(object):
         @param sampler2: Second sampler
         @type sampler2: L{AbstractSingleChainMC}
         """
-        
+
         self._sampler1 = sampler1
         self._sampler2 = sampler2
 
     @property
-    def sampler1(self):        
+    def sampler1(self):
         return self._sampler1
 
     @property
-    def sampler2(self):        
-        return self._sampler2        
+    def sampler2(self):
+        return self._sampler2
 
 class RESwapParameterInfo(AbstractSwapParameterInfo):
     """
@@ -497,21 +498,36 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
     @param timestep: Integration timestep
     @type timestep: float
 
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional numpy array with n being the dimension
+                               of the configuration space, that is, the dimension of
+                               the position / momentum vectors
+
     @param traj_length: Trajectory length in number of timesteps
     @type traj_length: int
 
     @param gradient: Gradient which determines the dynamics during a trajectory
-    @type gradient: L{AbstractGradient}       
+    @type gradient: L{AbstractGradient}
     """
-    
-    def __init__(self, sampler1, sampler2, timestep, traj_length, gradient):
+
+    def __init__(self, sampler1, sampler2, timestep, traj_length, gradient, mass_matrix=None):
         
         super(MDRENSSwapParameterInfo, self).__init__(sampler1, sampler2)
         
         self._timestep = timestep
+
+        d = len(sampler1.state.position)
+        self._mass_matrix = mass_matrix
+        if mass_matrix == None:
+            self._mass_matrix = numpy.eye(d)
+            self._inverse_mass_matrix = self._mass_matrix
+        else:
+            self._mass_matrix = numpy.dot(self._mass_matrix, numpy.eye(d))
+            self._inverse_mass_matrix = numpy.linalg.inv(self._mass_matrix)
+        
         self._traj_length = traj_length
         self._gradient = gradient
-
+    
     @property
     def timestep(self):
         """
@@ -539,6 +555,14 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
         """
         return self._gradient
 
+    @property
+    def mass_matrix(self):
+	    return self._mass_matrix
+
+    @property
+    def inverse_mass_matrix(self):
+	    return self._inverse_mass_matrix
+
 class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     """
     @param sampler1: First sampler
@@ -549,6 +573,11 @@ class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
 
     @param timestep: Integration timestep
     @type timestep: float
+
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional numpy array with n being the dimension
+                               of the configuration space, that is, the dimension of
+                               the position / momentum vectors
 
     @param traj_length: Trajectory length in number of timesteps
     @type traj_length: int
@@ -569,11 +598,12 @@ class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     @type collision_interval: int
     """
         
-    def __init__(self, sampler1, sampler2, timestep, traj_length, gradient,
+    def __init__(self, sampler1, sampler2, timestep, traj_length, gradient, mass_matrix=None,
                  temperature=lambda l: 1., collision_probability=0.1, collision_interval=1):
         
-        super(ThermostattedMDRENSSwapParameterInfo, self).__init__(
-                                    sampler1, sampler2, timestep, traj_length, gradient)
+        super(ThermostattedMDRENSSwapParameterInfo, self).__init__(sampler1, sampler2, timestep,
+																   traj_length, gradient,
+																   mass_matrix=mass_matrix)
         
         self._collision_probability = None
         self._collision_interval = None
@@ -615,26 +645,23 @@ class AbstractSwapCommunicator(object):
     @param param_info: ParameterInfo instance holding swap parameters
     @type param_info: L{AbstractSwapParameterInfo}
 
-    @param proposal1: Proposal state for first sampler
-    @type proposal1: L{State}
+    @param traj12: Forward trajectory
+    @type traj12: L{Trajectory}
 
-    @param proposal2: Proposal state for second sampler
-    @type proposal2: L{State}
+    @param traj21: Reverse trajectory
+    @type traj21: L{Trajectory}
     """
 
     __metaclass__ = ABCMeta
     
-    def __init__(self, param_info, proposal1, proposal2):
+    def __init__(self, param_info, traj12, traj21):
         
         self._sampler1 = param_info.sampler1
         self._sampler2 = param_info.sampler2
-        
-        self._state1 = self.sampler1.state
-        self._state2 = self.sampler2.state
-        
-        self._proposal1 = proposal1
-        self._proposal2 = proposal2
 
+        self._traj12 = traj12
+        self._traj21 = traj21
+        
         self._param_info = param_info
         
         self._acceptance_probability = None
@@ -649,20 +676,12 @@ class AbstractSwapCommunicator(object):
         return self._sampler2
     
     @property
-    def state1(self):
-        return self._state1    
+    def traj12(self):
+        return self._traj12    
 
     @property
-    def state2(self):
-        return self._state2
-        
-    @property
-    def proposal1(self):
-        return self._proposal1
-    
-    @property
-    def proposal2(self):
-        return self._proposal2
+    def traj21(self):
+        return self._traj21
 
     @property
     def acceptance_probability(self):
@@ -699,32 +718,24 @@ class RENSSwapCommunicator(AbstractSwapCommunicator):
     @param param_info: ParameterInfo instance holding swap parameters
     @type param_info: L{AbstractSwapParameterInfo}
 
-    @param proposal1: Proposal state for first sampler
-    @type proposal1: L{State}
+    @param traj12: Forward trajectory
+    @type traj12: L{Trajectory}
 
-    @param proposal2: Proposal state for second sampler
-    @type proposal2: L{State}
-
-    @param heat12: Heat generated during the forward trajectory
-    @type heat12: float
-
-    @param heat21: Heat generated during the reverse trajectory
-    @type heat21: float
+    @param traj21: Reverse trajectory
+    @type traj21: L{Trajectory}
     """
         
-    def __init__(self, param_info, proposal1, proposal2, heat12, heat21):
+    def __init__(self, param_info, traj12, traj21):
 
-        super(RENSSwapCommunicator, self).__init__(param_info, proposal1, proposal2)
-        self._heat12 = heat12
-        self._heat21 = heat21
+        super(RENSSwapCommunicator, self).__init__(param_info, traj12, traj21)
+        
+    @property
+    def traj12(self):
+        return self._traj12
 
     @property
-    def heat12(self):
-        return self._heat12
-
-    @property
-    def heat21(self):
-        return self._heat21
+    def traj21(self):
+        return self._traj21
 
 class SingleSwapStatistics(object):
     """
@@ -809,6 +820,8 @@ class AbstractExchangeMC(AbstractEnsembleMC):
         
         self._param_infos = param_infos
         self._statistics = SwapStatistics(self._param_infos)
+        self.mp = False
+        self.w12s, self.w21s = [], []
         
     def _checkstate(self, state):
         if not isinstance(state, EnsembleState):
@@ -830,6 +843,7 @@ class AbstractExchangeMC(AbstractEnsembleMC):
         result = self._accept_swap(swapcom)
         
         self.state = EnsembleState([x.state for x in self._samplers])
+        if not self.mp: self.statistics.stats[index].update(result)
         self.statistics.stats[index].update(result)
         
         return result
@@ -872,8 +886,8 @@ class AbstractExchangeMC(AbstractEnsembleMC):
         """
         
         if numpy.random.random() < swapcom.acceptance_probability:
-            swapcom.sampler1.state = swapcom.proposal1
-            swapcom.sampler2.state = swapcom.proposal2
+            swapcom.sampler1.state = swapcom.traj21.final
+            swapcom.sampler2.state = swapcom.traj12.final
             return True
         else:
             return False
@@ -960,13 +974,19 @@ class AbstractRENS(AbstractExchangeMC):
 
         T1 = param_info.sampler1.temperature
         T2 = param_info.sampler2.temperature
+
+        momentum_covariance_matrix1 = T1 * param_info.mass_matrix
+        momentum_covariance_matrix2 = T2 * param_info.mass_matrix
+
+        d = len(param_info.sampler1.state.position)
+
+        momentum1 = numpy.random.multivariate_normal(mean=numpy.zeros(d),
+                                                     cov=momentum_covariance_matrix1)
+        momentum2 = numpy.random.multivariate_normal(mean=numpy.zeros(d),
+                                                     cov=momentum_covariance_matrix2)        
         
-        init_state1 = State(param_info.sampler1.state.position,
-                            numpy.random.normal(size=param_info.sampler1.state.position.shape,
-                                                scale=numpy.sqrt(T1)))
-        init_state2 = State(param_info.sampler2.state.position,
-                            numpy.random.normal(size=param_info.sampler2.state.position.shape,
-                                                scale=numpy.sqrt(T2)))
+        init_state1 = State(param_info.sampler1.state.position, momentum1)
+        init_state2 = State(param_info.sampler2.state.position, momentum2)
         
         param_info.sampler1.state = init_state1
         param_info.sampler2.state = init_state2
@@ -977,33 +997,32 @@ class AbstractRENS(AbstractExchangeMC):
         traj12 = self._run_traj_generator(trajinfo12)
         traj21 = self._run_traj_generator(trajinfo21)
 
-        return RENSSwapCommunicator(param_info, traj21.final, traj12.final, traj12.heat, traj21.heat)
+        return RENSSwapCommunicator(param_info, traj12, traj21)
 
     def _calc_pacc_swap(self, swapcom):
 
         T1 = swapcom.param_info.sampler1.temperature
         T2 = swapcom.param_info.sampler2.temperature
         
-        heat12 = swapcom.heat12
-        heat21 = swapcom.heat21
+        heat12 = swapcom.traj12.heat
+        heat21 = swapcom.traj21.heat
         
-        proposal1 = swapcom.proposal1
-        proposal2 = swapcom.proposal2
+        proposal1 = swapcom.traj21.final
+        proposal2 = swapcom.traj12.final
         
-        state1 = swapcom.state1
-        state2 = swapcom.state2
+        state1 = swapcom.traj12.initial
+        state2 = swapcom.traj21.initial
+        
+        inverse_mass_matrix = swapcom.param_info.inverse_mass_matrix
         
         E1 = lambda x:-swapcom.sampler1._pdf.log_prob(x)
         E2 = lambda x:-swapcom.sampler2._pdf.log_prob(x)
-        
-        w12 = (0.5 * sum(proposal2.momentum ** 2) + E2(proposal2.position)) \
-               / T2 - \
-               (0.5 * sum(state1.momentum ** 2) + E1(state1.position)) \
-               / T1 - heat12 
-        w21 = (0.5 * sum(proposal1.momentum ** 2) + E1(proposal1.position)) \
-               / T1 - \
-              (0.5 * sum(state2.momentum ** 2) + E2(state2.position)) \
-               / T2 - heat21
+        K = lambda x: 0.5 * numpy.dot(x.T, numpy.dot(inverse_mass_matrix, x))
+
+        w12 = (K(proposal2.momentum) + E2(proposal2.position)) / T2 - \
+              (K(state1.momentum) + E1(state1.position)) / T1 - heat12 
+        w21 = (K(proposal1.momentum) + E1(proposal1.position)) / T1 - \
+              (K(state2.momentum) + E2(state2.position)) / T2 - heat21
 
         swapcom.acceptance_probability = csb.numeric.exp(-w12 - w21)
 
@@ -1088,4 +1107,3 @@ class AlternatingAdjacentSwapScheme(AbstractSwapScheme):
             self._current_swap_list = self._swap_list2
         else:
             self._current_swap_list = self._swap_list1
-
