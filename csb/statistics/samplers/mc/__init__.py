@@ -820,8 +820,6 @@ class AbstractExchangeMC(AbstractEnsembleMC):
         
         self._param_infos = param_infos
         self._statistics = SwapStatistics(self._param_infos)
-        self.mp = False
-        self.w12s, self.w21s = [], []
         
     def _checkstate(self, state):
         if not isinstance(state, EnsembleState):
