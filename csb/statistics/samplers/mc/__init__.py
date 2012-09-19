@@ -105,7 +105,7 @@ class PropagationResult(AbstractPropagationResult):
     """
     
     
-    def __init__(self, initial, final, heat=0.0, ):
+    def __init__(self, initial, final, heat=0.0):
         
         if not isinstance(initial, AbstractState):
             raise TypeError(initial)
@@ -116,7 +116,6 @@ class PropagationResult(AbstractPropagationResult):
         self._initial = initial
         self._final = final
         self._heat = None
-        self._work = None
         
         self.heat = heat
         
@@ -133,7 +132,7 @@ class PropagationResult(AbstractPropagationResult):
         return self._heat
     @heat.setter
     def heat(self, value):
-        self._heat = float(value)    
+        self._heat = float(value)
 
 class Trajectory(csb.core.CollectionContainer, AbstractPropagationResult):
     """
@@ -556,11 +555,11 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
 
     @property
     def mass_matrix(self):
-	    return self._mass_matrix
+        return self._mass_matrix
 
     @property
     def inverse_mass_matrix(self):
-	    return self._inverse_mass_matrix
+        return self._inverse_mass_matrix
 
 class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     """
@@ -840,6 +839,7 @@ class AbstractExchangeMC(AbstractEnsembleMC):
         result = self._accept_swap(swapcom)
         
         self.state = EnsembleState([x.state for x in self._samplers])
+
         self.statistics.stats[index].update(result)
         
         return result
