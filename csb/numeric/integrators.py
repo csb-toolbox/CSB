@@ -53,14 +53,14 @@ class AbstractIntegrator(object):
 
         d = len(init_state.position)
 
-        self._mass_matrix = mass_matrix
-        
-        if self._mass_matrix == None:
-            self._mass_matrix = numpy.eye(d)
-            self._inverse_mass_matrix = mass_matrix
+        inverse_mass_matrix = None
+
+        if mass_matrix == None:
+            mass_matrix = numpy.eye(d)
+            inverse_mass_matrix = mass_matrix
         else:
-            self._mass_matrix = numpy.dot(self._mass_matrix, numpy.eye(d))
-            self._inverse_mass_matrix = numpy.linalg.inv(self._mass_matrix)
+            mass_matrix = numpy.dot(mass_matrix, numpy.eye(d))
+            inverse_mass_matrix = numpy.linalg.inv(mass_matrix)
         
         builder = TrajectoryBuilder.create(full=return_trajectory)
             
@@ -68,10 +68,10 @@ class AbstractIntegrator(object):
         state = init_state.clone()
         
         for i in range(length - 1):
-            state = self.integrate_once(state, i, inverse_mass_matrix=self._inverse_mass_matrix)
+            state = self.integrate_once(state, i, inverse_mass_matrix=inverse_mass_matrix)
             builder.add_intermediate_state(state)
 
-        state = self.integrate_once(state, length - 1, inverse_mass_matrix=self._inverse_mass_matrix)
+        state = self.integrate_once(state, length - 1, inverse_mass_matrix=inverse_mass_matrix)
         builder.add_final_state(state)
 
         return builder.product
