@@ -2,11 +2,11 @@
 provides various integration schemes and an abstract gradient class.
 """
 
-from abc import ABCMeta, abstractmethod
-
 import numpy
 
+from abc import ABCMeta, abstractmethod
 from csb.statistics.samplers.mc import State, TrajectoryBuilder
+
 
 class AbstractIntegrator(object):
     """

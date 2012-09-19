@@ -105,7 +105,7 @@ class PropagationResult(AbstractPropagationResult):
     """
     
     
-    def __init__(self, initial, final, heat=0.0, ):
+    def __init__(self, initial, final, heat=0.0,):
         
         if not isinstance(initial, AbstractState):
             raise TypeError(initial)
@@ -557,11 +557,11 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
 
     @property
     def mass_matrix(self):
-	    return self._mass_matrix
+        return self._mass_matrix
 
     @property
     def inverse_mass_matrix(self):
-	    return self._inverse_mass_matrix
+        return self._inverse_mass_matrix
 
 class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     """
@@ -841,7 +841,8 @@ class AbstractExchangeMC(AbstractEnsembleMC):
         result = self._accept_swap(swapcom)
         
         self.state = EnsembleState([x.state for x in self._samplers])
-        if not self.mp: self.statistics.stats[index].update(result)
+        if not self.mp:
+            self.statistics.stats[index].update(result)
         self.statistics.stats[index].update(result)
         
         return result
