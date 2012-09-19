@@ -52,8 +52,10 @@ class AbstractIntegrator(object):
         """
 
         d = len(init_state.position)
+
+        self._mass_matrix = mass_matrix
         
-        if mass_matrix == None:
+        if self._mass_matrix == None:
             self._mass_matrix = numpy.eye(d)
             self._inverse_mass_matrix = mass_matrix
         else:

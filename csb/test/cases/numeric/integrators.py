@@ -72,7 +72,7 @@ class ReferenceRegressions(test.Case):
 
     def _run(self, algorithm):
         
-        result = algorithm.integrate(self.state, self.nsteps, True)
+        result = algorithm.integrate(self.state, self.nsteps, return_trajectory=True)
         self.assertFalse(result[0].position[0] == result[10].position[0])
         self.assertFalse(result[10].position[0] == result[20].position[0])
         self.assertFalse(result[0].position == result.final.position)

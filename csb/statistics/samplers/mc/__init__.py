@@ -315,7 +315,6 @@ class AbstractSingleChainMC(AbstractMC):
         self._nmoves = 0
         self._accepted = 0
         self._last_move_accepted = None
-        self.mp = False
         
     def _checkstate(self, state):
         if not isinstance(state, State):
@@ -841,7 +840,6 @@ class AbstractExchangeMC(AbstractEnsembleMC):
         result = self._accept_swap(swapcom)
         
         self.state = EnsembleState([x.state for x in self._samplers])
-        if not self.mp: self.statistics.stats[index].update(result)
         self.statistics.stats[index].update(result)
         
         return result
