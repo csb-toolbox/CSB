@@ -6,10 +6,10 @@ import numpy
 
 from abc import ABCMeta, abstractmethod
 
-from csb.statistics.samplers import State
 from csb.statistics.samplers.mc import TrajectoryBuilder
-from csb.statistics.pdf import MultivariateGaussian
 from csb.numeric.integrators import FastLeapFrog, VelocityVerlet
+
+
 class AbstractPropagator(object):
     """
     Abstract propagator class. Subclasses serve to propagate
