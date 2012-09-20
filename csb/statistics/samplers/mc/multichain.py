@@ -179,9 +179,9 @@ class ReplicaExchangeMC(AbstractExchangeMC):
     def _propose_swap(self, param_info):
         
         return RESwapCommunicator(param_info, Trajectory([param_info.sampler1.state,
-                                                          param_info.sampler2.state]),
+                                                          param_info.sampler1.state]),
                                               Trajectory([param_info.sampler2.state,
-                                                          param_info.sampler1.state]))
+                                                          param_info.sampler2.state]))
     
     def _calc_pacc_swap(self, swapcom):
         
@@ -194,8 +194,8 @@ class ReplicaExchangeMC(AbstractExchangeMC):
         state1 = swapcom.traj12.initial
         state2 = swapcom.traj21.initial
         
-        proposal1 = swapcom.traj12.final
-        proposal2 = swapcom.traj21.final
+        proposal1 = swapcom.traj21.final
+        proposal2 = swapcom.traj12.final
 
         swapcom.acceptance_probability = csb.numeric.exp(-E1(proposal1.position) / T1 + E1(state1.position) / T1 - \
                                                  E2(proposal2.position) / T2 + E2(state2.position) / T2)
