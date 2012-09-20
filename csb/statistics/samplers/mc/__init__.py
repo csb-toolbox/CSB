@@ -880,7 +880,7 @@ class AbstractExchangeMC(AbstractEnsembleMC):
 
         @rtype: boolean
         """
-        
+
         if numpy.random.random() < swapcom.acceptance_probability:
             swapcom.sampler1.state = swapcom.traj21.final
             swapcom.sampler2.state = swapcom.traj12.final
