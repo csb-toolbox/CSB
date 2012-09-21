@@ -125,16 +125,22 @@ class HMCSampler(AbstractSingleChainMC):
 
         self._integrator = integrator
         self._gradient = gradient
-        self._gen = MDPropagator(self._gradient, self._timestep,
-                                 mass_matrix=self._mass_matrix,
-                                 integrator=self._integrator)
         
     def _propose(self):
 
-        gen = self._gen
+        # This is somewhat slower than keeping the MDPropagator object as a constant field,
+        # but this allows for changes in the parameters during the trajectory.
+        # The decrease in perfomance comes from inverting the mass matrix every time a
+        # MDPropagator object is created. Some faster and still flexible solution would be
+        # desirable.
+        
+        gen = MDPropagator(self._gradient, self._timestep,
+                                 mass_matrix=self._mass_matrix,
+                                 integrator=self._integrator)
+        ###################################################################################
+        
         momenta = numpy.random.multivariate_normal(mean=numpy.zeros(len(self.state.position)), 
 												   cov=self._momentum_covariance_matrix)
-
         self.state = State(self.state.position, momenta)
         proposal = gen.generate(self.state, self._nsteps).final
         
