@@ -9,7 +9,6 @@ import csb.apps
 import csb.bio.utils
 
 from csb.bio.io.wwpdb import LegacyStructureParser
-from csb.bio.utils import probabilistic_fit
 from csb.statistics.scalemixture import ScaleMixture, GammaPrior, InvGammaPrior
 from csb.statistics.scalemixture import GammaPosteriorMAP, InvGammaPosteriorMAP
 from csb.bio.sequence import SequenceAlignment
@@ -109,32 +108,9 @@ class BFitApp(csb.apps.Application):
             self.exit('Structures are of different lengths,' + 
                       ' please specify an alignment',
                       ExitCodes.INPUT_ERROR)
-        
-        if self.args.scalemixture == 'student':
-            prior = GammaPrior()
-            if self.args.em:
-                prior.estimator = GammaPosteriorMAP()
 
-        elif self.args.scalemixture == 'k':
-            prior = InvGammaPrior()
-            if self.args.em:
-                prior.estimator = InvGammaPosteriorMAP()                
-        
-        mixture = ScaleMixture(scales=X.shape[0],
-                               prior=prior, d=3)
-
-        R, t = csb.bio.utils.fit(X, Y)
-
-        # gibbs sampling cycle
-        for i in range(self.args.niter):
-            # apply rotation
-            data = numpy.sum((X - numpy.dot(Y, numpy.transpose(R)) - t) ** 2,
-                             axis= -1) ** (1. / 2)
-            # sample scales
-            mixture.estimate(data)
-            # sample rotations
-            R, t = probabilistic_fit(X, Y, mixture.scales)
-            
+        R, t = csb.bio.utils.bfit(X, Y, self.args.niter,
+                self.args.scalemixture, self.args.em)
 
         m.transform(R, t)
         m.to_pdb(self.args.outfile)
