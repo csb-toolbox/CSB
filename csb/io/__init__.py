@@ -42,7 +42,7 @@ except ImportError:
 try:
     import urllib.request as urllib
 except ImportError:
-    import urllib
+    import urllib2 as urllib
         
 
 NEWLINE = "\n"

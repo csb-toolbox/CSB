@@ -375,7 +375,7 @@ class TestRemoteProvider(test.Case):
         self.assertEqual(s.accession, '3p1u')
         self.assertTrue(isinstance(s, Structure))
         
-        self.provider.prefix = 'http://NoSuchURL.test'
+        self.provider.prefix = 'http://www.google.com/NotExisting'
         self.assertRaises(StructureNotFoundError, self.provider.get, 'NoSuchFile')    
                 
 
