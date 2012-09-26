@@ -241,6 +241,10 @@ class ThermostattedMDPropagator(MDPropagator):
         d = len(state.position)
 
         n_randoms = int(1.5 * length * self._collision_probability / float(self._update_interval))
+        
+        if n_randoms < 5:
+            n_randoms = 5
+            
         randoms = numpy.random.multivariate_normal(mean=numpy.zeros(d), cov=self._mass_matrix, size=n_randoms).T
         self._random_loopers = [Looper(x) for x in randoms]
         

@@ -1081,16 +1081,20 @@ class AlternatingAdjacentSwapScheme(AbstractSwapScheme):
         self._create_swap_lists()
     
     def _create_swap_lists(self):
-        
-        i = 0
-        while i < len(self._algorithm.param_infos):
-            self._swap_list1.append(i)
-            i += 2
 
-        i = 1
-        while i < len(self._algorithm.param_infos):
-            self._swap_list2.append(i)
-            i += 2
+        if len(self._algorithm.param_infos) == 1:
+            self._swap_list1.append(0)
+            self._swap_list2.append(0)
+        else:
+            i = 0
+            while i < len(self._algorithm.param_infos):
+                self._swap_list1.append(i)
+                i += 2
+                
+            i = 1
+            while i < len(self._algorithm.param_infos):
+                self._swap_list2.append(i)
+                i += 2
 
         self._current_swap_list = self._swap_list1
 
