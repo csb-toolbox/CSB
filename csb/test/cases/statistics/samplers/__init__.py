@@ -50,7 +50,7 @@ class TestMCPropagators(test.Case):
                 return q / (sigma ** 2)
         return Grad()       
 
-    def check_result(self, trajectory):
+    def checkResult(self, trajectory):
 
         dim = len(trajectory[0].position)
         for i in range(dim):
@@ -62,20 +62,20 @@ class TestMCPropagators(test.Case):
 
         gen = RWMCPropagator(self.pdf, self.stepsize)
 
-        self.check_result(gen.generate(self.state, self.nits))
+        self.checkResult(gen.generate(self.state, self.nits))
 
     def testHMCPropagator(self):
 
         gen = HMCPropagator(self.pdf, self.gradient, self.timestep, self.nsteps)
 
-        self.check_result(gen.generate(self.state, self.nits))
+        self.checkResult(gen.generate(self.state, self.nits))
 
-    def testHMCPropagator_mm(self):
+    def testHMCPropagatorMM(self):
 
-        mm = np.array([[1., 0.], [0., 2.]])
+        # mm = np.array([[1., 0.], [0., 2.]])
         init_state = State(np.random.normal(size=2))
         gen = HMCPropagator(self.pdf, self.gradient, self.timestep, self.nsteps)
-        self.check_result(gen.generate(init_state, self.nits))
+        self.checkResult(gen.generate(init_state, self.nits))
         
         
 @test.functional
@@ -89,9 +89,9 @@ class TestMultichain(test.Case):
 
         init_state = State(np.random.uniform(low=-3.0, high=3.0, size=1))
         
-        self.samplers = [RWMCSampler(MultimodalPDF(), init_state, 0.5, 
+        self.samplers = [RWMCSampler(MultimodalPDF(), init_state, 0.5,
                                      temperature=self.temperatures[0]),
-                         RWMCSampler(MultimodalPDF(), init_state, 5.5, 
+                         RWMCSampler(MultimodalPDF(), init_state, 5.5,
                                      temperature=self.temperatures[1])]
         
         self.nits = 10000
@@ -100,14 +100,14 @@ class TestMultichain(test.Case):
 
         self.grad = self.samplers[0]._pdf.grad
 
-    def set_1p_samplerparams(self):
+    def set1pSamplerParams(self):
         init_state = State(np.random.uniform(low=-3.0, high=3.0, size=1))
         self.samplers[0].stepsize = 0.5
         self.samplers[1].stepsize = 5.5
         self.samplers[0].state = init_state
         self.samplers[1].state = init_state
 
-    def set_2p_samplerparams(self):
+    def set2pSamplerParams(self):
         init_state = State(np.random.uniform(low=-3.0, high=3.0, size=2))
         self.samplers[0].stepsize = 0.3
         self.samplers[1].stepsize = 2.5
@@ -158,7 +158,7 @@ class TestMultichain(test.Case):
 
     def testMDRENS(self):
 
-        self.set_1p_samplerparams()
+        self.set1pSamplerParams()
         params = [MDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
                                           0.025, 15, self.grad)]
         algorithm = MDRENS(self.samplers, params)
@@ -166,16 +166,16 @@ class TestMultichain(test.Case):
 
     def testThermostattedMDRens(self):
         
-        self.set_1p_samplerparams()
+        self.set1pSamplerParams()
         params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
                                                        0.05, 15, self.grad,
                                                        temperature=self.Ts[0])]
         algorithm = ThermostattedMDRENS(self.samplers, params)
         self._run(algorithm)
 
-    def testThermostattedMDRens_mm(self):
+    def testThermostattedMDRensMM(self):
         mm = np.array([[1., 0.], [0., 3.]])
-        self.set_2p_samplerparams()
+        self.set2pSamplerParams()
         params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
                                                        0.025, 75, self.grad,
                                                        temperature=self.Ts[0],
