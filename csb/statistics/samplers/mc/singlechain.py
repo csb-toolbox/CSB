@@ -60,7 +60,7 @@ from csb.statistics.samplers.mc import AbstractSingleChainMC
 from csb.statistics.samplers.mc import SimpleProposalCommunicator
 from csb.statistics.samplers.mc.propagators import MDPropagator
 from csb.numeric.integrators import FastLeapFrog
-
+from csb.numeric import InvertibleMatrix
 
 class HMCSampler(AbstractSingleChainMC):
     """
@@ -84,13 +84,13 @@ class HMCSampler(AbstractSingleChainMC):
     @type nsteps: int
 
     @param mass_matrix: Mass matrix
-    @type mass_matrix: n-dimensional numpy array with n being the dimension
-                               of the configuration space, that is, the dimension of
-                               the position / momentum vectors
+    @type mass_matrix: n-dimensional L{InvertibleMatrix} with n being the dimension
+                       of the configuration space, that is, the dimension of
+                       the position / momentum vectors
 
     @param integrator: Subclass of L{AbstractIntegrator} to be used for
                        integrating Hamiltionian equations of motion
-    @type integrator: type
+    @type integrator: L{AbstractIntegrator}
 
     @param temperature: Pseudo-temperature of the Boltzmann ensemble
                         M{p(x) = 1/N * exp(-1/T * E(x))} with the
@@ -108,41 +108,33 @@ class HMCSampler(AbstractSingleChainMC):
         self.timestep = timestep
         self._nsteps = None
         self.nsteps = nsteps
+
+        self._d = len(self.state.position)
+
         self._mass_matrix = mass_matrix
-
-        d = len(self.state.position)
-
-        self._momentum_covariance_matrix = None
-
-        if self._mass_matrix == None:
-            self._mass_matrix = numpy.eye(d)
-            self._inverse_mass_matrix = self._mass_matrix
-        else:
-            self._mass_matrix = numpy.dot(self._mass_matrix, numpy.eye(d))
-            self._inverse_mass_matrix = numpy.linalg.inv(self._mass_matrix)
-
-        self._momentum_covariance_matrix = self._temperature * self._mass_matrix
+        if self.mass_matrix == None:
+            self.mass_matrix = InvertibleMatrix(numpy.eye(self._d), numpy.eye(self._d))
+            
+        self._momentum_covariance_matrix = self._temperature * self.mass_matrix
 
         self._integrator = integrator
         self._gradient = gradient
-        
+
+        self._propagator = MDPropagator(self._gradient, self._timestep,
+                                       mass_matrix=self.mass_matrix,
+                                       integrator=self._integrator)
+
     def _propose(self):
 
-        # This is somewhat slower than keeping the MDPropagator object as a constant field,
-        # but this allows for changes in the parameters during the trajectory.
-        # The decrease in perfomance comes from inverting the mass matrix every time a
-        # MDPropagator object is created. Some faster and still flexible solution would be
-        # desirable.
-        
-        gen = MDPropagator(self._gradient, self._timestep,
-                                 mass_matrix=self._mass_matrix,
-                                 integrator=self._integrator)
-        ###################################################################################
-        
-        momenta = numpy.random.multivariate_normal(mean=numpy.zeros(len(self.state.position)), 
-												   cov=self._momentum_covariance_matrix)
+        if not self.mass_matrix.is_unity_multiple:
+            momenta = numpy.random.multivariate_normal(mean=numpy.zeros(self._d), 
+                                                       cov=self._momentum_covariance_matrix)
+        else:
+            mass = self.mass_matrix[0][0]
+            momenta = numpy.random.normal(size=self._d, scale=numpy.sqrt(self.temperature * mass))
+            
         self.state = State(self.state.position, momenta)
-        proposal = gen.generate(self.state, self._nsteps).final
+        proposal = self._propagator.generate(self.state, self._nsteps).final
         
         return SimpleProposalCommunicator(proposal)
 
@@ -150,7 +142,7 @@ class HMCSampler(AbstractSingleChainMC):
 
         proposal = proposal_communicator.proposal
         E = lambda x: -self._pdf.log_prob(x)
-        K = lambda x: 0.5 * numpy.dot(x.T, numpy.dot(self._inverse_mass_matrix, x))
+        K = lambda x: 0.5 * numpy.dot(x.T, numpy.dot(self.mass_matrix.inverse, x))
 
         pacc = csb.numeric.exp((-K(proposal.momentum) - E(proposal.position)
                                + K(self.state.momentum) + E(self.state.position)) / self.temperature)
@@ -164,6 +156,8 @@ class HMCSampler(AbstractSingleChainMC):
     @timestep.setter
     def timestep(self, value):
         self._timestep = float(value)
+        if "_propagator" in dir(self):
+            self._propagator.timestep = self._timestep
 
     @property
     def nsteps(self):
@@ -172,6 +166,15 @@ class HMCSampler(AbstractSingleChainMC):
     @nsteps.setter
     def nsteps(self, value):
         self._nsteps = int(value)
+
+    @property
+    def mass_matrix(self):
+        return self._mass_matrix
+    @mass_matrix.setter
+    def mass_matrix(self, value):
+        self._mass_matrix = value
+        if "_propagator" in dir(self):
+           self._propagator.mass_matrix = self._mass_matrix
 
 class RWMCSampler(AbstractSingleChainMC):
     """

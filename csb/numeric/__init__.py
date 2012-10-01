@@ -496,3 +496,252 @@ def gower_matrix(X):
     bb = b.mean()
 
     return (B - numpy.add.outer(b, b)) + bb
+
+class MatrixInitError(BaseException):
+    pass
+
+class InvertibleMatrix(object):
+    """
+    Matrix object which is intended to save time in MCMC sampling algorithms involving
+    repeated integration of Hamiltonian equations of motion and frequent draws from
+    multivariate normal distributions involving mass matrices as covariance matrices.
+    It can be initialized either with the matrix one wants to use or its inverse.
+    The main feature compared to standard numpy matrices / arrays is that it has also
+    a property "inverse", which gives the inverse matrix. If the matrix (its inverse) is
+    changed, the inverse (regular matrix) is calculated only when needed. This avoids costly
+    matrix inversions.
+
+    @param matrix: matrix-like object with whose values the Matrix object is supposed to
+                   hold
+    @type matrix:  invertible (n,n)-shaped numpy.ndarray
+
+    @param inverse_matrix: matrix-like object with whose inverse the Matrix object is supposed
+                           to hold
+    @type inverse_matrix:  invertible (n,n)-shaped numpy.ndarray
+    """
+    
+    def __init__(self, matrix=None, inverse_matrix=None):
+
+        if (matrix == None and inverse_matrix == None):
+            raise(MatrixInitError("At least one matrix argument has to be specified"))
+
+        self._matrix = None
+        self._inverse_matrix = None
+
+        self._matrix_updated = False
+        self._inverse_matrix_updated = False
+        
+        self._is_unity_multiple = False
+
+        if (matrix != None) and (inverse_matrix != None):
+            if type(matrix) != numpy.ndarray or type(inverse_matrix) != numpy.ndarray:
+                raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+            matrix = matrix.copy()
+            inverse_matrix = inverse_matrix.copy()
+            self._check_equal_shape(matrix, inverse_matrix)
+            self._matrix = matrix
+            self._inverse_matrix = inverse_matrix
+            self._is_unity_multiple = self._check_unity_multiple(self._matrix)
+            self._matrix_updated = True
+            self._inverse_matrix_updated = True
+        else:
+            if matrix != None:
+                if type(matrix) != numpy.ndarray:
+                    raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+                matrix = matrix.copy()
+                self._check_square(matrix)
+                self._matrix = matrix
+                self._matrix_updated = True
+                self._inverse_matrix_updated = False
+                self._is_unity_multiple = self._check_unity_multiple(self._matrix)
+            else:
+                if type(inverse_matrix) != numpy.ndarray:
+                    raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+                inverse_matrix = inverse_matrix.copy()
+                self._check_square(inverse_matrix)
+                self._inverse_matrix = inverse_matrix
+                self._matrix_updated = False
+                self._inverse_matrix_updated = True
+                self._is_unity_multiple = self._check_unity_multiple(self._inverse_matrix)
+            
+    def _check_diagonal(self, matrix):
+
+        return (matrix.T == matrix).all()
+
+    def _check_unity_multiple(self, matrix):
+
+        diagonal_elements_equal = numpy.all([matrix[i][i] == matrix[i+1][i+1] 
+                                             for i in range(len(matrix) - 1)])
+
+        return self._check_diagonal(matrix) and diagonal_elements_equal
+
+    def _check_square(self, matrix):
+
+        if matrix.shape[0] != matrix.shape[1]:
+            raise(ValueError("Matrix " + matrix.__name__ + " must be a square matrix!"))
+
+    def _check_equal_shape(self, matrix1, matrix2):
+
+        if not numpy.all(matrix1.shape == matrix2.shape):
+            raise(ValueError("Matrices " + matrix1.__name__ + " and " + matrix2.__name__ + 
+                             " must have equal shape!"))
+                    
+    def __getitem__(self, loc):
+        if self._matrix_updated == False:
+            if self.is_unity_multiple:
+                self._matrix = numpy.diag(1. / self._inverse_matrix.diagonal())
+            else:
+                self._matrix = numpy.linalg.inv(self._inverse_matrix)
+            self._matrix_updated = True
+            
+        return self._matrix[loc]
+
+    def __setitem__(self, i, value):
+        if type(value) != numpy.ndarray:
+            raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+        self._matrix[i] = numpy.array(value)
+        self._matrix_updated = True
+        self._inverse_matrix_updated = False
+        self._is_unity_multiple = self._check_unity_multiple(self._matrix)
+
+    def __array__(self):
+        return self._matrix
+
+    def __mul__(self, value):
+        if type(value) == float or type(value) == int:
+            v = float(value)
+            if self._matrix_updated:
+                return InvertibleMatrix(v * self._matrix)
+            else:
+                return InvertibleMatrix(inverse_matrix = self._inverse_matrix / v)
+
+        else:
+            raise(ValueError("Only float and int are supported for multiplication!"))
+    
+    __rmul__ = __mul__
+
+    def __div__(self, value):
+        if type(value) in (float, int):
+            v = float(value)
+            if self._matrix_updated:
+                return InvertibleMatrix(self._matrix / v)
+            else:
+                return InvertibleMatrix(inverse_matrix=self._inverse_matrix * v)
+
+        else:
+            raise(ValueError("Only float and int are supported for division!"))
+
+    def __imul__(self, value):
+        if type(value) in (float, int):
+            if self._matrix_updated:
+                self._matrix *= float(value)
+                self._deprecate_inverse_matrix()
+            else:
+                self._inverse_matrix /= float(value)
+                self._inverse_matrix_updated = True
+                self._deprecate_matrix()
+
+            return self
+        else:
+            raise(ValueError("Only float and int are supported for multiplication!"))
+
+    def __idiv__(self, value):
+        if type(value) in (float, int):
+            if self._matrix_updated:
+                self._matrix /= float(value)
+                self._matrix_updated = True
+                self._deprecate_inverse_matrix()
+            else:
+                self._inverse_matrix *= float(value)
+                self._inverse_matrix_updated = True
+                self._deprecate_matrix()
+
+            return self
+        else:
+            raise(ValueError("Only float and int are supported for division!"))
+
+    def __str__(self):
+        if self._matrix != None and self._inverse_matrix != None:
+            return "csb.numeric.InvertibleMatrix object holding the following numpy matrix:\n"+self._matrix.__str__() +"\n and its inverse:\n"+self._inverse_matrix.__str__()
+        else:
+            if self._matrix == None:
+                return "csb.numeric.InvertibleMatrix object holding only the inverse matrix:\n"+self._inverse_matrix.__str__()
+            else:
+                return "csb.numeric.InvertibleMatrix object holding the matrix:\n"+self._matrix.__str__()
+
+    def __len__(self):
+        if self._matrix != None:
+            return len(self._matrix)
+        else:
+            return len(self._inverse_matrix)
+    
+    def _deprecate_matrix(self):
+        self._matrix_updated = False
+
+    def _deprecate_inverse_matrix(self):
+        self._inverse_matrix_updated = False
+
+    def _update_matrix(self, matrix=None):
+        """
+        Updates the _matrix field given a new matrix or by setting
+        it to the inverse of the _inverse_matrix field.
+
+        @param matrix: matrix-like object which the Matrix object
+                       is supposed to represent
+        @type matrix:  (n,n)-shaped numpy.ndarray or list
+        """
+        
+        if matrix == None:
+            self._matrix = numpy.linalg.inv(self._inverse_matrix)
+        else:
+            self._matrix = matrix
+            
+        self._matrix_updated = True
+        self._deprecate_inverse_matrix()
+            
+
+    def _update_inverse_matrix(self, inverse=None):
+        """
+        Updates the __inverse_matrix field given a new matrix or by setting
+        it to the inverse of the _matrix field.
+
+        @param inverse: matrix-like object which the Matrix object
+                        is supposed to represent
+        @type inverse:  (n,n)-shaped numpy.ndarray or list
+        """
+
+        if inverse == None:
+            if self.is_unity_multiple:
+                self._inverse_matrix = numpy.diag(1. / self._matrix.diagonal())
+            else:
+                self._inverse_matrix = numpy.linalg.inv(self._matrix)
+        else:
+            self._inverse_matrix = inverse
+            
+        self._inverse_matrix_updated = True
+        
+    @property
+    def inverse(self):
+        if self._inverse_matrix_updated == False:
+            self._update_inverse_matrix()
+            
+        return self._inverse_matrix.copy()
+    @inverse.setter
+    def inverse(self, value):
+        if type(value) != numpy.ndarray:
+            raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+        self._check_equal_shape(value, self._matrix)
+        self._update_inverse_matrix(numpy.array(value))
+        self._deprecate_matrix()
+        self._is_unity_multiple = self._check_unity_multiple(self._inverse_matrix)
+
+    @property
+    def is_unity_multiple(self):
+        """
+        This property can be used to save computation time when drawing
+        from multivariate normal distributions with the covariance matrix
+        given by an instance of this object. By probing this property,
+        one can instead draw from normal distributions and rescale the samples
+        afterwards to avoid costly matrix inversions
+        """
+        return self._is_unity_multiple

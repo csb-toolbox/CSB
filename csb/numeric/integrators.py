@@ -6,6 +6,7 @@ import numpy
 
 from abc import ABCMeta, abstractmethod
 from csb.statistics.samplers.mc import State, TrajectoryBuilder
+from csb.numeric import InvertibleMatrix
 
 
 class AbstractIntegrator(object):
@@ -39,9 +40,9 @@ class AbstractIntegrator(object):
         @type length: int
 
         @param mass_matrix: Mass matrix
-        @type mass_matrix:  n-dimensional numpy array with n being the dimension
-                            of the configuration space, that is, the dimension of
-                            the position / momentum vectors
+        @type mass_matrix:  n-dimensional L{InvertibleMatrix} with n being the dimension
+                                    of the configuration space, that is, the dimension of
+                                    the position / momentum vectors
 
         @param return_trajectory: Return complete L{Trajectory} instead of the initial
                                   and final states only (L{PropagationResult}). This reduces
@@ -51,27 +52,16 @@ class AbstractIntegrator(object):
         @rtype: L{AbstractPropagationResult}
         """
 
-        d = len(init_state.position)
-
-        inverse_mass_matrix = None
-
-        if mass_matrix == None:
-            mass_matrix = numpy.eye(d)
-            inverse_mass_matrix = mass_matrix
-        else:
-            mass_matrix = numpy.dot(mass_matrix, numpy.eye(d))
-            inverse_mass_matrix = numpy.linalg.inv(mass_matrix)
-        
         builder = TrajectoryBuilder.create(full=return_trajectory)
             
         builder.add_initial_state(init_state)
         state = init_state.clone()
         
         for i in range(length - 1):
-            state = self.integrate_once(state, i, inverse_mass_matrix=inverse_mass_matrix)
+            state = self.integrate_once(state, i, mass_matrix=mass_matrix)
             builder.add_intermediate_state(state)
 
-        state = self.integrate_once(state, length - 1, inverse_mass_matrix=inverse_mass_matrix)
+        state = self.integrate_once(state, length - 1, mass_matrix=mass_matrix)
         builder.add_final_state(state)
 
         return builder.product
@@ -98,6 +88,16 @@ class AbstractIntegrator(object):
         """
         pass
 
+    def _get_inverse(self, mass_matrix):
+
+        inverse_mass_matrix = None
+        if mass_matrix == None:
+            inverse_mass_matrix = 1.
+        else:
+            inverse_mass_matrix = mass_matrix.inverse
+
+        return inverse_mass_matrix
+
 class LeapFrog(AbstractIntegrator):
     """
     Leap Frog integration scheme implementation that calculates position and
@@ -106,11 +106,10 @@ class LeapFrog(AbstractIntegrator):
     LeapFrog.integrate(init_state, length, return_trajectoy=True) are physical.
     """
     
-    def integrate_once(self, state, current_step, inverse_mass_matrix=None):
+    def integrate_once(self, state, current_step, mass_matrix=None):
 
-        if inverse_mass_matrix == None:
-                inverse_mass_matrix = 1.
-        
+        inverse_mass_matrix = self._get_inverse(mass_matrix)
+
         i = current_step
         
         if i == 0:
@@ -138,13 +137,8 @@ class FastLeapFrog(LeapFrog):
     def integrate(self, init_state, length, mass_matrix=None, return_trajectory=False):
 		
         d = len(init_state.position)
-        
-        if mass_matrix == None:
-            mass_matrix = numpy.eye(d)
-            inverse_mass_matrix = mass_matrix
-        else:
-            mass_matrix = numpy.dot(mass_matrix, numpy.eye(d))
-            inverse_mass_matrix = numpy.linalg.inv(mass_matrix)
+
+        inverse_mass_matrix = self._get_inverse(mass_matrix)
 
         builder = TrajectoryBuilder.create(full=return_trajectory)
             
@@ -171,10 +165,9 @@ class VelocityVerlet(AbstractIntegrator):
     Velocity Verlet integration scheme implementation.
     """
 
-    def integrate_once(self, state, current_step, inverse_mass_matrix=None):
+    def integrate_once(self, state, current_step, mass_matrix=None):
 
-        if inverse_mass_matrix == None:
-            inverse_mass_matrix = 1.
+        inverse_mass_matrix = self._get_inverse(mass_matrix)
 
         i = current_step
         

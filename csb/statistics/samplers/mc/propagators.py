@@ -8,6 +8,7 @@ from abc import ABCMeta, abstractmethod
 
 from csb.statistics.samplers.mc import TrajectoryBuilder
 from csb.numeric.integrators import FastLeapFrog, VelocityVerlet
+from csb.numeric import InvertibleMatrix
 
 
 class AbstractPropagator(object):
@@ -49,7 +50,7 @@ class MDPropagator(AbstractPropagator):
     @type timestep: float
 
     @param mass_matrix: Mass matrix
-    @type mass_matrix: n-dimensional numpy array with n being the dimension
+    @type mass_matrix: n-dimensional L{InvertibleMatrix} with n being the dimension
                                of the configuration space, that is, the dimension of
                                the position / momentum vectors
 
@@ -64,12 +65,12 @@ class MDPropagator(AbstractPropagator):
 
         self._gradient = None
         self.gradient = gradient
-        self._mass_matrix = None
-        self.mass_matrix = mass_matrix
+        self._mass_matrix = mass_matrix
         self._timestep = None
         self.timestep = timestep
-        
         self._integrator = integrator
+
+        self._first_run = True
 
     @property
     def gradient(self):
@@ -93,10 +94,16 @@ class MDPropagator(AbstractPropagator):
         self._mass_matrix = value
 
     def generate(self, init_state, length, return_trajectory=False):
-        
+
+        d = len(init_state.position)
+        if self._first_run == True and self.mass_matrix == None:
+            self.mass_matrix = InvertibleMatrix(numpy.eye(d), numpy.eye(d))
+
         integrator = self._integrator(self.timestep, self.gradient)
         
-        result = integrator.integrate(init_state, length, mass_matrix=self._mass_matrix, return_trajectory=return_trajectory)
+        result = integrator.integrate(init_state, length,
+                                      mass_matrix=self.mass_matrix,
+                                      return_trajectory=return_trajectory)
         return result
 
 class Looper(object):
@@ -138,7 +145,7 @@ class ThermostattedMDPropagator(MDPropagator):
     @type timestep: float
 
     @param mass_matrix: Mass matrix
-    @type mass_matrix: n-dimensional numpy array with n being the dimension
+    @type mass_matrix: n-dimensional L{InvertibleMatrix} with n being the dimension
                                of the configuration space, that is, the dimension of
                                the position / momentum vectors
 
@@ -165,8 +172,6 @@ class ThermostattedMDPropagator(MDPropagator):
         self._collision_probability = collision_probability
         self._update_interval = update_interval
         self._temperature = temperature
-
-        self._inverse_mass_matrix = numpy.linalg.inv(self.mass_matrix)
 
     def _update(self, momentum, T, collision_probability):
         """
@@ -217,7 +222,7 @@ class ThermostattedMDPropagator(MDPropagator):
         @type integrator: L{AbstractIntegrator}
         """
 
-        state = integrator.integrate_once(state, i, inverse_mass_matrix=self._inverse_mass_matrix)
+        state = integrator.integrate_once(state, i, mass_matrix=self.mass_matrix)
 
         if i % self._update_interval == 0:
             state.momentum, stepheat = self._update(state.momentum,
@@ -229,7 +234,7 @@ class ThermostattedMDPropagator(MDPropagator):
         return state, heat
 
     def generate(self, init_state, length, return_trajectory=False):
-        
+
         integrator = self._integrator(self.timestep, self.gradient)
         builder = TrajectoryBuilder.create(full=return_trajectory)
 
@@ -245,7 +250,13 @@ class ThermostattedMDPropagator(MDPropagator):
         if n_randoms < 5:
             n_randoms = 5
             
-        randoms = numpy.random.multivariate_normal(mean=numpy.zeros(d), cov=self._mass_matrix, size=n_randoms).T
+        if not self.mass_matrix.is_unity_multiple:
+            randoms = numpy.random.multivariate_normal(mean=numpy.zeros(d),
+                                                       cov=self.mass_matrix,
+                                                       size=n_randoms).T
+        else:
+            randoms = numpy.random.normal(scale=numpy.sqrt(self.mass_matrix[0][0]),
+                                          size=(d, n_randoms))
         self._random_loopers = [Looper(x) for x in randoms]
         
         for i in range(length - 1):
@@ -368,10 +379,9 @@ class HMCPropagator(AbstractMCPropagator):
     @type nsteps: int
 
     @param mass_matrix: Mass matrix
-    @type mass_matrix: n-dimensional numpy array with n being the dimension
+    @type mass_matrix: n-dimensional L{InvertibleMatrix} with n being the dimension
                                of the configuration space, that is, the dimension of
                                the position / momentum vectors
-
 
     @param integrator: Subclass of L{AbstractIntegrator} to be used for
                        integrating Hamiltionian equations of motion
@@ -392,11 +402,23 @@ class HMCPropagator(AbstractMCPropagator):
         self._mass_matrix = mass_matrix
         self._integrator = integrator
 
+        self._first_run = True
+        
     def _init_sampler(self, init_state):
 
         from csb.statistics.samplers.mc.singlechain import HMCSampler
+
+        if self._first_run == True and self._mass_matrix == None:
+            self._mass_matrix = InvertibleMatrix(numpy.eye(len(init_state.position)))
         
         self._sampler = HMCSampler(self._pdf, init_state, self._gradient,
                                    self._timestep, self._nsteps,
-                                   mass_matrix=self._mass_matrix,
+                                   mass_matrix=self.mass_matrix,
                                    integrator=self._integrator, temperature=self._temperature)
+
+    @property
+    def mass_matrix(self):
+        return self._mass_matrix
+    @mass_matrix.setter
+    def mass_matrix(self, value):
+        self._mass_matrix = value

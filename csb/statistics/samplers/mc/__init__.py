@@ -497,7 +497,7 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
     @type timestep: float
 
     @param mass_matrix: Mass matrix
-    @type mass_matrix: n-dimensional numpy array with n being the dimension
+    @type mass_matrix: n-dimensional matrix of type L{InvertibleMatrix} with n being the dimension
                                of the configuration space, that is, the dimension of
                                the position / momentum vectors
 
@@ -512,19 +512,15 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
         
         super(MDRENSSwapParameterInfo, self).__init__(sampler1, sampler2)
         
-        self._timestep = timestep
-
         d = len(sampler1.state.position)
-        self._mass_matrix = mass_matrix
-        if mass_matrix == None:
-            self._mass_matrix = numpy.eye(d)
-            self._inverse_mass_matrix = self._mass_matrix
-        else:
-            self._mass_matrix = numpy.dot(self._mass_matrix, numpy.eye(d))
-            self._inverse_mass_matrix = numpy.linalg.inv(self._mass_matrix)
         
+        self._mass_matrix = mass_matrix
+        if self.mass_matrix == None:
+            self.mass_matrix = csb.numeric.InvertibleMatrix(numpy.eye(d), numpy.eye(d))
+
         self._traj_length = traj_length
         self._gradient = gradient
+        self._timestep = timestep
     
     @property
     def timestep(self):
@@ -556,10 +552,9 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
     @property
     def mass_matrix(self):
         return self._mass_matrix
-
-    @property
-    def inverse_mass_matrix(self):
-        return self._inverse_mass_matrix
+    @mass_matrix.setter
+    def mass_matrix(self, value):
+        self._mass_matrix = value
 
 class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     """
@@ -573,9 +568,9 @@ class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     @type timestep: float
 
     @param mass_matrix: Mass matrix
-    @type mass_matrix: n-dimensional numpy array with n being the dimension
-                               of the configuration space, that is, the dimension of
-                               the position / momentum vectors
+    @type mass_matrix: n-dimensional L{InvertibleMatrix} with n being the dimension
+                       of the configuration space, that is, the dimension of
+                       the position / momentum vectors
 
     @param traj_length: Trajectory length in number of timesteps
     @type traj_length: int
@@ -606,7 +601,6 @@ class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
         self._collision_probability = None
         self._collision_interval = None
         self._temperature = temperature
-        
         self.collision_probability = collision_probability
         self.collision_interval = collision_interval
 
@@ -976,10 +970,16 @@ class AbstractRENS(AbstractExchangeMC):
 
         d = len(param_info.sampler1.state.position)
 
-        momentum1 = numpy.random.multivariate_normal(mean=numpy.zeros(d),
-                                                     cov=momentum_covariance_matrix1)
-        momentum2 = numpy.random.multivariate_normal(mean=numpy.zeros(d),
-                                                     cov=momentum_covariance_matrix2)        
+        if param_info.mass_matrix.is_unity_multiple:
+            momentum1 = numpy.random.normal(scale=numpy.sqrt(T1 * param_info.mass_matrix[0][0]),
+                                            size=d)
+            momentum2 = numpy.random.normal(scale=numpy.sqrt(T2 * param_info.mass_matrix[0][0]),
+                                            size=d)
+        else:
+            momentum1 = numpy.random.multivariate_normal(mean=numpy.zeros(d),
+                                                         cov=momentum_covariance_matrix1)
+            momentum2 = numpy.random.multivariate_normal(mean=numpy.zeros(d),
+                                                         cov=momentum_covariance_matrix2)        
         
         init_state1 = State(param_info.sampler1.state.position, momentum1)
         init_state2 = State(param_info.sampler2.state.position, momentum2)
@@ -1009,7 +1009,10 @@ class AbstractRENS(AbstractExchangeMC):
         state1 = swapcom.traj12.initial
         state2 = swapcom.traj21.initial
         
-        inverse_mass_matrix = swapcom.param_info.inverse_mass_matrix
+        if swapcom.param_info.mass_matrix.is_unity_multiple:
+            inverse_mass_matrix = 1. / swapcom.param_info.mass_matrix[0][0]
+        else:
+            inverse_mass_matrix = swapcom.param_info.mass_matrix.inverse
         
         E1 = lambda x:-swapcom.sampler1._pdf.log_prob(x)
         E2 = lambda x:-swapcom.sampler2._pdf.log_prob(x)

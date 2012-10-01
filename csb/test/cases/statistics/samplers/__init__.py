@@ -4,6 +4,7 @@ import csb.test as test
 from csb.statistics.pdf import Normal, AbstractDensity
 
 from csb.numeric.integrators import AbstractGradient, VelocityVerlet, LeapFrog, FastLeapFrog
+from csb.numeric import InvertibleMatrix
 
 from csb.statistics.samplers import State
 from csb.statistics.samplers.mc import MDRENSSwapParameterInfo, ThermostattedMDRENSSwapParameterInfo
@@ -39,7 +40,7 @@ class TestMCPropagators(test.Case):
         self.gradient = self._createGradient(1.)
         self.timestep = 1.2
         self.stepsize = 1.2
-        self.nsteps = 25
+        self.nsteps = 15
         self.nits = 10000
         self.state = State(np.random.normal(size=1))
 
@@ -55,8 +56,8 @@ class TestMCPropagators(test.Case):
         dim = len(trajectory[0].position)
         for i in range(dim):
             states = [state.position[i] for state in trajectory]
-            self.assertAlmostEqual(np.array(states).mean(), 0., delta=1e-1)
-            self.assertAlmostEqual(np.array(states).var(), 1., delta=1e-1)
+            self.assertAlmostEqual(np.array(states).mean(), 0., delta=0.15)
+            self.assertAlmostEqual(np.array(states).var(), 1., delta=0.15)
 
     def testRWMCPropagator(self):
 
@@ -72,9 +73,10 @@ class TestMCPropagators(test.Case):
 
     def testHMCPropagatorMM(self):
 
-        # mm = np.array([[1., 0.], [0., 2.]])
+        mm = InvertibleMatrix(np.array([[1., 0.], [0.,  2.]]))
         init_state = State(np.random.normal(size=2))
-        gen = HMCPropagator(self.pdf, self.gradient, self.timestep, self.nsteps)
+        gen = HMCPropagator(self.pdf, self.gradient, self.timestep * 1.5, self.nsteps, mass_matrix=mm)
+
         self.checkResult(gen.generate(init_state, self.nits))
         
         
@@ -104,13 +106,6 @@ class TestMultichain(test.Case):
         init_state = State(np.random.uniform(low=-3.0, high=3.0, size=1))
         self.samplers[0].stepsize = 0.5
         self.samplers[1].stepsize = 5.5
-        self.samplers[0].state = init_state
-        self.samplers[1].state = init_state
-
-    def set2pSamplerParams(self):
-        init_state = State(np.random.uniform(low=-3.0, high=3.0, size=2))
-        self.samplers[0].stepsize = 0.3
-        self.samplers[1].stepsize = 2.5
         self.samplers[0].state = init_state
         self.samplers[1].state = init_state
         
@@ -161,7 +156,7 @@ class TestMultichain(test.Case):
         self.set1pSamplerParams()
         params = [MDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
                                           0.025, 15, self.grad)]
-        algorithm = MDRENS(self.samplers, params)
+        algorithm = MDRENS(self.samplers, params, integrator=VelocityVerlet)
         self._run(algorithm)
 
     def testThermostattedMDRens(self):
@@ -174,10 +169,9 @@ class TestMultichain(test.Case):
         self._run(algorithm)
 
     def testThermostattedMDRensMM(self):
-        mm = np.array([[1., 0.], [0., 3.]])
-        self.set2pSamplerParams()
+        mm = InvertibleMatrix(np.array([[1.0]]))
         params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
-                                                       0.025, 75, self.grad,
+                                                       0.05, 15, self.grad,
                                                        temperature=self.Ts[0],
                                                        mass_matrix=mm)]
         algorithm = ThermostattedMDRENS(self.samplers, params)
