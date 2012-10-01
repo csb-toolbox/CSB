@@ -231,7 +231,7 @@ class MDRENS(AbstractRENS):
         
         tau = traj_info.param_info.traj_length * traj_info.param_info.timestep
         factory = InterpolationFactory(traj_info.protocol, tau)
-                
+
         gen = MDPropagator(factory.build_gradient(traj_info.param_info.gradient),
                            traj_info.param_info.timestep,
 						   mass_matrix=traj_info.param_info.mass_matrix,
