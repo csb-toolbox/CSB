@@ -512,10 +512,9 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
         
         super(MDRENSSwapParameterInfo, self).__init__(sampler1, sampler2)
         
-        d = len(sampler1.state.position)
-        
         self._mass_matrix = mass_matrix
-        if self.mass_matrix == None:
+        if self.mass_matrix is None:
+            d = len(sampler1.state.position)
             self.mass_matrix = csb.numeric.InvertibleMatrix(numpy.eye(d), numpy.eye(d))
 
         self._traj_length = traj_length
