@@ -91,7 +91,7 @@ class AbstractIntegrator(object):
     def _get_inverse(self, mass_matrix):
 
         inverse_mass_matrix = None
-        if mass_matrix == None:
+        if mass_matrix is None:
             inverse_mass_matrix = 1.
         else:
             inverse_mass_matrix = mass_matrix.inverse
@@ -135,8 +135,6 @@ class FastLeapFrog(LeapFrog):
     """
 
     def integrate(self, init_state, length, mass_matrix=None, return_trajectory=False):
-		
-        d = len(init_state.position)
 
         inverse_mass_matrix = self._get_inverse(mass_matrix)
 

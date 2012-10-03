@@ -94,9 +94,9 @@ class MDPropagator(AbstractPropagator):
         self._mass_matrix = value
 
     def generate(self, init_state, length, return_trajectory=False):
-
-        d = len(init_state.position)
-        if self._first_run == True and self.mass_matrix == None:
+        
+        if self._first_run == True and self.mass_matrix is None:
+            d = len(init_state.position)
             self.mass_matrix = InvertibleMatrix(numpy.eye(d), numpy.eye(d))
 
         integrator = self._integrator(self.timestep, self.gradient)
@@ -195,7 +195,12 @@ class ThermostattedMDPropagator(MDPropagator):
         update_list = numpy.where(numpy.random.random(d) < collision_probability)[0]
 
         if len(update_list) > 0:
-            K = lambda x: 0.5 * sum(x ** 2)
+            K = None
+            if self.mass_matrix.is_unity_multiple:
+                K = lambda x: 0.5 * sum(x ** 2) / self.mass_matrix[0][0]
+            else:
+                K = lambda x: 0.5 * numpy.dot(x.T, numpy.dot(self.mass_matrix.inverse, x))
+
             ke_old = K(momentum)
             
             updated_momentum = [numpy.sqrt(T) * self._random_loopers[i].next() for i in update_list]
@@ -249,7 +254,7 @@ class ThermostattedMDPropagator(MDPropagator):
         
         if n_randoms < 5:
             n_randoms = 5
-            
+
         if not self.mass_matrix.is_unity_multiple:
             randoms = numpy.random.multivariate_normal(mean=numpy.zeros(d),
                                                        cov=self.mass_matrix,
@@ -408,7 +413,7 @@ class HMCPropagator(AbstractMCPropagator):
 
         from csb.statistics.samplers.mc.singlechain import HMCSampler
 
-        if self._first_run == True and self._mass_matrix == None:
+        if self._first_run == True and self._mass_matrix is None:
             self._mass_matrix = InvertibleMatrix(numpy.eye(len(init_state.position)))
         
         self._sampler = HMCSampler(self._pdf, init_state, self._gradient,

@@ -197,8 +197,10 @@ class ReplicaExchangeMC(AbstractExchangeMC):
         proposal1 = swapcom.traj21.final
         proposal2 = swapcom.traj12.final
 
-        swapcom.acceptance_probability = csb.numeric.exp(-E1(proposal1.position) / T1 + E1(state1.position) / T1 - \
-                                                 E2(proposal2.position) / T2 + E2(state2.position) / T2)
+        swapcom.acceptance_probability = csb.numeric.exp(-E1(proposal1.position) / T1 
+                                                         + E1(state1.position) / T1 
+                                                         - E2(proposal2.position) / T2 
+                                                         + E2(state2.position) / T2)
                                                  
         return swapcom
 
