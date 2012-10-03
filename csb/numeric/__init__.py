@@ -497,7 +497,7 @@ def gower_matrix(X):
 
     return (B - numpy.add.outer(b, b)) + bb
 
-class MatrixInitError(BaseException):
+class MatrixInitError(Exception):
     pass
 
 class InvertibleMatrix(object):
@@ -522,8 +522,8 @@ class InvertibleMatrix(object):
     
     def __init__(self, matrix=None, inverse_matrix=None):
 
-        if (matrix == None and inverse_matrix == None):
-            raise(MatrixInitError("At least one matrix argument has to be specified"))
+        if (matrix is None and inverse_matrix is None):
+            raise MatrixInitError("At least one matrix argument has to be specified")
 
         self._matrix = None
         self._inverse_matrix = None
@@ -533,9 +533,9 @@ class InvertibleMatrix(object):
         
         self._is_unity_multiple = False
 
-        if (matrix != None) and (inverse_matrix != None):
+        if matrix is not None and inverse_matrix is not None:
             if type(matrix) != numpy.ndarray or type(inverse_matrix) != numpy.ndarray:
-                raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+                raise TypeError("Arguments have to be of type numpy.ndarray!")
             matrix = matrix.copy()
             inverse_matrix = inverse_matrix.copy()
             self._check_equal_shape(matrix, inverse_matrix)
@@ -545,9 +545,9 @@ class InvertibleMatrix(object):
             self._matrix_updated = True
             self._inverse_matrix_updated = True
         else:
-            if matrix != None:
+            if matrix is not None:
                 if type(matrix) != numpy.ndarray:
-                    raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+                    raise TypeError("Arguments have to be of type numpy.ndarray!")
                 matrix = matrix.copy()
                 self._check_square(matrix)
                 self._matrix = matrix
@@ -556,7 +556,7 @@ class InvertibleMatrix(object):
                 self._is_unity_multiple = self._check_unity_multiple(self._matrix)
             else:
                 if type(inverse_matrix) != numpy.ndarray:
-                    raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+                    raise TypeError("Arguments have to be of type numpy.ndarray!")
                 inverse_matrix = inverse_matrix.copy()
                 self._check_square(inverse_matrix)
                 self._inverse_matrix = inverse_matrix
@@ -578,13 +578,13 @@ class InvertibleMatrix(object):
     def _check_square(self, matrix):
 
         if matrix.shape[0] != matrix.shape[1]:
-            raise(ValueError("Matrix " + matrix.__name__ + " must be a square matrix!"))
+            raise ValueError("Matrix " + matrix.__name__ + " must be a square matrix!")
 
     def _check_equal_shape(self, matrix1, matrix2):
 
         if not numpy.all(matrix1.shape == matrix2.shape):
-            raise(ValueError("Matrices " + matrix1.__name__ + " and " + matrix2.__name__ + 
-                             " must have equal shape!"))
+            raise ValueError("Matrices " + matrix1.__name__ + " and " + matrix2.__name__ + 
+                             " must have equal shape!")
                     
     def __getitem__(self, loc):
         if self._matrix_updated == False:
@@ -598,17 +598,17 @@ class InvertibleMatrix(object):
 
     def __setitem__(self, i, value):
         if type(value) != numpy.ndarray:
-            raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+            raise TypeError("Arguments have to be of type numpy.ndarray!")
         self._matrix[i] = numpy.array(value)
         self._matrix_updated = True
         self._inverse_matrix_updated = False
         self._is_unity_multiple = self._check_unity_multiple(self._matrix)
 
-    def __array__(self):
+    def __array__(self, dtype=None):
         return self._matrix
 
     def __mul__(self, value):
-        if type(value) == float or type(value) == int:
+        if type(value) in (float, int):
             v = float(value)
             if self._matrix_updated:
                 return InvertibleMatrix(v * self._matrix)
@@ -616,11 +616,11 @@ class InvertibleMatrix(object):
                 return InvertibleMatrix(inverse_matrix = self._inverse_matrix / v)
 
         else:
-            raise(ValueError("Only float and int are supported for multiplication!"))
+            raise ValueError("Only float and int are supported for multiplication!")
     
     __rmul__ = __mul__
 
-    def __div__(self, value):
+    def __truediv__(self, value):
         if type(value) in (float, int):
             v = float(value)
             if self._matrix_updated:
@@ -629,7 +629,9 @@ class InvertibleMatrix(object):
                 return InvertibleMatrix(inverse_matrix=self._inverse_matrix * v)
 
         else:
-            raise(ValueError("Only float and int are supported for division!"))
+            raise ValueError("Only float and int are supported for division!")
+        
+    __div__ = __truediv__
 
     def __imul__(self, value):
         if type(value) in (float, int):
@@ -643,9 +645,9 @@ class InvertibleMatrix(object):
 
             return self
         else:
-            raise(ValueError("Only float and int are supported for multiplication!"))
+            raise ValueError("Only float and int are supported for multiplication!")
 
-    def __idiv__(self, value):
+    def __itruediv__(self, value):
         if type(value) in (float, int):
             if self._matrix_updated:
                 self._matrix /= float(value)
@@ -658,19 +660,24 @@ class InvertibleMatrix(object):
 
             return self
         else:
-            raise(ValueError("Only float and int are supported for division!"))
+            raise ValueError("Only float and int are supported for division!")
+
+    __idiv__ = __itruediv__
 
     def __str__(self):
-        if self._matrix != None and self._inverse_matrix != None:
-            return "csb.numeric.InvertibleMatrix object holding the following numpy matrix:\n"+self._matrix.__str__() +"\n and its inverse:\n"+self._inverse_matrix.__str__()
+        if self._matrix is not None and self._inverse_matrix is not None:
+            return "csb.numeric.InvertibleMatrix object holding the following numpy matrix:\n"\
+              +self._matrix.__str__() +"\n and its inverse:\n"+self._inverse_matrix.__str__()
         else:
-            if self._matrix == None:
-                return "csb.numeric.InvertibleMatrix object holding only the inverse matrix:\n"+self._inverse_matrix.__str__()
+            if self._matrix is None:
+                return "csb.numeric.InvertibleMatrix object holding only the inverse matrix:\n"\
+                  +self._inverse_matrix.__str__()
             else:
-                return "csb.numeric.InvertibleMatrix object holding the matrix:\n"+self._matrix.__str__()
+                return "csb.numeric.InvertibleMatrix object holding the matrix:\n"\
+                  +self._matrix.__str__()
 
     def __len__(self):
-        if self._matrix != None:
+        if self._matrix is not None:
             return len(self._matrix)
         else:
             return len(self._inverse_matrix)
@@ -691,7 +698,7 @@ class InvertibleMatrix(object):
         @type matrix:  (n,n)-shaped numpy.ndarray or list
         """
         
-        if matrix == None:
+        if matrix is None:
             self._matrix = numpy.linalg.inv(self._inverse_matrix)
         else:
             self._matrix = matrix
@@ -710,7 +717,7 @@ class InvertibleMatrix(object):
         @type inverse:  (n,n)-shaped numpy.ndarray or list
         """
 
-        if inverse == None:
+        if inverse is None:
             if self.is_unity_multiple:
                 self._inverse_matrix = numpy.diag(1. / self._matrix.diagonal())
             else:
@@ -729,7 +736,7 @@ class InvertibleMatrix(object):
     @inverse.setter
     def inverse(self, value):
         if type(value) != numpy.ndarray:
-            raise(TypeError("Arguments have to be of type numpy.ndarray!"))
+            raise TypeError("Arguments have to be of type numpy.ndarray!")
         self._check_equal_shape(value, self._matrix)
         self._update_inverse_matrix(numpy.array(value))
         self._deprecate_matrix()

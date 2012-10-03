@@ -112,7 +112,7 @@ class HMCSampler(AbstractSingleChainMC):
         self._d = len(self.state.position)
 
         self._mass_matrix = mass_matrix
-        if self.mass_matrix == None:
+        if self.mass_matrix is None:
             self.mass_matrix = InvertibleMatrix(numpy.eye(self._d), numpy.eye(self._d))
             
         self._momentum_covariance_matrix = self._temperature * self.mass_matrix
