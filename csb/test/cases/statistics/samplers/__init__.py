@@ -28,6 +28,23 @@ class MultimodalPDF(AbstractDensity):
     def grad(self, x, t):
         return -6.25 * np.sin(2.5 * x) + 0.08 * x
 
+class Multimodal2DPDF(AbstractDensity):
+
+    k = 0.5
+
+    def _E1(self, x):
+        return 2.5 * np.cos(2.5 * x[0]) + 0.04 * x[0] ** 2
+
+    def _E2(self, x):
+        return self.k * x[1] ** 2
+
+    def log_prob(self, x):
+        return -self._E1(x) - self._E2(x)
+
+    def grad(self, x, t):
+        return np.array([(-6.25 * np.sin(2.5 * x[0]) + 0.08 * x[0]) * self._E2(x),
+                         self._E1(x) * self.k * x[1]])
+
     
 @test.functional
 class TestMCPropagators(test.Case):
@@ -84,30 +101,36 @@ class TestMCPropagators(test.Case):
 class TestMultichain(test.Case):
 
     def setUp(self):
-        
         super(TestMultichain, self).setUp()
 
-        self.temperatures = [0.4, 2.0]
+        self.samplers = None
 
+    def set1pParams(self):
         init_state = State(np.random.uniform(low=-3.0, high=3.0, size=1))
-        
+        self.temperatures = [0.4, 2.0]
         self.samplers = [RWMCSampler(MultimodalPDF(), init_state, 0.5,
                                      temperature=self.temperatures[0]),
                          RWMCSampler(MultimodalPDF(), init_state, 5.5,
                                      temperature=self.temperatures[1])]
-        
-        self.nits = 10000
-        self.algorithm = None
-        self.Ts = [lambda l: l * self.temperatures[1] + (1. - l) * self.temperatures[0]]
-
         self.grad = self.samplers[0]._pdf.grad
-
-    def set1pSamplerParams(self):
-        init_state = State(np.random.uniform(low=-3.0, high=3.0, size=1))
-        self.samplers[0].stepsize = 0.5
-        self.samplers[1].stepsize = 5.5
-        self.samplers[0].state = init_state
-        self.samplers[1].state = init_state
+        self.nits = 10000
+        self.Ts = [lambda l: l * self.temperatures[i+1] + (1. - l) * self.temperatures[i]
+                   for i in range(len(self.samplers) - 1)]
+        
+    def set2pParams(self):
+        init_state = State(np.random.uniform(low=-3.0, high=3.0, size=2))
+        pdf = Multimodal2DPDF()
+        self.temperatures = [0.4, 1.0, 2.0]
+        self.samplers = [RWMCSampler(pdf, init_state, 0.2,
+                                     temperature=self.temperatures[0]),
+                         RWMCSampler(pdf, init_state, .8,
+                                     temperature=self.temperatures[1]),
+                         RWMCSampler(pdf, init_state, 2.,
+                                     temperature=self.temperatures[2])]
+        self.grad = self.samplers[0]._pdf.grad
+        self.nits = 20000
+        self.Ts = [lambda l: l * self.temperatures[i+1] + (1. - l) * self.temperatures[i]
+                   for i in range(len(self.samplers) - 1)]
         
     def _run(self, algorithm):
 
@@ -146,14 +169,14 @@ class TestMultichain(test.Case):
         self.assertAlmostEqual(p_occ_sampled2, p_occ, delta=4.0 * 0.035)
         
     def testReplicaExchangeMC(self):
-
+        self.set1pParams()
         params = [RESwapParameterInfo(self.samplers[0], self.samplers[1])]
         algorithm = ReplicaExchangeMC(self.samplers, params)
         self._run(algorithm)
 
     def testMDRENS(self):
 
-        self.set1pSamplerParams()
+        self.set1pParams()
         params = [MDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
                                           0.025, 15, self.grad)]
         algorithm = MDRENS(self.samplers, params, integrator=VelocityVerlet)
@@ -161,7 +184,7 @@ class TestMultichain(test.Case):
 
     def testThermostattedMDRens(self):
         
-        self.set1pSamplerParams()
+        self.set1pParams()
         params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
                                                        0.05, 15, self.grad,
                                                        temperature=self.Ts[0])]
@@ -169,12 +192,21 @@ class TestMultichain(test.Case):
         self._run(algorithm)
 
     def testThermostattedMDRensMM(self):
-        mm = InvertibleMatrix(np.array([[1.0]]))
+
+        self.set2pParams()
+        mm1 = InvertibleMatrix(np.array([[1.0, 0.0], [0.0, 5.0]]))
+        mm2 = InvertibleMatrix(np.array([[.5, 0.0], [0.0, 10.0]]))
+        pdf = Multimodal2DPDF()
         params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
-                                                       0.05, 15, self.grad,
+                                                       0.01, 15, pdf.grad,
                                                        temperature=self.Ts[0],
-                                                       mass_matrix=mm)]
+                                                       mass_matrix=mm1),
+                  ThermostattedMDRENSSwapParameterInfo(self.samplers[1], self.samplers[2],
+                                                       0.1, 15, pdf.grad,
+                                                       temperature=self.Ts[1],
+                                                       mass_matrix=mm2)]
         algorithm = ThermostattedMDRENS(self.samplers, params)
+
         self._run(algorithm)
                 
 if __name__ == '__main__':
