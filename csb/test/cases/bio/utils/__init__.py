@@ -166,6 +166,13 @@ class TestUtils(test.Case):
             [ 0.,     0.,    4./3. ]])
         self.assertArrayEqual(it, it_test)
 
+    def testFindPairs(self):
+        pairs11 = list(cbu.find_pairs(1.2, X1))
+        pairs12 = list(cbu.find_pairs(1.2, X1, X2))
+
+        self.assertEqual(len(pairs11), 2)
+        self.assertEqual(len(pairs12), 3)
+
     def testDistanceMatrix(self):
         d = cbu.distance_matrix(X1)
 
