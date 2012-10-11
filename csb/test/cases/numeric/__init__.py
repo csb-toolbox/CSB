@@ -81,6 +81,18 @@ class TestMath(test.Case):
                                 degree2radian(radian2degree(rand)))\
                          < eps).all())
 
+    def testRotationMatrix(self):
+        from csb.numeric import rotation_matrix, axis_and_angle
+
+        R1 = [[0, -1, 0], [1, 0, 0], [0, 0, 1]]
+        R2 = rotation_matrix([0, 0, 1], np.pi / 2.0)
+        axis, angle = axis_and_angle(R2)
+        R3 = rotation_matrix(axis, angle)
+
+        self.assertAlmostEqual(angle, np.pi / 2.0)
+        self.assertTrue(np.allclose(R1, R2))
+        self.assertTrue(np.allclose(R1, R3))
+
 
 @test.unit
 class TestNumeric(test.Case):
