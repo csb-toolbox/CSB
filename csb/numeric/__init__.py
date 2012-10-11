@@ -141,6 +141,48 @@ def euler(a, b, c):
                   [-sc * cb * ca - cc * sa, -sc * cb * sa + cc * ca, sc * sb],
                   [     sb * ca, sb * sa, cb ]])
 
+def rotation_matrix(axis, angle):
+    """
+    Calculate a three dimensional rotation matrix for a rotation around
+    the given angle and axis.
+
+    @type axis: (3,) numpy array
+    @param angle: angle in radians
+    @type angle: float
+
+    @rtype (3,3) numpy.array
+    """
+    axis = numpy.asfarray(axis) / norm(axis)
+    assert axis.shape == (3,)
+
+    c = math.cos(angle)
+    s = math.sin(angle)
+
+    r = (1.0 - c) * numpy.outer(axis, axis)
+    r.flat[[0,4,8]] += c
+    r.flat[[5,6,1]] -= s * axis
+    r.flat[[7,2,3]] += s * axis
+
+    return r
+
+def axis_and_angle(r):
+    """
+    Calculate axis and angle of rotation from a three dimensional
+    rotation matrix.
+
+    @param r: 3x3 Rotation matrix
+
+    @return: axis unit vector as (3,) numpy.array and angle in radians as float
+    @rtype: tuple
+    """
+    from scipy.linalg import logm
+
+    B = logm(r).real
+    a = numpy.array([-B[1,2], B[0,2], -B[0,1]])
+    n = norm(a)
+
+    return a / n, n
+
 def norm(x):
     """
     Calculate the Eucledian norm of a d-dimensional vector.
