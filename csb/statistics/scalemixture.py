@@ -8,6 +8,7 @@ import csb.core
 import csb.statistics.ars
 import csb.statistics.rand
 
+from csb.core import typedproperty, validatedproperty
 from abc import abstractmethod, ABCMeta
 
 from csb.numeric import log, exp, approx_psi, inv_psi, d_approx_psi
@@ -513,32 +514,17 @@ class GammaPrior(ScaleMixturePrior, Gamma):
 
         super(GammaPrior, self).__init__(alpha, beta)
 
-        self._hyper_alpha = Gamma(hyper_alpha[0], hyper_alpha[0])
-        self._hyper_beta = Gamma(hyper_beta[0], hyper_beta[0])
+        self._hyper_alpha = Gamma(*hyper_alpha)
+        self._hyper_beta = Gamma(*hyper_beta)
         self.estimator = GammaPosteriorSampler()
    
+    @typedproperty(AbstractDensity)
+    def hyper_beta():
+        pass
 
-    @property
-    def hyper_beta(self):
-        return self._hyper_beta
-
-    @hyper_beta.setter
-    def hyper_beta(self, value):
-        if isinstance(value, AbstractDensity):
-            self._hyper_beta = value
-        else:
-            raise ValueError(value)
-
-    @property
-    def hyper_alpha(self):
-        return self._hyper_alpha
-
-    @hyper_alpha.setter
-    def hyper_alpha(self, value):
-        if isinstance(value, AbstractDensity):
-            self._hyper_beta = value
-        else:
-            raise ValueError(value)
+    @typedproperty(AbstractDensity)
+    def hyper_alpha():
+        pass
 
     def log_prob(self, x):
 
@@ -562,33 +548,17 @@ class InvGammaPrior(ScaleMixturePrior, InverseGamma):
 
         super(InvGammaPrior, self).__init__(alpha, beta)
 
-        self._hyper_alpha = Gamma(hyper_alpha[0],
-                                  hyper_alpha[0])
-        self._hyper_beta = Gamma(hyper_beta[0],
-                                 hyper_beta[0])
+        self._hyper_alpha = Gamma(*hyper_alpha)
+        self._hyper_beta = Gamma(*hyper_beta)
         self.estimator = InvGammaPosteriorSampler()
 
-    @property
-    def hyper_beta(self):
-        return self._hyper_beta
+    @typedproperty(AbstractDensity)
+    def hyper_beta():
+        pass
 
-    @hyper_beta.setter
-    def hyper_beta(self, value):
-        if isinstance(value, AbstractDensity):
-            self._hyper_beta = value
-        else:
-            raise ValueError(value)
-
-    @property
-    def hyper_alpha(self):
-        return self._hyper_alpha
-
-    @hyper_alpha.setter
-    def hyper_alpha(self, value):
-        if isinstance(value, AbstractDensity):
-            self._hyper_beta = value
-        else:
-            raise ValueError(value)
+    @typedproperty(AbstractDensity)
+    def hyper_alpha():
+        pass
 
     def log_prob(self, x):
 
