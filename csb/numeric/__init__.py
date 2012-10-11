@@ -150,7 +150,7 @@ def rotation_matrix(axis, angle):
     @param angle: angle in radians
     @type angle: float
 
-    @rtype (3,3) numpy.array
+    @rtype: (3,3) numpy.array
     """
     axis = numpy.asfarray(axis) / norm(axis)
     assert axis.shape == (3,)
