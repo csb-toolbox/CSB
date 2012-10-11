@@ -688,6 +688,34 @@ def inertia_tensor(x, m=None):
     else:
         return eye(x.shape[0]) * r2.sum() - dot(x, x.T)
 
+def find_pairs(cutoff, X, Y=None):
+    """
+    Find pairs with euclidean distance below C{cutoff}. Either between
+    C{X} and C{Y}, or within C{X} if C{Y} is C{None}.
+
+    Uses a KDTree and thus is memory efficient and reasonable fast.
+
+    @type cutoff: float
+    @type X: (m,n) numpy.array
+    @type Y: (k,n) numpy.array
+    @return: set of index tuples
+    @rtype: iterable
+    """
+    try:
+        from scipy.spatial import cKDTree as KDTree
+        KDTree.query_pairs
+        KDTree.query_ball_tree
+    except (ImportError, AttributeError):
+        from scipy.spatial import KDTree
+
+    tree = KDTree(X, len(X))
+    if Y is None:
+        return tree.query_pairs(cutoff)
+
+    other = KDTree(Y, len(Y))
+    contacts = tree.query_ball_tree(other, cutoff)
+    return ((i, j) for (i, js) in enumerate(contacts) for j in js)
+
 def distance_matrix(X, Y=None):
     """
     Calculates a matrix of pairwise distances
