@@ -78,6 +78,75 @@ def singleton(klass):
     
     return get
             
+class validatedproperty(property):
+    """
+    Property decorator with predefined getter/setter and value checking
+    or casting in the setter. The provided function will be the validator
+    and must take and return a value.
+
+    If the property is named C{foo}, a private field named C{_foo} will
+    be used to store the value.
+
+    Example:
+
+        >>> @validatedproperty
+        >>> def a(v):
+        >>>     v = int(v)
+        >>>     if v < 0:
+        >>>         raise ValueError(v)
+        >>>     return v
+
+    """
+    def __init__(self, validator):
+        self.name = '_' + validator.__name__
+        self.__doc__ = func.__doc__
+        self.validator = validator
+        self.argcount = validator.__code__.co_argcount
+        assert 1 <= self.argcount <= 2
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return self
+        return getattr(instance, self.name)
+
+    def __set__(self, instance, value):
+        value = self.validator(value) if self.argcount == 1 else \
+                self.validator(instance, value)
+        setattr(instance, self.name, value)
+
+class typedproperty(property):
+    """
+    Property decorator for convenient creation of typed, encapsulated fields.
+    The provided function must be a dummy, only its name is used.
+
+    Example:
+
+        >>> @typedproperty(float)
+        >>> def b():
+        >>>     pass
+
+    """
+    def __init__(self, type):
+        self.type = type
+
+    def __call__(self, func):
+        assert func() is None
+        self.name = '_' + func.__name__
+        self.__doc__ = func.__doc__ or ''
+        if '@type:' not in self.__doc__:
+            self.__doc__ += '@type: ' + self.type.__name__
+        return self
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return self
+        return getattr(instance, self.name)
+
+    def __set__(self, instance, value):
+        if not isinstance(value, self.type):
+            raise TypeError('expected {0}, got {1}'.format(self.type, type(value)))
+        setattr(instance, self.name, value)
+
 class Proxy(object):
     """
     Base class implementing the proxy pattern. Subclasses that define
