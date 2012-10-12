@@ -418,7 +418,7 @@ def rmsd(X, Y):
     """
 
     from numpy import sum, dot, sqrt, clip, average
-    from numpy.linalg import svd
+    from numpy.linalg import svd, det
 
     X = X - X.mean(0)
     Y = Y - Y.mean(0)
@@ -426,7 +426,10 @@ def rmsd(X, Y):
     R_x = sum(X ** 2)
     R_y = sum(Y ** 2)
 
-    L = svd(dot(Y.T, X))[1]
+    V, L, U = svd(dot(Y.T, X))
+
+    if det(dot(V, U)) < 0.:
+        L[-1] *= -1
 
     return sqrt(clip(R_x + R_y - 2 * sum(L), 0., 1e300) / len(X))
 
