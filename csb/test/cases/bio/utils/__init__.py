@@ -46,6 +46,12 @@ X6 = numpy.array([
     [   0.,  100.,    0.],
     [  60.,   60.,    0.]])
 
+X7 = numpy.array([
+    [   0.,    0.,    0.],
+    [ 100.,    0.,    0.],
+    [   0.,  100.,    0.],
+    [   0.,    0.,  100.]])
+
             
 @test.regression
 class Regressions(test.Case):
@@ -80,6 +86,13 @@ class Regressions(test.Case):
             p.terminate()
             self.fail('timeout expired')
             
+    def testRmsdMirrorImage(self):
+        X, Y = X7, X7.copy()
+        Y[:, 0] *= -1
+        rmsd = cbu.rmsd(X, Y)
+
+        self.assertAlmostEqual(rmsd, 50.0)
+
 
 @test.functional
 class TestUtils(test.Case):
