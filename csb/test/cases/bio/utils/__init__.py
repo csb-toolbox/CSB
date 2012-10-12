@@ -103,6 +103,13 @@ class TestUtils(test.Case):
         d = 5.0**0.5
         self.assertArrayEqual(t, [-d / 2.0 + 0.5, 0., 0.])
 
+    def testScaleAndFit(self):
+        R, t, s = cbu.scale_and_fit(2.0 * X1, X1)
+
+        self.assertArrayEqual(R, numpy.identity(3))
+        self.assertArrayEqual(t, [0., 0., 0.])
+        self.assertAlmostEqual(s, 2.0)
+
     def testFitWellordered(self):
         R, t = cbu.fit_wellordered(X5, X6, 10, 1.0)             #@UnusedVariable
 
