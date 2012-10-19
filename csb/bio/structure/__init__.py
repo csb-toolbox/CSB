@@ -416,6 +416,7 @@ class Structure(csb.core.AbstractNIContainer, AbstractEntity):
         self._accession = None
         self._chains = StructureChainsTable(self)
         self._model_id = None
+        self._resolution = None
         
         self.accession = accession
 
@@ -474,6 +475,18 @@ class Structure(csb.core.AbstractNIContainer, AbstractEntity):
     @model_id.setter
     def model_id(self, value):
         self._model_id = value
+        
+    @property
+    def resolution(self):
+        """
+        Resolution in Angstroms
+        """
+        return self._resolution
+    @resolution.setter
+    def resolution(self, value):
+        if value is not None:
+            value = float(value)
+        self._resolution = value
                     
     def to_fasta(self):
         """
