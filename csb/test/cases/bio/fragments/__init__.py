@@ -197,11 +197,23 @@ class TestTorsionAnglesPredictor(test.Case):
     def testCompute(self):
         
         pred = self.predictor.compute(3)
-        self.assertTrue(len(pred) > 1)
+        self.assertGreater(len(pred), 1)
 
         for pi in pred:
             self.assertEqual(pi.as_tuple()[1:], (-143.77110677043459, 148.81948663098206, -179.98643191250056))            
             self.assertTrue(pi.confidence <= pred[0].confidence)
+            
+    def testGetAngles(self):
+        
+        pred = self.predictor.get_angles(6)
+        self.assertEqual(len(pred), self.target.residues[6].assignments.length)
+        self.assertEqual(len(pred), 2)
+        
+        for pi in pred:
+            ref = self.target.residues[6].assignments[0].fragment.torsion_at(6, 6)[0]
+            self.assertEqual((pi.phi, pi.psi, pi.omega), (-150.51264336633528, 134.10287564490648, 179.98064117348235))
+            self.assertEqual((pi.phi, pi.psi, pi.omega), (ref.phi, ref.psi, ref.omega))
+
             
             
 @test.unit
