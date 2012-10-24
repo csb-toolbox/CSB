@@ -150,6 +150,7 @@ class TorsionAnglesPredictor(object):
         
         self._initialized = False
         self._reps = {}
+        self._clusters = {}
             
         if init:
             self.init()
@@ -172,14 +173,36 @@ class TorsionAnglesPredictor(object):
         """
 
         self._reps = {}
+        self._clusters = {}
                 
         for residue in self.target.residues:
-            rep = residue.filter(threshold=self.threshold, extend=self.extend)
+            cluster = self._filter(residue)
             
-            if rep is not None:
+            if cluster is not None:
+                rep = cluster.centroid()
+                if rep.has_alternative:
+                    rep.exchange()
+                    
                 self._reps[residue.native.rank] = rep
+                self._clusters[residue.native.rank] = cluster.items
                 
         self._initialized = True      
+        
+    def _filter(self, residue):
+        
+        try:
+            nodes = []
+            for ai in residue.assignments:
+                node = ClusterNode.create(ai.fragment)
+                nodes.append(node)
+                
+            cluster = FragmentCluster(nodes, threshold=self.threshold)
+            cluster.shrink(minitems=0)
+    
+            return cluster
+        
+        except (ClusterExhaustedError, ClusterDivergingError):
+            return None
        
     def _residue(self, rank):
         
@@ -224,13 +247,12 @@ class TorsionAnglesPredictor(object):
         
         if not self._initialized:
             self.init()
-        
-        residue = self._residue(rank)
+
         prediction = []
         
         for rep in self._reps.values():
             
-            if rep.centroid.qstart <= residue.native.rank <= rep.centroid.qend:
+            if rep.centroid.qstart <= rank <= rep.centroid.qend:
                 
                 fragment = rep.centroid
                 torsion = fragment.torsion_at(rank, rank)[0]
@@ -243,6 +265,33 @@ class TorsionAnglesPredictor(object):
         
         prediction.sort(reverse=True)
         return tuple(prediction)
+    
+    def get_angles(self, rank):
+        """
+        Extract all torsion angles coming from all fragments, which had survived
+        the filtering and cover residue C{#rank}. 
+
+        @param rank: target residue rank
+        @type rank: int
+        
+        @return: a tuple of L{TorsionAngles}  
+        @rtype: tuple  
+        """  
+                
+        if not self._initialized:
+            self.init()
+        if rank not in self._clusters:
+            return tuple()
+
+        angles = []
+                
+        for node in self._clusters[rank]:
+            fragment = node.fragment
+            torsion = fragment.torsion_at(rank, rank)[0]
+            angles.append(torsion)
+
+        return tuple(angles)   
+         
 
 class TorsionPredictionInfo(object):
     """
@@ -546,16 +595,15 @@ class TargetResidue(object):
         try:
             nodes = []
             for ai in self.assignments:
-                if ai.fragment.probability > 0.7 and ai.fragment.length >= FragmentCluster.MIN_LENGTH:
-                    node = ClusterNode(ai.fragment, distance=method, fixed=extend)
-                else:
-                    node = ClusterNode(ai.fragment, distance=method, fixed=False)
+                node = ClusterNode.create(ai.fragment, method, extend)
                 nodes.append(node)
+                
             cluster = FragmentCluster(nodes, threshold=threshold)
-          
+            
             center = cluster.shrink(minitems=0)
             if center.has_alternative:
                 center.exchange()
+                
             return center
         
         except (ClusterExhaustedError, ClusterDivergingError):
@@ -1187,7 +1235,7 @@ class FragmentCluster(object):
         
     @property    
     def fragments(self):
-        return [i.fragment for i in self._items]
+        return tuple(i.fragment for i in self._items)
     
     @property
     def threshold(self):
@@ -1367,6 +1415,21 @@ class ClusterNode(object):
     @type fixed: bool    
     """
     
+    FIXED = 0.7
+    
+    @staticmethod
+    def create(fragment, method=Metrics.RMSD, extend=False):
+        """
+        Create a new L{ClusterNode} given a specified C{Assignment}. If this
+        assignment is a high probability match, define it as a fixed fragment.
+        
+        @rtype: L{ClusterNode}
+        """
+        if fragment.probability > ClusterNode.FIXED and fragment.length >= FragmentCluster.MIN_LENGTH:
+            return ClusterNode(fragment, distance=method, fixed=extend)
+        else:
+            return ClusterNode(fragment, distance=method, fixed=False)        
+        
     def __init__(self, fragment, distance=Metrics.RMSD, fixed=False):
         
         if fixed and fragment.length < FragmentCluster.MIN_LENGTH:
