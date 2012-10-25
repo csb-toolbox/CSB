@@ -214,7 +214,34 @@ class TestTorsionAnglesPredictor(test.Case):
             self.assertEqual((pi.phi, pi.psi, pi.omega), (-150.51264336633528, 134.10287564490648, 179.98064117348235))
             self.assertEqual((pi.phi, pi.psi, pi.omega), (ref.phi, ref.psi, ref.omega))
 
-            
+    def testFlatTorsionMap(self):
+        
+        source = test.Config().getPickle('1nz9.model1.pickle').chains['A']
+        source.compute_torsion()
+        target = SampleTarget.build_target()       
+        
+        # add more fragments at location 2..9; this will also alter the confidence
+        for i in range(20):
+            # these fragments come from 12..19 
+            target.assign(Assignment(source, 2 + 10, 9 + 10, 't', 2, 9, 1, 1))
+        
+        predictor = TorsionAnglesPredictor(target) 
+        pred = predictor.flat_torsion_map()
+        
+        self.assertEqual(len(pred), target.length)
+                
+        # outside the 2..9 region
+        self.assertAlmostEqual(pred[0].confidence, 0.301, delta=0.01)         
+        self.assertEqual(pred[0].torsion.phi, target.residues[1].native.torsion.phi)
+        self.assertEqual(pred[9].torsion.phi, target.residues[10].native.torsion.phi)
+
+        # intside the 2..9 region
+        for i in range(2, 9 + 1):
+            self.assertEqual(pred[i - 1].rank, i)
+            self.assertAlmostEqual(pred[i - 1].confidence, 1.20, delta=0.01)                
+        self.assertEqual(pred[1].torsion.psi, target.residues[2 + 10].native.torsion.psi)
+        self.assertEqual(pred[8].torsion.psi, target.residues[9 + 10].native.torsion.psi)        
+        
             
 @test.unit
 class TestAssignment(test.Case):
