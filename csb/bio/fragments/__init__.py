@@ -241,8 +241,8 @@ class TorsionAnglesPredictor(object):
         @param rank: target residue rank
         @type rank: int
         
-        @return: a tuple of L{TorsionPredictionInfo}, sorted by confidence  
-        @rtype: tuple  
+        @return: L{TorsionPredictionInfo} instances, sorted by confidence  
+        @rtype: tuple of L{TorsionPredictionInfo}  
         """        
         
         if not self._initialized:
@@ -266,6 +266,43 @@ class TorsionAnglesPredictor(object):
         prediction.sort(reverse=True)
         return tuple(prediction)
     
+    def flat_torsion_map(self):
+        """
+        Filter the current fragment map and create a new, completely flat,
+        non-overlapping map built from centroids, assigned iteratively by
+        decreasing confidence. Centroids with lower confidence which overlap
+        with previously assigned centroids will be trimmed to fill existing
+        gaps only. 
+        
+        @return: L{TorsionPredictionInfo} instances, one for each target residue
+        @rtype: tuple of L{TorsionPredictionInfo}            
+        """
+        
+        if not self._initialized:
+            self.init()        
+        
+        prediction = []
+        slots = set(range(1, self.target.length + 1))
+        
+        reps = list(self._reps.values())
+        reps.sort(key=lambda i: i.confidence, reverse=True)
+        
+        for rep in reps:
+            
+            for rank in range(rep.centroid.qstart, rep.centroid.qend + 1):
+                if rank in slots:
+                    torsion = rep.centroid.torsion_at(rank, rank)[0]
+                    info = TorsionPredictionInfo(rank, rep.confidence, torsion)
+                    
+                    prediction.append(info)
+                    slots.remove(rank)
+                    
+        for rank in slots:
+            prediction.append(TorsionPredictionInfo(rank, 0, None))
+
+        prediction.sort(key=lambda i: i.rank)                    
+        return tuple(prediction)
+    
     def get_angles(self, rank):
         """
         Extract all torsion angles coming from all fragments, which had survived
@@ -274,8 +311,8 @@ class TorsionAnglesPredictor(object):
         @param rank: target residue rank
         @type rank: int
         
-        @return: a tuple of L{TorsionAngles}  
-        @rtype: tuple  
+        @return: all L{TorsionAngles} for a cluster at the specified residue  
+        @rtype: tuple of L{TorsionAngles}
         """  
                 
         if not self._initialized:
@@ -290,7 +327,7 @@ class TorsionAnglesPredictor(object):
             torsion = fragment.torsion_at(rank, rank)[0]
             angles.append(torsion)
 
-        return tuple(angles)   
+        return tuple(angles)
          
 
 class TorsionPredictionInfo(object):
