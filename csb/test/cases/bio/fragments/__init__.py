@@ -32,7 +32,8 @@ class SampleTarget(object):
         config = test.Config()
         chain = config.getPickle('1nz9.model1.pickle').chains['A']
         chain.compute_torsion()
-        
+        ss = str(chain.secondary_structure) + chain.length * '-'
+                
         target = Target('testA', chain.length, chain.residues)
         
         for start in range(1, target.length + 1, 5):
@@ -48,6 +49,7 @@ class SampleTarget(object):
             rmsd = chain.subregion(start, end).rmsd(source.subregion(start, end))
             
             a = Assignment(source, start, end, id, start, end, probability=1.0, rmsd=rmsd)
+            a.secondary_structure = ss[start - 1: end]
             target.assign(a)
         
         return target
@@ -240,7 +242,10 @@ class TestTorsionAnglesPredictor(test.Case):
             self.assertEqual(pred[i - 1].rank, i)
             self.assertAlmostEqual(pred[i - 1].confidence, 1.20, delta=0.01)                
         self.assertEqual(pred[1].torsion.psi, target.residues[2 + 10].native.torsion.psi)
-        self.assertEqual(pred[8].torsion.psi, target.residues[9 + 10].native.torsion.psi)        
+        self.assertEqual(pred[8].torsion.psi, target.residues[9 + 10].native.torsion.psi)     
+        
+        self.assertEqual(pred[10].dssp.type, 'E')
+        self.assertEqual(pred[52].dssp.type, 'H')   
         
             
 @test.unit
@@ -560,6 +565,5 @@ class TestRosettaFragmentMap(test.Case):
     
                                  
 if __name__ == '__main__':
-    
     test.Console()
     

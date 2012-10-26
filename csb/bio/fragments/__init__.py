@@ -18,6 +18,7 @@ import csb.core
 import csb.bio.utils
 import csb.bio.structure
 import csb.bio.sequence
+from csb.bio.structure import SecondaryStructure
 
 
 class FragmentTypes(object):
@@ -231,8 +232,9 @@ class TorsionAnglesPredictor(object):
         else:
             fragment = rep.centroid
             torsion = fragment.torsion_at(rank, rank)[0]
+            ss = fragment.sec_structure_at(rank, rank)[0] 
             
-            return TorsionPredictionInfo(rank, rep.confidence, torsion, primary=True)    
+            return TorsionPredictionInfo(rank, rep.confidence, torsion, ss, primary=True)    
             
     def compute(self, rank):
         """
@@ -256,7 +258,8 @@ class TorsionAnglesPredictor(object):
                 
                 fragment = rep.centroid
                 torsion = fragment.torsion_at(rank, rank)[0]
-                info = TorsionPredictionInfo(rank, rep.confidence, torsion)
+                ss = fragment.sec_structure_at(rank, rank)[0] 
+                info = TorsionPredictionInfo(rank, rep.confidence, torsion, ss)
 
                 if rep is self._reps.get(rank, None):
                     info.primary = True
@@ -292,7 +295,8 @@ class TorsionAnglesPredictor(object):
             for rank in range(rep.centroid.qstart, rep.centroid.qend + 1):
                 if rank in slots:
                     torsion = rep.centroid.torsion_at(rank, rank)[0]
-                    info = TorsionPredictionInfo(rank, rep.confidence, torsion)
+                    ss = rep.centroid.sec_structure_at(rank, rank)[0] 
+                    info = TorsionPredictionInfo(rank, rep.confidence, torsion, ss, primary=True)
                     
                     prediction.append(info)
                     slots.remove(rank)
@@ -340,18 +344,21 @@ class TorsionPredictionInfo(object):
     @type confidence: float
     @param torsion: assigned phi/psi/omega angles
     @type torsion: L{TorsionAngles}
+    @param dssp: assigned secondary structure
+    @type dssp: L{SecondaryStructureElement}
     @param primary: if True, designates that the assigned angles are extracted
                     from the L{ClusterRep} at residue C{#rank}; otherwise: the
                     angles are coming from another, overlapping L{ClusterRep}
     
     """
     
-    def __init__(self, rank, confidence, torsion, primary=False):
+    def __init__(self, rank, confidence, torsion, dssp, primary=False):
         
         self.rank = rank
         self.confidence = confidence
         self.torsion = torsion
         self.primary = primary
+        self.dssp = dssp
             
     def as_tuple(self):
         """
@@ -963,11 +970,14 @@ class Assignment(FragmentMatch):
 
         self._score = score
         self._neff = neff
+        self._ss = None 
     
         self._segment_start = segment
         self.internal_id = internal_id
         
         super(Assignment, self).__init__(id, qstart, qend, probability, rmsd, tm_score, None)
+        
+        self._ss = SecondaryStructure('-' * self.length)
 
     @property
     def backbone(self):
@@ -1004,6 +1014,19 @@ class Assignment(FragmentMatch):
     @property
     def segment(self):
         return self._segment_start    
+    
+    @property
+    def secondary_structure(self):
+        return self._ss
+    @secondary_structure.setter
+    def secondary_structure(self, value):
+        
+        if isinstance(value, csb.core.string):
+            value = csb.bio.structure.SecondaryStructure(value)
+        if len(str(value)) != self.length:#(value.end - value.start + 1) != self.length:
+            raise ValueError("Invalid secondary structure length", len(str(value)), self.length )
+          
+        self._ss = value
     
     def transform(self, rotation, translation):
         """
@@ -1065,7 +1088,15 @@ class Assignment(FragmentMatch):
         relstart = qstart - self.qstart
         relend = qend - self.qstart + 1
         
-        return sa_string[relstart : relend]    
+        return sa_string[relstart : relend] 
+    
+    def sec_structure_at(self, qstart, qend):
+                
+        self._check_range(qstart, qend)
+        start = qstart - self.qstart + 1
+        end = qend - self.qstart + 1
+        
+        return self.secondary_structure.scan(start, end, loose=True, cut=True)      
     
     def profile_at(self, source, qstart, qend):
         
@@ -1940,6 +1971,13 @@ class BenchmarkAdapter(object):
             
             db.cursor.callproc('reporting."GetAssignments"', (target_id, type))
             return db.cursor.fetchall()
+        
+    def assignments_sec_structure(self, target_id, type):
+        
+        with BenchmarkAdapter.Connection() as db:
+            
+            db.cursor.callproc('reporting."GetTargetSecStructureAssignments2"', (target_id, type))
+            return db.cursor.fetchall()        
 
     def scores(self, benchmark_id, type):
         
@@ -1976,7 +2014,7 @@ class BenchmarkAdapter(object):
         
         return self._parser(pdbfile).parse_structure()
             
-    def prediction(self, target_id, type):
+    def prediction(self, target_id, type, ss=False):
         
         info = self.target_details(target_id)
         if not info:
@@ -2026,8 +2064,27 @@ class BenchmarkAdapter(object):
                                         tm_score=row['TMScore'],
                                         segment=row['SegmentStart'],
                                         internal_id=row['InternalID'])
-            
+                            
             target.assign(fragment)
+        
+        if ss:
+            self._attach_sec_structure(target, target_id, type)
         
         return target
 
+    def _attach_sec_structure(self, target, target_id, type):
+        
+        ss = {}
+        
+        for row in self.assignments_sec_structure(target_id, type):
+            frag_id, state = row["AssignmentID"], row["DSSP"]
+            if row[frag_id] not in ss:
+                ss[frag_id] = []
+                
+            ss[frag_id].append(state)
+        
+        for a in target.matches:
+            if a.internal_id in ss:
+                dssp = ''.join(ss[a.internal_id])
+                a.secondary_structure = dssp
+        
