@@ -233,7 +233,7 @@ class TestTorsionAnglesPredictor(test.Case):
         self.assertEqual(len(pred), target.length)
                 
         # outside the 2..9 region
-        self.assertAlmostEqual(pred[0].confidence, 0.301, delta=0.01)         
+        self.assertAlmostEqual(pred[18].confidence, 0.301, delta=0.01)         
         self.assertEqual(pred[0].torsion.phi, target.residues[1].native.torsion.phi)
         self.assertEqual(pred[9].torsion.phi, target.residues[10].native.torsion.phi)
 
