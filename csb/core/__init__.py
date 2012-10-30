@@ -99,7 +99,7 @@ class validatedproperty(property):
     """
     def __init__(self, validator):
         self.name = '_' + validator.__name__
-        self.__doc__ = func.__doc__
+        self.__doc__ = validator.__doc__
         self.validator = validator
         self.argcount = validator.__code__.co_argcount
         assert 1 <= self.argcount <= 2
