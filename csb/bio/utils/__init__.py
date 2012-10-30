@@ -835,9 +835,9 @@ def deg(x):
     @rtype: numpy array     
     """
     from csb.bio.structure import TorsionAngles
-    from numpy import reshape
     
-    return reshape(map(TorsionAngles.deg,x.flatten()),x.shape)
+    func = numpy.vectorize(TorsionAngles.deg)
+    return func(x)
 
 def rad(x):
     """
@@ -849,8 +849,8 @@ def rad(x):
     @rtype: numpy array     
     """
     from csb.bio.structure import TorsionAngles
-    from numpy import reshape
     
-    return reshape(map(TorsionAngles.rad,x.flatten()),x.shape)
+    func = numpy.vectorize(TorsionAngles.rad)
+    return func(x)
 
 # vi:expandtab:smarttab:sw=4
