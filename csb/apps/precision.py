@@ -222,7 +222,10 @@ class LibrarySuperimposer(object):
                 background.append(100)
                 
         coverage = len(covered) * 100.0 / len(residues)
-        avg_precision = sum(precision) / len(precision)                 
+        if len(precision) > 0:
+            avg_precision = sum(precision) / len(precision)
+        else:
+            avg_precision = 0                 
         
         with csb.io.plots.Chart() as chart:
                         
