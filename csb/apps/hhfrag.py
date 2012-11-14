@@ -2,6 +2,7 @@
 HHfrag: build a dynamic variable-length fragment library for protein structure
 prediction with Rosetta AbInitio.
 """
+from __future__ import print_function
 
 import os
 import multiprocessing
@@ -112,8 +113,7 @@ class HHfragApp(csb.apps.Application):
     def log(self, message, ending='\n', level=1):
         
         if level <= self.args.verbosity:
-            super(HHfragApp, self).log(message, ending)
-
+            print(message, end=ending, file=self._log)
 
 class ArgumentError(ValueError):
     pass
