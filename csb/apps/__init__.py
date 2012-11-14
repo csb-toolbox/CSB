@@ -104,7 +104,7 @@ class Application(object):
     def __init__(self, args, log=sys.stdout):
         
         self.__args = None
-        self.__log = log
+        self._log = log
                 
         self.args = args
         
