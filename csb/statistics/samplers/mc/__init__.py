@@ -705,28 +705,11 @@ class RENSSwapCommunicator(AbstractSwapCommunicator):
     """
     Holds all the information which needs to be communicated between distinct
     RENS swap substeps.
-    
-    @param param_info: ParameterInfo instance holding swap parameters
-    @type param_info: L{AbstractSwapParameterInfo}
 
-    @param traj12: Forward trajectory
-    @type traj12: L{Trajectory}
-
-    @param traj21: Reverse trajectory
-    @type traj21: L{Trajectory}
+    See L{AbstractSwapCommunicator} for constructor signature.
     """
-        
-    def __init__(self, param_info, traj12, traj21):
-
-        super(RENSSwapCommunicator, self).__init__(param_info, traj12, traj21)
-        
-    @property
-    def traj12(self):
-        return self._traj12
-
-    @property
-    def traj21(self):
-        return self._traj21
+    
+    pass
 
 class SingleSwapStatistics(object):
     """
@@ -982,7 +965,7 @@ class AbstractRENS(AbstractExchangeMC):
         
         init_state1 = State(param_info.sampler1.state.position, momentum1)
         init_state2 = State(param_info.sampler2.state.position, momentum2)
-        
+
         param_info.sampler1.state = init_state1
         param_info.sampler2.state = init_state2
         
