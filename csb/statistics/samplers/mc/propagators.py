@@ -240,6 +240,10 @@ class ThermostattedMDPropagator(MDPropagator):
 
     def generate(self, init_state, length, return_trajectory=False):
 
+        if self._first_run == True and self.mass_matrix is None:
+            d = len(init_state.position)
+            self.mass_matrix = InvertibleMatrix(numpy.eye(d), numpy.eye(d))
+
         integrator = self._integrator(self.timestep, self.gradient)
         builder = TrajectoryBuilder.create(full=return_trajectory)
 
