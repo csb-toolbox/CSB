@@ -134,9 +134,9 @@ class Application(object):
         @type message: str        
         """
         
-        self.__log.write(message)
-        self.__log.write(ending)
-        self.__log.flush()
+        self._log.write(message)
+        self._log.write(ending)
+        self._log.flush()
         
     @staticmethod
     def exit(message, code=0, usage=False):
