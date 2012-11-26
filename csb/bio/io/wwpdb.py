@@ -692,8 +692,8 @@ class AbstractStructureParser(object):
                     else:
                         atom._residue_name = csb.core.Enum.parsename(SequenceAlphabets.Protein, residue_name)
 
-                    atom.occupancy = float(line[54:60])
-                    atom.bfactor = float(line[60:66])
+                    atom.occupancy = float(line[54:60].strip() or 0)
+                    atom.bfactor = float(line[60:66].strip() or 0)
 
                     charge = line[78:80].strip()
                     if charge:
