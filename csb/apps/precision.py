@@ -291,7 +291,7 @@ def rmsd(target, source, fragments, pdb, save=None):
                 if save:
                     dummy = structure.Structure(subject.entry_id)
                     dummy.chains.append(subject)
-                    filename = '{0.qstart:}-{0.qend}.{1.entry_id}{2}.frag'.format(fragment, query, fn or '')
+                    filename = '{0.qstart:}-{0.qend}-{0.source_id}.{1.entry_id}{2}.frag'.format(fragment, query, fn or '')
                     dummy.to_pdb(os.path.join(save, filename))
                     
             except (structure.Broken3DStructureError, IOError) as ex:
