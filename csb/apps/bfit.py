@@ -9,8 +9,6 @@ import csb.apps
 import csb.bio.utils
 
 from csb.bio.io.wwpdb import LegacyStructureParser
-from csb.statistics.scalemixture import ScaleMixture, GammaPrior, InvGammaPrior
-from csb.statistics.scalemixture import GammaPosteriorMAP, InvGammaPosteriorMAP
 from csb.bio.sequence import SequenceAlignment
 
 
