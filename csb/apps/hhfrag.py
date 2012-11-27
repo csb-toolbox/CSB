@@ -2,7 +2,6 @@
 HHfrag: build a dynamic variable-length fragment library for protein structure
 prediction with Rosetta AbInitio.
 """
-from __future__ import print_function
 
 import os
 import multiprocessing
@@ -113,7 +112,7 @@ class HHfragApp(csb.apps.Application):
     def log(self, message, ending='\n', level=1):
         
         if level <= self.args.verbosity:
-            print(message, end=ending, file=self._log)
+            super(HHfragApp, self).log(message, ending)
 
 class ArgumentError(ValueError):
     pass
@@ -279,9 +278,7 @@ class HHfrag(object):
         for length in sorted(histogram):
             
             percent = histogram[length] * 100.0 / len(self._matches)
-            seg = b'\xe2\x9f\xa4'.decode('utf-8')
-            bar = b'{0:3} |{1} {2:5.1f}%'.decode('utf-8')
-            bar = bar.format(length, seg * int(percent), percent)
+            bar = '{0:3} |{1} {2:5.1f}%'.format(length, 'o' * int(percent), percent)
             self.log(bar, level=2)
     
     def build_fragment_map(self):
