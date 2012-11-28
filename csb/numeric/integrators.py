@@ -92,9 +92,12 @@ class AbstractIntegrator(object):
 
         inverse_mass_matrix = None
         if mass_matrix is None:
-            inverse_mass_matrix = 1.
+            inverse_mass_matrix = 1.0
         else:
-            inverse_mass_matrix = mass_matrix.inverse
+            if mass_matrix.is_unity_multiple:
+                inverse_mass_matrix = mass_matrix.inverse[0][0]
+            else:
+                inverse_mass_matrix = mass_matrix.inverse
 
         return inverse_mass_matrix
 
