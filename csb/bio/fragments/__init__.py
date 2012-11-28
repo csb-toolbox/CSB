@@ -978,6 +978,27 @@ class Assignment(FragmentMatch):
         super(Assignment, self).__init__(id, qstart, qend, probability, rmsd, tm_score, None)
         
         self._ss = SecondaryStructure('-' * self.length)
+        
+    @staticmethod
+    def from_fragment(fragment, provider):
+        """
+        Create a new L{Assignment} given a source rosetta fragment.
+        
+        @param fragment: rosetta fragment
+        @type fragment: L{RosettaFragment}
+        @param provider: PDB database provider
+        @type provider: L{StructureProvider} 
+        
+        @rtype: L{Assignment}
+        """
+        structure = provider.get(fragment.accession)
+        source = structure.chains[fragment.chain]
+        source.compute_torsion()
+        
+        id = "{0}:{1}-{2}".format(fragment.source_id, fragment.start, fragment.end)
+        
+        return Assignment(source, fragment.start, fragment.end, id,
+                          fragment.qstart, fragment.qend, 0, 0)        
 
     @property
     def backbone(self):
