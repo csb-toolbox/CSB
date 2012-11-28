@@ -121,8 +121,8 @@ class HMCSampler(AbstractSingleChainMC):
         self._gradient = gradient
 
         self._propagator = MDPropagator(self._gradient, self._timestep,
-                                       mass_matrix=self.mass_matrix,
-                                       integrator=self._integrator)
+                                        mass_matrix=self._mass_matrix,
+                                        integrator=self._integrator)
 
     def _propose(self):
 
