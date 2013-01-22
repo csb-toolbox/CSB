@@ -520,6 +520,27 @@ class Structure(csb.core.AbstractNIContainer, AbstractEntity):
             with csb.io.EntryWriter(output_file, close=False) as out:
                 out.write(data)
 
+    @staticmethod
+    def from_chain(chain):
+        """
+        A Structure factory, which instantiates and returns a new Structure with 
+        chain as deep cpoy of chain
+
+        @param chain: the chain which will comprise the new structure
+        @type chain: L{Chain}
+
+        @rtype: L{Structure}
+        """
+
+        chain_copy = chain.subregion(0, len(chain), clone=True)
+        structure = Structure("NONE")
+        structure.chains.append(chain_copy)
+
+        return structure
+        
+        
+
+
 class StructureChainsTable(csb.core.DictionaryContainer):
     
     def __init__(self, structure=None, chains=None):
