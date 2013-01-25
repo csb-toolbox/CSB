@@ -287,7 +287,7 @@ def dihedral_angle(a, b, c, d):
     m = numpy.cross((a - b), v)
     m /= norm(m)
     n = numpy.cross((d - c), v)
-    n /= norm(m)
+    n /= norm(n)
 
     c = numpy.dot(m, n)
     s = numpy.dot(numpy.cross(n, m), v) / norm(v)
