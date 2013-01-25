@@ -532,7 +532,9 @@ class Structure(csb.core.AbstractNIContainer, AbstractEntity):
         @rtype: L{Structure}
         """
 
-        chain_copy = chain.subregion(0, len(chain), clone=True)
+        chain_copy = chain.subregion(chain.residues.start_index, 
+                                     chain.residues.last_index, 
+                                     clone=True)
         structure = Structure("NONE")
         structure.chains.append(chain_copy)
 
