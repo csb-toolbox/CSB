@@ -18,6 +18,7 @@ import csb.core
 import csb.bio.utils
 import csb.bio.structure
 import csb.bio.sequence
+from csb.bio.structure import SecondaryStructure
 
 
 class FragmentTypes(object):
@@ -150,6 +151,7 @@ class TorsionAnglesPredictor(object):
         
         self._initialized = False
         self._reps = {}
+        self._clusters = {}
             
         if init:
             self.init()
@@ -172,14 +174,36 @@ class TorsionAnglesPredictor(object):
         """
 
         self._reps = {}
+        self._clusters = {}
                 
         for residue in self.target.residues:
-            rep = residue.filter(threshold=self.threshold, extend=self.extend)
+            cluster = self._filter(residue)
             
-            if rep is not None:
+            if cluster is not None:
+                rep = cluster.centroid()
+                if rep.has_alternative:
+                    rep.exchange()
+                    
                 self._reps[residue.native.rank] = rep
+                self._clusters[residue.native.rank] = cluster.items
                 
         self._initialized = True      
+        
+    def _filter(self, residue):
+        
+        try:
+            nodes = []
+            for ai in residue.assignments:
+                node = ClusterNode.create(ai.fragment)
+                nodes.append(node)
+                
+            cluster = FragmentCluster(nodes, threshold=self.threshold)
+            cluster.shrink(minitems=0)
+    
+            return cluster
+        
+        except (ClusterExhaustedError, ClusterDivergingError):
+            return None
        
     def _residue(self, rank):
         
@@ -208,8 +232,9 @@ class TorsionAnglesPredictor(object):
         else:
             fragment = rep.centroid
             torsion = fragment.torsion_at(rank, rank)[0]
+            ss = fragment.sec_structure_at(rank, rank)[0] 
             
-            return TorsionPredictionInfo(rank, rep.confidence, torsion, primary=True)    
+            return TorsionPredictionInfo(rank, rep.confidence, torsion, ss, primary=True)    
             
     def compute(self, rank):
         """
@@ -218,23 +243,23 @@ class TorsionAnglesPredictor(object):
         @param rank: target residue rank
         @type rank: int
         
-        @return: a tuple of L{TorsionPredictionInfo}, sorted by confidence  
-        @rtype: tuple  
+        @return: L{TorsionPredictionInfo} instances, sorted by confidence  
+        @rtype: tuple of L{TorsionPredictionInfo}  
         """        
         
         if not self._initialized:
             self.init()
-        
-        residue = self._residue(rank)
+
         prediction = []
         
         for rep in self._reps.values():
             
-            if rep.centroid.qstart <= residue.native.rank <= rep.centroid.qend:
+            if rep.centroid.qstart <= rank <= rep.centroid.qend:
                 
                 fragment = rep.centroid
                 torsion = fragment.torsion_at(rank, rank)[0]
-                info = TorsionPredictionInfo(rank, rep.confidence, torsion)
+                ss = fragment.sec_structure_at(rank, rank)[0] 
+                info = TorsionPredictionInfo(rank, rep.confidence, torsion, ss)
 
                 if rep is self._reps.get(rank, None):
                     info.primary = True
@@ -243,6 +268,71 @@ class TorsionAnglesPredictor(object):
         
         prediction.sort(reverse=True)
         return tuple(prediction)
+    
+    def flat_torsion_map(self):
+        """
+        Filter the current fragment map and create a new, completely flat,
+        non-overlapping map built from centroids, assigned iteratively by
+        decreasing confidence. Centroids with lower confidence which overlap
+        with previously assigned centroids will be trimmed to fill existing
+        gaps only. 
+        
+        @return: L{TorsionPredictionInfo} instances, one for each target residue
+        @rtype: tuple of L{TorsionPredictionInfo}            
+        """
+        
+        if not self._initialized:
+            self.init()        
+        
+        prediction = []
+        slots = set(range(1, self.target.length + 1))
+        
+        reps = list(self._reps.values())
+        reps.sort(key=lambda i: i.confidence, reverse=True)
+        
+        for rep in reps:
+            
+            for rank in range(rep.centroid.qstart, rep.centroid.qend + 1):
+                if rank in slots:
+                    torsion = rep.centroid.torsion_at(rank, rank)[0]
+                    ss = rep.centroid.sec_structure_at(rank, rank)[0] 
+                    info = TorsionPredictionInfo(rank, rep.confidence, torsion, ss, primary=True)
+                    
+                    prediction.append(info)
+                    slots.remove(rank)
+                    
+        for rank in slots:
+            prediction.append(TorsionPredictionInfo(rank, 0, None))
+
+        prediction.sort(key=lambda i: i.rank)                    
+        return tuple(prediction)
+    
+    def get_angles(self, rank):
+        """
+        Extract all torsion angles coming from all fragments, which had survived
+        the filtering and cover residue C{#rank}. 
+
+        @param rank: target residue rank
+        @type rank: int
+        
+        @return: all L{TorsionAngles} for a cluster at the specified residue  
+        @rtype: tuple of L{TorsionAngles}
+        """  
+                
+        if not self._initialized:
+            self.init()
+        if rank not in self._clusters:
+            return tuple()
+
+        angles = []
+                
+        for node in self._clusters[rank]:
+            fragment = node.fragment
+            torsion = fragment.torsion_at(rank, rank)[0]
+            angles.append(torsion)
+
+        return tuple(angles)
+         
 
 class TorsionPredictionInfo(object):
     """
@@ -254,18 +344,21 @@ class TorsionPredictionInfo(object):
     @type confidence: float
     @param torsion: assigned phi/psi/omega angles
     @type torsion: L{TorsionAngles}
+    @param dssp: assigned secondary structure
+    @type dssp: L{SecondaryStructureElement}
     @param primary: if True, designates that the assigned angles are extracted
                     from the L{ClusterRep} at residue C{#rank}; otherwise: the
                     angles are coming from another, overlapping L{ClusterRep}
     
     """
     
-    def __init__(self, rank, confidence, torsion, primary=False):
+    def __init__(self, rank, confidence, torsion, dssp, primary=False):
         
         self.rank = rank
         self.confidence = confidence
         self.torsion = torsion
         self.primary = primary
+        self.dssp = dssp
             
     def as_tuple(self):
         """
@@ -546,16 +639,15 @@ class TargetResidue(object):
         try:
             nodes = []
             for ai in self.assignments:
-                if ai.fragment.probability > 0.7 and ai.fragment.length >= FragmentCluster.MIN_LENGTH:
-                    node = ClusterNode(ai.fragment, distance=method, fixed=extend)
-                else:
-                    node = ClusterNode(ai.fragment, distance=method, fixed=False)
+                node = ClusterNode.create(ai.fragment, method, extend)
                 nodes.append(node)
+                
             cluster = FragmentCluster(nodes, threshold=threshold)
-          
+            
             center = cluster.shrink(minitems=0)
             if center.has_alternative:
                 center.exchange()
+                
             return center
         
         except (ClusterExhaustedError, ClusterDivergingError):
@@ -878,11 +970,35 @@ class Assignment(FragmentMatch):
 
         self._score = score
         self._neff = neff
+        self._ss = None 
     
         self._segment_start = segment
         self.internal_id = internal_id
         
         super(Assignment, self).__init__(id, qstart, qend, probability, rmsd, tm_score, None)
+        
+        self._ss = SecondaryStructure('-' * self.length)
+        
+    @staticmethod
+    def from_fragment(fragment, provider):
+        """
+        Create a new L{Assignment} given a source rosetta fragment.
+        
+        @param fragment: rosetta fragment
+        @type fragment: L{RosettaFragment}
+        @param provider: PDB database provider
+        @type provider: L{StructureProvider} 
+        
+        @rtype: L{Assignment}
+        """
+        structure = provider.get(fragment.accession)
+        source = structure.chains[fragment.chain]
+        source.compute_torsion()
+        
+        id = "{0}:{1}-{2}".format(fragment.source_id, fragment.start, fragment.end)
+        
+        return Assignment(source, fragment.start, fragment.end, id,
+                          fragment.qstart, fragment.qend, 0, 0)        
 
     @property
     def backbone(self):
@@ -919,6 +1035,19 @@ class Assignment(FragmentMatch):
     @property
     def segment(self):
         return self._segment_start    
+    
+    @property
+    def secondary_structure(self):
+        return self._ss
+    @secondary_structure.setter
+    def secondary_structure(self, value):
+        
+        if isinstance(value, csb.core.string):
+            value = csb.bio.structure.SecondaryStructure(value)
+        if len(str(value)) != self.length:#(value.end - value.start + 1) != self.length:
+            raise ValueError("Invalid secondary structure length", len(str(value)), self.length )
+          
+        self._ss = value
     
     def transform(self, rotation, translation):
         """
@@ -980,7 +1109,15 @@ class Assignment(FragmentMatch):
         relstart = qstart - self.qstart
         relend = qend - self.qstart + 1
         
-        return sa_string[relstart : relend]    
+        return sa_string[relstart : relend] 
+    
+    def sec_structure_at(self, qstart, qend):
+                
+        self._check_range(qstart, qend)
+        start = qstart - self.qstart + 1
+        end = qend - self.qstart + 1
+        
+        return self.secondary_structure.scan(start, end, loose=True, cut=True)      
     
     def profile_at(self, source, qstart, qend):
         
@@ -1187,7 +1324,7 @@ class FragmentCluster(object):
         
     @property    
     def fragments(self):
-        return [i.fragment for i in self._items]
+        return tuple(i.fragment for i in self._items)
     
     @property
     def threshold(self):
@@ -1367,6 +1504,21 @@ class ClusterNode(object):
     @type fixed: bool    
     """
     
+    FIXED = 0.7
+    
+    @staticmethod
+    def create(fragment, method=Metrics.RMSD, extend=False):
+        """
+        Create a new L{ClusterNode} given a specified C{Assignment}. If this
+        assignment is a high probability match, define it as a fixed fragment.
+        
+        @rtype: L{ClusterNode}
+        """
+        if fragment.probability > ClusterNode.FIXED and fragment.length >= FragmentCluster.MIN_LENGTH:
+            return ClusterNode(fragment, distance=method, fixed=extend)
+        else:
+            return ClusterNode(fragment, distance=method, fixed=False)        
+        
     def __init__(self, fragment, distance=Metrics.RMSD, fixed=False):
         
         if fixed and fragment.length < FragmentCluster.MIN_LENGTH:
@@ -1840,6 +1992,13 @@ class BenchmarkAdapter(object):
             
             db.cursor.callproc('reporting."GetAssignments"', (target_id, type))
             return db.cursor.fetchall()
+        
+    def assignments_sec_structure(self, target_id, type):
+        
+        with BenchmarkAdapter.Connection() as db:
+            
+            db.cursor.callproc('reporting."GetTargetSecStructureAssignments2"', (target_id, type))
+            return db.cursor.fetchall()        
 
     def scores(self, benchmark_id, type):
         
@@ -1876,7 +2035,7 @@ class BenchmarkAdapter(object):
         
         return self._parser(pdbfile).parse_structure()
             
-    def prediction(self, target_id, type):
+    def prediction(self, target_id, type, ss=False):
         
         info = self.target_details(target_id)
         if not info:
@@ -1926,8 +2085,27 @@ class BenchmarkAdapter(object):
                                         tm_score=row['TMScore'],
                                         segment=row['SegmentStart'],
                                         internal_id=row['InternalID'])
-            
+                            
             target.assign(fragment)
+        
+        if ss:
+            self._attach_sec_structure(target, target_id, type)
         
         return target
 
+    def _attach_sec_structure(self, target, target_id, type):
+        
+        ss = {}
+        
+        for row in self.assignments_sec_structure(target_id, type):
+            frag_id, state = row["AssignmentID"], row["DSSP"]
+            if row[frag_id] not in ss:
+                ss[frag_id] = []
+                
+            ss[frag_id].append(state)
+        
+        for a in target.matches:
+            if a.internal_id in ss:
+                dssp = ''.join(ss[a.internal_id])
+                a.secondary_structure = dssp
+        

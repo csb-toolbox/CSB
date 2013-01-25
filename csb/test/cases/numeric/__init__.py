@@ -84,7 +84,7 @@ class TestMath(test.Case):
     def testRotationMatrix(self):
         from csb.numeric import rotation_matrix, axis_and_angle
 
-        R1 = [[0, -1, 0], [1, 0, 0], [0, 0, 1]]
+        R1 = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
         R2 = rotation_matrix([0, 0, 1], np.pi / 2.0)
         axis, angle = axis_and_angle(R2)
         R3 = rotation_matrix(axis, angle)

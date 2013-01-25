@@ -1518,7 +1518,7 @@ class Clans(object):
         """
         self.seqgroups._remove_item(group)
 
-        [group.remove(member) for member in group.members]
+        [group.remove(member) for member in group.members[:]]
 
     def append_groups_from(self, other):
         '''

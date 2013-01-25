@@ -104,7 +104,7 @@ class Application(object):
     def __init__(self, args, log=sys.stdout):
         
         self.__args = None
-        self.__log = log
+        self._log = log
                 
         self.args = args
         
@@ -134,9 +134,9 @@ class Application(object):
         @type message: str        
         """
         
-        self.__log.write(message)
-        self.__log.write(ending)
-        self.__log.flush()
+        self._log.write(message)
+        self._log.write(ending)
+        self._log.flush()
         
     @staticmethod
     def exit(message, code=0, usage=False):
@@ -355,7 +355,16 @@ class ArgHandler(object):
         assert len(args) in (1, 2)   
         args.extend(a)                        
         
-        self.parser.add_argument(*args, **kargs)        
+        self.parser.add_argument(*args, **kargs)
+        
+    def _format_help(self, help, default):
+
+        if not help:
+            help = ''
+        if default is not None:
+            help = '{0} (default={1})'.format(help, default)
+            
+        return help
         
     def add_positional_argument(self, name, type, help, choices=None):
         """
@@ -405,9 +414,9 @@ class ArgHandler(object):
                         inverse value is assigned  
         @type default: bool       
         """
-        if not help:
-            help = ''
-        help = '{0} (default={1})'.format(help, default)
+        if not default:
+            default = False
+        help = self._format_help(help, default)
         
         if default:
             action = 'store_false'
@@ -435,10 +444,7 @@ class ArgHandler(object):
         @param required: make this option a named mandatory argument
         @type required: bool      
         """
-        if not help:
-            help = ''
-        if default is not None:
-            help = '{0} (default={1})'.format(help, default)             
+        help = self._format_help(help, default)          
          
         self._add(ArgHandler.Type.NAMED, name, shortname,
                   type=type, help=help, default=default, choices=choices, required=required)        
@@ -461,13 +467,11 @@ class ArgHandler(object):
         @param required: make this option a named mandatory argument
         @type required: bool                   
         """
-        if not help:
-            help = ''
-        if default is not None:
-            help = '{0} (default={1})'.format(help, default)           
-         
+        help = self._format_help(help, default)      
+        
         self._add(ArgHandler.Type.NAMED, name, shortname,
-                  nargs=argparse.ZERO_OR_MORE, type=type, help=help, choices=choices, required=required)
+                  nargs=argparse.ZERO_OR_MORE, type=type, help=help, default=default,
+                  choices=choices, required=required)
         
     def parse(self, args):
         """

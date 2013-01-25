@@ -160,8 +160,8 @@ def rotation_matrix(axis, angle):
 
     r = (1.0 - c) * numpy.outer(axis, axis)
     r.flat[[0,4,8]] += c
-    r.flat[[5,6,1]] -= s * axis
-    r.flat[[7,2,3]] += s * axis
+    r.flat[[5,6,1]] += s * axis
+    r.flat[[7,2,3]] -= s * axis
 
     return r
 
@@ -178,7 +178,7 @@ def axis_and_angle(r):
     from scipy.linalg import logm
 
     B = logm(r).real
-    a = numpy.array([-B[1,2], B[0,2], -B[0,1]])
+    a = numpy.array([B[1,2], -B[0,2], B[0,1]])
     n = norm(a)
 
     return a / n, n

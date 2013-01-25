@@ -95,15 +95,12 @@ class MDPropagator(AbstractPropagator):
 
     def generate(self, init_state, length, return_trajectory=False):
         
-        if self._first_run == True and self.mass_matrix is None:
-            d = len(init_state.position)
-            self.mass_matrix = InvertibleMatrix(numpy.eye(d), numpy.eye(d))
-
         integrator = self._integrator(self.timestep, self.gradient)
         
         result = integrator.integrate(init_state, length,
                                       mass_matrix=self.mass_matrix,
                                       return_trajectory=return_trajectory)
+        
         return result
 
 class Looper(object):
@@ -239,6 +236,10 @@ class ThermostattedMDPropagator(MDPropagator):
         return state, heat
 
     def generate(self, init_state, length, return_trajectory=False):
+
+        if self._first_run == True and self.mass_matrix is None:
+            d = len(init_state.position)
+            self.mass_matrix = InvertibleMatrix(numpy.eye(d), numpy.eye(d))
 
         integrator = self._integrator(self.timestep, self.gradient)
         builder = TrajectoryBuilder.create(full=return_trajectory)
@@ -407,15 +408,10 @@ class HMCPropagator(AbstractMCPropagator):
         self._mass_matrix = mass_matrix
         self._integrator = integrator
 
-        self._first_run = True
-        
     def _init_sampler(self, init_state):
 
         from csb.statistics.samplers.mc.singlechain import HMCSampler
 
-        if self._first_run == True and self._mass_matrix is None:
-            self._mass_matrix = InvertibleMatrix(numpy.eye(len(init_state.position)))
-        
         self._sampler = HMCSampler(self._pdf, init_state, self._gradient,
                                    self._timestep, self._nsteps,
                                    mass_matrix=self.mass_matrix,

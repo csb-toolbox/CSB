@@ -187,7 +187,7 @@ class ReplicaExchangeMC(AbstractExchangeMC):
         
         E1 = lambda x:-swapcom.sampler1._pdf.log_prob(x)
         E2 = lambda x:-swapcom.sampler2._pdf.log_prob(x)
-
+            
         T1 = swapcom.sampler1.temperature
         T2 = swapcom.sampler2.temperature
         
@@ -201,7 +201,7 @@ class ReplicaExchangeMC(AbstractExchangeMC):
                                                          + E1(state1.position) / T1 
                                                          - E2(proposal2.position) / T2 
                                                          + E2(state2.position) / T2)
-                                                 
+                                                         
         return swapcom
 
 class MDRENS(AbstractRENS):
@@ -278,6 +278,7 @@ class ThermostattedMDRENS(MDRENS):
                                         update_interval=traj_info.param_info.collision_interval,
 										mass_matrix=traj_info.param_info.mass_matrix,
                                         integrator=self._integrator)
+
         
         traj = gen.generate(traj_info.init_state, traj_info.param_info.traj_length)
 

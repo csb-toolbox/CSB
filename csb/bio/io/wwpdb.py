@@ -692,8 +692,8 @@ class AbstractStructureParser(object):
                     else:
                         atom._residue_name = csb.core.Enum.parsename(SequenceAlphabets.Protein, residue_name)
 
-                    atom.occupancy = float(line[54:60])
-                    atom.bfactor = float(line[60:66])
+                    atom.occupancy = float(line[54:60].strip() or 0)
+                    atom.bfactor = float(line[60:66].strip() or 0)
 
                     charge = line[78:80].strip()
                     if charge:
@@ -988,7 +988,12 @@ class RegularStructureParser(AbstractStructureParser):
                             structure.chains.append(new_chain)
                         except csb.core.DuplicateKeyError:
                             raise HeaderFormatError('Chain {0} is already defined.'.format(new_chain.id))
-                        
+
+            elif line.startswith('REMARK   2 RESOLUTION'):
+                res = re.search("(\d+(?:\.\d+)?)\s+ANGSTROM", line)
+                if res and res.groups():
+                    structure.resolution = float(res.group(1))
+                                        
             elif line.startswith('SEQRES'):
                 # Correct handling of empty chain id
                 seq_fields = [line[7:10], line[11], line[13:17] ]

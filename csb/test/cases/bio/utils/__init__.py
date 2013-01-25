@@ -213,10 +213,26 @@ class TestUtils(test.Case):
         rmsd = cbu.rmsd_cur(X1, X2)
 
         self.assertAlmostEqual(rmsd, 2.0)
+        
+
+    def testRad(self):
+        
+        converted = cbu.rad([[0, 90, 180]])[0]
+         
+        self.assertEqual(converted[0], 0)
+        self.assertAlmostEqual(converted[1], numpy.pi / 2.0)
+        self.assertAlmostEqual(converted[2], numpy.pi)
+
+    def testDeg(self):
+        
+        converted = cbu.deg([[0, numpy.pi / 2.0, numpy.pi]])[0]
+        
+        self.assertEqual(converted[0], 0)
+        self.assertAlmostEqual(converted[1], 90)
+        self.assertAlmostEqual(converted[2], 180)
+        
 
 if __name__ == '__main__':
 
     test.Console()
-
-# vi:expandtab:smarttab
 
