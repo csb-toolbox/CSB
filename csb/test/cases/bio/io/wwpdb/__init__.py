@@ -212,12 +212,14 @@ class TestRegularStructureParser(test.Case):
         ensemble = RegularStructureParser(pdb).parse_models()
         self.assertEquals(ensemble.models.length, 1)    
         self.assertEquals(ensemble[0].model_id, 1)
+        self.assertEquals(ensemble[0].resolution, 2.05)
     
     def testParseStructure(self):
 
         structure = self.parser.parse(model=2)
         
-        self.assertEquals(self.parser.parse_structure().model_id, 1)        
+        self.assertEquals(self.parser.parse_structure().model_id, 1)
+        self.assertEquals(structure.resolution, None)
 
         self.assertEqual(structure.accession, '1d3z')
         self.assertEqual(structure.model_id, 2)
@@ -498,5 +500,5 @@ def TestPDB():
 
 
 if __name__ == '__main__':
-
+    
     test.Console()

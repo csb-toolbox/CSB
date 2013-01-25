@@ -2,3 +2,5 @@ recursive-include csb/bio/nmr/resources *.*
 recursive-include csb/test/data *.*
 recursive-include docs *.*
 include INSTALL.txt
+
+recursive-exclude csb/test/data *.pickle

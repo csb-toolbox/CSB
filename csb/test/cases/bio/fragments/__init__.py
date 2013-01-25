@@ -32,7 +32,8 @@ class SampleTarget(object):
         config = test.Config()
         chain = config.getPickle('1nz9.model1.pickle').chains['A']
         chain.compute_torsion()
-        
+        ss = str(chain.secondary_structure) + chain.length * '-'
+                
         target = Target('testA', chain.length, chain.residues)
         
         for start in range(1, target.length + 1, 5):
@@ -48,6 +49,7 @@ class SampleTarget(object):
             rmsd = chain.subregion(start, end).rmsd(source.subregion(start, end))
             
             a = Assignment(source, start, end, id, start, end, probability=1.0, rmsd=rmsd)
+            a.secondary_structure = ss[start - 1: end]
             target.assign(a)
         
         return target
@@ -197,12 +199,54 @@ class TestTorsionAnglesPredictor(test.Case):
     def testCompute(self):
         
         pred = self.predictor.compute(3)
-        self.assertTrue(len(pred) > 1)
+        self.assertGreater(len(pred), 1)
 
         for pi in pred:
             self.assertEqual(pi.as_tuple()[1:], (-143.77110677043459, 148.81948663098206, -179.98643191250056))            
             self.assertTrue(pi.confidence <= pred[0].confidence)
             
+    def testGetAngles(self):
+        
+        pred = self.predictor.get_angles(6)
+        self.assertEqual(len(pred), self.target.residues[6].assignments.length)
+        self.assertEqual(len(pred), 2)
+        
+        for pi in pred:
+            ref = self.target.residues[6].assignments[0].fragment.torsion_at(6, 6)[0]
+            self.assertEqual((pi.phi, pi.psi, pi.omega), (-150.51264336633528, 134.10287564490648, 179.98064117348235))
+            self.assertEqual((pi.phi, pi.psi, pi.omega), (ref.phi, ref.psi, ref.omega))
+
+    def testFlatTorsionMap(self):
+        
+        source = test.Config().getPickle('1nz9.model1.pickle').chains['A']
+        source.compute_torsion()
+        target = SampleTarget.build_target()       
+        
+        # add more fragments at location 2..9; this will also alter the confidence
+        for i in range(20):
+            # these fragments come from 12..19 
+            target.assign(Assignment(source, 2 + 10, 9 + 10, 't', 2, 9, 1, 1))
+        
+        predictor = TorsionAnglesPredictor(target) 
+        pred = predictor.flat_torsion_map()
+        
+        self.assertEqual(len(pred), target.length)
+                
+        # outside the 2..9 region
+        self.assertAlmostEqual(pred[18].confidence, 0.301, delta=0.01)         
+        self.assertEqual(pred[0].torsion.phi, target.residues[1].native.torsion.phi)
+        self.assertEqual(pred[9].torsion.phi, target.residues[10].native.torsion.phi)
+
+        # intside the 2..9 region
+        for i in range(2, 9 + 1):
+            self.assertEqual(pred[i - 1].rank, i)
+            self.assertAlmostEqual(pred[i - 1].confidence, 1.20, delta=0.01)                
+        self.assertEqual(pred[1].torsion.psi, target.residues[2 + 10].native.torsion.psi)
+        self.assertEqual(pred[8].torsion.psi, target.residues[9 + 10].native.torsion.psi)     
+        
+        self.assertEqual(pred[10].dssp.type, 'E')
+        self.assertEqual(pred[52].dssp.type, 'H')   
+        
             
 @test.unit
 class TestAssignment(test.Case):
@@ -521,6 +565,5 @@ class TestRosettaFragmentMap(test.Case):
     
                                  
 if __name__ == '__main__':
-    
     test.Console()
     

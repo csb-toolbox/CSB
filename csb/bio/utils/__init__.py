@@ -824,4 +824,33 @@ def is_mirror_image(X, Y):
 
     return det(R) < 0
 
+def deg(x):
+    """
+    Convert an array of torsion angles in radians to torsion degrees
+    ranging from -180 to 180.
+
+    @param x: array of angles
+    @type x: numpy array
+ 
+    @rtype: numpy array     
+    """
+    from csb.bio.structure import TorsionAngles
+    
+    func = numpy.vectorize(TorsionAngles.deg)
+    return func(x)
+
+def rad(x):
+    """
+    Convert an array of torsion angles in torsion degrees to radians.
+
+    @param x: array of angles
+    @type x: numpy array
+ 
+    @rtype: numpy array     
+    """
+    from csb.bio.structure import TorsionAngles
+    
+    func = numpy.vectorize(TorsionAngles.rad)
+    return func(x)
+
 # vi:expandtab:smarttab:sw=4
