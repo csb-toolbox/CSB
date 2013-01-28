@@ -1,6 +1,27 @@
 import csb.test as test
 import numpy as np
 
+
+@test.regression
+class MathRegressions(test.Case):
+
+    def testDihedralAngles(self):
+        """
+        r526
+        """
+        from csb.numeric import dihedral_angle
+
+        a = np.array([2, 0., 0.])
+        b = np.array([0, 0., 0.])
+        c = np.array([0, 2., 0.])
+        d = np.array([0, 4., -4.])
+
+        self.assertEqual(dihedral_angle(a, b, c, d), 90.0)
+        self.assertEqual(dihedral_angle(a, b, c, a), 0.0)
+        self.assertEqual(dihedral_angle(a, b, c, -d), -90.0)
+    
+
+
 @test.unit
 class TestMath(test.Case):
 
