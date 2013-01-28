@@ -356,6 +356,19 @@ class TestStructure(test.Case):
         with self.config.getTempStream() as tmp:   
             self.structure.to_pdb(tmp.name)
             self.assertEqual(pdbraw, open(tmp.name).read())            
+
+    def testFromChain(self):
+        new_structure = structure.Structure.from_chain(self.structure.first_chain)
+
+        self.assertEqual(new_structure.chains.length,1)
+        self.assertEqual(new_structure.first_chain.get_coordinates(('CA',)).tolist(),
+                         self.structure.first_chain.get_coordinates(('CA',)).tolist(),)
+
+        self.assertEqual(new_structure.first_chain.sequence,
+                         self.structure.first_chain.sequence)
+
+                        
+        
             
 @test.unit
 class TestChain(test.Case):
