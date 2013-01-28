@@ -29,6 +29,20 @@ input PDB file. If the input file looks like a regular PDB file, the factory
 returns a L{RegularStructureParser}, otherwise it instantiates L{LegacyStructureParser}.
 L{StructureParser} is in fact an alias for L{AbstractStructureParser.create_parser}.
 
+Writing your own, customized PDB parser is easy. Suppose that you are trying to
+parse a PDB-like file which misuses the charge column to store custom info. This
+will certainly crash L{RegularStructureParser} (for good), but you can create your
+own parser as a workaround. All you need to to is to override the virtual
+C{_read_charge_field} hook method::
+
+    class CustomParser(RegularStructureParser):
+    
+        def _read_charge_field(self, line):
+            try:
+                return super(CustomParser, self)._read_charge_field(line)
+            except StructureFormatError:
+                return None
+
 Another important abstraction in this module is L{StructureProvider}. It has several
 implementations which can be used to retrieve PDB L{Structure}s from various sources:
 file system directories, remote URLs, etc. You can easily create your own provider as
@@ -464,8 +478,13 @@ class AbstractStructureParser(object):
         """
         if model is not None:
             model = int(model)
-                    
-        structure = self._parse_header(model)
+        
+        try:            
+            structure = self._parse_header(model)
+        except PDBParseError:
+            raise
+        except ValueError as ex:
+            raise HeaderFormatError("Malformed header: {0}".format(ex))
         
         self._parse_atoms(structure, model)
         self._parse_ss(structure)
@@ -582,6 +601,11 @@ class AbstractStructureParser(object):
         molecule identifiers, chains and residues. This structure object is
         then internally passed to the C{_parse_atoms} hook, responsible for
         attachment of the atoms to the residues in the structure.
+        
+        @param model: model ID to parse
+        @type model: str
+        
+        @rtype: L{Structure}
         """
         pass
 
@@ -605,6 +629,11 @@ class AbstractStructureParser(object):
         """
         Parse the ATOMs from the specified C{model} and attach them to the
         C{structure}.
+        
+        @param structure: L{Structure} being constructed
+        @type structure:L{Structure}
+        @param model: model ID to parse
+        @type model: str        
         """
         
         structure.model_id = None
@@ -639,72 +668,17 @@ class AbstractStructureParser(object):
                     self._scroll_model(model, self._stream)
                     structure.model_id = model
                 else:
-                    model = int(line[10:14])
-                    structure.model_id = model
+                    self._parse_model_line(line, structure)
+                    model = structure.model_id
 
-            elif line.startswith('ATOM') \
-                     or (line.startswith('HETATM') and not in_ligands):
-                    in_atom = True
+            elif line.startswith('ATOM') or \
+                            (line.startswith('HETATM') and not in_ligands):
+                in_atom = True
+                
+                atom = self._parse_atom_line(line, structure)
+                chains.add(atom._chain)
+                atoms[atom._chain].append(atom)                      
                     
-                    rank = int(line[22:26])
-                    serial_number = int(line[6:11])
-                    name = line[12:16]
-                    x, y, z = line[30:38], line[38:46], line[46:54]
-                    vector = numpy.array([float(x), float(y), float(z)])
-                    element = line[76:78].strip()
-                    if element:
-                        try:
-                            element = csb.core.Enum.parsename(ChemElements, element)
-                        except csb.core.EnumMemberError:
-                            if element in ('D', 'X'):
-                                element = ChemElements.x                            
-                            else:
-                                raise StructureFormatError('Unknown chemical element: {0}'.format(element))
-                    else:
-                        element = None
-
-                    atom = csb.bio.structure.Atom(serial_number, name, element,
-                                                  vector)
-
-                    atom._het = line.startswith('HETATM')
-                    atom._rank = rank
-                    atom._sequence_number = int(line[22:26].strip())
-                    atom._residue_id = str(atom._sequence_number)
-                    atom._insertion_code = line[26].strip()
-                    if not atom._insertion_code:
-                        atom._insertion_code = None
-                    else:
-                        atom._residue_id += atom._insertion_code
-
-                    atom.alternate = line[16].strip()
-                    if not atom.alternate:
-                        atom.alternate = None
-
-                    atom._chain = line[21].strip()
-                    if atom._chain not in structure.chains:
-                        raise StructureFormatError(
-                                    'Atom {0}: chain {1} is undefined'.format(serial_number, atom._chain))
-                    chains.add(atom._chain)
-                    residue_name = line[17:20].strip()
-                    residue_name = self.parse_residue_safe(residue_name, as_type=structure.chains[atom._chain].type)
-                    if structure.chains[atom._chain].type == SequenceTypes.NucleicAcid:                               
-                        atom._residue_name = csb.core.Enum.parsename(SequenceAlphabets.Nucleic, residue_name)
-                    else:
-                        atom._residue_name = csb.core.Enum.parsename(SequenceAlphabets.Protein, residue_name)
-
-                    atom.occupancy = float(line[54:60].strip() or 0)
-                    atom.bfactor = float(line[60:66].strip() or 0)
-
-                    charge = line[78:80].strip()
-                    if charge:
-                        if charge in ('+', '-'):
-                            charge += '1'
-                        if charge[-1] in ('+', '-'):
-                            charge = charge[::-1]
-                        atom.charge = int(charge)
-
-                    atoms[atom._chain].append(atom)
-
             elif in_atom and line.startswith('TER'):
                 in_atom = False
                 if len(chains) == total_chains:
@@ -719,12 +693,198 @@ class AbstractStructureParser(object):
         if structure.model_id != model:
             raise ValueError('No such model {0} in the structure.'.format(model))
 
-        self._map_residues(structure, atoms, het_residues)        
+        self._map_residues(structure, atoms, het_residues)
+        
+    def _parse_model_line(self, line, structure):
+        """
+        Handle a new MODEL line. The default implementation will read the model
+        ID and attach it to the C{structure}.
+        
+        @param line: raw string line to parse
+        @type line: str
+        @param structure: L{Structure} being constructed
+        @type structure:L{Structure}
+        
+        @return: read model ID
+        @rtype: int
+        """
+        try:
+            model = int(line[10:14])
+            structure.model_id = model
+            return model
+        except ValueError:
+            raise StructureFormatError("Invalid model ID: {0}".format(model))
+        
+    def _parse_atom_line(self, line, structure):
+        """
+        Handle a new ATOM or HETATM line. The default implementation will read
+        all data fields, create a new L{Atom} and attach it to the C{structure}.
+        
+        @param line: raw string line to parse
+        @type line: str
+        @param structure: L{Structure} being constructed
+        @type structure:L{Structure}
+        
+        @return: newly constructed atom
+        @rtype: L{Atom}
+        """
+
+        try:
+            rank = int(line[22:26])
+            serial_number = int(line[6:11])
+            name = line[12:16]
+            x, y, z = line[30:38], line[38:46], line[46:54]
+            vector = numpy.array([float(x), float(y), float(z)])
+        except ValueError as ve:
+            raise StructureFormatError("Invalid ATOM line: {0}".format(ve))
+        
+        element = self._read_element_field(line)
+        atom = csb.bio.structure.Atom(serial_number, name, element, vector)
+
+        atom._het = line.startswith('HETATM')
+        atom._rank = rank
+        atom._sequence_number = int(line[22:26].strip())
+        atom._residue_id = str(atom._sequence_number)
+        atom._insertion_code = line[26].strip()
+        if not atom._insertion_code:
+            atom._insertion_code = None
+        else:
+            atom._residue_id += atom._insertion_code
+
+        atom._chain = line[21].strip()
+        if atom._chain not in structure.chains:
+            raise StructureFormatError(
+                        'Atom {0}: chain {1} is undefined'.format(serial_number, atom._chain))
+
+        rn = self._read_residue_field(line, structure.chains[atom._chain])
+        atom._residue_name = rn
+        
+        atom.alternate = self._read_alternate_field(line)
+        atom.occupancy = self._read_occupancy_field(line)
+        atom.bfactor = self._read_bfactor_field(line)
+        atom.charge = self._read_charge_field(line)
+
+        return atom
+
+    def _read_residue_field(self, line, chain):
+        """
+        @param chain: owning L{Chain} object 
+        @type chain: L{Chain}
+        
+        @return: a member of any alphabet (e.g. L{SequenceAlphabets.Protein})
+        @rtype: L{EnumItem}
+        """
+        raw = line[17:20].strip()
+        residue = self.parse_residue_safe(raw, as_type=chain.type)
+        
+        try:
+            if chain.type == SequenceTypes.NucleicAcid:                               
+                return csb.core.Enum.parsename(SequenceAlphabets.Nucleic, residue)
+            else:
+                return csb.core.Enum.parsename(SequenceAlphabets.Protein, residue)
+        except csb.core.EnumMemberError:
+            raise StructureFormatError("{0} is not a valid {1} residue".format(raw, chain.type))        
+            
+    def _read_element_field(self, line):
+        """
+        @return: a member of L{ChemElements}
+        @rtype: L{EnumItem} or None
+        """
+        element = line[76:78].strip()
+        if element:
+            try:
+                element = csb.core.Enum.parsename(ChemElements, element)
+            except csb.core.EnumMemberError:
+                if element in ('D', 'X'):
+                    element = ChemElements.x                            
+                else:
+                    raise StructureFormatError('Unknown chemical element: {0}'.format(element))
+        else:
+            element = None
+            
+        return element
+    
+    def _read_alternate_field(self, line):
+        """
+        @return: alt identifier
+        @rtype: str or None
+        """
+        alternate = line[16].strip()
+        
+        if not alternate:
+            return None
+        else:
+            return alternate
+    
+    def _read_occupancy_field(self, line):
+        """
+        @return: occupancy
+        @rtype: float or None
+        """        
+        try:
+            return float(line[54:60].strip() or 0)
+        except ValueError:
+            raise StructureFormatError("Malformed occupancy field")
+
+    def _read_bfactor_field(self, line):
+        """
+        @return: b-factor
+        @rtype: float or None
+        """
+        try:
+            return float(line[60:66].strip() or 0)
+        except ValueError:
+            raise StructureFormatError("Malformed occupancy field")        
+            
+    def _read_charge_field(self, line):
+        """
+        @return: charge
+        @rtype: int or None
+        """        
+        charge = line[78:80].strip()
+        
+        if charge:
+            if charge in ('+', '-'):
+                charge += '1'
+            if charge[-1] in ('+', '-'):
+                charge = charge[::-1]
+            try:
+                return int(charge)
+            except ValueError:
+                raise StructureFormatError("Malformed charge field") 
+        else:
+            return None
 
     def _map_residues(self, structure, atoms, het_residues):
+        """
+        Attach each L{Atom} to its corresponding L{Residue}.
+        
+        This is where all the magic and heavy lifting happens. Basically we
+        construct a sparse (fragmented) regexp given the information we have read
+        from the ATOM/HETATM records. That includes PDB sequence identifiers and
+        insertion codes, which cover only residues with XYZ coordinates and often
+        do not correspond to our L{Residue} ranks.
+        Our job is to find the right correspondence by matching this regexp to
+        what we have got from the SEQRES fields (the complete, gap-free protein
+        sequence).
+        
+        @param structure: L{Structure} being constructed
+        @type structure:L{Structure}
+        @param atoms: all L{Atom}s which have been constructed so far. This must
+                      be a map of the form: <chainID: [L{Atom}1, L{Atom}2...]>
+        @type atoms: dict
+        @param het_residues: PDB sequence identifiers of all HET atoms. This
+                             must be a map: <chainID: [seqID1, seqID2...]>
+                            
+        @type het_residues: dict         
+        """
 
-        assert set(structure.chains) == set(atoms.keys())
-
+        if set(structure.chains) != set(atoms.keys()):
+            raise PDBParseError("Invalid PDB file")
+       
+        # The code below is fairly complicated and tricky to follow, so better read
+        # the comments in debug mode.
+        
         for chain in structure.chains:
 
             subject = structure.chains[chain].sequence
@@ -1022,7 +1182,8 @@ class RegularStructureParser(AbstractStructureParser):
                     residue = csb.bio.structure.Residue.create(chain.type, rank=rank, type=rname)
                     residue._pdb_name = residue_name
                     structure.chains[chain_id].residues.append(residue)
-                    assert structure.chains[chain_id].residues.last_index == rank        
+                    if structure.chains[chain_id].residues.last_index != rank:
+                        raise HeaderFormatError("Malformed SEQRES")
 
             elif line.startswith('MODEL') or line.startswith('ATOM'):
                 break
