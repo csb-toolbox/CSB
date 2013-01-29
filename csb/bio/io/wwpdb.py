@@ -33,13 +33,13 @@ Writing your own, customized PDB parser is easy. Suppose that you are trying to
 parse a PDB-like file which misuses the charge column to store custom info. This
 will certainly crash L{RegularStructureParser} (for good), but you can create your
 own parser as a workaround. All you need to to is to override the virtual
-C{_read_charge_field} hook method::
+C{_read_charge} hook method::
 
     class CustomParser(RegularStructureParser):
     
-        def _read_charge_field(self, line):
+        def _read_charge(self, line):
             try:
-                return super(CustomParser, self)._read_charge_field(line)
+                return super(CustomParser, self)._read_charge(line)
             except StructureFormatError:
                 return None
 
@@ -621,7 +621,7 @@ class AbstractStructureParser(object):
                 raise ValueError('No such model {0} in the structure.'.format(model))
             
             if line.startswith('MODEL'):
-                model_id = int(line[10:14])
+                model_id = self._read_model(line)
                 if model == model_id:
                     return model_id      
         
@@ -644,6 +644,7 @@ class AbstractStructureParser(object):
         het_residues = dict( (chain, set()) for chain in structure.chains )
         in_ligands = False                
         in_atom = False
+        read_model = False
 
         self._stream.seek(0)
         while True:
@@ -664,12 +665,12 @@ class AbstractStructureParser(object):
                         het_residues[het_chain].add(het_residue_id)              
                 
             elif line.startswith('MODEL'):
-                if model and model != int(line[10:14]):
-                    self._scroll_model(model, self._stream)
-                    structure.model_id = model
+                if read_model:
+                    break
                 else:
-                    self._parse_model_line(line, structure)
+                    self._parse_model_line(line, structure, model)
                     model = structure.model_id
+                    read_model = True
 
             elif line.startswith('ATOM') or \
                             (line.startswith('HETATM') and not in_ligands):
@@ -695,7 +696,7 @@ class AbstractStructureParser(object):
 
         self._map_residues(structure, atoms, het_residues)
         
-    def _parse_model_line(self, line, structure):
+    def _parse_model_line(self, line, structure, model):
         """
         Handle a new MODEL line. The default implementation will read the model
         ID and attach it to the C{structure}.
@@ -705,15 +706,19 @@ class AbstractStructureParser(object):
         @param structure: L{Structure} being constructed
         @type structure:L{Structure}
         
+        @note: this method may have side effects: scrolls the current stream
+        
         @return: read model ID
         @rtype: int
         """
-        try:
-            model = int(line[10:14])
+        if model and model != self._read_model(line):
+            self._scroll_model(model, self._stream)
             structure.model_id = model
-            return model
-        except ValueError:
-            raise StructureFormatError("Invalid model ID: {0}".format(model))
+        else:
+            model = self._read_model(line)
+            structure.model_id = model
+                            
+        return model
         
     def _parse_atom_line(self, line, structure):
         """
@@ -729,8 +734,47 @@ class AbstractStructureParser(object):
         @rtype: L{Atom}
         """
 
+        atom = self._read_atom(line)
+        atom._het = line.startswith('HETATM')
+        
+        atom._rank = self._read_sequence_number(line)            
+        atom._sequence_number = atom._rank            
+        atom._insertion_code = self._read_insertion_code(line)        
+        
+        atom._residue_id = str(atom._sequence_number)        
+        if atom._insertion_code:
+            atom._residue_id += atom._insertion_code
+
+        atom._chain = self._read_chain_id(line)
+        if atom._chain not in structure.chains:
+            raise StructureFormatError("Chain {0._chain} is undefined".format(atom))
+
+        rn = self._read_residue(line, structure.chains[atom._chain])
+        atom._residue_name = rn
+        
+        atom.alternate = self._read_alternate(line)
+        atom.occupancy = self._read_occupancy(line)
+        atom.bfactor = self._read_bfactor(line)
+        atom.charge = self._read_charge(line)
+
+        return atom
+    
+    def _read_model(self, line):
+        """
+        @return: model identifier
+        @rtype: int
+        """          
         try:
-            rank = int(line[22:26])
+            return int(line[10:14])
+        except ValueError:
+            raise StructureFormatError("Invalid model ID: {0}".format(line))  
+    
+    def _read_atom(self, line):
+        """
+        @return: a new atom (serial_number, name, element, vector)
+        @rtype: L{Atom}
+        """
+        try:
             serial_number = int(line[6:11])
             name = line[12:16]
             x, y, z = line[30:38], line[38:46], line[46:54]
@@ -738,35 +782,39 @@ class AbstractStructureParser(object):
         except ValueError as ve:
             raise StructureFormatError("Invalid ATOM line: {0}".format(ve))
         
-        element = self._read_element_field(line)
-        atom = csb.bio.structure.Atom(serial_number, name, element, vector)
+        element = self._read_element(line)
+        return csb.bio.structure.Atom(serial_number, name, element, vector)        
 
-        atom._het = line.startswith('HETATM')
-        atom._rank = rank
-        atom._sequence_number = int(line[22:26].strip())
-        atom._residue_id = str(atom._sequence_number)
-        atom._insertion_code = line[26].strip()
-        if not atom._insertion_code:
-            atom._insertion_code = None
-        else:
-            atom._residue_id += atom._insertion_code
-
-        atom._chain = line[21].strip()
-        if atom._chain not in structure.chains:
-            raise StructureFormatError(
-                        'Atom {0}: chain {1} is undefined'.format(serial_number, atom._chain))
-
-        rn = self._read_residue_field(line, structure.chains[atom._chain])
-        atom._residue_name = rn
+    def _read_sequence_number(self, line):
+        """
+        @return: PDB sequence number
+        @rtype: int
+        """
+        try:
+            return int(line[22:26])
+        except ValueError:
+            raise StructureFormatError("Invalid sequence number")
         
-        atom.alternate = self._read_alternate_field(line)
-        atom.occupancy = self._read_occupancy_field(line)
-        atom.bfactor = self._read_bfactor_field(line)
-        atom.charge = self._read_charge_field(line)
+    def _read_insertion_code(self, line):
+        """
+        @return: PDB insertion code
+        @rtype: str or None
+        """       
+        code = line[26].strip()
+        
+        if code:
+            return code
+        else:
+            return None
 
-        return atom
-
-    def _read_residue_field(self, line, chain):
+    def _read_chain_id(self, line):
+        """
+        @return: chain identifier
+        @rtype: str
+        """          
+        return line[21].strip()
+        
+    def _read_residue(self, line, chain):
         """
         @param chain: owning L{Chain} object 
         @type chain: L{Chain}
@@ -785,7 +833,7 @@ class AbstractStructureParser(object):
         except csb.core.EnumMemberError:
             raise StructureFormatError("{0} is not a valid {1} residue".format(raw, chain.type))        
             
-    def _read_element_field(self, line):
+    def _read_element(self, line):
         """
         @return: a member of L{ChemElements}
         @rtype: L{EnumItem} or None
@@ -804,7 +852,7 @@ class AbstractStructureParser(object):
             
         return element
     
-    def _read_alternate_field(self, line):
+    def _read_alternate(self, line):
         """
         @return: alt identifier
         @rtype: str or None
@@ -816,7 +864,7 @@ class AbstractStructureParser(object):
         else:
             return alternate
     
-    def _read_occupancy_field(self, line):
+    def _read_occupancy(self, line):
         """
         @return: occupancy
         @rtype: float or None
@@ -826,7 +874,7 @@ class AbstractStructureParser(object):
         except ValueError:
             raise StructureFormatError("Malformed occupancy field")
 
-    def _read_bfactor_field(self, line):
+    def _read_bfactor(self, line):
         """
         @return: b-factor
         @rtype: float or None
@@ -834,9 +882,9 @@ class AbstractStructureParser(object):
         try:
             return float(line[60:66].strip() or 0)
         except ValueError:
-            raise StructureFormatError("Malformed occupancy field")        
+            raise StructureFormatError("Malformed bfactor field")        
             
-    def _read_charge_field(self, line):
+    def _read_charge(self, line):
         """
         @return: charge
         @rtype: int or None
@@ -854,6 +902,9 @@ class AbstractStructureParser(object):
                 raise StructureFormatError("Malformed charge field") 
         else:
             return None
+        
+
+         
 
     def _map_residues(self, structure, atoms, het_residues):
         """
