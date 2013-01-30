@@ -285,7 +285,7 @@ class TestStructure(test.Case):
         self.assertFalse('A' in self.structure2.chains)
         
         for c in ['.', 'A']:
-            self.assertRaises(csb.core.ItemNotFoundError, self.structure2.chains.remove, c)       
+            self.assertRaises(structure.ChainNotFoundError, self.structure2.chains.remove, c)       
             
     def testAccession(self):
         
@@ -477,8 +477,8 @@ class TestChain(test.Case):
         self.assertEqual(self.chain.find('127', 'X'), self.chain[0])
         
         self.chain[0].id = 127, None
-        self.assertRaises(csb.core.ItemNotFoundError, self.chain.find, 127, 'X')
-        self.assertRaises(csb.core.ItemNotFoundError, self.chain.find, 999999)
+        self.assertRaises(structure.EntityNotFoundError, self.chain.find, 127, 'X')
+        self.assertRaises(structure.EntityNotFoundError, self.chain.find, 999999)
         
     def testComputeTorsion(self):
         
