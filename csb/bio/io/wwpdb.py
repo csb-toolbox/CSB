@@ -822,7 +822,7 @@ class AbstractStructureParser(object):
         @return: a member of any alphabet (e.g. L{SequenceAlphabets.Protein})
         @rtype: L{EnumItem}
         """
-        raw = line[17:20].strip()
+        raw = self._read_residue_raw(line)
         residue = self.parse_residue_safe(raw, as_type=chain.type)
         
         try:
@@ -831,7 +831,13 @@ class AbstractStructureParser(object):
             else:
                 return csb.core.Enum.parsename(SequenceAlphabets.Protein, residue)
         except csb.core.EnumMemberError:
-            raise StructureFormatError("{0} is not a valid {1} residue".format(raw, chain.type))        
+            raise StructureFormatError("{0} is not a valid {1} residue".format(raw, chain.type))  
+        
+    def _read_residue_raw(self, line):
+        """
+        @rtype: str
+        """
+        return line[17:20].strip()              
             
     def _read_element(self, line):
         """
@@ -1007,19 +1013,22 @@ class AbstractStructureParser(object):
                         fixed_residue = residue
 
                     assert str(residue.type) == subject[atom._rank - 1]
+                    self._compact_atom(atom)                    
                     residue.atoms.append(atom)
-                    
-                    del atom._rank
-                    del atom._insertion_code
-                    del atom._sequence_number
-                    del atom._chain
-                    del atom._residue_id
-                    del atom._residue_name
             else:
                 if structure.chains[chain].length == 0 and len(atoms[chain]) > 0:
                     raise StructureFormatError("Can't add atoms: chain {0} has no residues".format(chain))
                 else:            
                     raise StructureFormatError("Can't map atoms")
+                
+    def _compact_atom(self, atom):
+
+        del atom._rank
+        del atom._insertion_code
+        del atom._sequence_number
+        del atom._chain
+        del atom._residue_id
+        del atom._residue_name        
 
     def _parse_ss(self, structure):
         """
@@ -1279,6 +1288,7 @@ class LegacyStructureParser(AbstractStructureParser):
         self._stream.seek(0)
         in_atom = False
         has_atoms = False
+        has_model = False
         chains = csb.core.OrderedDict()
 
         header = next(self._stream)
@@ -1298,67 +1308,93 @@ class LegacyStructureParser(AbstractStructureParser):
                 break
 
             if line.startswith('MODEL'):
-                if model and model != int(line[10:14]):
-                    self._scroll_model(model, self._stream)
-                    structure.model_id = model
+                if has_model:
+                    break
                 else:
-                    model = int(line[10:14])
-                    structure.model_id = model
+                    self._parse_model_line(line, structure, model)
+                    model = structure.model_id
+                    has_model = True
 
             elif line.startswith('ATOM') \
                      or (in_atom and line.startswith('HETATM')):
                     in_atom = True
                     has_atoms = True
                     
-                    residue_id = line[22:27].strip()
-                    residue_name = line[17:20].strip()
-                    chain_id = line[21].strip()
+                    seq_number = self._read_sequence_number(line)
+                    ins_code = self._read_insertion_code(line)
+                    residue_id = (seq_number, ins_code)
+                    residue_name = self._read_residue_raw(line)
+                    chain_id = self._read_chain_id(line)
                     
                     if chain_id not in chains:
                         chains[chain_id] = csb.core.OrderedDict()
-                        
-                        new_chain = csb.bio.structure.Chain(
-                                            chain_id, 
-                                            type=SequenceTypes.Unknown, 
-                                            accession=structure.accession)
-                        new_chain.molecule_id = '1'
-                        structure.chains.append(new_chain)                        
+                        self._add_chain(structure, chain_id)
                         
                     if residue_id not in chains[chain_id]:
                         chains[chain_id][residue_id] = residue_name
-                        
-                        if structure.chains[chain_id].type == SequenceTypes.Unknown:
-                            try:
-                                structure.chains[chain_id].type = self.guess_sequence_type(residue_name)
-                            except UnknownPDBResidueError:
-                                pass
+                        chain = structure.chains[chain_id] 
+                        if chain.type == SequenceTypes.Unknown:
+                            self._fix_chain(chain, residue_name)
 
             elif in_atom and line.startswith('TER'):
                 in_atom = False
-
             elif line.startswith('ENDMDL'):
                 break
-
             elif line.startswith('END'):
                 break
 
         if not has_atoms:
             raise HeaderFormatError("Can't parse legacy structure: no ATOMs found")                                     
-        
-        for chain_id in structure.chains:
-            chain = structure.chains[chain_id]
-            
-            for residue_id in chains[chain_id]:
-                residue_name = chains[chain_id][residue_id]
-                rank = (chain.residues.last_index or 0) + 1
-                
-                rname = self.parse_residue_safe(residue_name, as_type=structure.chains[chain_id].type)
-                residue = csb.bio.structure.Residue.create(chain.type, rank=rank, type=rname)
-                residue._pdb_name = residue_name
-                chain.residues.append(residue)                                  
-        
-        return structure    
 
+        for chain in structure.items:    
+            self._build_chain(chain, chains[chain.id])
+        
+        return structure
+    
+    def _add_chain(self, structure, chain_id):
+
+        new_chain = csb.bio.structure.Chain(chain_id,
+                                            type=SequenceTypes.Unknown, 
+                                            accession=structure.accession)
+        new_chain.molecule_id = '1'
+        structure.chains.append(new_chain)      
+                     
+    def _build_chain(self, chain, residues):
+            
+        for residue_id, residue_name in residues.items():
+            rank = (chain.residues.last_index or 0) + 1
+            
+            rname = self.parse_residue_safe(residue_name, as_type=chain.type)
+            residue = csb.bio.structure.Residue.create(chain.type, rank=rank, type=rname)
+            residue._pdb_name = residue_name
+            residue.id = residue_id
+            chain.residues.append(residue)
+
+    def _fix_chain(self, chain, probe):
+                
+        try:
+            chain.type = self.guess_sequence_type(probe)
+        except UnknownPDBResidueError:
+            pass  
+    
+    def _map_residues(self, structure, atoms, het_residues):
+
+        for chain in structure.items:
+            covered = set()
+            
+            for atom in atoms[chain.id]:
+                try:
+                    residue = chain.find(atom._sequence_number, atom._insertion_code)
+                    residue.atoms.append(atom)
+                    
+                    covered.add(residue.rank)
+                    self._compact_atom(atom)
+                    
+                except csb.bio.structure.EntityNotFoundError:
+                    pass
+                
+            assert chain.length == len(covered)            
+                
     
 StructureParser = AbstractStructureParser.create_parser
 """

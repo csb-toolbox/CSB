@@ -598,6 +598,7 @@ class StructureChainsTable(csb.core.DictionaryContainer):
 
         @param id: ID of the chain to be detached
         @type id: str
+        @raise ChainNotFoundError: if C{id} is not a valid chain ID 
         """
         chain = self[id]
         self._remove(id)
@@ -931,7 +932,7 @@ class Chain(csb.core.AbstractNIContainer, AbstractEntity):
         @return: the residue object with such an ID
         @rtype: L{Residue}
         
-        @raise csb.core.ItemNotFoundError: if no residue with that ID exists
+        @raise EntityNotFoundError: if no residue with that ID exists
         """
         res_id = str(sequence_number).strip()
         
@@ -1170,7 +1171,7 @@ class ChainResiduesCollection(csb.core.CollectionContainer):
         try:
             return self.__lookup[id]
         except KeyError:
-            raise csb.core.ItemNotFoundError(id)
+            raise EntityNotFoundError(id)
         
 class Residue(csb.core.AbstractNIContainer, AbstractEntity):
     """
