@@ -99,7 +99,7 @@ class HHProfileParser(object):
         s = csb.bio.io.StructureParser(input_pdb).parse_structure()
         chain = s.chains[chain_id]
 
-        if s.first_chain.length != hmm.layers.length:
+        if chain.length != hmm.layers.length:
             raise StructureFormatError(
                         "{0}: Incorrect number of residues".format(chain.entry_id)) 
 
