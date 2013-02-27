@@ -1240,7 +1240,7 @@ class RegularStructureParser(AbstractStructureParser):
                     rank = rank_base * 13 - (13 - (i + 1))
                     rname = self.parse_residue_safe(residue_name, as_type=chain.type)
                     residue = csb.bio.structure.Residue.create(chain.type, rank=rank, type=rname)
-                    residue._pdb_name = residue_name
+                    residue.label = residue_name
                     structure.chains[chain_id].residues.append(residue)
                     if structure.chains[chain_id].residues.last_index != rank:
                         raise HeaderFormatError("Malformed SEQRES")
@@ -1366,7 +1366,7 @@ class LegacyStructureParser(AbstractStructureParser):
             
             rname = self.parse_residue_safe(residue_name, as_type=chain.type)
             residue = csb.bio.structure.Residue.create(chain.type, rank=rank, type=rname)
-            residue._pdb_name = residue_name
+            residue.label = residue_name
             residue.id = residue_id
             chain.residues.append(residue)
 
@@ -1508,7 +1508,7 @@ class PDBFileBuilder(FileBuilder):
         for chain_id in master.chains:
             
             chain = master.chains[chain_id]
-            res = [ r._pdb_name for r in chain.residues ]
+            res = [ r.label for r in chain.residues ]
 
             rn = 0
             for j in range(0, chain.length, 13):
@@ -1554,7 +1554,7 @@ class PDBFileBuilder(FileBuilder):
                         element = ' '
                     self.writeline('ATOM  {0:>5} {1:>4}{2}{3:>3} {4}{5:>4}{6}   {7:>8.3f}{8:>8.3f}{9:>8.3f}{10:>6.2f}{11:>6.2f}{12:>12}{13:2}'.format(
                                         atom.serial_number, atom._full_name, isnull(alt, ' '), 
-                                        residue._pdb_name, chain.id, 
+                                        residue.label, chain.id, 
                                         isnull(residue.sequence_number, residue.rank), isnull(residue.insertion_code, ' '), 
                                         atom.vector[0], atom.vector[1], atom.vector[2], isnull(atom.occupancy, 0.0), isnull(atom.bfactor, 0.0), 
                                         element, isnull(atom.charge, ' ') ))        

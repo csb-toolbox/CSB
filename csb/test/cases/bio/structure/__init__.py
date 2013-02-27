@@ -696,8 +696,16 @@ class TestResidue(test.Case):
         self.assertEqual(self.residue.insertion_code, None)    
         
     def testType(self):
-        self.assertEqual(self.residue.type, structure.SequenceAlphabets.Protein.ALA)        
+        self.assertEqual(self.residue.type, structure.SequenceAlphabets.Protein.ALA)
+        
+    def testIsModified(self):
+        self.assertFalse(self.residue.is_modified)
+        self.assertTrue(self.chain[37].is_modified)
 
+    def testLabel(self):
+        self.assertEqual(self.residue.label, repr(self.residue.type))
+        self.assertTrue(self.chain[37].label, 'MSE')
+        
     def testTorsion(self):
         self.assertEqual(self.residue.torsion.phi, None)
         self.assertNotEqual(self.residue.torsion.psi, None)        

@@ -1171,7 +1171,7 @@ class ChainResiduesCollection(csb.core.CollectionContainer):
         try:
             return self.__lookup[id]
         except KeyError:
-            raise EntityNotFoundError(id)
+            raise EntityNotFoundError(id)            
         
 class Residue(csb.core.AbstractNIContainer, AbstractEntity):
     """
@@ -1197,7 +1197,7 @@ class Residue(csb.core.AbstractNIContainer, AbstractEntity):
     def __init__(self, rank, type, sequence_number=None, insertion_code=None):
         
         self._type = None    
-        self._pdb_name = None
+        self._label = None
         self._rank = int(rank)
         self._atoms = ResidueAtomsTable(self) 
         self._secondary_structure = None
@@ -1208,7 +1208,7 @@ class Residue(csb.core.AbstractNIContainer, AbstractEntity):
         
         self.type = type
         self.id = sequence_number, insertion_code
-        self._pdb_name = repr(type)
+        self.label = repr(type)
         
     @property
     def _children(self):
@@ -1216,6 +1216,26 @@ class Residue(csb.core.AbstractNIContainer, AbstractEntity):
         
     def __repr__(self):
         return '<{1} [{0.rank}]: {0.type!r} {0.id}>'.format(self, self.__class__.__name__)
+    
+    @property
+    def label(self):
+        """
+        Original residue label (different from C{Residue.type} for modified
+        residues)
+        @rtype: str        
+        """
+        return self._label
+    @label.setter
+    def label(self, value):
+        self._label = str(value)
+        
+    @property
+    def is_modified(self):
+        """
+        Return True id this is a modified residue
+        @rtype: bool        
+        """        
+        return self.label != repr(self.type)
         
     @property
     def type(self):
@@ -1510,7 +1530,11 @@ class NucleicResidue(Residue):
             raise TypeError(type)
             
         super(NucleicResidue, self).__init__(rank, type, sequence_number, insertion_code)  
-        self._pdb_name = str(type)
+        self.label = str(type)
+        
+    @property
+    def is_modified(self):
+        return self.label != str(self.type)        
 
 class UnknownResidue(Residue):
     

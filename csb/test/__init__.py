@@ -330,7 +330,7 @@ class Config(object):
         Pickle.dump(ensemble, open(os.path.join(self.data, '1nz9.full.pickle'), 'wb'))
         
         mse = model1.chains['A'].find(164)
-        mse._pdb_name = 'MSE'
+        mse.label = 'MSE'
         mse.atoms['SD']._element = ChemElements.Se
         mse.atoms['SD']._full_name = 'SE  '
         Pickle.dump(model1, open(os.path.join(self.data, '1nz9.model1.pickle'), 'wb'))    
