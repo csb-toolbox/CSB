@@ -264,26 +264,33 @@ class ShortTrajectoryBuilder(TrajectoryBuilder):
 
 class SimpleProposalCommunicator(object):
     """
-    With the exception of the current state of the Markov chain, this
-    holds all the information needed to calculate the acceptance
+    This holds all the information needed to calculate the acceptance
     probability in both the L{RWMCSampler} and L{HMCSampler} classes,
     that is, only the proposal state.
     For more advanced algorithms, one may derive classes capable of
     holding the neccessary additional information from this class.
 
-    @param proposal: Proposal state
-    @type proposal: L{State}
+    @param current_state: Current state
+    @type current_state: L{State}
+    
+    @param proposal_state: Proposal state
+    @type proposal_state: L{State}
     """
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, proposal):
+    def __init__(self, current_state, proposal_state):
 
-        self._proposal = proposal
+        self._current_state = current_state
+        self._proposal_state = proposal_state
 
     @property
-    def proposal(self):
-        return self._proposal
+    def current_state(self):
+        return self._current_state
+        
+    @property
+    def proposal_state(self):
+        return self._proposal_state
 
 class AbstractSingleChainMC(AbstractMC):
     """
@@ -327,7 +334,7 @@ class AbstractSingleChainMC(AbstractMC):
         
         proposal_communicator = self._propose()
         pacc = self._calc_pacc(proposal_communicator)
-        self._accept(proposal_communicator.proposal, pacc)
+        self._accept(proposal_communicator.proposal_state, pacc)
 
         return self.state
 
@@ -353,12 +360,12 @@ class AbstractSingleChainMC(AbstractMC):
         """
         pass
 
-    def _accept(self, proposal, pacc):
+    def _accept(self, proposal_state, pacc):
         """
         Accept / reject proposal with given acceptance probability pacc.
 
-        @param proposal: proposal state
-        @type proposal: L{State}
+        @param proposal_state: proposal state
+        @type proposal_state: L{State}
 
         @param pacc: acceptance probability
         @type pacc: float
@@ -367,7 +374,7 @@ class AbstractSingleChainMC(AbstractMC):
         self._nmoves += 1
         
         if numpy.random.random() < pacc:
-            self.state = proposal
+            self.state = proposal_state
             self._accepted += 1
             self._last_move_accepted = True
             return True
@@ -963,15 +970,14 @@ class AbstractRENS(AbstractExchangeMC):
             momentum2 = numpy.random.multivariate_normal(mean=numpy.zeros(d),
                                                          cov=momentum_covariance_matrix2)        
         
-        init_state1 = State(param_info.sampler1.state.position, momentum1)
-        init_state2 = State(param_info.sampler2.state.position, momentum2)
-
-        param_info.sampler1.state = init_state1
-        param_info.sampler2.state = init_state2
+        init_state1 = param_info.sampler1.state.clone()
+        init_state2 = param_info.sampler2.state.clone()
+        init_state1.momentum = momentum1
+        init_state2.momentum = momentum2
         
         trajinfo12 = RENSTrajInfo(param_info, init_state1, protocol=lambda t, tau: t / tau)
         trajinfo21 = RENSTrajInfo(param_info, init_state2, protocol=lambda t, tau: (tau - t) / tau)
-        
+
         traj12 = self._run_traj_generator(trajinfo12)
         traj21 = self._run_traj_generator(trajinfo21)
 
@@ -1042,11 +1048,11 @@ class AbstractSwapScheme(object):
     def swap_all(self):
         """
         Advises the Replica Exchange-like algorithm to perform swaps according to
-        the some schedule defined here.
+        the schedule defined here.
         """
         
         pass
-
+    
 class AlternatingAdjacentSwapScheme(AbstractSwapScheme):
     """
     Provides a swapping scheme in which tries exchanges between neighbours only
