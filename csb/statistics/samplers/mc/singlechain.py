@@ -62,6 +62,7 @@ from csb.statistics.samplers.mc.propagators import MDPropagator
 from csb.numeric.integrators import FastLeapFrog
 from csb.numeric import InvertibleMatrix
 
+
 class HMCSampler(AbstractSingleChainMC):
     """
     Hamilton Monte Carlo (HMC, also called Hybrid Monte Carlo by the inventors,
@@ -127,26 +128,30 @@ class HMCSampler(AbstractSingleChainMC):
     def _propose(self):
 
         if not self.mass_matrix.is_unity_multiple:
-            momenta = numpy.random.multivariate_normal(mean=numpy.zeros(self._d), 
+            momentum = numpy.random.multivariate_normal(mean=numpy.zeros(self._d), 
                                                        cov=self._momentum_covariance_matrix)
         else:
             mass = self.mass_matrix[0][0]
-            momenta = numpy.random.normal(size=self._d, scale=numpy.sqrt(self.temperature * mass))
+            momentum = numpy.random.normal(size=self._d, scale=numpy.sqrt(self.temperature * mass))
             
-        self.state = State(self.state.position, momenta)
-        proposal = self._propagator.generate(self.state, self._nsteps).final
+        current_state = self.state.clone()
+        current_state.momentum = momentum
+        proposal_state = self._propagator.generate(current_state, self._nsteps).final
         
-        return SimpleProposalCommunicator(proposal)
+        return SimpleProposalCommunicator(current_state, proposal_state)
 
     def _calc_pacc(self, proposal_communicator):
 
-        proposal = proposal_communicator.proposal
+        current_state = proposal_communicator.current_state
+        proposal_state = proposal_communicator.proposal_state
+        
         E = lambda x: -self._pdf.log_prob(x)
         K = lambda x: 0.5 * numpy.dot(x.T, numpy.dot(self.mass_matrix.inverse, x))
 
-        pacc = csb.numeric.exp((-K(proposal.momentum) - E(proposal.position)
-                               + K(self.state.momentum) + E(self.state.position)) / self.temperature)
-        
+        pacc = csb.numeric.exp((-K(proposal_state.momentum) - E(proposal_state.position)
+                               + K(current_state.momentum) + E(current_state.position)) / 
+                               self.temperature)
+
         return pacc
 
     @property
@@ -211,20 +216,27 @@ class RWMCSampler(AbstractSingleChainMC):
         self._stepsize = None
         self.stepsize = stepsize
         if proposal_density == None:
-            self._proposal_density = lambda x, s: x.position + s * numpy.random.uniform(size=x.position.shape, low=-1., high=1.)
+            self._proposal_density = lambda x, s: x.position + \
+                                     s * numpy.random.uniform(size=x.position.shape, low=-1., high=1.)
         else:
             self._proposal_density = proposal_density
 
     def _propose(self):
+
+        current_state = self.state.clone()
+        proposal_state = self.state.clone()
+        proposal_state.position = self._proposal_density(current_state, self.stepsize)
         
-        return SimpleProposalCommunicator(State(self._proposal_density(self._state, self.stepsize)))
+        return SimpleProposalCommunicator(current_state, proposal_state)
 
     def _calc_pacc(self, proposal_communicator):
 
-        proposal = proposal_communicator.proposal
+        current_state = proposal_communicator.current_state
+        proposal_state = proposal_communicator.proposal_state
         E = lambda x:-self._pdf.log_prob(x)
         
-        pacc = csb.numeric.exp((-(E(proposal.position) - E(self.state.position))) / self.temperature)
+        pacc = csb.numeric.exp((-(E(proposal_state.position) - E(current_state.position))) /
+                               self.temperature)
         return pacc
 
     @property

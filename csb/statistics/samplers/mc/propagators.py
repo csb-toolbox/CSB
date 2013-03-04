@@ -10,7 +10,6 @@ from csb.statistics.samplers.mc import TrajectoryBuilder
 from csb.numeric.integrators import FastLeapFrog, VelocityVerlet
 from csb.numeric import InvertibleMatrix
 
-
 class AbstractPropagator(object):
     """
     Abstract propagator class. Subclasses serve to propagate
@@ -309,10 +308,13 @@ class AbstractMCPropagator(AbstractPropagator):
 
         for i in range(length):
             self._sampler.sample()
-            builder.add_intermediate_state(self._sampler.state)
+            if i != length - 1:
+                builder.add_intermediate_state(self._sampler.state)
 
+        builder.add_final_state(self._sampler.state)
+                
         self._acceptance_rate = self._sampler.acceptance_rate
-
+        
         return builder.product
 
     @abstractmethod

@@ -100,7 +100,10 @@ class State(AbstractState):
             self._momentum = None
         
     def clone(self):
-        return State(self.position, self.momentum)
+        if self.momentum is not None:
+            return State(self.position.copy(), self.momentum.copy())
+        else:
+            return State(self.position.copy())
         
 class EnsembleState(csb.core.BaseCollectionContainer, AbstractState):
     """
