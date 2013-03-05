@@ -97,13 +97,14 @@ L{AbstractSwapScheme.swap_all} method may be called for example after sampling
 intervals of a fixed length or randomly.
 """
 
+import numpy
+
 import csb.numeric
 
 from csb.statistics.samplers.mc import AbstractExchangeMC, AbstractRENS, RESwapCommunicator
 from csb.statistics.samplers.mc.propagators import MDPropagator, ThermostattedMDPropagator
 from csb.statistics.samplers.mc import Trajectory
 from csb.numeric.integrators import AbstractGradient
-
 
 class InterpolationFactory(object):
     """
@@ -228,19 +229,101 @@ class MDRENS(AbstractRENS):
         super(MDRENS, self).__init__(samplers, param_infos)
         
         self._integrator = integrator
-        
+
+    def _augment_state(self, state, temperature, mass_matrix):
+        """
+        Augments a state with only positions given by momenta drawn
+        from the Maxwell-Boltzmann distribution.
+
+        @param state: State to be augmented
+        @type state: L{State}
+
+        @param temperature: Temperature of the desired Maxwell-Boltzmann
+                            distribution
+        @type temperature: float
+
+        @param mass_matrix: Mass matrix to be used in the Maxwell-Boltzmann
+                            distribution
+        @type mass_matrix: L{InvertibleMatrix}
+
+        @return: The initial state augmented with a momentum
+        @rtype: L{State}
+        """
+
+        d = len(state.position)
+        if mass_matrix.is_unity_multiple:
+            momentum = numpy.random.normal(scale=numpy.sqrt(temperature * mass_matrix[0][0]),
+                                           size=d)
+        else:
+            covariance_matrix = temperature * mass_matrix
+            momentum = numpy.random.multivariate_normal(mean=numpy.zeros(d),
+                                                        cov=covariance_matrix)
+
+        state.momentum = momentum
+
+        return state
+
     def _run_traj_generator(self, traj_info):
+
+        timestep = traj_info.param_info.timestep
+        traj_length = traj_info.param_info.traj_length
+
+        protocol = None
+
+        if traj_info.direction == "fw":
+            init_temperature = traj_info.param_info.sampler1.temperature
+            protocol = traj_info.param_info.protocol
+        else:
+            init_temperature = traj_info.param_info.sampler2.temperature
+            protocol = lambda t, tau: traj_info.param_info.protocol(tau - t, tau)
         
-        tau = traj_info.param_info.traj_length * traj_info.param_info.timestep
-        factory = InterpolationFactory(traj_info.protocol, tau)
+        init_state = traj_info.init_state
+        if init_state.momentum is None:
+            init_state = self._augment_state(init_state,
+                                             init_temperature,
+                                             traj_info.param_info.mass_matrix)
+        
+        tau = traj_length * timestep
+        factory = InterpolationFactory(protocol, tau)
 
         gen = MDPropagator(factory.build_gradient(traj_info.param_info.gradient),
-                           traj_info.param_info.timestep,
+                           timestep,
 						   mass_matrix=traj_info.param_info.mass_matrix,
 						   integrator=self._integrator)
         
-        traj = gen.generate(traj_info.init_state, int(traj_info.param_info.traj_length))
+        traj = gen.generate(init_state, int(traj_length))
+        
         return traj
+
+    def _calc_works(self, swapcom):
+
+        T1 = swapcom.param_info.sampler1.temperature
+        T2 = swapcom.param_info.sampler2.temperature
+        
+        heat12 = swapcom.traj12.heat
+        heat21 = swapcom.traj21.heat
+        
+        proposal1 = swapcom.traj21.final
+        proposal2 = swapcom.traj12.final
+        
+        state1 = swapcom.traj12.initial
+        state2 = swapcom.traj21.initial
+        
+        if swapcom.param_info.mass_matrix.is_unity_multiple:
+            inverse_mass_matrix = 1.0 / swapcom.param_info.mass_matrix[0][0]
+        else:
+            inverse_mass_matrix = swapcom.param_info.mass_matrix.inverse
+        
+        E1 = lambda x:-swapcom.sampler1._pdf.log_prob(x)
+        E2 = lambda x:-swapcom.sampler2._pdf.log_prob(x)
+        K = lambda x: 0.5 * numpy.dot(x.T, numpy.dot(inverse_mass_matrix, x))
+
+        w12 = (K(proposal2.momentum) + E2(proposal2.position)) / T2 - \
+              (K(state1.momentum) + E1(state1.position)) / T1 - heat12 
+        w21 = (K(proposal1.momentum) + E1(proposal1.position)) / T1 - \
+              (K(state2.momentum) + E2(state2.position)) / T2 - heat21
+
+        return w12, w21
 
 class ThermostattedMDRENS(MDRENS):
     """
@@ -265,13 +348,28 @@ class ThermostattedMDRENS(MDRENS):
         super(ThermostattedMDRENS, self).__init__(samplers, param_infos, integrator)
 
     def _run_traj_generator(self, traj_info):
-        
+
+        protocol = None
+
+        if traj_info.direction == "fw":
+            init_temperature = traj_info.param_info.sampler1.temperature
+            protocol = traj_info.param_info.protocol
+        else:
+            init_temperature = traj_info.param_info.sampler2.temperature
+            protocol = lambda t, tau: traj_info.param_info.protocol(tau - t, tau)
+
         tau = traj_info.param_info.traj_length * traj_info.param_info.timestep
-        factory = InterpolationFactory(traj_info.protocol, tau)
+        factory = InterpolationFactory(protocol, tau)
         
         grad = factory.build_gradient(traj_info.param_info.gradient)
         temp = factory.build_temperature(traj_info.param_info.temperature)
-        
+
+        init_state = traj_info.init_state
+        if init_state.momentum is None:
+            init_state = self._augment_state(init_state,
+                                             init_temperature,
+                                             traj_info.param_info.mass_matrix)
+                
         gen = ThermostattedMDPropagator(grad,
                                         traj_info.param_info.timestep, temperature=temp, 
 										collision_probability=traj_info.param_info.collision_probability,
@@ -280,6 +378,6 @@ class ThermostattedMDRENS(MDRENS):
                                         integrator=self._integrator)
 
         
-        traj = gen.generate(traj_info.init_state, traj_info.param_info.traj_length)
+        traj = gen.generate(init_state, traj_info.param_info.traj_length)
 
         return traj

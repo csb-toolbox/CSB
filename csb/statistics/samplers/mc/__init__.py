@@ -503,22 +503,30 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
     @param timestep: Integration timestep
     @type timestep: float
 
-    @param mass_matrix: Mass matrix
-    @type mass_matrix: n-dimensional matrix of type L{InvertibleMatrix} with n being the dimension
-                               of the configuration space, that is, the dimension of
-                               the position / momentum vectors
-
     @param traj_length: Trajectory length in number of timesteps
     @type traj_length: int
 
     @param gradient: Gradient which determines the dynamics during a trajectory
     @type gradient: L{AbstractGradient}
+    
+    @param protocol: Switching protocol determining the time dependence of the
+                     switching parameter. It is a function M{f} taking the running
+                     time t and the switching time tau to yield a value in M{[0, 1]}
+                     with M{f(0, tau) = 0} and M{f(tau, tau) = 1}. Default is a linear
+                     protocol, which is being set manually due to an epydoc bug
+    @type protocol: callable
+    
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional matrix of type L{InvertibleMatrix} with n being the dimension
+                               of the configuration space, that is, the dimension of
+                               the position / momentum vectors
     """
 
-    def __init__(self, sampler1, sampler2, timestep, traj_length, gradient, mass_matrix=None):
+    def __init__(self, sampler1, sampler2, timestep, traj_length, gradient,
+                 protocol=None, mass_matrix=None):
         
         super(MDRENSSwapParameterInfo, self).__init__(sampler1, sampler2)
-        
+
         self._mass_matrix = mass_matrix
         if self.mass_matrix is None:
             d = len(sampler1.state.position)
@@ -527,6 +535,14 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
         self._traj_length = traj_length
         self._gradient = gradient
         self._timestep = timestep
+
+        ## Can't pass the linear protocol as a default argument because of a reported bug
+        ## in epydoc parsing which makes it fail building the docs.
+        self._protocol = None
+        if protocol is None:
+            self._protocol = lambda t, tau: t / tau
+        else:
+            self._protocol = protocol
     
     @property
     def timestep(self):
@@ -562,6 +578,17 @@ class MDRENSSwapParameterInfo(RESwapParameterInfo):
     def mass_matrix(self, value):
         self._mass_matrix = value
 
+    @property
+    def protocol(self):
+        """
+        Switching protocol determining the time dependence
+        of the switching parameter.
+        """
+        return self._protocol
+    @protocol.setter
+    def protocol(self, value):
+        self._protocol = value
+
 class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     """
     @param sampler1: First sampler
@@ -573,16 +600,22 @@ class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     @param timestep: Integration timestep
     @type timestep: float
 
-    @param mass_matrix: Mass matrix
-    @type mass_matrix: n-dimensional L{InvertibleMatrix} with n being the dimension
-                       of the configuration space, that is, the dimension of
-                       the position / momentum vectors
-
     @param traj_length: Trajectory length in number of timesteps
     @type traj_length: int
 
     @param gradient: Gradient which determines the dynamics during a trajectory
     @type gradient: subclass instance of L{AbstractGradient}
+
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional L{InvertibleMatrix} with n being the dimension
+                       of the configuration space, that is, the dimension of
+                       the position / momentum vectors
+
+    @param protocol: Switching protocol determining the time dependence of the
+                     switching parameter. It is a function f taking the running
+                     time t and the switching time tau to yield a value in [0, 1]
+                     with f(0, tau) = 0 and f(tau, tau) = 1
+    @type protocol: callable
 
     @param temperature: Temperature interpolation function.
     @type temperature: Real-valued function mapping from [0,1] to R.
@@ -598,11 +631,13 @@ class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     """
         
     def __init__(self, sampler1, sampler2, timestep, traj_length, gradient, mass_matrix=None,
-                 temperature=lambda l: 1., collision_probability=0.1, collision_interval=1):
+                 protocol=None, temperature=lambda l: 1.0,
+                 collision_probability=0.1, collision_interval=1):
         
         super(ThermostattedMDRENSSwapParameterInfo, self).__init__(sampler1, sampler2, timestep,
 																   traj_length, gradient,
-																   mass_matrix=mass_matrix)
+																   mass_matrix=mass_matrix,
+                                                                   protocol=protocol)
         
         self._collision_probability = None
         self._collision_interval = None
@@ -917,27 +952,29 @@ class RENSTrajInfo(object):
     @param init_state: state from which the trajectory is supposed to start
     @type init_state: L{State}
 
-    @param protocol: Protocol to be used to generate nonequilibrium trajectories
-    @type protocol: Real-valued function that maps [0, switching time] to [0, 1]      
+    @param direction: Either "fw" or "bw", indicating a forward or backward
+                      trajectory. This is neccessary to pick the protocol or
+                      the reversed protocol, respectively.
+    @type direction: string, either "fw" or "bw"
     """
     
-    def __init__(self, param_info, init_state, protocol):
+    def __init__(self, param_info, init_state, direction):
         
         self._param_info = param_info
-        self._protocol = protocol
         self._init_state = init_state
+        self._direction = direction
         
     @property
     def param_info(self):
         return self._param_info
 
     @property
-    def protocol(self):
-        return self._protocol
-
-    @property
     def init_state(self):
         return self._init_state
+
+    @property
+    def direction(self):
+        return self._direction
 
 class AbstractRENS(AbstractExchangeMC):
     """
@@ -951,67 +988,38 @@ class AbstractRENS(AbstractExchangeMC):
 
     def _propose_swap(self, param_info):
 
-        T1 = param_info.sampler1.temperature
-        T2 = param_info.sampler2.temperature
-
-        momentum_covariance_matrix1 = T1 * param_info.mass_matrix
-        momentum_covariance_matrix2 = T2 * param_info.mass_matrix
-
-        d = len(param_info.sampler1.state.position)
-
-        if param_info.mass_matrix.is_unity_multiple:
-            momentum1 = numpy.random.normal(scale=numpy.sqrt(T1 * param_info.mass_matrix[0][0]),
-                                            size=d)
-            momentum2 = numpy.random.normal(scale=numpy.sqrt(T2 * param_info.mass_matrix[0][0]),
-                                            size=d)
-        else:
-            momentum1 = numpy.random.multivariate_normal(mean=numpy.zeros(d),
-                                                         cov=momentum_covariance_matrix1)
-            momentum2 = numpy.random.multivariate_normal(mean=numpy.zeros(d),
-                                                         cov=momentum_covariance_matrix2)        
+        init_state1 = param_info.sampler1.state
+        init_state2 = param_info.sampler2.state
         
-        init_state1 = param_info.sampler1.state.clone()
-        init_state2 = param_info.sampler2.state.clone()
-        init_state1.momentum = momentum1
-        init_state2.momentum = momentum2
-        
-        trajinfo12 = RENSTrajInfo(param_info, init_state1, protocol=lambda t, tau: t / tau)
-        trajinfo21 = RENSTrajInfo(param_info, init_state2, protocol=lambda t, tau: (tau - t) / tau)
+        trajinfo12 = RENSTrajInfo(param_info, init_state1, direction="fw")
+        trajinfo21 = RENSTrajInfo(param_info, init_state2, direction="bw")
 
         traj12 = self._run_traj_generator(trajinfo12)
         traj21 = self._run_traj_generator(trajinfo21)
 
         return RENSSwapCommunicator(param_info, traj12, traj21)
 
+    @abstractmethod
+    def _calc_works(self, swapcom):
+        """
+        Calculates the works expended during the nonequilibrium
+        trajectories.
+
+        @param swapcom: Swap communicator object holding all the
+                        neccessary information.
+        @type swapcom: L{RENSSwapCommunicator}
+
+        @return: The expended during the forward and the backward
+                 trajectory.
+        @rtype: 2-tuple of floats
+        """
+        
+        pass
+
     def _calc_pacc_swap(self, swapcom):
 
-        T1 = swapcom.param_info.sampler1.temperature
-        T2 = swapcom.param_info.sampler2.temperature
-        
-        heat12 = swapcom.traj12.heat
-        heat21 = swapcom.traj21.heat
-        
-        proposal1 = swapcom.traj21.final
-        proposal2 = swapcom.traj12.final
-        
-        state1 = swapcom.traj12.initial
-        state2 = swapcom.traj21.initial
-        
-        if swapcom.param_info.mass_matrix.is_unity_multiple:
-            inverse_mass_matrix = 1. / swapcom.param_info.mass_matrix[0][0]
-        else:
-            inverse_mass_matrix = swapcom.param_info.mass_matrix.inverse
-        
-        E1 = lambda x:-swapcom.sampler1._pdf.log_prob(x)
-        E2 = lambda x:-swapcom.sampler2._pdf.log_prob(x)
-        K = lambda x: 0.5 * numpy.dot(x.T, numpy.dot(inverse_mass_matrix, x))
-
-        w12 = (K(proposal2.momentum) + E2(proposal2.position)) / T2 - \
-              (K(state1.momentum) + E1(state1.position)) / T1 - heat12 
-        w21 = (K(proposal1.momentum) + E1(proposal1.position)) / T1 - \
-              (K(state2.momentum) + E2(state2.position)) / T2 - heat21
-
-        swapcom.acceptance_probability = csb.numeric.exp(-w12 - w21)
+        work12, work21 = self._calc_works(swapcom)
+        swapcom.acceptance_probability = csb.numeric.exp(-work12 - work21)
 
         return swapcom
 
