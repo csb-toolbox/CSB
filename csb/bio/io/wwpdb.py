@@ -68,6 +68,8 @@ import datetime
 import multiprocessing
 
 import csb.bio.structure
+import csb.bio.sequence
+import csb.bio.sequence.alignment as alignment
 import csb.core
 import csb.io
 
@@ -147,6 +149,9 @@ class StructureNotFoundError(KeyError):
     pass
 
 class InvalidEntryIDError(StructureFormatError):
+    pass
+
+class ResidueMappingError(StructureFormatError):
     pass
 
 
@@ -282,7 +287,10 @@ class AbstractStructureParser(object):
     @type structure_file: str
     @param check_ss: if True, secondary structure errors in the file will cause 
                      L{SecStructureFormatError} exceptions
-    @type check_ss: bool    
+    @type check_ss: bool
+    @param mapper: residue mapper, used to align ATOM records to SEQRES.
+                   If None, use the default (L{CombinedResidueMapper})
+    @type mapper: L{AbstractResidueMapper}    
 
     @raise IOError: when the input file cannot be found
     """
@@ -290,7 +298,7 @@ class AbstractStructureParser(object):
     __metaclass__ = ABCMeta
 
     @staticmethod
-    def create_parser(structure_file, check_ss=False):
+    def create_parser(structure_file, check_ss=False, mapper=None):
         """
         A StructureParser factory, which instantiates and returns the proper parser
         object based on the contents of the PDB file.
@@ -301,6 +309,12 @@ class AbstractStructureParser(object):
         
         @param structure_file: the PDB file to parse
         @type structure_file: str
+        @param check_ss: if True, secondary structure errors in the file will cause 
+                         L{SecStructureFormatError} exceptions
+        @type check_ss: bool
+        @param mapper: residue mapper, used to align ATOM records to SEQRES.
+                       If None, use the default (L{CombinedResidueMapper})
+        @type mapper: L{AbstractResidueMapper}          
         
         @rtype: L{AbstractStructureParser}
         """
@@ -312,23 +326,39 @@ class AbstractStructureParser(object):
                 break
         
         if has_seqres:
-            return RegularStructureParser(structure_file)
+            return RegularStructureParser(structure_file, check_ss, mapper)
         else:
-            return LegacyStructureParser(structure_file)        
+            return LegacyStructureParser(structure_file, check_ss, mapper)        
 
-    def __init__(self, structure_file, check_ss=False):
+    def __init__(self, structure_file, check_ss=False, mapper=None):
 
         self._file = None
         self._stream = None
-        self._check_ss = bool(check_ss)        
+        self._mapper = CombinedResidueMapper()
+        self._check_ss = bool(check_ss)
 
         self.filename = structure_file
+        if mapper is not None:
+            self.mapper = mapper
 
     def __del__(self):
         try:
             self._stream.close()
         except:
             pass
+        
+    @property
+    def mapper(self):
+        """
+        Current residue mapping strategy
+        @rtype: L{AbstractResidueMapper}
+        """
+        return self._mapper
+    @mapper.setter
+    def mapper(self, value):
+        if not isinstance(value, AbstractResidueMapper):
+            raise TypeError(value)
+        self._mapper = value
 
     @property
     def filename(self):
@@ -378,12 +408,12 @@ class AbstractStructureParser(object):
         else:
             return []
 
-    def guess_sequence_type(self, residue_name):
+    def guess_sequence_type(self, residue_label):
         """
-        Try to guess what is the sequence type of a PDB C{residue_name}.
+        Try to guess what is the sequence type of a PDB C{residue_label}.
 
-        @param residue_name: a PDB-conforming name of a residue
-        @type residue_name: str
+        @param residue_label: a PDB-conforming name of a residue
+        @type residue_label: str
 
         @return: a L{SequenceTypes} enum member
         @rtype: L{csb.core.EnumItem}
@@ -391,22 +421,22 @@ class AbstractStructureParser(object):
         @raise UnknownPDBResidueError: when there is no such PDB residue name
                                        in the catalog tables
         """
-        if residue_name in PDB_AMINOACIDS:
+        if residue_label in PDB_AMINOACIDS:
             return SequenceTypes.Protein                                
-        elif residue_name in PDB_NUCLEOTIDES:
+        elif residue_label in PDB_NUCLEOTIDES:
             return SequenceTypes.NucleicAcid                            
         else:
-            raise UnknownPDBResidueError(residue_name)
+            raise UnknownPDBResidueError(residue_label)
 
-    def parse_residue(self, residue_name, as_type=None):
+    def parse_residue(self, residue_label, as_type=None):
         """
-        Try to parse a PDB C{residue_name} and return its closest 'normal'
+        Try to parse a PDB C{residue_label} and return its closest 'normal'
         string representation. If a sequence type (C{as_type}) is defined,
         guess the alphabet based on that information, otherwise try first to
         parse it as a protein residue.
 
-        @param residue_name: a PDB-conforming name of a residue
-        @type residue_name: str
+        @param residue_label: a PDB-conforming name of a residue
+        @type residue_label: str
         @param as_type: suggest a sequence type (L{SequenceTypes} member)
         @type L{scb.core.EnumItem}
 
@@ -417,25 +447,25 @@ class AbstractStructureParser(object):
                                        in the catalog table(s)
         """
         if as_type is None:
-            as_type = self.guess_sequence_type(residue_name)         
+            as_type = self.guess_sequence_type(residue_label)         
 
         try:
             if as_type == SequenceTypes.Protein:                            
-                return PDB_AMINOACIDS[residue_name]
+                return PDB_AMINOACIDS[residue_label]
             elif as_type == SequenceTypes.NucleicAcid:                      
-                return PDB_NUCLEOTIDES[residue_name]
+                return PDB_NUCLEOTIDES[residue_label]
             else:
-                raise UnknownPDBResidueError(residue_name)
+                raise UnknownPDBResidueError(residue_label)
         except KeyError:
-            raise UnknownPDBResidueError(residue_name)
+            raise UnknownPDBResidueError(residue_label)
 
-    def parse_residue_safe(self, residue_name, as_type):
+    def parse_residue_safe(self, residue_label, as_type):
         """
         Same as C{parse_residue}, but returns UNK/Any instead of raising
         UnknownPDBResidueError.
 
-        @param residue_name: a PDB-conforming name of a residue
-        @type residue_name: str
+        @param residue_label: a PDB-conforming name of a residue
+        @type residue_label: str
         @param as_type: suggest a sequence type (L{SequenceTypes} member)
         @type L{scb.core.EnumItem}
 
@@ -443,7 +473,7 @@ class AbstractStructureParser(object):
         @rtype: str
         """
         try:
-            return self.parse_residue(residue_name, as_type)
+            return self.parse_residue(residue_label, as_type)
         except UnknownPDBResidueError:
             if as_type == SequenceTypes.Protein:                        
                 return repr(SequenceAlphabets.Protein.UNK)              
@@ -638,10 +668,12 @@ class AbstractStructureParser(object):
         
         structure.model_id = None
 
-        atoms = dict( (chain, []) for chain in structure.chains )
         chains = set()
         total_chains = len([c for c in structure.items if c.length > 0])
-        het_residues = dict( (chain, set()) for chain in structure.chains )
+        
+        residues = dict( (chain, []) for chain in structure.chains )
+        seen_residues = dict( (chain, {}) for chain in structure.chains )
+        
         in_ligands = False                
         in_atom = False
         read_model = False
@@ -654,17 +686,7 @@ class AbstractStructureParser(object):
             except StopIteration:
                 break
             
-            if line.startswith('HET '):
-                het_residue, het_chain, het_residue_id = line[7:10].strip(), line[12], line[13:18].strip()
-                
-                if het_chain in structure:
-                    chain = structure.chains[het_chain]
-                    if chain.type == SequenceTypes.Protein and het_residue in PDB_AMINOACIDS:              
-                        het_residues[het_chain].add(het_residue_id)
-                    elif chain.type == SequenceTypes.NucleicAcid and het_residue in PDB_NUCLEOTIDES:       
-                        het_residues[het_chain].add(het_residue_id)              
-                
-            elif line.startswith('MODEL'):
+            if line.startswith('MODEL'):
                 if read_model:
                     break
                 else:
@@ -676,9 +698,15 @@ class AbstractStructureParser(object):
                             (line.startswith('HETATM') and not in_ligands):
                 in_atom = True
                 
-                atom = self._parse_atom_line(line, structure)
-                chains.add(atom._chain)
-                atoms[atom._chain].append(atom)                      
+                info = self._parse_atom_line(line, structure)                
+                chains.add(info.chain)
+                
+                if info.id not in seen_residues[info.chain]:
+                    residues[info.chain].append(info)
+                    seen_residues[info.chain][info.id] = info
+                else:
+                    atom = info.atoms[0]
+                    seen_residues[info.chain][info.id].atoms.append(atom)
                     
             elif in_atom and line.startswith('TER'):
                 in_atom = False
@@ -693,8 +721,8 @@ class AbstractStructureParser(object):
 
         if structure.model_id != model:
             raise ValueError('No such model {0} in the structure.'.format(model))
-
-        self._map_residues(structure, atoms, het_residues)
+                
+        self._map_residues(structure, residues)
         
     def _parse_model_line(self, line, structure, model):
         """
@@ -723,7 +751,7 @@ class AbstractStructureParser(object):
     def _parse_atom_line(self, line, structure):
         """
         Handle a new ATOM or HETATM line. The default implementation will read
-        all data fields, create a new L{Atom} and attach it to the C{structure}.
+        all data fields and create a new L{Atom}.
         
         @param line: raw string line to parse
         @type line: str
@@ -731,33 +759,35 @@ class AbstractStructureParser(object):
         @type structure:L{Structure}
         
         @return: newly constructed atom
-        @rtype: L{Atom}
+        @rtype: L{ResidueInfo}
         """
 
         atom = self._read_atom(line)
-        atom._het = line.startswith('HETATM')
         
-        atom._rank = self._read_sequence_number(line)            
-        atom._sequence_number = atom._rank            
-        atom._insertion_code = self._read_insertion_code(line)        
+        rank = self._read_sequence_number(line)            
+        sequence_number = rank            
+        insertion_code = self._read_insertion_code(line)        
         
-        atom._residue_id = str(atom._sequence_number)        
-        if atom._insertion_code:
-            atom._residue_id += atom._insertion_code
+        id = str(sequence_number)        
+        if insertion_code:
+            id += insertion_code
 
-        atom._chain = self._read_chain_id(line)
-        if atom._chain not in structure.chains:
-            raise StructureFormatError("Chain {0._chain} is undefined".format(atom))
+        chain = self._read_chain_id(line)
+        if chain not in structure.chains:
+            raise StructureFormatError("Chain {0} is undefined".format(chain))
 
-        rn = self._read_residue(line, structure.chains[atom._chain])
-        atom._residue_name = rn
+        type = self._read_residue(line, structure.chains[chain])
         
         atom.alternate = self._read_alternate(line)
         atom.occupancy = self._read_occupancy(line)
         atom.bfactor = self._read_bfactor(line)
         atom.charge = self._read_charge(line)
 
-        return atom
+        info = ResidueInfo(chain, rank, id, sequence_number, insertion_code, type)
+        info.het = line.startswith('HETATM')
+        info.atoms = [atom]
+        
+        return info
     
     def _read_model(self, line):
         """
@@ -908,127 +938,48 @@ class AbstractStructureParser(object):
                 raise StructureFormatError("Malformed charge field") 
         else:
             return None
-        
 
-         
-
-    def _map_residues(self, structure, atoms, het_residues):
+    def _map_residues(self, structure, residues):
         """
         Attach each L{Atom} to its corresponding L{Residue}.
         
-        This is where all the magic and heavy lifting happens. Basically we
-        construct a sparse (fragmented) regexp given the information we have read
-        from the ATOM/HETATM records. That includes PDB sequence identifiers and
-        insertion codes, which cover only residues with XYZ coordinates and often
-        do not correspond to our L{Residue} ranks.
-        Our job is to find the right correspondence by matching this regexp to
-        what we have got from the SEQRES fields (the complete, gap-free protein
-        sequence).
+        So far we have constructed a sparse (fragmented) chain given the information
+        we have read from the ATOM/HETATM records. That includes PDB sequence
+        identifiers and insertion codes, which cover only residues with XYZ coordinates
+        and often do not correspond to our L{Residue} ranks.
+        Our job is to find the right correspondence by matching this unreal sequence
+        to what we have got from the SEQRES fields (the complete, gap-free protein
+        sequence). Here we delegate this task to the current L{AbstractResidueMapper}
+        strategy, which does all the magic.
         
         @param structure: L{Structure} being constructed
         @type structure:L{Structure}
-        @param atoms: all L{Atom}s which have been constructed so far. This must
-                      be a map of the form: <chainID: [L{Atom}1, L{Atom}2...]>
-        @type atoms: dict
-        @param het_residues: PDB sequence identifiers of all HET atoms. This
-                             must be a map: <chainID: [seqID1, seqID2...]>
-                            
-        @type het_residues: dict         
+        @param residues: all L{Atom}s which have been constructed so far.
+                         This must be a map of the form:
+                         <chainID: [L{ResidueInfo}1, L{ResidueInfo}2...]>
+        @type residues: dict of L{ResidueInfo}        
         """
 
-        if set(structure.chains) != set(atoms.keys()):
-            raise PDBParseError("Invalid PDB file")
+        if set(structure.chains) != set(residues.keys()):
+            raise PDBParseError("Corrupt PDB file")
+        for c in residues:
+            if len(residues[c]) == 0:
+                raise StructureFormatError("Chain {0} has no atoms".format(c))
        
-        # The code below is fairly complicated and tricky to follow, so better read
-        # the comments in debug mode.
-        
-        for chain in structure.chains:
-
-            subject = structure.chains[chain].sequence
-            query = ''
-            fragments = []
-
-            seq_numbers = []
-            lookup = {}
-
-            i = -1
-            for a in atoms[chain]:
-                if a._residue_id not in lookup:
-                    i += 1
-                    lookup[a._residue_id] = [a._sequence_number, a._insertion_code]
-                    seq_numbers.append(a._residue_id)
-                    res_name = a._residue_name.value
-                    res_id = '{0}{1}'.format(a._sequence_number or '', a._insertion_code or '').strip()
-                    if a._het and res_id not in het_residues[chain]:
-                        # if it is a HETATM, but not a modified residue, initiate an optional fragment
-                        fragments.append([res_name, '?'])
-                    elif a._insertion_code and not (i > 0 and lookup[seq_numbers[i - 1]][1]):
-                        fragments.append([res_name])
-                    elif i == 0 or a._sequence_number - lookup[seq_numbers[i - 1]][0] not in (0, 1, -1):
-                        # if residues [i, i-1] are not consecutive or 'overlapping', initiate a new fragment:
-                        fragments.append([res_name])
-                    else:
-                        # then they are consecutive
-                        if fragments[-1][-1] == '?':
-                            # but the prev was optional (maybe HET), all optionals *MUST* reside in 
-                            # singleton fragments, so start a new fragment
-                            fragments.append([res_name])
-                        else:
-                            # append the new residue to the end of the last fragment                            
-                            fragments[-1].append(res_name)
+        for chain in structure.items:
+            reference = csb.bio.sequence.ChainSequence.create(chain)
+            sparse = csb.bio.sequence.ChainSequence(
+                                "atoms", "", residues[chain.id], chain.type)
             
-            for i, frag in enumerate(fragments):
-                fragments[i] = ''.join(frag)
-            if len(fragments) > 100:
-                # Python's regex engine will crash with more than 100 groups
-                raise StructureFormatError("Can't map structure with more than 100 fragments in ATOMS") 
-            query = '^.*?({0}).*?$'.format(').*?('.join(fragments))
+            aligned = self.mapper.map(sparse, reference)
+            assert aligned.length == chain.length 
             
-            matches = re.match(query, subject)
-            
-            if matches:
-                seq_numitem = -1
-                for frag_number, frag in enumerate(matches.groups(), start=1):
-                    if frag is '':
-                        # optional fragment, which did not match (NOTE: all optionals must occupy 
-                        # their own fragments of length 1 residue)
-                        seq_numitem += 1    # this 1 implies that all optional fragments are 1 residue long
-                    else:
-                        for i, dummy in enumerate(frag, start=1):
-                            seq_numitem += 1
-                            # lookup[res_id] is finally set to give the final rank of residue under id res_id:
-                            try:
-                                lookup[ seq_numbers[seq_numitem] ] = matches.start(frag_number) + i
-                            except:
-                                raise 
-
-                fixed_residue = None
-                for atom in atoms[chain]:
-                    if not isinstance(lookup[atom._residue_id], int):
-                        continue                                    # this atom was not mapped (e.g. HET)
-                    atom._rank = lookup[atom._residue_id]
-                    residue = structure.chains[chain].residues[atom._rank]
-                    if residue is not fixed_residue:
-                        residue.id = atom._sequence_number, atom._insertion_code
-                        fixed_residue = residue
-
-                    assert str(residue.type) == subject[atom._rank - 1]
-                    self._compact_atom(atom)                    
-                    residue.atoms.append(atom)
-            else:
-                if structure.chains[chain].length == 0 and len(atoms[chain]) > 0:
-                    raise StructureFormatError("Can't add atoms: chain {0} has no residues".format(chain))
-                else:            
-                    raise StructureFormatError("Can't map atoms")
-                
-    def _compact_atom(self, atom):
-
-        del atom._rank
-        del atom._insertion_code
-        del atom._sequence_number
-        del atom._chain
-        del atom._residue_id
-        del atom._residue_name        
+            for residue, mapped in zip(chain.residues, aligned.residues):
+                if mapped.type != sparse.alphabet.GAP:
+                    residue.id = (mapped.sequence_number, mapped.insertion_code)
+                    
+                    for atom in mapped.atoms:
+                        residue.atoms.append(atom)
 
     def _parse_ss(self, structure):
         """
@@ -1236,11 +1187,11 @@ class RegularStructureParser(AbstractStructureParser):
                         except UnknownPDBResidueError:
                             pass
 
-                for i, residue_name in enumerate(seq_fields[3:]):
+                for i, residue_label in enumerate(seq_fields[3:]):
                     rank = rank_base * 13 - (13 - (i + 1))
-                    rname = self.parse_residue_safe(residue_name, as_type=chain.type)
+                    rname = self.parse_residue_safe(residue_label, as_type=chain.type)
                     residue = csb.bio.structure.Residue.create(chain.type, rank=rank, type=rname)
-                    residue.label = residue_name
+                    residue.label = residue_label
                     structure.chains[chain_id].residues.append(residue)
                     if structure.chains[chain_id].residues.last_index != rank:
                         raise HeaderFormatError("Malformed SEQRES")
@@ -1323,7 +1274,7 @@ class LegacyStructureParser(AbstractStructureParser):
                     seq_number = self._read_sequence_number(line)
                     ins_code = self._read_insertion_code(line)
                     residue_id = (seq_number, ins_code)
-                    residue_name = self._read_residue_raw(line)
+                    label = self._read_residue_raw(line)
                     chain_id = self._read_chain_id(line)
                     
                     if chain_id not in chains:
@@ -1331,10 +1282,10 @@ class LegacyStructureParser(AbstractStructureParser):
                         self._add_chain(structure, chain_id)
                         
                     if residue_id not in chains[chain_id]:
-                        chains[chain_id][residue_id] = residue_name
+                        chains[chain_id][residue_id] = label
                         chain = structure.chains[chain_id] 
                         if chain.type == SequenceTypes.Unknown:
-                            self._fix_chain(chain, residue_name)
+                            self._fix_chain(chain, label)
 
             elif in_atom and line.startswith('TER'):
                 in_atom = False
@@ -1361,12 +1312,12 @@ class LegacyStructureParser(AbstractStructureParser):
                      
     def _build_chain(self, chain, residues):
             
-        for residue_id, residue_name in residues.items():
+        for residue_id, label in residues.items():
             rank = (chain.residues.last_index or 0) + 1
             
-            rname = self.parse_residue_safe(residue_name, as_type=chain.type)
+            rname = self.parse_residue_safe(label, as_type=chain.type)
             residue = csb.bio.structure.Residue.create(chain.type, rank=rank, type=rname)
-            residue.label = residue_name
+            residue.label = label
             residue.id = residue_id
             chain.residues.append(residue)
 
@@ -1377,29 +1328,234 @@ class LegacyStructureParser(AbstractStructureParser):
         except UnknownPDBResidueError:
             pass  
     
-    def _map_residues(self, structure, atoms, het_residues):
+    def _map_residues(self, structure, residues):
 
         for chain in structure.items:
-            covered = set()
-            
-            for atom in atoms[chain.id]:
+            for residue_info in residues[chain.id]:
                 try:
-                    residue = chain.find(atom._sequence_number, atom._insertion_code)
-                    residue.atoms.append(atom)
-                    
-                    covered.add(residue.rank)
-                    self._compact_atom(atom)
+                    residue = chain.find(residue_info.sequence_number, residue_info.insertion_code)
+                    for atom in residue_info.atoms:
+                        residue.atoms.append(atom)
                     
                 except csb.bio.structure.EntityNotFoundError:
-                    pass
-                
-            assert chain.length == len(covered)            
+                    pass         
                 
     
 StructureParser = AbstractStructureParser.create_parser
 """
 Alias for L{AbstractStructureParser.create_parser}.
 """
+
+
+class ResidueInfo(object):
+    """
+    High-performance struct, which functions as a container for unmapped
+    L{Atom}s.
+    
+    @note: This object must implement the L{csb.bio.sequence.ResidueInfo}
+           interface. This is not enforced through inheritance solely
+           to save some CPU (by exposing public fields and no properties).
+           However, on an abstract level this object is_a ResidueInfo
+           and is used to build L{AbstractSequence}s.
+    """
+    __slots__ = ['chain', 'rank', 'id' , 'sequence_number', 'insertion_code', 'type', 'het', 'atoms']
+    
+    def __init__(self, chain, rank, id, seq_number, ins_code, type):
+        
+        self.chain = chain
+        self.rank = rank
+        self.id = id
+        self.sequence_number = seq_number
+        self.insertion_code = ins_code
+        self.type = type
+        self.het = False
+        self.atoms = []
+
+
+class AbstractResidueMapper(object):
+    """
+    Defines the base interface of all residue mappers, used to align PDB ATOM
+    records to the real (SEQRES) sequence of a chain.
+    """
+    
+    __metaclass__ = ABCMeta
+    
+    @abstractmethod
+    def map(self, sparse, reference):
+        """
+        Map L{sparse}'s residues to L{reference}. Return all C{sparse} residues,
+        aligned over C{reference}, with artificial gap residues inserted at
+        relevant positions. The resulting sequence of sparse residues will
+        always have the same length as the C{reference} sequence.
+        
+        @note: C{sparse}'s ranks won't be touched because the C{rank} property
+        of the underlying L{ResidueInfo} implementation is not necessarily r/w.
+        
+        @param sparse: sparse sequence (e.g. derived from ATOMS records)
+        @type sparse: L{csb.bio.sequence.ChainSequence}
+        @param reference: reference, complete sequence
+                          (e.g. derived from SEQRES records)
+        @type reference: L{csb.bio.sequence.ChainSequence}
+        
+        @return: all C{sparse} residues, optimally aligned over C{reference}
+                 (with gaps)
+        @rtype: L{csb.bio.sequence.ChainSequence}
+        
+        @raise ResidueMappingError: if the specified sequences are not alignable
+        """
+        pass
+    
+    def create_gap(self, alphabet=SequenceAlphabets.Protein):
+        """
+        Create and return a new gap residue.
+        
+        @param alphabet: sequence alphabet; a member of L{SequenceAlphabets}
+                         which has GAP item
+        @type alphabet: L{enum}
+        
+        @rtype: L{ResidueInfo}
+        """
+        return ResidueInfo(None, -1, None, None, None, alphabet.GAP)
+    
+    def _build(self, sparse, aligned):
+        
+        return csb.bio.sequence.ChainSequence(
+                            sparse.id, sparse.header, aligned, sparse.type)        
+
+class FastResidueMapper(AbstractResidueMapper):
+    """
+    RegExp-based residue mapper. Fails on heavily malformed input (i.e. it cannot
+    insert gaps in the C{reference}), but it is very fast (linear) and memory
+    efficient. 
+    """
+    
+    MAX_FRAGMENTS = 20
+    
+    def map(self, sparse, reference):
+
+        aligned = []
+        mapping = {}
+
+        residues = list(sparse.residues)
+
+        pattern = self._build_pattern(residues)
+        matches = re.match(pattern, reference.sequence)
+                
+        if matches:
+            unmapped_item = -1
+            
+            for fn, fragment in enumerate(matches.groups(), start=1):
+                assert fragment != ''
+                
+                for offset in range(1, len(fragment) + 1):
+                    unmapped_item += 1
+                    rank = matches.start(fn) + offset 
+                    
+                    mapped_residue = residues[unmapped_item] 
+                    real_residue = reference.residues[rank]                    
+                    
+                    assert real_residue.type == mapped_residue.type
+                    mapping[real_residue] = mapped_residue                    
+        
+        else:
+            raise ResidueMappingError("Can't map ATOM records")
+        
+        for rank, residue in enumerate(reference.residues, start=1):
+            if residue in mapping:
+                aligned.append(mapping[residue])
+            else:
+                aligned.append(self.create_gap(sparse.alphabet))
+        
+        assert len(aligned) == reference.length
+        return self._build(sparse, aligned)
+    
+    def _build_pattern(self, residues):
+
+        fragments = []
+        
+        for rn, r in enumerate(residues):
+            res_name = str(r.type)
+            
+            if rn == 0:
+                # First residue, start a new fragment:
+                fragments.append([res_name])
+            elif r.insertion_code: # and not residues[rn - 1].insertion_code:
+                # If residue i has an insertion code, initiate a new fragment:
+                fragments.append([res_name])
+            elif r.sequence_number - residues[rn - 1].sequence_number in (0, 1, -1):
+                # If the seq numbers of residues [i-1, i] are consecutive, extend the last fragment:
+                fragments[-1].append(res_name)
+            else:
+                # They are not consecutive, so we better start a new fragment:
+                fragments.append([res_name])
+        
+        for i, frag in enumerate(fragments):
+            fragments[i] = ''.join(frag)
+        if len(fragments) > FastResidueMapper.MAX_FRAGMENTS:
+            # Wow, that's a lot of fragments. Better use a different mapper
+            raise ResidueMappingError("Can't map chain with large number of fragments")
+        
+        blocks = ').*?('.join(fragments)
+        pattern = '^.*?({0}).*?$'.format(blocks)
+        
+        return pattern
+        
+class RobustResidueMapper(AbstractResidueMapper):
+    """
+    Exhaustive residue mapper, which uses Needleman-Wunsch global alignment.
+    Much slower (quadratic), but fail-proof even with incompatible sequences
+    (can insert gaps in both the C{sparse} and the C{reference} sequence).
+    
+    @param match: score for a match
+    @type match: float
+    @param mismatch: score for a mismatch (by default mismatches are heavily
+                     penalized, while gaps are allowed)
+    @type mismatch: float
+    @param gap: gap penalty
+    @type gap: float  
+    """
+    
+    def __init__(self, match=1, mismatch=-10, gap=0):
+        
+        scoring = alignment.IdentityMatrix(match=match, mismatch=mismatch)
+        aligner = alignment.GlobalAlignmentAlgorithm(scoring=scoring, gap=gap)
+        
+        self._aligner = aligner
+        
+    def map(self, sparse, reference):
+        
+        aligned = []
+        ali = self._aligner.align(sparse, reference)
+        
+        if ali.is_empty:
+            raise ResidueMappingError("Global alignment failed")
+        
+        for mapped, residue in zip(ali.query, ali.subject):
+            
+            if residue.type == reference.alphabet.GAP:
+                continue
+            elif mapped.type == sparse.alphabet.GAP:
+                aligned.append(self.create_gap(sparse.alphabet))
+            else:
+                aligned.append(mapped)
+                
+        return self._build(sparse, aligned)
+
+class CombinedResidueMapper(AbstractResidueMapper):
+    """
+    The best of both worlds: attempts to map the residues using
+    L{FastResidueMapper}, but upon failure secures success by switching to
+    L{RobustResidueMapper}. 
+    """
+    FAST = FastResidueMapper()
+    ROBUST = RobustResidueMapper()
+    
+    def map(self, sparse, reference):
+        
+        try:
+            return CombinedResidueMapper.FAST.map(sparse, reference)        
+        except ResidueMappingError:
+            return CombinedResidueMapper.ROBUST.map(sparse, reference)
 
 class FileBuilder(object):
     """

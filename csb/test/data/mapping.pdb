@@ -1,0 +1,12 @@
+HEADER    RIBOSOME                                30-MAR-01   1GIY              
+COMPND    MOL_ID: 1;                                                            
+COMPND   2 MOLECULE: 50S RIBOSOMAL PROTEIN L3;                                  
+COMPND   3 CHAIN: E;                                                            
+SEQRES   1 E  338  LEU VAL ASN ASP GLU PRO ASN SER PRO ARG GLU GLY MET          
+SEQRES   2 E  338  GLU GLU THR VAL PRO VAL THR VAL ILE GLU THR PRO PRO          
+ATOM   3430  CA  MET E  65     -35.315 183.547 344.254  1.00  0.00           C  
+ATOM   3431  CA  GLU E  66     -31.330 184.145 343.173  1.00  0.00           C  
+ATOM   3432  CA  THR E  67     -27.574 184.326 344.054  1.00  0.00           C  
+ATOM   3433  CA  VAL E  68     -25.637 187.772 343.919  1.00  0.00           C  
+TER    3634      VAL E  68                                                      
+END                                                                             

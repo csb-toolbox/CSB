@@ -1,11 +1,13 @@
 import os
+import sys
 import csb.test as test
 
 from csb.bio.io.wwpdb import EntryID, StandardID, DegenerateID, SeqResID, InvalidEntryIDError, HeaderFormatError
+from csb.bio.io.wwpdb import RobustResidueMapper, FastResidueMapper, CombinedResidueMapper, ResidueMappingError
 from csb.bio.io.wwpdb import StructureParser, RegularStructureParser, LegacyStructureParser, UnknownPDBResidueError
 from csb.bio.io.wwpdb import get, find, FileSystemStructureProvider, RemoteStructureProvider, CustomStructureProvider, StructureNotFoundError
-from csb.bio.sequence import SequenceAlphabets, SequenceTypes
-from csb.bio.structure import ChemElements, SecStructures, Structure
+from csb.bio.sequence import SequenceAlphabets, ProteinAlphabet, SequenceTypes, RichSequence, ChainSequence
+from csb.bio.structure import ChemElements, SecStructures, Structure, Chain
 
 
 @test.regression
@@ -50,7 +52,6 @@ class TestMappingRegressions(test.Case):
         self.assertTrue(residue.atoms.length > 0)
         
         for an in residue.atoms:
-            self.assertTrue(residue[an]._het)
             self.assertTrue(residue[an].vector.tolist())
 
     def testNonStandardResidueMapping(self):
@@ -199,8 +200,51 @@ class TestRegularStructureParser(test.Case):
         super(TestRegularStructureParser, self).setUp()
         
         self.pdb = self.config.getTestFile('1d3z.regular.pdb')
+        self.mapping = self.config.getTestFile('mapping.pdb')
         self.parser = RegularStructureParser(self.pdb)
         
+    def testMapper(self):
+        
+        p = RegularStructureParser(self.pdb, mapper=None)
+        self.assertTrue(isinstance(p.mapper, CombinedResidueMapper))
+        
+        p.mapper = FastResidueMapper()
+        self.assertTrue(isinstance(p.mapper, FastResidueMapper))
+        
+    def testCombinedMapping(self):
+
+        # default mapper        
+        c = self.parser.parse(self.mapping)['E']
+        self.assertEqual(c.residues[14].type, ProteinAlphabet.GLU)
+        self.assertEqual(c.residues[15].type, ProteinAlphabet.GLU)
+        self.assertEqual(c.residues[16].type, ProteinAlphabet.THR)
+        self.assertEquals(4, sum([1 for r in c if r.has_structure]))
+
+        # explicit combined mapper        
+        self.parser.mapper = CombinedResidueMapper()
+        c = self.parser.parse(self.mapping)['E']
+        self.assertEquals(4, sum([1 for r in c if r.has_structure]))
+
+    def testFastMapping(self):
+           
+        self.parser.mapper = FastResidueMapper()
+        self.assertRaises(ResidueMappingError, self.parser.parse, self.mapping)
+        
+        mapping2 = self.config.getTestFile('mapping2.pdb')
+        
+        c = self.parser.parse(mapping2)['E']
+        self.assertEquals(2, sum([1 for r in c if r.has_structure]))
+        
+    def testRobustMapping(self):
+
+        mapping3 = self.config.getTestFile('mapping3.pdb')
+        
+        self.parser.mapper = RobustResidueMapper()
+        self.assertRaises(ResidueMappingError, self.parser.parse, mapping3)
+        
+        c = self.parser.parse(self.mapping)['E']                
+        self.assertEquals(4, sum([1 for r in c if r.has_structure]))
+                        
     def testParseModels(self):
         
         ensemble = self.parser.parse_models()
@@ -249,7 +293,6 @@ class TestRegularStructureParser(test.Case):
         # Atom
         vector = [52.647, -87.443, 9.674]
         self.assertEqual(structure['A'][0]['CA'].vector.tolist(), vector)
-        self.assertEqual(structure['A'][0]['CA']._het, True) 
 
     def testParseResidue(self):
         
@@ -277,6 +320,68 @@ class TestRegularStructureParser(test.Case):
         self.assertEqual(self.parser.models(), list(range(1, 11)))
 
 
+@test.unit
+class TestFastResidueMapper(test.Case):
+    
+    def setUp(self):
+        super(TestFastResidueMapper, self).setUp()
+        self.mapper = FastResidueMapper()
+    
+    def _build(self, string):
+        
+        id = str(hash(string))
+        seq = RichSequence(id, "", string, SequenceTypes.Protein)
+        
+        return ChainSequence.create(Chain.from_sequence(seq))                
+
+    def testMap(self):
+
+        ref = self._build("ZABCD")        
+        sparse = self._build("AC")
+        
+        self.assertRaises(ResidueMappingError, self.mapper.map, sparse, ref)
+        
+        sparse.residues[2].id = (22, None)
+        result = self.mapper.map(sparse, ref)
+
+        self.assertEquals(result.sequence, "-A-C-")
+        
+@test.unit
+class TestRobustResidueMapper(TestFastResidueMapper):
+    
+    def setUp(self):
+        super(TestRobustResidueMapper, self).setUp()
+        self.mapper = RobustResidueMapper()              
+
+    def testMap(self):
+
+        ref = self._build("ABCD")        
+        sparse = self._build("EF")
+        
+        self.assertRaises(ResidueMappingError, self.mapper.map, sparse, ref)
+        
+        ref = self._build("ZABCD")        
+        sparse = self._build("AC")
+        result = self.mapper.map(sparse, ref)
+
+        self.assertEquals(result.sequence, "-A-C-")        
+        
+
+@test.unit
+class TestCombinedResidueMapper(TestFastResidueMapper):
+    
+    def setUp(self):
+        super(TestCombinedResidueMapper, self).setUp()
+        self.mapper = CombinedResidueMapper()              
+
+    def testMap(self):
+
+        ref = self._build("ZABCD")        
+        sparse = self._build("AC")
+        result = self.mapper.map(sparse, ref)
+
+        self.assertEquals(result.sequence, "-A-C-") 
+                
 @test.unit
 class TestFileSystemProvider(test.Case):
     
@@ -487,6 +592,7 @@ def TestPDB():
             try:
                 StructureParser(self.entry).parse_structure()
             except:
+                sys.stdout.write("\n{0}\n".format(self.entry))
                 self.reRaise([self.entry])    
 
     var = 'PDBMASK'
