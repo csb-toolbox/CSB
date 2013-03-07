@@ -1,0 +1,19 @@
+HHsearch 1.5
+NAME  name
+FAM   fam
+LENG  2 match states, 2 columns in multiple alignment
+NEFF  10
+PCT   False
+SEQ
+#
+NULL   5346	8263	5863
+HMM    A	C	E
+       M->M	M->I	M->D	I->M	I->I	D->M	D->D	Neff	Neff_I	Neff_D
+       321    	3321   	3321   	*	*	*	*	*	*	*	
+A 1    0      	1000   	1584   	1
+       321    	3321   	3321   	1000   	1000   	1000   	1000   	*      	*      	*      	
+
+C 2    0      	1000   	1584   	2
+       152    	3321   	*	1000   	1000   	0      	*	*      	*      	*      	
+
+//
