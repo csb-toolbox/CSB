@@ -129,6 +129,8 @@ class SequenceAlphabets(object):
             SequenceTypes.DNA: NucleicAlphabet,
             SequenceTypes.RNA: NucleicAlphabet,
             SequenceTypes.Unknown: UnknownAlphabet }
+    
+    ALL_ALPHABETS = set([ProteinAlphabet, NucleicAlphabet, UnknownAlphabet])
 
     assert set(MAP) == csb.core.Enum.members(SequenceTypes)
     
@@ -136,8 +138,20 @@ class SequenceAlphabets(object):
     def get(type):
         """
         Get the alphabet corresponding to the specified sequence C{type}
+        @param type: a member of L{SequenceTypes}
+        @type type: L{csb.core.EnumItem}
+        @rtype: L{csb.core.enum} 
         """
-        return SequenceAlphabets.MAP[type]    
+        return SequenceAlphabets.MAP[type]  
+    
+    @staticmethod
+    def contains(alphabet):
+        """
+        Return True if C{alphabet} is a sequence alphabet
+        @type alphabet: L{csb.core.enum}
+        @rtype: bool
+        """
+        return alphabet in SequenceAlphabets.ALL_ALPHABETS        
 
 
 class SequenceError(ValueError):
@@ -195,7 +209,7 @@ class ResidueInfo(object):
         return self._type
     @type.setter
     def type(self, type):
-        if type.enum not in (ProteinAlphabet, NucleicAlphabet, UnknownAlphabet):
+        if not SequenceAlphabets.contains(type.enum):
             raise TypeError(type)
         self._type = type
         
@@ -1313,5 +1327,6 @@ class A3MAlignment(AbstractAlignment):
         @rtype: L{A3MAlignment}
         """        
         from csb.bio.io.fasta import SequenceAlignmentReader
-        return SequenceAlignmentReader(strict=strict).read_a3m(string)    
+        return SequenceAlignmentReader(strict=strict).read_a3m(string)
+
     
