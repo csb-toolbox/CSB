@@ -962,11 +962,11 @@ class AbstractStructureParser(object):
 
         if set(structure.chains) != set(residues.keys()):
             raise PDBParseError("Corrupt PDB file")
-        for c in residues:
-            if len(residues[c]) == 0:
-                raise StructureFormatError("Chain {0} has no atoms".format(c))
-       
-        for chain in structure.items:
+
+        for chain in structure.items:            
+            if chain.length == 0 or len(residues[chain.id]) == 0:
+                continue
+            
             reference = csb.bio.sequence.ChainSequence.create(chain)
             sparse = csb.bio.sequence.ChainSequence(
                                 "atoms", "", residues[chain.id], chain.type)
