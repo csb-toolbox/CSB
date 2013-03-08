@@ -276,21 +276,21 @@ class MDRENS(AbstractRENS):
         else:
             init_temperature = traj_info.param_info.sampler2.temperature
             protocol = lambda t, tau: traj_info.param_info.protocol(tau - t, tau)
-        
-        init_state = traj_info.init_state
+
+        init_state = traj_info.init_state.clone()
         if init_state.momentum is None:
             init_state = self._augment_state(init_state,
                                              init_temperature,
                                              traj_info.param_info.mass_matrix)
-        
+
         tau = traj_length * timestep
         factory = InterpolationFactory(protocol, tau)
-
+        
         gen = MDPropagator(factory.build_gradient(traj_info.param_info.gradient),
                            timestep,
 						   mass_matrix=traj_info.param_info.mass_matrix,
 						   integrator=self._integrator)
-        
+
         traj = gen.generate(init_state, int(traj_length))
         
         return traj

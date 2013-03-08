@@ -900,6 +900,9 @@ class AbstractExchangeMC(AbstractEnsembleMC):
         """
 
         if numpy.random.random() < swapcom.acceptance_probability:
+            if swapcom.sampler1.state.momentum is None and swapcom.sampler2.state.momentum is None:
+                swapcom.traj12.final.momentum = None
+                swapcom.traj21.final.momentum = None
             swapcom.sampler1.state = swapcom.traj21.final
             swapcom.sampler2.state = swapcom.traj12.final
             return True
@@ -993,7 +996,7 @@ class AbstractRENS(AbstractExchangeMC):
         
         trajinfo12 = RENSTrajInfo(param_info, init_state1, direction="fw")
         trajinfo21 = RENSTrajInfo(param_info, init_state2, direction="bw")
-
+        
         traj12 = self._run_traj_generator(trajinfo12)
         traj21 = self._run_traj_generator(trajinfo21)
 
