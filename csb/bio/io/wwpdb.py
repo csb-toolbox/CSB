@@ -407,6 +407,37 @@ class AbstractStructureParser(object):
             return models
         else:
             return []
+        
+    def guess_chain_type(self, residue_labels):
+        """
+        Try to guess what is the sequence type of a chunk of PDB
+        C{residue_label}s. The list of labels is probed starting from the middle
+        first, because PDB chains often contain modified / unknown residues at
+        the termini. If none of the probed residues can be used to determine
+        chain's type, just give up and return L{SequenceTypes.Unknown}.
+        
+        @param residue_labels: an iterable of PDB residue labels
+        @type residue_labels: iterable 
+
+        @return: a L{SequenceTypes} enum member
+        @rtype: L{csb.core.EnumItem}              
+        """
+        
+        labels = list(residue_labels)
+        middle = len(labels) / 2
+        
+        reordered = labels[middle:] + list(reversed(labels[:middle]))
+        
+        for label in reordered:
+            try:
+                type = self.guess_sequence_type(label)
+                if type != SequenceTypes.Unknown:
+                    return type
+                
+            except UnknownPDBResidueError:
+                continue
+            
+        return SequenceTypes.Unknown
 
     def guess_sequence_type(self, residue_label):
         """
@@ -1150,57 +1181,84 @@ class RegularStructureParser(AbstractStructureParser):
                                 chains += ', ' + line[11:].strip()
                             break
 
-                    chain_name = chain_name.strip()[:-1]
-                    for chain in chains.replace(';', ' ').replace(',', ' ').split() or ['']:  # the second part deals with an empty chain id
-                        new_chain = csb.bio.structure.Chain(chain, type=SequenceTypes.Unknown,
-                                                            name=chain_name, accession=structure.accession)
-                        new_chain.molecule_id = mol_id
-                        try:
-                            structure.chains.append(new_chain)
-                        except csb.core.DuplicateKeyError:
-                            raise HeaderFormatError('Chain {0} is already defined.'.format(new_chain.id))
+                    chain_ids = chains.replace(';', ' ').replace(',', ' ').split() or ['']  # the second part deals with an empty chain id
+                    self._add_chains(structure, chain_name, mol_id, *chain_ids)
 
             elif line.startswith('REMARK   2 RESOLUTION'):
-                res = re.search("(\d+(?:\.\d+)?)\s+ANGSTROM", line)
-                if res and res.groups():
-                    structure.resolution = float(res.group(1))
+                structure.resolution = self._read_resolution(line)
                                         
             elif line.startswith('SEQRES'):
-                # Correct handling of empty chain id
-                seq_fields = [line[7:10], line[11], line[13:17] ]
-                seq_fields.extend(line[18:].split())
-
-                rank_base = int(seq_fields[0])
-                chain_id = seq_fields[1].strip()
-                
-                if chain_id not in structure.chains:
-                    raise HeaderFormatError('Chain {0} is undefined'.format(chain_id))
-                
+                chain_id, residues = self._parse_seqres_line(line, structure)
                 chain = structure.chains[chain_id]
-
-                if chain.type == SequenceTypes.Unknown:
-                    inner_residuerank = int(len(seq_fields[3:]) / 2) + 3
-                    for i in [inner_residuerank, 3, -1]:
-                        try:
-                            chain.type = self.guess_sequence_type(seq_fields[i])
-                            break
-                        except UnknownPDBResidueError:
-                            pass
-
-                for i, residue_label in enumerate(seq_fields[3:]):
-                    rank = rank_base * 13 - (13 - (i + 1))
-                    rname = self.parse_residue_safe(residue_label, as_type=chain.type)
-                    residue = csb.bio.structure.Residue.create(chain.type, rank=rank, type=rname)
-                    residue.label = residue_label
-                    structure.chains[chain_id].residues.append(residue)
-                    if structure.chains[chain_id].residues.last_index != rank:
+                
+                for residue in residues:
+                    chain.residues.append(residue)
+                    if chain.residues.last_index != residue.rank:
                         raise HeaderFormatError("Malformed SEQRES")
 
             elif line.startswith('MODEL') or line.startswith('ATOM'):
                 break
                         
-        return structure   
+        return structure  
+    
+    def _add_chains(self, structure, name, mol_id, *chain_ids):
 
+        name = name.strip().rstrip(";")
+        
+        for chain in chain_ids:
+            new_chain = csb.bio.structure.Chain(chain, type=SequenceTypes.Unknown,
+                                                name=name, accession=structure.accession)
+            new_chain.molecule_id = mol_id
+            try:
+                structure.chains.append(new_chain)
+            except csb.bio.structure.DuplicateChainIDError:
+                raise HeaderFormatError('Chain {0} is already defined.'.format(new_chain.id))
+    
+    def _read_resolution(self, line):
+        """
+        @return: resolution
+        @rtype: float or None
+        """
+        res = re.search("(\d+(?:\.\d+)?)\s+ANGSTROM", line)
+        
+        if res and res.groups():
+            return float(res.group(1))
+        else:
+            return None         
+
+    def _parse_seqres_line(self, line, structure):
+        """
+        Parse a SEQRES line, build and return newly constructed residues.
+        If the current sequence type of the chain is unknown, try to guess it
+        before parsing the residues.
+        
+        @return: parsed chain_id and L{Residue}s
+        @rtype: 2-tuple: (str, iterable of L{Residue})
+        """
+        residues = []
+        
+        rownum = int(line[7:10])
+        chain_id = line[11].strip()
+        labels = line[18:].split()
+        
+        if chain_id not in structure.chains:
+            raise HeaderFormatError('Chain {0} is undefined'.format(chain_id))
+        
+        chain = structure.chains[chain_id]
+        
+        if chain.type == SequenceTypes.Unknown:
+            chain.type = self.guess_chain_type(labels)
+
+        for rn, label in enumerate(labels):
+            rank = rownum * 13 - (13 - (rn + 1))
+            rtype = self.parse_residue_safe(label, as_type=chain.type)
+            
+            residue = csb.bio.structure.Residue.create(chain.type, rank=rank, type=rtype)
+            residue.label = label
+            residues.append(residue)
+            
+        return chain_id, residues
+    
 
 class PDBHeaderParser(RegularStructureParser):
     """
