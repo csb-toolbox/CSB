@@ -152,6 +152,11 @@ class HMCSampler(AbstractSingleChainMC):
                                + K(current_state.momentum) + E(current_state.position)) / 
                                self.temperature)
 
+        if self.state.momentum is None:
+            proposal_communicator.proposal_state.momentum = None
+        else:
+            proposal_communicator.proposal_state.momentum = self.state.momentum
+
         return pacc
 
     @property
