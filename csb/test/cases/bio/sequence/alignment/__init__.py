@@ -193,4 +193,4 @@ class TestAlignmentResult(test.Case):
 
 if __name__ == '__main__':
 
-    test.Console()        
+    test.Console()
