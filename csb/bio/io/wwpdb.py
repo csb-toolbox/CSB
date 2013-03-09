@@ -424,7 +424,7 @@ class AbstractStructureParser(object):
         """
         
         labels = list(residue_labels)
-        middle = len(labels) / 2
+        middle = int(len(labels)) / 2
         
         reordered = labels[middle:] + list(reversed(labels[:middle]))
         
