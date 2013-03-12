@@ -329,7 +329,7 @@ class ArgHandler(object):
         
         self._parser = argparse.ArgumentParser(prog=program, description=description)
         
-    def _add(self, kind, name, shortname, *a, **k):
+    def _add(self, kind, name, shortname, help="", *a, **k):
         
         args = []
         kargs = dict(k)
@@ -353,7 +353,8 @@ class ArgHandler(object):
                 args.append(ArgHandler.LONG_PREFIX + name)
 
         assert len(args) in (1, 2)   
-        args.extend(a)                        
+        args.extend(a)
+        kargs["help"] = help.replace("%", "%%")     # workaround for a bug in argparse           
         
         self.parser.add_argument(*args, **kargs)
         
