@@ -1,5 +1,6 @@
 
 import os
+import sys
 import numpy
 import types
 import csb.io
@@ -18,10 +19,18 @@ class TestShell(test.Case):
     def setUp(self):
         
         super(TestShell, self).setUp()
-        self.output = csb.io.Shell.run('echo TeST')
+        
+        cmd = '{0.python} -c "print({0.text})"'
+        
+        self.python = sys.executable.replace("\\", "/") # "\" fails on win7
+        self.text = "123"
+        self.output = csb.io.Shell.run(cmd.format(self))
+
+        if not self.python:
+            self.skipTest("Can't get interpreter's path")
         
     def testSTDOUT(self):
-        self.assertEquals(self.output.stdout.strip(), 'TeST')
+        self.assertEquals(self.output.stdout.strip(), self.text)
         
     def testSTDERR(self):
         self.assertEquals(self.output.stderr, '')
