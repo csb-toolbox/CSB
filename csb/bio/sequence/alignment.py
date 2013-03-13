@@ -213,8 +213,8 @@ class AbstractAlignmentAlgorithm(object):
             raise ValueError("Can't align zero length sequence")        
         
         # working with string sequences results in a massive speed-up
-        qseq = "*" + query.sequence
-        sseq = "*" + subject.sequence
+        qseq = ["*"] + self._sequence(query)
+        sseq = ["*"] + self._sequence(subject)
         
         # 1. create a dynamic programming matrix
         matrix = []        
@@ -236,6 +236,17 @@ class AbstractAlignmentAlgorithm(object):
         
         # 3. compute alignment          
         return self._traceback(matrix, query, subject)    
+    
+    def _sequence(self, s):
+        """
+        Extract and return the string sequence of {s}.
+        
+        @param s: sequence object
+        @type s: L{AbstractSequence}
+        
+        @rtype: list of str
+        """
+        return list(s.sequence)
     
     @abstractmethod
     def _initialize(self, matrix):
@@ -301,8 +312,8 @@ class AbstractAlignmentAlgorithm(object):
         subject = []        
 
         # working with string sequences results in a massive speed-up
-        qseq = "*" + seq1.sequence
-        sseq = "*" + seq2.sequence
+        qseq = ["*"] + self._sequence(seq1)
+        sseq = ["*"] + self._sequence(seq2)
 
         i, j = self._terminus(m)
         qstart, start = i, j
