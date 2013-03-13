@@ -43,6 +43,11 @@ try:
     import urllib.request as urllib
 except ImportError:
     import urllib2 as urllib
+    
+try:
+    from __builtin__ import unichr
+except ImportError:
+    from builtins import chr as unichr
         
 
 NEWLINE = "\n"
