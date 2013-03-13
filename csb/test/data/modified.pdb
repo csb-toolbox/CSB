@@ -1,0 +1,16 @@
+HEADER    .                                       12-Mar-13   TEST              
+COMPND   1 MOL_ID: 1;                                                           
+COMPND   2 MOLECULE: HYPOTHETICAL PROTEIN RV0983;                               
+COMPND   3 CHAIN: A;                                                            
+SEQRES   1 A   20  MET PRO PRO GLY SER VAL GLU GLN VAL ALA ALA LYS VAL          
+SEQRES   2 A   20  VAL PRO SER VAL VAL MSE                                      
+ATOM     95  N   MSE A  21      55.075  23.677  19.139  1.00 33.35           N  
+ATOM     96  CA  MSE A  21      54.672  23.803  17.741  1.00 37.62           C  
+ATOM     97  C   MSE A  21      54.539  22.403  17.111  1.00 35.23           C  
+ATOM     98  O   MSE A  21      55.344  21.485  17.419  1.00 34.50           O  
+ATOM     99  CB  MSE A  21      55.662  24.626  16.915  1.00 34.96           C  
+ATOM    100  CG  MSE A  21      55.211  24.834  15.458  1.00 34.65           C  
+ATOM    101 SE   MSE A  21      56.402  26.367  14.841  1.00 52.51          Se  
+ATOM    102  CE  MSE A  21      56.143  26.398  12.634  1.00 50.46           C
+TER                                                                             
+END                                                                             
