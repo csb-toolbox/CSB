@@ -808,14 +808,14 @@ class AbstractStructureParser(object):
             raise StructureFormatError("Chain {0} is undefined".format(chain))
 
         type = self._read_residue(line, structure.chains[chain])
+        label = self._read_residue_raw(line)
         
         atom.alternate = self._read_alternate(line)
         atom.occupancy = self._read_occupancy(line)
         atom.bfactor = self._read_bfactor(line)
         atom.charge = self._read_charge(line)
 
-        info = ResidueInfo(chain, rank, id, sequence_number, insertion_code, type)
-        info.het = line.startswith('HETATM')
+        info = ResidueInfo(chain, rank, id, sequence_number, insertion_code, type, label)
         info.atoms = [atom]
         
         return info
@@ -998,9 +998,9 @@ class AbstractStructureParser(object):
             if chain.length == 0 or len(residues[chain.id]) == 0:
                 continue
             
-            reference = csb.bio.sequence.ChainSequence.create(chain)
-            sparse = csb.bio.sequence.ChainSequence(
-                                "atoms", "", residues[chain.id], chain.type)
+            reference = SparseChainSequence.create(chain)
+            sparse = SparseChainSequence(
+                            "atoms", "", residues[chain.id], chain.type)
             
             aligned = self.mapper.map(sparse, reference)
             assert aligned.length == chain.length 
@@ -1416,9 +1416,9 @@ class ResidueInfo(object):
            However, on an abstract level this object is_a ResidueInfo
            and is used to build L{AbstractSequence}s.
     """
-    __slots__ = ['chain', 'rank', 'id' , 'sequence_number', 'insertion_code', 'type', 'het', 'atoms']
+    __slots__ = ['chain', 'rank', 'id' , 'sequence_number', 'insertion_code', 'type', 'label', 'atoms']
     
-    def __init__(self, chain, rank, id, seq_number, ins_code, type):
+    def __init__(self, chain, rank, id, seq_number, ins_code, type, label):
         
         self.chain = chain
         self.rank = rank
@@ -1426,10 +1426,48 @@ class ResidueInfo(object):
         self.sequence_number = seq_number
         self.insertion_code = ins_code
         self.type = type
-        self.het = False
+        self.label = label
         self.atoms = []
+        
+    @property
+    def is_modified(self):
+        
+        if self.type.enum is SequenceAlphabets.Nucleic:
+            return self.label != str(self.type)
+        else:
+            return self.label != repr(self.type)
 
-
+class SparseChainSequence(csb.bio.sequence.ChainSequence):
+    """
+    Sequence view for reference (SEQRES) or sparse (ATOM) PDB chains.
+    The residue instances passed to the constructor must be
+    L{csb.bio.structure.Residue} or L{csb.bio.io.wwpdb.ResidueInfo} objects.
+    
+    See L{csb.bio.sequence.AbstractSequence} for details.
+    """
+            
+    def _add(self, residue):
+        
+        if not isinstance(residue, (csb.bio.structure.Residue, ResidueInfo)):
+            raise TypeError(residue)
+        else:
+            self._residues.append(residue)
+            
+    def _get(self, rank):
+        return self._residues[rank - 1]
+    
+    @staticmethod
+    def create(chain):
+        """
+        Create a new L{SparseChainSequence} from existing L{Chain}.
+        
+        @type chain: L{csb.bio.structure.Chain}
+        @rtype: L{SparseChainSequence}
+        """        
+        return SparseChainSequence(
+                chain.entry_id, chain.header, chain.residues, chain.type)    
+    
+    
 class AbstractResidueMapper(object):
     """
     Defines the base interface of all residue mappers, used to align PDB ATOM
@@ -1450,14 +1488,14 @@ class AbstractResidueMapper(object):
         of the underlying L{ResidueInfo} implementation is not necessarily r/w.
         
         @param sparse: sparse sequence (e.g. derived from ATOMS records)
-        @type sparse: L{csb.bio.sequence.ChainSequence}
+        @type sparse: L{SparseChainSequence}
         @param reference: reference, complete sequence
                           (e.g. derived from SEQRES records)
-        @type reference: L{csb.bio.sequence.ChainSequence}
+        @type reference: L{SparseChainSequence}
         
         @return: all C{sparse} residues, optimally aligned over C{reference}
                  (with gaps)
-        @rtype: L{csb.bio.sequence.ChainSequence}
+        @rtype: L{SparseChainSequence}
         
         @raise ResidueMappingError: if the specified sequences are not alignable
         """
@@ -1473,12 +1511,12 @@ class AbstractResidueMapper(object):
         
         @rtype: L{ResidueInfo}
         """
-        return ResidueInfo(None, -1, None, None, None, alphabet.GAP)
+        return ResidueInfo(None, -1, None, None, None, alphabet.GAP, "-")
     
     def _build(self, sparse, aligned):
         
-        return csb.bio.sequence.ChainSequence(
-                            sparse.id, sparse.header, aligned, sparse.type)        
+        return SparseChainSequence(
+                    sparse.id, sparse.header, aligned, sparse.type)        
 
 class FastResidueMapper(AbstractResidueMapper):
     """
@@ -1489,6 +1527,17 @@ class FastResidueMapper(AbstractResidueMapper):
     
     MAX_FRAGMENTS = 20
     
+    MIN_UNICODE_CHAR = 300
+    FORBIDDEN_CHARS = set('^.*?()-')
+    
+    CODEC = "utf-8"
+    DELIMITER = ").*?(".encode(CODEC).decode(CODEC)
+    PATTERN = "^.*?({0}).*?$".encode(CODEC).decode(CODEC)
+    
+    def __init__(self):
+        self._charcode = FastResidueMapper.MIN_UNICODE_CHAR
+        self._cache = {} 
+    
     def map(self, sparse, reference):
 
         aligned = []
@@ -1497,7 +1546,9 @@ class FastResidueMapper(AbstractResidueMapper):
         residues = list(sparse.residues)
 
         pattern = self._build_pattern(residues)
-        matches = re.match(pattern, reference.sequence)
+        seqres = self._encode_sequence(reference)
+
+        matches = re.match(pattern, seqres)
                 
         if matches:
             unmapped_item = -1
@@ -1528,11 +1579,14 @@ class FastResidueMapper(AbstractResidueMapper):
         return self._build(sparse, aligned)
     
     def _build_pattern(self, residues):
+        """
+        Build and return a sparse regular rexpression for C{residues}.
+        """
 
         fragments = []
         
         for rn, r in enumerate(residues):
-            res_name = str(r.type)
+            res_name = self._encode(r)
             
             if rn == 0:
                 # First residue, start a new fragment:
@@ -1553,10 +1607,41 @@ class FastResidueMapper(AbstractResidueMapper):
             # Wow, that's a lot of fragments. Better use a different mapper
             raise ResidueMappingError("Can't map chain with large number of fragments")
         
-        blocks = ').*?('.join(fragments)
-        pattern = '^.*?({0}).*?$'.format(blocks)
+        blocks = FastResidueMapper.DELIMITER.join(fragments)
+        pattern = FastResidueMapper.PATTERN.format(blocks)
         
         return pattern
+    
+    def _encode(self, r):
+        """
+        Return a unique single-letter representation of C{r.type}. 
+        """
+        if not r.is_modified:
+            return str(r.type)
+        else:             
+            return self._register_label(r.label)
+        
+    def _encode_sequence(self, s):
+        return ''.join(map(self._encode, s.residues))
+            
+    def _register_label(self, label):
+        """
+        Assign a new unicode character to C{label} and cache it.
+
+        @return: cached single-letter representation of label.
+        @rtype: unicode char
+        """
+
+        if label not in self._cache:
+            if set(label).intersection(FastResidueMapper.FORBIDDEN_CHARS):
+                raise ResidueMappingError("Invalid residue label")
+            
+            self._charcode += 1
+            code = self._charcode
+            self._cache[label] = csb.io.unichr(code)
+            
+        return self._cache[label]    
+                
         
 class RobustResidueMapper(AbstractResidueMapper):
     """
@@ -1573,10 +1658,16 @@ class RobustResidueMapper(AbstractResidueMapper):
     @type gap: float  
     """
     
+    class GlobalAligner(alignment.GlobalAlignmentAlgorithm):
+        
+        def _sequence(self, s):
+            return [r.label for r in s.residues]
+           
+    
     def __init__(self, match=1, mismatch=-10, gap=0):
         
         scoring = alignment.IdentityMatrix(match=match, mismatch=mismatch)
-        aligner = alignment.GlobalAlignmentAlgorithm(scoring=scoring, gap=gap)
+        aligner = RobustResidueMapper.GlobalAligner(scoring=scoring, gap=gap)
         
         self._aligner = aligner
         
@@ -1614,6 +1705,7 @@ class CombinedResidueMapper(AbstractResidueMapper):
             return CombinedResidueMapper.FAST.map(sparse, reference)        
         except ResidueMappingError:
             return CombinedResidueMapper.ROBUST.map(sparse, reference)
+                
 
 class FileBuilder(object):
     """

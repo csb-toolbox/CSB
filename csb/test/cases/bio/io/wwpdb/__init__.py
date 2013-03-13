@@ -3,10 +3,10 @@ import sys
 import csb.test as test
 
 from csb.bio.io.wwpdb import EntryID, StandardID, DegenerateID, SeqResID, InvalidEntryIDError, HeaderFormatError
-from csb.bio.io.wwpdb import RobustResidueMapper, FastResidueMapper, CombinedResidueMapper, ResidueMappingError
+from csb.bio.io.wwpdb import RobustResidueMapper, FastResidueMapper, CombinedResidueMapper, ResidueMappingError, SparseChainSequence
 from csb.bio.io.wwpdb import StructureParser, RegularStructureParser, LegacyStructureParser, UnknownPDBResidueError
 from csb.bio.io.wwpdb import get, find, FileSystemStructureProvider, RemoteStructureProvider, CustomStructureProvider, StructureNotFoundError
-from csb.bio.sequence import SequenceAlphabets, ProteinAlphabet, SequenceTypes, RichSequence, ChainSequence
+from csb.bio.sequence import SequenceAlphabets, ProteinAlphabet, SequenceTypes, RichSequence
 from csb.bio.structure import ChemElements, SecStructures, Structure, Chain
 
 
@@ -53,7 +53,7 @@ class TestMappingRegressions(test.Case):
         
         for an in residue.atoms:
             self.assertTrue(residue[an].vector.tolist())
-
+                                  
     def testNonStandardResidueMapping(self):
         """
         @see: [CSB 0000052]
@@ -274,6 +274,7 @@ class TestRegularStructureParser(test.Case):
         self.assertEqual(structure.chains.length, 1)
         self.assertEqual(len(structure.chains), 1)
         self.assertEqual(structure.chains['A'].sequence, 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG')
+        self.assertEqual(structure.chains['A'].sequence, ''.join([str(r.type) for r in structure.chains['A'] if r.has_structure]))        
         
         ss = structure.chains['A'].secondary_structure
         self.assertEqual(ss.to_string(), '-EEEEE-----EEEEE-----HHHHHHHHHHHHHH-HHH-EEEEE--EE------HHHHH-----EEEEEE')
@@ -332,7 +333,7 @@ class TestFastResidueMapper(test.Case):
         id = str(hash(string))
         seq = RichSequence(id, "", string, SequenceTypes.Protein)
         
-        return ChainSequence.create(Chain.from_sequence(seq))                
+        return SparseChainSequence.create(Chain.from_sequence(seq))                
 
     def testMap(self):
 
@@ -345,6 +346,25 @@ class TestFastResidueMapper(test.Case):
         result = self.mapper.map(sparse, ref)
 
         self.assertEquals(result.sequence, "-A-C-")
+        
+    def testModifiedResidueMapping(self):
+        """
+        Strictly speaking, this is a regression test. But it so essential that
+        we should keep it here.
+         
+        @see: [csb: 19]
+        """
+        pdb = self.config.getTestFile('modified.pdb')
+         
+        structure = StructureParser(pdb, mapper=self.mapper).parse_structure()
+        chain = structure.first_chain
+
+        self.assertFalse(chain.residues[1].has_structure)
+        self.assertEquals(chain.residues[1].label, "MET")
+                        
+        self.assertTrue(chain.residues[19].has_structure)
+        self.assertEquals(chain.residues[19].label, "MSE")    
+   
         
 @test.unit
 class TestRobustResidueMapper(TestFastResidueMapper):
@@ -365,6 +385,19 @@ class TestRobustResidueMapper(TestFastResidueMapper):
         result = self.mapper.map(sparse, ref)
 
         self.assertEquals(result.sequence, "-A-C-")        
+        
+    def testModifiedResidueMapping(self):
+        
+        pdb = self.config.getTestFile('modified2.pdb')
+         
+        structure = StructureParser(pdb, mapper=self.mapper).parse_structure()
+        chain = structure.first_chain
+
+        self.assertTrue(chain.residues[1].has_structure)
+        self.assertEquals(chain.residues[1].label, "MSE")
+                        
+        self.assertFalse(chain.residues[19].has_structure)
+        self.assertEquals(chain.residues[19].label, "MET")           
         
 
 @test.unit
@@ -607,6 +640,7 @@ def TestPDB():
     return suite
 
 
+
 if __name__ == '__main__':
-    
+
     test.Console()
