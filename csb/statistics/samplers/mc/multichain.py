@@ -101,76 +101,282 @@ import numpy
 
 import csb.numeric
 
-from csb.statistics.samplers.mc import AbstractExchangeMC, AbstractRENS, RESwapCommunicator
+from abc import ABCMeta, abstractmethod
+
+from csb.statistics.samplers import EnsembleState
+from csb.statistics.samplers.mc import AbstractMC, Trajectory, MCCollection
 from csb.statistics.samplers.mc.propagators import MDPropagator, ThermostattedMDPropagator
-from csb.statistics.samplers.mc import Trajectory
-from csb.numeric.integrators import AbstractGradient
+from csb.statistics.samplers.mc.neqsteppropagator import NonequilibriumStepPropagator
+from csb.statistics.samplers.mc.neqsteppropagator import Protocol, Step, ReducedHamiltonian
+from csb.statistics.samplers.mc.neqsteppropagator import ReducedHamiltonianPerturbation
+from csb.statistics.samplers.mc.neqsteppropagator import HMCPropagation, HMCPropagationParam
+from csb.statistics.samplers.mc.neqsteppropagator import HamiltonianSysInfo, NonequilibriumTrajectory
+from csb.numeric.integrators import AbstractGradient, FastLeapFrog
 
-class InterpolationFactory(object):
+
+class AbstractEnsembleMC(AbstractMC):
     """
-    Produces interpolations for functions changed during non-equilibrium
-    trajectories.
-    
-    @param protocol: protocol to be used to generate non-equilibrium trajectories
-    @type protocol: function mapping t to [0...1] for fixed tau
-    @param tau: switching time
-    @type tau: float    
+    Abstract class for Monte Carlo sampling algorithms simulating several ensembles.
+
+    @param samplers: samplers which sample from their respective equilibrium distributions
+    @type samplers: list of L{AbstractSingleChainMC}    
     """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, samplers):
+        
+        self._samplers = MCCollection(samplers)
+        state = EnsembleState([x.state for x in self._samplers])
+        
+        super(AbstractEnsembleMC, self).__init__(state)        
+
+    def sample(self):
+        """
+        Draw an ensemble sample.
+        
+        @rtype: L{EnsembleState}
+        """
+        
+        sample = EnsembleState([sampler.sample() for sampler in self._samplers])
+        self.state = sample
+
+        return sample
+
+    @property
+    def energy(self):
+        """
+        Total ensemble energy.
+        """ 
+        return sum([x.energy for x in self._samplers])
+
+
+class AbstractExchangeMC(AbstractEnsembleMC):
+    """
+    Abstract class for Monte Carlo sampling algorithms employing some replica exchange method.
+
+    @param samplers: samplers which sample from their respective equilibrium distributions
+    @type samplers: list of L{AbstractSingleChainMC}
+
+    @param param_infos: list of ParameterInfo instances providing information needed
+        for performing swaps
+    @type param_infos: list of L{AbstractSwapParameterInfo}
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, samplers, param_infos):
+        super(AbstractExchangeMC, self).__init__(samplers)
+        
+        self._swaplist1 = []
+        self._swaplist2 = []        
+        self._currentswaplist = self._swaplist1
+        
+        self._param_infos = param_infos
+        self._statistics = SwapStatistics(self._param_infos)
+        
+    def _checkstate(self, state):
+        if not isinstance(state, EnsembleState):
+            raise TypeError(state)        
+
+    def swap(self, index):
+        """
+        Perform swap between sampler pair described by param_infos[index]
+        and return outcome (true = accepted, false = rejected).
+
+        @param index: index of swap pair in param_infos
+        @type index: int
+
+        @rtype: boolean
+        """
+        param_info = self._param_infos[index]
+        swapcom = self._propose_swap(param_info)
+        swapcom = self._calc_pacc_swap(swapcom)
+        result = self._accept_swap(swapcom)
+        
+        self.state = EnsembleState([x.state for x in self._samplers])
+
+        self.statistics.stats[index].update(result)
+        
+        return result
+
+    @abstractmethod
+    def _propose_swap(self, param_info):
+        """
+        Calculate proposal states for a swap between two samplers.
+        
+        @param param_info: ParameterInfo instance holding swap parameters
+        @type param_info: L{AbstractSwapParameterInfo}
+        
+        @rtype: L{AbstractSwapCommunicator}
+        """ 
+        pass
+
+    @abstractmethod
+    def _calc_pacc_swap(self, swapcom):
+        """
+        Calculate probability to accept a swap given initial and proposal states.
+
+        @param swapcom: SwapCommunicator instance holding information to be communicated
+                        between distinct swap substeps
+        @type swapcom: L{AbstractSwapCommunicator}
+
+        @rtype: L{AbstractSwapCommunicator}
+        """
+        pass
+
+    def _accept_swap(self, swapcom):
+        """
+        Accept / reject an exchange between two samplers given proposal states and
+        the acceptance probability and returns the outcome (true = accepted, false = rejected).
+
+        @param swapcom: SwapCommunicator instance holding information to be communicated
+            between distinct swap substeps
+        @type swapcom: L{AbstractSwapCommunicator}
+
+        @rtype: boolean
+        """
+
+        if numpy.random.random() < swapcom.acceptance_probability:
+            if swapcom.sampler1.state.momentum is None and swapcom.sampler2.state.momentum is None:
+                swapcom.traj12.final.momentum = None
+                swapcom.traj21.final.momentum = None
+            swapcom.sampler1.state = swapcom.traj21.final
+            swapcom.sampler2.state = swapcom.traj12.final
+            return True
+        else:
+            return False
+
+    @property
+    def acceptance_rates(self):
+        """
+        Return swap acceptance rates.
+
+        @rtype: list of floats
+        """        
+        return self.statistics.acceptance_rates
+
+    @property
+    def param_infos(self):
+        """
+        List of SwapParameterInfo instances holding all necessary parameters.
+
+        @rtype: list of L{AbstractSwapParameterInfo}
+        """
+        return self._param_infos
     
-    def __init__(self, protocol, tau):
+    @property
+    def statistics(self):
+        return self._statistics
+
+    def _update_statistics(self, index, accepted):
+        """
+        Update statistics of a given swap process.
         
-        self._protocol = None
-        self._tau = None
+        @param index: position of swap statistics to be updated
+        @type index: int
         
-        self.protocol = protocol
-        self.tau = tau
+        @param accepted: outcome of the swap
+        @type accepted: boolean
+        """
+        
+        self._stats[index][0] += 1
+        self._stats[index][1] += int(accepted)
+
+
+class AbstractSwapParameterInfo(object):
+    """
+    Subclass instances hold all parameters necessary for performing a swap
+    between two given samplers.
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, sampler1, sampler2):
+        """
+        @param sampler1: First sampler
+        @type sampler1: L{AbstractSingleChainMC}
+
+        @param sampler2: Second sampler
+        @type sampler2: L{AbstractSingleChainMC}
+        """
+
+        self._sampler1 = sampler1
+        self._sampler2 = sampler2
+
+    @property
+    def sampler1(self):
+        return self._sampler1
+
+    @property
+    def sampler2(self):
+        return self._sampler2
+
+
+class AbstractSwapCommunicator(object):
+    """
+    Holds all the information which needs to be communicated between
+    distinct swap substeps.
+
+    @param param_info: ParameterInfo instance holding swap parameters
+    @type param_info: L{AbstractSwapParameterInfo}
+
+    @param traj12: Forward trajectory
+    @type traj12: L{Trajectory}
+
+    @param traj21: Reverse trajectory
+    @type traj21: L{Trajectory}
+    """
+
+    __metaclass__ = ABCMeta
+    
+    def __init__(self, param_info, traj12, traj21):
+        
+        self._sampler1 = param_info.sampler1
+        self._sampler2 = param_info.sampler2
+
+        self._traj12 = traj12
+        self._traj21 = traj21
+        
+        self._param_info = param_info
+        
+        self._acceptance_probability = None
+        self._accepted = False
         
     @property
-    def protocol(self):
-        return self._protocol
-    @protocol.setter
-    def protocol(self, value):
-        if not hasattr(value, '__call__'):
-            raise TypeError(value)
-        self._protocol = value
-                    
-    @property
-    def tau(self):
-        return self._tau
-    @tau.setter
-    def tau(self, value):
-        self._tau = float(value)
-        
-    def build_gradient(self, gradient):
-        """
-        Create a gradient instance with according to given protocol
-        and switching time.
-        
-        @param gradient: gradient with G(0) = G_1 and G(1) = G_2
-        @type gradient: callable    
-        """
-        return Gradient(gradient, self._protocol, self._tau)
-    
-    def build_temperature(self, temperature):
-        """
-        Create a temperature function according to given protocol and
-        switching time.
+    def sampler1(self):
+        return self._sampler1
 
-        @param temperature: temperature with T(0) = T_1 and T(1) = T_2
-        @type temperature: callable        
-        """
-        return lambda t: temperature(self.protocol(t, self.tau))
-        
-class Gradient(AbstractGradient):
+    @property
+    def sampler2(self):
+        return self._sampler2
     
-    def __init__(self, gradient, protocol, tau):
-        
-        self._protocol = protocol
-        self._gradient = gradient
-        self._tau = tau
-    
-    def evaluate(self, q, t):
-        return self._gradient(q, self._protocol(t, self._tau))
+    @property
+    def traj12(self):
+        return self._traj12    
+
+    @property
+    def traj21(self):
+        return self._traj21
+
+    @property
+    def acceptance_probability(self):
+        return self._acceptance_probability
+    @acceptance_probability.setter
+    def acceptance_probability(self, value):
+        self._acceptance_probability = value
+
+    @property
+    def accepted(self):
+        return self._accepted
+    @accepted.setter
+    def accepted(self, value):
+        self._accepted = value
+
+    @property
+    def param_info(self):
+        return self._param_info
+
 
 class ReplicaExchangeMC(AbstractExchangeMC):
     """
@@ -204,6 +410,163 @@ class ReplicaExchangeMC(AbstractExchangeMC):
                                                          + E2(state2.position) / T2)
                                                          
         return swapcom
+
+
+class RESwapParameterInfo(AbstractSwapParameterInfo):
+    """
+    Holds parameters for a standard Replica Exchange swap.
+    """
+    pass
+
+
+class RESwapCommunicator(AbstractSwapCommunicator):
+    """
+    Holds all the information which needs to be communicated between distinct
+    RE swap substeps.
+
+    See L{AbstractSwapCommunicator} for constructor signature.
+    """
+    pass
+
+
+class AbstractRENS(AbstractExchangeMC):
+    """
+    Abstract Replica Exchange with Nonequilibrium Switches
+    (RENS, Ballard & Jarzynski 2009) class.
+    Subclasses implement various ways of generating trajectories
+    (deterministic or stochastic).
+    """
+
+    __metaclass__ = ABCMeta
+
+    def _propose_swap(self, param_info):
+
+        init_state1 = param_info.sampler1.state
+        init_state2 = param_info.sampler2.state
+        
+        trajinfo12 = RENSTrajInfo(param_info, init_state1, direction="fw")
+        trajinfo21 = RENSTrajInfo(param_info, init_state2, direction="bw")
+        
+        traj12 = self._run_traj_generator(trajinfo12)
+        traj21 = self._run_traj_generator(trajinfo21)
+
+        return RENSSwapCommunicator(param_info, traj12, traj21)
+
+    @abstractmethod
+    def _calc_works(self, swapcom):
+        """
+        Calculates the works expended during the nonequilibrium
+        trajectories.
+
+        @param swapcom: Swap communicator object holding all the
+                        neccessary information.
+        @type swapcom: L{RENSSwapCommunicator}
+
+        @return: The expended during the forward and the backward
+                 trajectory.
+        @rtype: 2-tuple of floats
+        """
+        
+        pass
+
+    def _calc_pacc_swap(self, swapcom):
+
+        work12, work21 = self._calc_works(swapcom)
+        swapcom.acceptance_probability = csb.numeric.exp(-work12 - work21)
+
+        return swapcom
+
+    @abstractmethod
+    def _run_traj_generator(self, traj_info):
+        """
+        Run the trajectory generator which generates a trajectory
+        of a given length between the states of two samplers.
+
+        @param traj_info: TrajectoryInfo instance holding information
+                          needed to generate a nonequilibrium trajectory   
+        @type traj_info: L{RENSTrajInfo}
+        
+        @rtype: L{Trajectory}
+        """
+        pass
+
+
+class AbstractRENSSwapParameterInfo(RESwapParameterInfo):
+    """
+    Holds parameters for a RENS swap.
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, sampler1, sampler2, protocol):
+
+        super(AbstractRENSSwapParameterInfo, self).__init__(sampler1, sampler2)
+
+        ## Can't pass the linear protocol as a default argument because of a reported bug
+        ## in epydoc parsing which makes it fail building the docs.
+        self._protocol = None
+        if protocol is None:
+            self._protocol = lambda t, tau: t / tau
+        else:
+            self._protocol = protocol
+
+    @property
+    def protocol(self):
+        """
+        Switching protocol determining the time dependence
+        of the switching parameter.
+        """
+        return self._protocol
+    @protocol.setter
+    def protocol(self, value):
+        self._protocol = value
+
+
+class RENSSwapCommunicator(AbstractSwapCommunicator):
+    """
+    Holds all the information which needs to be communicated between distinct
+    RENS swap substeps.
+
+    See L{AbstractSwapCommunicator} for constructor signature.
+    """
+    
+    pass
+
+
+class RENSTrajInfo(object):
+    """
+    Holds information necessary for calculating a RENS trajectory.
+
+    @param param_info: ParameterInfo instance holding swap parameters
+    @type param_info: L{AbstractSwapParameterInfo}
+
+    @param init_state: state from which the trajectory is supposed to start
+    @type init_state: L{State}
+
+    @param direction: Either "fw" or "bw", indicating a forward or backward
+                      trajectory. This is neccessary to pick the protocol or
+                      the reversed protocol, respectively.
+    @type direction: string, either "fw" or "bw"
+    """
+    
+    def __init__(self, param_info, init_state, direction):
+        
+        self._param_info = param_info
+        self._init_state = init_state
+        self._direction = direction
+        
+    @property
+    def param_info(self):
+        return self._param_info
+
+    @property
+    def init_state(self):
+        return self._init_state
+
+    @property
+    def direction(self):
+        return self._direction
+
 
 class MDRENS(AbstractRENS):
     """
@@ -325,6 +688,107 @@ class MDRENS(AbstractRENS):
 
         return w12, w21
 
+
+class MDRENSSwapParameterInfo(RESwapParameterInfo):
+    """
+    Holds parameters for a MDRENS swap.
+
+    @param sampler1: First sampler
+    @type sampler1: L{AbstractSingleChainMC}
+
+    @param sampler2: Second sampler
+    @type sampler2: L{AbstractSingleChainMC}
+
+    @param timestep: Integration timestep
+    @type timestep: float
+
+    @param traj_length: Trajectory length in number of timesteps
+    @type traj_length: int
+
+    @param gradient: Gradient which determines the dynamics during a trajectory
+    @type gradient: L{AbstractGradient}
+    
+    @param protocol: Switching protocol determining the time dependence of the
+                     switching parameter. It is a function M{f} taking the running
+                     time t and the switching time tau to yield a value in M{[0, 1]}
+                     with M{f(0, tau) = 0} and M{f(tau, tau) = 1}. Default is a linear
+                     protocol, which is being set manually due to an epydoc bug
+    @type protocol: callable
+    
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional matrix of type L{InvertibleMatrix} with n being the dimension
+                               of the configuration space, that is, the dimension of
+                               the position / momentum vectors
+    """
+
+    def __init__(self, sampler1, sampler2, timestep, traj_length, gradient,
+                 protocol=None, mass_matrix=None):
+        
+        super(MDRENSSwapParameterInfo, self).__init__(sampler1, sampler2)
+
+        self._mass_matrix = mass_matrix
+        if self.mass_matrix is None:
+            d = len(sampler1.state.position)
+            self.mass_matrix = csb.numeric.InvertibleMatrix(numpy.eye(d), numpy.eye(d))
+
+        self._traj_length = traj_length
+        self._gradient = gradient
+        self._timestep = timestep
+
+        ## Can't pass the linear protocol as a default argument because of a reported bug
+        ## in epydoc parsing which makes it fail building the docs.
+        self._protocol = None
+        if protocol is None:
+            self._protocol = lambda t, tau: t / tau
+        else:
+            self._protocol = protocol
+    
+    @property
+    def timestep(self):
+        """
+        Integration timestep.
+        """
+        return self._timestep
+    @timestep.setter
+    def timestep(self, value):
+        self._timestep = float(value)
+
+    @property
+    def traj_length(self):
+        """
+        Trajectory length in number of integration steps.
+        """
+        return self._traj_length
+    @traj_length.setter
+    def traj_length(self, value):
+        self._traj_length = int(value)
+
+    @property
+    def gradient(self):
+        """
+        Gradient which governs the equations of motion.
+        """
+        return self._gradient
+
+    @property
+    def mass_matrix(self):
+        return self._mass_matrix
+    @mass_matrix.setter
+    def mass_matrix(self, value):
+        self._mass_matrix = value
+
+    @property
+    def protocol(self):
+        """
+        Switching protocol determining the time dependence
+        of the switching parameter.
+        """
+        return self._protocol
+    @protocol.setter
+    def protocol(self, value):
+        self._protocol = value
+
+
 class ThermostattedMDRENS(MDRENS):
     """
     Replica Exchange with Nonequilibrium Switches (RENS, Ballard & Jarzynski, 2009)
@@ -381,3 +845,574 @@ class ThermostattedMDRENS(MDRENS):
         traj = gen.generate(init_state, traj_info.param_info.traj_length)
 
         return traj
+
+
+class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
+    """
+    @param sampler1: First sampler
+    @type sampler1: subclass instance of L{AbstractSingleChainMC}
+
+    @param sampler2: Second sampler
+    @type sampler2: subclass instance of L{AbstractSingleChainMC}
+
+    @param timestep: Integration timestep
+    @type timestep: float
+
+    @param traj_length: Trajectory length in number of timesteps
+    @type traj_length: int
+
+    @param gradient: Gradient which determines the dynamics during a trajectory
+    @type gradient: subclass instance of L{AbstractGradient}
+
+    @param mass_matrix: Mass matrix
+    @type mass_matrix: n-dimensional L{InvertibleMatrix} with n being the dimension
+                       of the configuration space, that is, the dimension of
+                       the position / momentum vectors
+
+    @param protocol: Switching protocol determining the time dependence of the
+                     switching parameter. It is a function f taking the running
+                     time t and the switching time tau to yield a value in [0, 1]
+                     with f(0, tau) = 0 and f(tau, tau) = 1
+    @type protocol: callable
+
+    @param temperature: Temperature interpolation function.
+    @type temperature: Real-valued function mapping from [0,1] to R.
+        T(0) = temperature of the ensemble sampler1 samples from, T(1) = temperature
+        of the ensemble sampler2 samples from
+
+    @param collision_probability: Probability for a collision with the heatbath during one timestep
+    @type collision_probability: float
+
+    @param collision_interval: Interval during which collision may occur with probability
+        collision_probability
+    @type collision_interval: int
+    """
+        
+    def __init__(self, sampler1, sampler2, timestep, traj_length, gradient, mass_matrix=None,
+                 protocol=None, temperature=lambda l: 1.0,
+                 collision_probability=0.1, collision_interval=1):
+        
+        super(ThermostattedMDRENSSwapParameterInfo, self).__init__(sampler1, sampler2, timestep,
+																   traj_length, gradient,
+																   mass_matrix=mass_matrix,
+                                                                   protocol=protocol)
+        
+        self._collision_probability = None
+        self._collision_interval = None
+        self._temperature = temperature
+        self.collision_probability = collision_probability
+        self.collision_interval = collision_interval
+
+    @property
+    def collision_probability(self):
+        """
+        Probability for a collision with the heatbath during one timestep.
+        """
+        return self._collision_probability
+    @collision_probability.setter
+    def collision_probability(self, value):
+        self._collision_probability = float(value)
+
+    @property
+    def collision_interval(self):
+        """
+        Interval during which collision may occur with probability
+        C{collision_probability}.
+        """
+        return self._collision_interval
+    @collision_interval.setter
+    def collision_interval(self, value):
+        self._collision_interval = int(value)
+
+    @property
+    def temperature(self):
+        return self._temperature
+
+
+class AbstractStepRENS(AbstractRENS):
+    """
+    Replica Exchange with Nonequilibrium Switches (RENS, Ballard & Jarzynski 2009)
+    with stepwise trajectories as described in Nilmeier et al., "Nonequilibrium candidate
+    Monte Carlo is an efficient tool for equilibrium simulation", PNAS 2011.
+    The switching parameter dependence of the Hamiltonian is a linear interpolation
+    between the PDFs of the sampler objects, 
+    M{H(S{lambda}) = H_2 * S{lambda} + (1 - S{lambda}) * H_1}.
+    The perturbation kernel is a thermodynamic perturbation and the propagation is subclass
+    responsibility.
+    Note that due to the linear interpolations between the two Hamiltonians, the
+    log-probability has to be evaluated four times per perturbation step which can be
+    costly. In this case it is advisable to define the intermediate log probabilities
+    in _run_traj_generator differently.
+
+    @param samplers: Samplers which sample their respective equilibrium distributions
+    @type samplers: list of L{AbstractSingleChainMC}
+
+    @param param_infos: ParameterInfo instances holding
+                        information required to perform a HMCStepRENS swaps
+    @type param_infos: list of L{AbstractSwapParameterInfo}
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, samplers, param_infos):
+
+        super(AbstractStepRENS, self).__init__(samplers, param_infos)
+
+    @abstractmethod
+    def _setup_propagations(self, im_sys_infos, param_info):
+        """
+        Set up the propagation steps using the information about the current system
+        setup and parameters from the SwapParameterInfo object.
+
+        @param im_sys_infos: Information about the intermediate system setups
+        @type im_sys_infos: List of L{AbstractSystemInfo}
+
+        @param param_info: SwapParameterInfo object containing parameters for the
+                           propagations like timesteps, trajectory lengths etc.
+        @type param_info: L{AbstractSwapParameterInfo}
+        """
+        
+        pass
+
+    @abstractmethod
+    def _add_gradients(self, im_sys_infos, param_info, t_prot):
+        """
+        If needed, set im_sys_infos.hamiltonian.gradient.
+
+        @param im_sys_infos: Information about the intermediate system setups
+        @type im_sys_infos: List of L{AbstractSystemInfo}
+
+        @param param_info: SwapParameterInfo object containing parameters for the
+                           propagations like timesteps, trajectory lengths etc.
+        @type param_info: L{AbstractSwapParameterInfo}
+
+        @param t_prot: Switching protocol defining the time dependence of the switching
+                       parameter.
+        @type t_prot: callable
+        """
+        
+        pass
+    
+    def _run_traj_generator(self, traj_info):
+
+        t_prot = None
+        if traj_info.direction == "fw":
+            t_prot = lambda i: traj_info.param_info.protocol(float(i), float(traj_length))
+        else:
+            t_prot = lambda i: traj_info.param_info.protocol(float(traj_length) - float(i), 
+                                                             float(traj_length))
+
+        pdf1 = traj_info.param_info.sampler1._pdf
+        pdf2 = traj_info.param_info.sampler2._pdf
+        T1 = traj_info.param_info.sampler1.temperature
+        T2 = traj_info.param_info.sampler2.temperature
+        traj_length = traj_info.param_info.intermediate_steps
+
+        im_log_probs = [lambda x, i=i: pdf2.log_prob(x) * t_prot(i) + \
+                                       (1 - t_prot(i)) * pdf1.log_prob(x)
+                        for i in range(traj_length + 1)]
+        im_temperatures = [T2 * t_prot(i) + (1 - t_prot(i)) * T1 
+                           for i in range(traj_length + 1)]
+        im_reduced_hamiltonians = [ReducedHamiltonian(im_log_probs[i],
+                                                      temperature=im_temperatures[i]) 
+                                   for i in range(traj_length + 1)]
+        im_sys_infos = [HamiltonianSysInfo(im_reduced_hamiltonians[i])
+                        for i in range(traj_length + 1)]
+        perturbations = [ReducedHamiltonianPerturbation(im_sys_infos[i], im_sys_infos[i+1])
+                        for i in range(traj_length)]
+        im_sys_infos = self._add_gradients(im_sys_infos, traj_info.param_info, t_prot)
+        propagations = self._setup_propagations(im_sys_infos, traj_info.param_info)
+        
+        steps = [Step(perturbations[i], propagations[i]) for i in range(traj_length)]
+
+        gen = NonequilibriumStepPropagator(Protocol(steps))
+        
+        init_state = traj_info.init_state.clone()
+        
+        traj = gen.generate(init_state)
+
+        return NonequilibriumTrajectory([init_state, traj.final], jacobian=1.0,
+                                        heat=traj.heat, work=traj.work, deltaH=traj.deltaH)       
+
+
+class HMCStepRENS(AbstractStepRENS):
+    """
+    Replica Exchange with Nonequilibrium Switches (RENS, Ballard & Jarzynski 2009)
+    with stepwise trajectories as described in Nilmeier et al., "Nonequilibrium candidate
+    Monte Carlo is an efficient tool for equilibrium simulation", PNAS 2011.
+    The switching parameter dependence of the Hamiltonian is a linear interpolation
+    between the PDFs of the sampler objects, 
+    M{H(S{lambda}) = H_2 * S{lambda} + (1 - S{lambda}) * H_1}.
+    The perturbation kernel is a thermodynamic perturbation and the propagation is done using HMC.
+
+    Note that due to the linear interpolations between the two Hamiltonians, the
+    log-probability and its gradient has to be evaluated four times per perturbation step which
+    can be costly. In this case it is advisable to define the intermediate log probabilities
+    in _run_traj_generator differently.
+
+    @param samplers: Samplers which sample their respective equilibrium distributions
+    @type samplers: list of L{AbstractSingleChainMC}
+
+    @param param_infos: ParameterInfo instances holding
+                        information required to perform a HMCStepRENS swaps
+    @type param_infos: list of L{HMCStepRENSSwapParameterInfo}
+    """
+
+    def __init__(self, samplers, param_infos):
+
+        super(AbstractStepRENS, self).__init__(samplers, param_infos)
+
+    def _add_gradients(self, im_sys_infos, param_info, t_prot):
+
+        im_gradients = [lambda x, t: param_info.gradient(x, t_prot(i))
+                        for i in range(param_info.intermediate_steps + 1)]
+
+        for i, s in enumerate(im_sys_infos):
+            s.hamiltonian.gradient = im_gradients[i]
+
+        return im_sys_infos
+            
+    def _setup_propagations(self, im_sys_infos, param_info):
+                        
+        propagation_params = [HMCPropagationParam(param_info.timestep,
+                                                  param_info.hmc_traj_length,
+                                                  im_sys_infos[i].hamiltonian.gradient,
+                                                  param_info.hmc_iterations,
+                                                  mass_matrix=param_info.mass_matrix,
+                                                  integrator=param_info.integrator)
+                              for i in range(param_info.intermediate_steps + 1)]
+
+        propagations = [HMCPropagation(im_sys_infos[i], propagation_params[i])
+                        for i in range(param_info.intermediate_steps)]
+
+        return propagations        
+
+    def _calc_works(self, swapcom):
+
+        return swapcom.traj12.work, swapcom.traj21.work
+
+
+class HMCStepRENSSwapParameterInfo(AbstractRENSSwapParameterInfo):
+    """
+    Holds all required information for performing HMCStepRENS swaps.
+
+    @param sampler1: First sampler
+    @type sampler1: subclass instance of L{AbstractSingleChainMC}
+
+    @param sampler2: Second sampler
+    @type sampler2: subclass instance of L{AbstractSingleChainMC}
+
+    @param timestep: integration timestep
+    @type timestep: float
+
+    @param hmc_traj_length: HMC trajectory length
+    @type hmc_traj_length: int
+
+    @param hmc_iterations: number of HMC iterations in the propagation step
+    @type hmc_iterations: int
+
+    @param gradient: gradient governing the equations of motion, function of
+                     position array and time
+    @type gradient: callable
+    
+    @param intermediate_steps: number of steps in the protocol; this is a discrete version
+                               of the switching time in "continuous" RENS implementations
+    @type intermediate_steps: int
+
+    @param protocol: Switching protocol determining the time dependence of the
+                     switching parameter. It is a function f taking the running
+                     time t and the switching time tau to yield a value in [0, 1]
+                     with f(0, tau) = 0 and f(tau, tau) = 1
+    @type protocol: callable
+
+    @param mass_matrix: mass matrix for kinetic energy definition
+    @type mass_matrix: L{InvertibleMatrix}
+
+    @param integrator: Integration scheme to be utilized
+    @type integrator: l{AbstractIntegrator}
+    """
+
+    def __init__(self, sampler1, sampler2, timestep, hmc_traj_length, hmc_iterations, 
+                 gradient, intermediate_steps, parametrization=None, protocol=None,
+                 mass_matrix=None, integrator=FastLeapFrog):
+
+        super(HMCStepRENSSwapParameterInfo, self).__init__(sampler1, sampler2, protocol)
+
+        self._mass_matrix = None
+        self.mass_matrix = mass_matrix
+        if self.mass_matrix is None:
+            d = len(sampler1.state.position)
+            self.mass_matrix = csb.numeric.InvertibleMatrix(numpy.eye(d), numpy.eye(d))
+
+        self._hmc_traj_length = None
+        self.hmc_traj_length = hmc_traj_length
+        self._gradient = None
+        self.gradient = gradient
+        self._timestep = None
+        self.timestep = timestep
+        self._hmc_iterations = None
+        self.hmc_iterations = hmc_iterations
+        self._intermediate_steps = None
+        self.intermediate_steps = intermediate_steps
+        self._integrator = None
+        self.integrator = integrator
+    
+    @property
+    def timestep(self):
+        """
+        Integration timestep.
+        """
+        return self._timestep
+    @timestep.setter
+    def timestep(self, value):
+        self._timestep = float(value)
+
+    @property
+    def hmc_traj_length(self):
+        """
+        HMC trajectory length in number of integration steps.
+        """
+        return self._hmc_traj_length
+    @hmc_traj_length.setter
+    def hmc_traj_length(self, value):
+        self._hmc_traj_length = int(value)
+
+    @property
+    def gradient(self):
+        """
+        Gradient which governs the equations of motion.
+        """
+        return self._gradient
+    @gradient.setter
+    def gradient(self, value):
+        self._gradient = value
+
+    @property
+    def mass_matrix(self):
+        return self._mass_matrix
+    @mass_matrix.setter
+    def mass_matrix(self, value):
+        self._mass_matrix = value
+
+    @property
+    def hmc_iterations(self):
+        return self._hmc_iterations
+    @hmc_iterations.setter
+    def hmc_iterations(self, value):
+        self._hmc_iterations = value
+
+    @property
+    def intermediate_steps(self):
+        return self._intermediate_steps
+    @intermediate_steps.setter
+    def intermediate_steps(self, value):
+        self._intermediate_steps = value
+
+    @property
+    def integrator(self):
+        return self._integrator
+    @integrator.setter
+    def integrator(self, value):
+        self._integrator = value
+
+
+class AbstractSwapScheme(object):
+    """
+    Provides the interface for classes defining schemes according to which swaps in
+    Replica Exchange-like simulations are performed.
+
+    @param algorithm: Exchange algorithm that performs the swaps
+    @type algorithm: L{AbstractExchangeMC}
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, algorithm):
+
+        self._algorithm = algorithm
+
+    @abstractmethod
+    def swap_all(self):
+        """
+        Advises the Replica Exchange-like algorithm to perform swaps according to
+        the schedule defined here.
+        """
+        
+        pass
+
+
+class AlternatingAdjacentSwapScheme(AbstractSwapScheme):
+    """
+    Provides a swapping scheme in which tries exchanges between neighbours only
+    following the scheme 1 <-> 2, 3 <-> 4, ... and after a sampling period 2 <-> 3, 4 <-> 5, ...
+
+    @param algorithm: Exchange algorithm that performs the swaps
+    @type algorithm: L{AbstractExchangeMC}
+    """
+
+    def __init__(self, algorithm):
+
+        super(AlternatingAdjacentSwapScheme, self).__init__(algorithm)
+        
+        self._current_swap_list = None
+        self._swap_list1 = []
+        self._swap_list2 = []
+        self._create_swap_lists()
+    
+    def _create_swap_lists(self):
+
+        if len(self._algorithm.param_infos) == 1:
+            self._swap_list1.append(0)
+            self._swap_list2.append(0)
+        else:
+            i = 0
+            while i < len(self._algorithm.param_infos):
+                self._swap_list1.append(i)
+                i += 2
+                
+            i = 1
+            while i < len(self._algorithm.param_infos):
+                self._swap_list2.append(i)
+                i += 2
+
+        self._current_swap_list = self._swap_list1
+
+    def swap_all(self):
+        
+        for x in self._current_swap_list:
+            self._algorithm.swap(x)
+
+        if self._current_swap_list == self._swap_list1:
+            self._current_swap_list = self._swap_list2
+        else:
+            self._current_swap_list = self._swap_list1
+
+
+class SingleSwapStatistics(object):
+    """
+    Tracks swap statistics of a single sampler pair.
+
+    @param param_info: ParameterInfo instance holding swap parameters
+    @type param_info: L{AbstractSwapParameterInfo}
+    """
+    
+    def __init__(self, param_info):
+        self._total_swaps = 0
+        self._accepted_swaps = 0
+
+    @property
+    def total_swaps(self):
+        return self._total_swaps
+    
+    @property
+    def accepted_swaps(self):
+        return self._accepted_swaps
+    
+    @property
+    def acceptance_rate(self):
+        """
+        Acceptance rate of the sampler pair.
+        """
+        if self.total_swaps > 0:
+            return float(self.accepted_swaps) / float(self.total_swaps)
+        else:
+            return 0.
+
+    def update(self, accepted):
+        """
+        Updates swap statistics.
+        """        
+        self._total_swaps += 1
+        self._accepted_swaps += int(accepted)
+
+
+class SwapStatistics(object):
+    """
+    Tracks swap statistics for an AbstractExchangeMC subclass instance.
+
+    @param param_infos: list of ParameterInfo instances providing information
+                        needed for performing swaps
+    @type param_infos: list of L{AbstractSwapParameterInfo}
+    """
+    
+    def __init__(self, param_infos):        
+        self._stats = [SingleSwapStatistics(x) for x in param_infos]
+        
+    @property
+    def stats(self):
+        return tuple(self._stats)
+
+    @property
+    def acceptance_rates(self):
+        """
+        Returns acceptance rates for all swaps.
+        """        
+        return [x.acceptance_rate for x in self._stats]
+        
+
+class InterpolationFactory(object):
+    """
+    Produces interpolations for functions changed during non-equilibrium
+    trajectories.
+    
+    @param protocol: protocol to be used to generate non-equilibrium trajectories
+    @type protocol: function mapping t to [0...1] for fixed tau
+    @param tau: switching time
+    @type tau: float    
+    """
+    
+    def __init__(self, protocol, tau):
+        
+        self._protocol = None
+        self._tau = None
+        
+        self.protocol = protocol
+        self.tau = tau
+        
+    @property
+    def protocol(self):
+        return self._protocol
+    @protocol.setter
+    def protocol(self, value):
+        if not hasattr(value, '__call__'):
+            raise TypeError(value)
+        self._protocol = value
+                    
+    @property
+    def tau(self):
+        return self._tau
+    @tau.setter
+    def tau(self, value):
+        self._tau = float(value)
+        
+    def build_gradient(self, gradient):
+        """
+        Create a gradient instance with according to given protocol
+        and switching time.
+        
+        @param gradient: gradient with G(0) = G_1 and G(1) = G_2
+        @type gradient: callable    
+        """
+        return Gradient(gradient, self._protocol, self._tau)
+    
+    def build_temperature(self, temperature):
+        """
+        Create a temperature function according to given protocol and
+        switching time.
+
+        @param temperature: temperature with T(0) = T_1 and T(1) = T_2
+        @type temperature: callable        
+        """
+        return lambda t: temperature(self.protocol(t, self.tau))
+        
+
+class Gradient(AbstractGradient):
+    
+    def __init__(self, gradient, protocol, tau):
+        
+        self._protocol = protocol
+        self._gradient = gradient
+        self._tau = tau
+    
+    def evaluate(self, q, t):
+        return self._gradient(q, self._protocol(t, self._tau))

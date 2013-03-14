@@ -54,13 +54,132 @@ L{State} objects in states, a histogram is created and finally plotted.
 
 import numpy
 import csb.numeric
+import csb.core
+
+from abc import ABCMeta, abstractmethod
 
 from csb.statistics.samplers import State
-from csb.statistics.samplers.mc import AbstractSingleChainMC
-from csb.statistics.samplers.mc import SimpleProposalCommunicator
+from csb.statistics.samplers.mc import AbstractMC, MCCollection
 from csb.statistics.samplers.mc.propagators import MDPropagator
 from csb.numeric.integrators import FastLeapFrog
 from csb.numeric import InvertibleMatrix
+
+
+class AbstractSingleChainMC(AbstractMC):
+    """
+    Abstract class for Monte Carlo sampling algorithms simulating
+    only one ensemble.
+    
+    @param pdf: probability density function to sample from
+    @type pdf: subclass of L{csb.statistics.pdf.AbstractDensity}
+
+    @param state: Initial state
+    @type state: L{State}
+
+    @param temperature: Pseudo-temperature of the Boltzmann ensemble
+                        M{p(x) = 1/N * exp(-1/T * E(x))} with the
+                        pseudo-energy defined as M{E(x) = -log(p(x))}
+                        where M{p(x)} is the PDF under consideration
+    @type temperature: float
+    """
+    
+    __metaclass__ = ABCMeta
+
+    def __init__(self, pdf, state, temperature=1.):
+        
+        super(AbstractSingleChainMC, self).__init__(state)
+        
+        self._pdf = pdf
+        self._temperature = temperature
+        self._nmoves = 0
+        self._accepted = 0
+        self._last_move_accepted = None
+        
+    def _checkstate(self, state):
+        if not isinstance(state, State):
+            raise TypeError(state)
+
+    def sample(self):
+        """
+        Draw a sample.
+        @rtype: L{State}
+        """
+        
+        proposal_communicator = self._propose()
+        pacc = self._calc_pacc(proposal_communicator)
+        self._accept(proposal_communicator.proposal_state, pacc)
+
+        return self.state
+
+    @abstractmethod
+    def _propose(self):
+        """
+        Calculate a new proposal state and gather additional information
+        needed to calculate the acceptance probability.
+        
+        @rtype: L{SimpleProposalCommunicator}
+        """
+        pass
+
+    @abstractmethod
+    def _calc_pacc(self, proposal_communicator):
+        """
+        Calculate probability with which to accept the proposal.
+
+        @param proposal_communicator: Contains information about the proposal
+                                      and additional information needed to
+                                      calculate the acceptance probability
+        @type proposal_communicator: L{SimpleProposalCommunicator}
+        """
+        pass
+
+    def _accept(self, proposal_state, pacc):
+        """
+        Accept / reject proposal with given acceptance probability pacc.
+
+        @param proposal_state: proposal state
+        @type proposal_state: L{State}
+
+        @param pacc: acceptance probability
+        @type pacc: float
+        """
+        
+        self._nmoves += 1
+        
+        if numpy.random.random() < pacc:
+            self.state = proposal_state
+            self._accepted += 1
+            self._last_move_accepted = True
+            return True
+        else:
+            self._last_move_accepted = False
+            return False
+
+    @property
+    def energy(self):
+        """
+        Log-likelihood of the current state.
+        @rtype: float
+        """
+        return self._pdf.log_prob(self.state.position)
+
+    @property
+    def acceptance_rate(self):
+        """
+        Acceptance rate.
+        """
+        return float(self._accepted) / float(self._nmoves)
+
+    @property
+    def last_move_accepted(self):
+        """
+        Information whether the last MC move was accepted or not.
+        """
+        return self._last_move_accepted
+
+    @property
+    def temperature(self):
+        return self._temperature
 
 
 class HMCSampler(AbstractSingleChainMC):
@@ -251,3 +370,34 @@ class RWMCSampler(AbstractSingleChainMC):
     @stepsize.setter
     def stepsize(self, value):
         self._stepsize = float(value)
+
+
+class SimpleProposalCommunicator(object):
+    """
+    This holds all the information needed to calculate the acceptance
+    probability in both the L{RWMCSampler} and L{HMCSampler} classes,
+    that is, only the proposal state.
+    For more advanced algorithms, one may derive classes capable of
+    holding the neccessary additional information from this class.
+
+    @param current_state: Current state
+    @type current_state: L{State}
+    
+    @param proposal_state: Proposal state
+    @type proposal_state: L{State}
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, current_state, proposal_state):
+
+        self._current_state = current_state
+        self._proposal_state = proposal_state
+
+    @property
+    def current_state(self):
+        return self._current_state
+        
+    @property
+    def proposal_state(self):
+        return self._proposal_state
