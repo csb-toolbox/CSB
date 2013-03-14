@@ -22,7 +22,7 @@ class TestSequenceParser(test.Case):
         
         s = self.parser.parse_file(self.file)
 
-        self.assertEquals(len(s), 3)
+        self.assertEqual(len(s), 3)
 
         self.assertTrue(isinstance(s[0], Sequence))
         self.assertEqual(s[0].id, 'gi|148654187')
@@ -33,7 +33,7 @@ class TestSequenceParser(test.Case):
 
         s = self.parser.parse_string(self.data)
                                            
-        self.assertEquals(len(s), 3)
+        self.assertEqual(len(s), 3)
 
         self.assertTrue(isinstance(s[0], Sequence))
         self.assertEqual(s[0].id, 'gi|148654187')

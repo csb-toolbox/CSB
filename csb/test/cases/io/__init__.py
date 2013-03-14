@@ -30,13 +30,13 @@ class TestShell(test.Case):
             self.skipTest("Can't get interpreter's path")
         
     def testSTDOUT(self):
-        self.assertEquals(self.output.stdout.strip(), self.text)
+        self.assertEqual(self.output.stdout.strip(), self.text)
         
     def testSTDERR(self):
-        self.assertEquals(self.output.stderr, '')
+        self.assertEqual(self.output.stderr, '')
         
     def testExitCode(self):
-        self.assertEquals(self.output.code, 0)  
+        self.assertEqual(self.output.code, 0)  
         
         
 @test.unit
@@ -91,7 +91,7 @@ class TestTable(test.Case):
     def testInsert(self):
         
         self.t.insert([333, 333.0, '3 3 3']) 
-        self.assertEquals(self.t[3, 2], '3 3 3')
+        self.assertEqual(self.t[3, 2], '3 3 3')
         
         self.assertRaises(Exception, lambda:self.t.insert([1]))
         
@@ -99,20 +99,20 @@ class TestTable(test.Case):
 
         self.assertRaises(csb.io.tsv.InvalidColumnError, lambda:self.t.where('ID').equals(11).update('Missing', 0))            
         self.t.where('ID').equals(11).update('ID', 133)
-        self.assertEquals(self.t[0, 'ID'], 133)
-        self.assertEquals(self.t[1, 'ID'], 12)
+        self.assertEqual(self.t[0, 'ID'], 133)
+        self.assertEqual(self.t[1, 'ID'], 12)
                 
         self.assertRaises(csb.io.tsv.InvalidColumnError, lambda:self.t.update('Missing', 0))
         self.assertRaises(csb.io.tsv.InvalidColumnError, lambda:self.t[0, 'Missing'])        
         self.t.update('ID', 13)
         
         for r in self.t[:, 'ID']:
-            self.assertEquals(r['ID'], 13)                    
+            self.assertEqual(r['ID'], 13)                    
             
         self.t[0, 'ID'] = 11
         self.t[1, 'ID'] = 12
-        self.assertEquals(self.t[0, 'ID'], 11)
-        self.assertEquals(self.t[2, 'ID'], 13)        
+        self.assertEqual(self.t[0, 'ID'], 11)
+        self.assertEqual(self.t[2, 'ID'], 13)        
     
     def testDump(self):
         
@@ -125,9 +125,9 @@ class TestTable(test.Case):
             
     def testScalar(self):
         
-        self.assertEquals(self.table.scalar(0, 'ID'), 11)
-        self.assertEquals(self.table[0, 'ID'], 11)
-        self.assertEquals(self.table[0, 0], 11)
+        self.assertEqual(self.table.scalar(0, 'ID'), 11)
+        self.assertEqual(self.table[0, 'ID'], 11)
+        self.assertEqual(self.table[0, 0], 11)
         
         self.assertTrue(isinstance(self.table[:, :], csb.io.tsv.Table))
         self.assertTrue(isinstance(self.table[:, ('A',)], csb.io.tsv.Table))
@@ -138,41 +138,41 @@ class TestTable(test.Case):
     def testSelect(self):
         
         # test column selection
-        self.assertEquals(self.table.select().columns, ('ID', 'A', 'B'))
-        self.assertEquals(self.table.select('*').columns, ('ID', 'A', 'B'))
-        self.assertEquals(self.table[:, :].columns, ('ID', 'A', 'B'))
-        self.assertEquals(self.table[:, :'A'].columns, ('ID',))
-        self.assertEquals(self.table[:, 'ID':'B'].columns, ('ID', 'A'))                
+        self.assertEqual(self.table.select().columns, ('ID', 'A', 'B'))
+        self.assertEqual(self.table.select('*').columns, ('ID', 'A', 'B'))
+        self.assertEqual(self.table[:, :].columns, ('ID', 'A', 'B'))
+        self.assertEqual(self.table[:, :'A'].columns, ('ID',))
+        self.assertEqual(self.table[:, 'ID':'B'].columns, ('ID', 'A'))                
                 
-        self.assertEquals(self.table.select(['B', 'A']).columns, ('B', 'A'))
-        self.assertEquals(self.table.select('A', 'B').columns, ('A', 'B'))
-        self.assertEquals(self.table[:, ('B', 'A')].columns, ('B', 'A'))
+        self.assertEqual(self.table.select(['B', 'A']).columns, ('B', 'A'))
+        self.assertEqual(self.table.select('A', 'B').columns, ('A', 'B'))
+        self.assertEqual(self.table[:, ('B', 'A')].columns, ('B', 'A'))
                 
-        self.assertEquals(self.table.select(['A']).columns, ('A',))
-        self.assertEquals(self.table.select(['A']).columns, ('A',))
+        self.assertEqual(self.table.select(['A']).columns, ('A',))
+        self.assertEqual(self.table.select(['A']).columns, ('A',))
         
         def fr(t):
             return list(t)[0]
         
         # test data        
-        self.assertEquals(len(list(self.table[1:2, :])), 1)
-        self.assertEquals(len(list(self.table[1:, :])), 2)
-        self.assertEquals(len(list(self.table[(1, 2), :])), 2)
-        self.assertEquals(len(list(self.table[(0, 1, 2), :])), 3)                           
-        self.assertEquals(len(list(self.table[:, :])), 3)
+        self.assertEqual(len(list(self.table[1:2, :])), 1)
+        self.assertEqual(len(list(self.table[1:, :])), 2)
+        self.assertEqual(len(list(self.table[(1, 2), :])), 2)
+        self.assertEqual(len(list(self.table[(0, 1, 2), :])), 3)                           
+        self.assertEqual(len(list(self.table[:, :])), 3)
                 
         firstrow = fr(self.table.select('B', 'A'))
-        self.assertEquals(firstrow[0], 'Row eleven')
-        self.assertEquals(firstrow[1], 11.1)
+        self.assertEqual(firstrow[0], 'Row eleven')
+        self.assertEqual(firstrow[1], 11.1)
 
-        self.assertEquals(fr(self.table[:, :])[0], 11)
+        self.assertEqual(fr(self.table[:, :])[0], 11)
                 
-        self.assertEquals(fr(self.table[:, 'A'])[0], 11.1)
-        self.assertEquals(fr(self.table[:, 'B':])[0], 'Row eleven')
+        self.assertEqual(fr(self.table[:, 'A'])[0], 11.1)
+        self.assertEqual(fr(self.table[:, 'B':])[0], 'Row eleven')
                 
-        self.assertEquals(fr(self.table[2, :])[0], 13)
-        self.assertEquals(fr(self.table[(1, 2), :])[0], 12)
-        self.assertEquals(fr(self.table[1:9, :])[0], 12)  
+        self.assertEqual(fr(self.table[2, :])[0], 13)
+        self.assertEqual(fr(self.table[(1, 2), :])[0], 12)
+        self.assertEqual(fr(self.table[1:9, :])[0], 12)  
         
     def testWhere(self):
         
@@ -274,7 +274,7 @@ class TestTempFile(test.Case):
         
             self.assertTrue(os.path.isdir(name))
             del temp
-            self.assertEquals(os.path.isdir(name), not dispose)
+            self.assertEqual(os.path.isdir(name), not dispose)
         
     def testMultipleHandles(self):
         
@@ -318,7 +318,7 @@ class TestTempFolder(test.Case):
         
             self.assertTrue(os.path.isdir(name))
             del temp
-            self.assertEquals(os.path.isdir(name), not dispose)
+            self.assertEqual(os.path.isdir(name), not dispose)
                     
                                         
 @test.unit

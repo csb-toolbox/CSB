@@ -17,7 +17,7 @@ class TestDeepCopy(test.Case):
         obj = ['X']
         copy = utils.deepcopy(obj, recursion=(rec + 1))
         
-        self.assertEquals(obj, copy)
+        self.assertEqual(obj, copy)
         self.assertNotEquals(id(obj), id(copy))
 
 @test.unit
@@ -54,7 +54,7 @@ class TestEnum(test.Case):
 
         result = list(self.enum)
         members = [self.enum.A, self.enum.B, self.enum.C]
-        self.assertEquals(set(result), set(members))        
+        self.assertEqual(set(result), set(members))        
 
     def testInOperator(self):
         self.assertTrue(self.enum.C in self.enum)
@@ -85,7 +85,7 @@ class TestEnum(test.Case):
     def testMembers(self):
         result = utils.Enum.members(self.enum)
         members = [self.enum.A, self.enum.B, self.enum.C]
-        self.assertEquals(set(result), set(members))
+        self.assertEqual(set(result), set(members))
         
     def testCreate(self):
         new = utils.Enum.create('NewEnum', A=11, B=22)
@@ -96,15 +96,15 @@ class TestEnum(test.Case):
         result = utils.Enum.names(self.enum)
         names = map(repr, [self.enum.A, self.enum.B, self.enum.C])
         names2 = map(operator.attrgetter('name'), [self.enum.A, self.enum.B, self.enum.C])        
-        self.assertEquals(set(result), set(names))
-        self.assertEquals(set(result), set(names2))        
+        self.assertEqual(set(result), set(names))
+        self.assertEqual(set(result), set(names2))        
         
     def testValues(self):
         result = utils.Enum.values(self.enum)
         values = map(int, [self.enum.A, self.enum.B, self.enum.C])
         values2 = map(operator.attrgetter('value'), [self.enum.A, self.enum.B, self.enum.C])        
-        self.assertEquals(set(result), set(values))
-        self.assertEquals(set(result), set(values2))
+        self.assertEqual(set(result), set(values))
+        self.assertEqual(set(result), set(values2))
 
     def testParseValue(self):
         item = utils.Enum.parse(self.enum, 66)
@@ -140,7 +140,7 @@ class TestDictionaryContainer(test.Case):
         
         super(TestDictionaryContainer, self).setUp()
         
-        self.dict = utils.OrderedDict({'A': 1, 'B': 2})
+        self.dict = utils.OrderedDict([('A', 1), ('B', 2)])
         self.keys = ('A', 'B', 'C', 'D', 'Z')
         self.new = utils.DictionaryContainer
         self.test = utils.DictionaryContainer(items=self.dict, restrict=self.keys)
@@ -186,7 +186,7 @@ class TestDictionaryContainer(test.Case):
 
         new._update({'A': 7})
         self.assertTrue('A' in new)
-        self.assertEquals(new['A'], 7)
+        self.assertEqual(new['A'], 7)
         
         self.assertRaises(utils.ItemNotFoundError, new._update, {'Z': 0})
 
@@ -251,7 +251,7 @@ class TestCollectionContainer(test.Case):
 
         new._update([98, 99])
         self.assertTrue(98 in new)
-        self.assertEquals(new.length, 2)
+        self.assertEqual(new.length, 2)
         
         self.assertRaises(TypeError, new._update, ['S'])
 
@@ -336,7 +336,7 @@ class TestOrderedDict(test.Case):
         items = [('G', 4), ('A', 2), ('C', 8), ('B', 7)]
         odict = utils.OrderedDict(items)
         
-        self.assertEquals(list(odict.items()), items)
+        self.assertEqual(list(odict.items()), items)
         
         for i, k in enumerate(odict):
             self.assertEqual(k, items[i][0])            

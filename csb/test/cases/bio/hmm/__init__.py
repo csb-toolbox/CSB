@@ -1,6 +1,6 @@
 import csb.test as test
 
-from csb.core import Enum
+from csb.core import Enum, OrderedDict
 
 from csb.bio.hmm import State, Transition, ProfileHMM, HMMLayer, ProfileLength, StateFactory, ProfileHMMSegment
 from csb.bio.hmm import StateExistsError, UnobservableStateError, EmissionExistsError
@@ -17,7 +17,10 @@ def build_hmm():
         hmm = ProfileHMM(units=ScoreUnits.Probability)
         
         factory = StateFactory()
-        background = { ProteinAlphabet.ALA: 0.02457563, ProteinAlphabet.CYS: 0.00325358, ProteinAlphabet.GLU: 0.01718016 }
+        background = OrderedDict([ (ProteinAlphabet.ALA, 0.02457563), 
+                                   (ProteinAlphabet.CYS, 0.00325358), 
+                                   (ProteinAlphabet.GLU, 0.01718016) ])
+        
         emission = dict( (aa, 1.0 / i) for i, aa in enumerate(background, start=1) )
         
         # States
@@ -280,7 +283,7 @@ class TestState(test.Case):
     def testEmission(self):
         # also covers EmissionTable
         self.assertEqual(self.m.emission.length, 3)
-        self.assertEqual(list(self.m.emission), [ProteinAlphabet.ALA, ProteinAlphabet.CYS, ProteinAlphabet.GLU])
+        self.assertEqual(set(self.m.emission), set([ProteinAlphabet.ALA, ProteinAlphabet.CYS, ProteinAlphabet.GLU]))
         self.assertEqual(self.m.emission[ProteinAlphabet.CYS], 0.5)
         self.assertRaises(lambda: self.m.emission[ProteinAlphabet.GAP])
         self.assertRaises(UnobservableStateError, lambda: self.d.emission)
@@ -298,7 +301,7 @@ class TestState(test.Case):
     def testBackground(self):
         # also covers EmissionTable
         self.assertEqual(self.m.background.length, 3)
-        self.assertEqual(list(self.m.background), [ProteinAlphabet.ALA, ProteinAlphabet.CYS, ProteinAlphabet.GLU])
+        self.assertEqual(set(self.m.background), set([ProteinAlphabet.ALA, ProteinAlphabet.CYS, ProteinAlphabet.GLU]))
         self.assertEqual(self.m.background[ProteinAlphabet.CYS], 0.00325358)
         self.assertRaises(lambda: self.m.background[ProteinAlphabet.GAP])
         

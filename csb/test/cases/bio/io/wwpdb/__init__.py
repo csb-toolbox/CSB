@@ -106,15 +106,15 @@ class TestLegacyStructureParser(test.Case):
     def testParseModels(self):
         
         ensemble = self.parser.parse_models()
-        self.assertEquals(ensemble.models.length, 10)
-        self.assertEquals(ensemble[0].model_id, 1)
-        self.assertEquals(ensemble.models[1].model_id, 1)        
+        self.assertEqual(ensemble.models.length, 10)
+        self.assertEqual(ensemble[0].model_id, 1)
+        self.assertEqual(ensemble.models[1].model_id, 1)        
         
     def testParseStructure(self):
         
         structure = self.parser.parse(model=1)
         
-        self.assertEquals(self.parser.parse_structure().model_id, 1)        
+        self.assertEqual(self.parser.parse_structure().model_id, 1)        
 
         self.assertEqual(structure.accession, '1d3z')
         self.assertEqual(structure.model_id, 1)
@@ -159,8 +159,8 @@ class TestLegacyStructureParser(test.Case):
     
     def testGuessSequenceType(self):
         
-        self.assertEquals(self.parser.guess_sequence_type('AGM'), SequenceTypes.Protein)                                        
-        self.assertEquals(self.parser.guess_sequence_type('DOC'), SequenceTypes.NucleicAcid)                                      
+        self.assertEqual(self.parser.guess_sequence_type('AGM'), SequenceTypes.Protein)                                        
+        self.assertEqual(self.parser.guess_sequence_type('DOC'), SequenceTypes.NucleicAcid)                                      
         self.assertRaises(UnknownPDBResidueError, self.parser.guess_sequence_type, 'junk')
         
     def testFileName(self):
@@ -218,12 +218,12 @@ class TestRegularStructureParser(test.Case):
         self.assertEqual(c.residues[14].type, ProteinAlphabet.GLU)
         self.assertEqual(c.residues[15].type, ProteinAlphabet.GLU)
         self.assertEqual(c.residues[16].type, ProteinAlphabet.THR)
-        self.assertEquals(4, sum([1 for r in c if r.has_structure]))
+        self.assertEqual(4, sum([1 for r in c if r.has_structure]))
 
         # explicit combined mapper        
         self.parser.mapper = CombinedResidueMapper()
         c = self.parser.parse(self.mapping)['E']
-        self.assertEquals(4, sum([1 for r in c if r.has_structure]))
+        self.assertEqual(4, sum([1 for r in c if r.has_structure]))
 
     def testFastMapping(self):
            
@@ -233,7 +233,7 @@ class TestRegularStructureParser(test.Case):
         mapping2 = self.config.getTestFile('mapping2.pdb')
         
         c = self.parser.parse(mapping2)['E']
-        self.assertEquals(2, sum([1 for r in c if r.has_structure]))
+        self.assertEqual(2, sum([1 for r in c if r.has_structure]))
         
     def testRobustMapping(self):
 
@@ -243,29 +243,29 @@ class TestRegularStructureParser(test.Case):
         self.assertRaises(ResidueMappingError, self.parser.parse, mapping3)
         
         c = self.parser.parse(self.mapping)['E']                
-        self.assertEquals(4, sum([1 for r in c if r.has_structure]))
+        self.assertEqual(4, sum([1 for r in c if r.has_structure]))
                         
     def testParseModels(self):
         
         ensemble = self.parser.parse_models()
-        self.assertEquals(ensemble.models.length, 10)
-        self.assertEquals(ensemble[0].model_id, 1)
-        self.assertEquals(ensemble.models[1].model_id, 1)
+        self.assertEqual(ensemble.models.length, 10)
+        self.assertEqual(ensemble[0].model_id, 1)
+        self.assertEqual(ensemble.models[1].model_id, 1)
         
         self.assertRaises(ValueError, self.parser.parse_models, (999, 1000))
         
         pdb = self.config.getTestFile('3p1u.pdb')
         ensemble = RegularStructureParser(pdb).parse_models()
-        self.assertEquals(ensemble.models.length, 1)    
-        self.assertEquals(ensemble[0].model_id, 1)
-        self.assertEquals(ensemble[0].resolution, 2.05)
+        self.assertEqual(ensemble.models.length, 1)    
+        self.assertEqual(ensemble[0].model_id, 1)
+        self.assertEqual(ensemble[0].resolution, 2.05)
     
     def testParseStructure(self):
 
         structure = self.parser.parse(model=2)
         
-        self.assertEquals(self.parser.parse_structure().model_id, 1)
-        self.assertEquals(structure.resolution, None)
+        self.assertEqual(self.parser.parse_structure().model_id, 1)
+        self.assertEqual(structure.resolution, None)
 
         self.assertEqual(structure.accession, '1d3z')
         self.assertEqual(structure.model_id, 2)
@@ -310,8 +310,8 @@ class TestRegularStructureParser(test.Case):
     
     def testGuessSequenceType(self):
         
-        self.assertEquals(self.parser.guess_sequence_type('AGM'), SequenceTypes.Protein)                                        
-        self.assertEquals(self.parser.guess_sequence_type('DOC'), SequenceTypes.NucleicAcid)                                      
+        self.assertEqual(self.parser.guess_sequence_type('AGM'), SequenceTypes.Protein)                                        
+        self.assertEqual(self.parser.guess_sequence_type('DOC'), SequenceTypes.NucleicAcid)                                      
         self.assertRaises(UnknownPDBResidueError, self.parser.guess_sequence_type, 'junk')
         
     def testFileName(self):
@@ -345,7 +345,7 @@ class TestFastResidueMapper(test.Case):
         sparse.residues[2].id = (22, None)
         result = self.mapper.map(sparse, ref)
 
-        self.assertEquals(result.sequence, "-A-C-")
+        self.assertEqual(result.sequence, "-A-C-")
         
     def testModifiedResidueMapping(self):
         """
@@ -360,10 +360,10 @@ class TestFastResidueMapper(test.Case):
         chain = structure.first_chain
 
         self.assertFalse(chain.residues[1].has_structure)
-        self.assertEquals(chain.residues[1].label, "MET")
+        self.assertEqual(chain.residues[1].label, "MET")
                         
         self.assertTrue(chain.residues[19].has_structure)
-        self.assertEquals(chain.residues[19].label, "MSE")    
+        self.assertEqual(chain.residues[19].label, "MSE")    
    
         
 @test.unit
@@ -384,7 +384,7 @@ class TestRobustResidueMapper(TestFastResidueMapper):
         sparse = self._build("AC")
         result = self.mapper.map(sparse, ref)
 
-        self.assertEquals(result.sequence, "-A-C-")        
+        self.assertEqual(result.sequence, "-A-C-")        
         
     def testModifiedResidueMapping(self):
         
@@ -394,10 +394,10 @@ class TestRobustResidueMapper(TestFastResidueMapper):
         chain = structure.first_chain
 
         self.assertTrue(chain.residues[1].has_structure)
-        self.assertEquals(chain.residues[1].label, "MSE")
+        self.assertEqual(chain.residues[1].label, "MSE")
                         
         self.assertFalse(chain.residues[19].has_structure)
-        self.assertEquals(chain.residues[19].label, "MET")           
+        self.assertEqual(chain.residues[19].label, "MET")           
         
 
 @test.unit
@@ -413,7 +413,7 @@ class TestCombinedResidueMapper(TestFastResidueMapper):
         sparse = self._build("AC")
         result = self.mapper.map(sparse, ref)
 
-        self.assertEquals(result.sequence, "-A-C-") 
+        self.assertEqual(result.sequence, "-A-C-") 
                 
 @test.unit
 class TestFileSystemProvider(test.Case):
