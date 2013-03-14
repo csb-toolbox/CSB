@@ -77,25 +77,25 @@ class TestMCPropagators(test.Case):
             self.assertAlmostEqual(np.array(states).mean(), 0., delta=0.15)
             self.assertAlmostEqual(np.array(states).var(), 1., delta=0.15)
 
-    # def testRWMCPropagator(self):
+    def testRWMCPropagator(self):
 
-    #     gen = RWMCPropagator(self.pdf, self.stepsize)
+        gen = RWMCPropagator(self.pdf, self.stepsize)
 
-    #     self.checkResult(gen.generate(self.state, self.nits))
+        self.checkResult(gen.generate(self.state, self.nits))
 
-    # def testHMCPropagator(self):
+    def testHMCPropagator(self):
 
-    #     gen = HMCPropagator(self.pdf, self.gradient, self.timestep, self.nsteps)
+        gen = HMCPropagator(self.pdf, self.gradient, self.timestep, self.nsteps)
 
-    #     self.checkResult(gen.generate(self.state, self.nits))
+        self.checkResult(gen.generate(self.state, self.nits))
 
-    # def testHMCPropagatorMM(self):
+    def testHMCPropagatorMM(self):
 
-    #     mm = InvertibleMatrix(np.array([[1., 0.], [0.,  2.]]))
-    #     init_state = State(np.random.normal(size=2))
-    #     gen = HMCPropagator(self.pdf, self.gradient, self.timestep * 1.5, self.nsteps, mass_matrix=mm)
+        mm = InvertibleMatrix(np.array([[1., 0.], [0.,  2.]]))
+        init_state = State(np.random.normal(size=2))
+        gen = HMCPropagator(self.pdf, self.gradient, self.timestep * 1.5, self.nsteps, mass_matrix=mm)
 
-    #     self.checkResult(gen.generate(init_state, self.nits))
+        self.checkResult(gen.generate(init_state, self.nits))
         
         
 @test.functional
@@ -169,46 +169,46 @@ class TestMultichain(test.Case):
         self.assertAlmostEqual(p_occ_sampled1, p_occ, delta=4.0 * 0.035)
         self.assertAlmostEqual(p_occ_sampled2, p_occ, delta=4.0 * 0.035)
         
-    # def testReplicaExchangeMC(self):
-    #     self.set1pParams()
-    #     params = [RESwapParameterInfo(self.samplers[0], self.samplers[1])]
-    #     algorithm = ReplicaExchangeMC(self.samplers, params)
-    #     self._run(algorithm)
+    def testReplicaExchangeMC(self):
+        self.set1pParams()
+        params = [RESwapParameterInfo(self.samplers[0], self.samplers[1])]
+        algorithm = ReplicaExchangeMC(self.samplers, params)
+        self._run(algorithm)
 
-    # def testMDRENS(self):
+    def testMDRENS(self):
 
-    #     self.set1pParams()
-    #     params = [MDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
-    #                                       0.025, 15, self.grad)]
-    #     algorithm = MDRENS(self.samplers, params, integrator=VelocityVerlet)
-    #     self._run(algorithm)
+        self.set1pParams()
+        params = [MDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
+                                          0.025, 15, self.grad)]
+        algorithm = MDRENS(self.samplers, params, integrator=VelocityVerlet)
+        self._run(algorithm)
 
-    # def testThermostattedMDRens(self):
+    def testThermostattedMDRens(self):
         
-    #     self.set1pParams()
-    #     params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
-    #                                                    0.05, 15, self.grad,
-    #                                                    temperature=self.Ts[0])]
-    #     algorithm = ThermostattedMDRENS(self.samplers, params)
-    #     self._run(algorithm)
+        self.set1pParams()
+        params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
+                                                       0.05, 15, self.grad,
+                                                       temperature=self.Ts[0])]
+        algorithm = ThermostattedMDRENS(self.samplers, params)
+        self._run(algorithm)
 
-    # def testThermostattedMDRensMM(self):
+    def testThermostattedMDRensMM(self):
 
-    #     self.set2pParams()
-    #     mm1 = InvertibleMatrix(np.array([[1.0, 0.0], [0.0, 5.0]]))
-    #     mm2 = InvertibleMatrix(np.array([[.5, 0.0], [0.0, 10.0]]))
-    #     pdf = Multimodal2DPDF()
-    #     params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
-    #                                                    0.01, 15, pdf.grad,
-    #                                                    temperature=self.Ts[0],
-    #                                                    mass_matrix=mm1),
-    #               ThermostattedMDRENSSwapParameterInfo(self.samplers[1], self.samplers[2],
-    #                                                    0.1, 15, pdf.grad,
-    #                                                    temperature=self.Ts[1],
-    #                                                    mass_matrix=mm2)]
-    #     algorithm = ThermostattedMDRENS(self.samplers, params)
+        self.set2pParams()
+        mm1 = InvertibleMatrix(np.array([[1.0, 0.0], [0.0, 5.0]]))
+        mm2 = InvertibleMatrix(np.array([[.5, 0.0], [0.0, 10.0]]))
+        pdf = Multimodal2DPDF()
+        params = [ThermostattedMDRENSSwapParameterInfo(self.samplers[0], self.samplers[1],
+                                                       0.01, 15, pdf.grad,
+                                                       temperature=self.Ts[0],
+                                                       mass_matrix=mm1),
+                  ThermostattedMDRENSSwapParameterInfo(self.samplers[1], self.samplers[2],
+                                                       0.1, 15, pdf.grad,
+                                                       temperature=self.Ts[1],
+                                                       mass_matrix=mm2)]
+        algorithm = ThermostattedMDRENS(self.samplers, params)
 
-    #     self._run(algorithm)
+        self._run(algorithm)
 
     def testHMCStepRENS(self):
 

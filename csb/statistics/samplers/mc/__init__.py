@@ -278,72 +278,43 @@ class MCCollection(csb.core.BaseCollectionContainer):
         super(MCCollection, self).__init__(items, type=AbstractSingleChainMC)
 
 
-class AbstractSwapScheme(object):
+def augment_state(state, temperature=1.0, mass_matrix=None):
     """
-    Provides the interface for classes defining schemes according to which swaps in
-    Replica Exchange-like simulations are performed.
+    Augments a state with only positions given by momenta drawn
+    from the Maxwell-Boltzmann distribution.
 
-    @param algorithm: Exchange algorithm that performs the swaps
-    @type algorithm: L{AbstractExchangeMC}
+    @param state: State to be augmented
+    @type state: L{State}
+
+    @param temperature: Temperature of the desired Maxwell-Boltzmann
+                        distribution
+    @type temperature: float
+
+    @param mass_matrix: Mass matrix to be used in the Maxwell-Boltzmann
+                        distribution; None defaults to a unity matrix
+    @type mass_matrix: L{InvertibleMatrix}
+
+    @return: The initial state augmented with momenta
+    @rtype: L{State}
     """
 
-    __metaclass__ = ABCMeta
-
-    def __init__(self, algorithm):
-
-        self._algorithm = algorithm
-
-    @abstractmethod
-    def swap_all(self):
-        """
-        Advises the Replica Exchange-like algorithm to perform swaps according to
-        the schedule defined here.
-        """
-        
-        pass
+    d = len(state.position)
+    mm_unity = None
     
-class AlternatingAdjacentSwapScheme(AbstractSwapScheme):
-    """
-    Provides a swapping scheme in which tries exchanges between neighbours only
-    following the scheme 1 <-> 2, 3 <-> 4, ... and after a sampling period 2 <-> 3, 4 <-> 5, ...
+    if mass_matrix == None:
+        mm_unity = True
 
-    @param algorithm: Exchange algorithm that performs the swaps
-    @type algorithm: L{AbstractExchangeMC}
-    """
-
-    def __init__(self, algorithm):
-
-        super(AlternatingAdjacentSwapScheme, self).__init__(algorithm)
+    if mm_unity == None:
+        mm_unity = mass_matrix.is_unity_multiple
         
-        self._current_swap_list = None
-        self._swap_list1 = []
-        self._swap_list2 = []
-        self._create_swap_lists()
-    
-    def _create_swap_lists(self):
+    if mm_unity == True:
+        momentum = numpy.random.normal(scale=numpy.sqrt(temperature),
+                                       size=d)
+    else:
+        covariance_matrix = temperature * mass_matrix
+        momentum = numpy.random.multivariate_normal(mean=numpy.zeros(d),
+                                                    cov=covariance_matrix)
 
-        if len(self._algorithm.param_infos) == 1:
-            self._swap_list1.append(0)
-            self._swap_list2.append(0)
-        else:
-            i = 0
-            while i < len(self._algorithm.param_infos):
-                self._swap_list1.append(i)
-                i += 2
-                
-            i = 1
-            while i < len(self._algorithm.param_infos):
-                self._swap_list2.append(i)
-                i += 2
+    state.momentum = momentum
 
-        self._current_swap_list = self._swap_list1
-
-    def swap_all(self):
-        
-        for x in self._current_swap_list:
-            self._algorithm.swap(x)
-
-        if self._current_swap_list == self._swap_list1:
-            self._current_swap_list = self._swap_list2
-        else:
-            self._current_swap_list = self._swap_list1
+    return state
