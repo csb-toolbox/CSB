@@ -498,19 +498,8 @@ class MDPerturbation(AbstractPerturbation):
             d = len(init_state.position)
             self.param.mass_matrix = InvertibleMatrix(numpy.eye(d), numpy.eye(d))
         
-        if init_state.momentum is None:
-            momentum = None
-            if not self.param.mass_matrix.is_unity_multiple:
-                covariance_matrix = self.sys_before.hamiltonian.temperature * self.param.mass_matrix
-                momentum = numpy.random.multivariate_normal(mean=numpy.zeros(len(state.position)),
-                                                            cov=covariance_matrix)
-            else:
-                variance = self.sys_before.hamiltonian.temperature * self.param.mass_matrix[0][0]
-                momentum = numpy.random.normal(size=len(state.position),
-                                               scale=numpy.sqrt(variance))
-
-            init_state.momentum = momentum
-
+        init_state = augment_state(init_state, self.sys_before.hamiltonian.temperature,
+                                   self.param.mass_matrix)
 
         gen = MDPropagator(self.param.gradient, self.param.timestep,
                            mass_matrix=self.param.mass_matrix,

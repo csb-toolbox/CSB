@@ -59,7 +59,7 @@ import csb.core
 from abc import ABCMeta, abstractmethod
 
 from csb.statistics.samplers import State
-from csb.statistics.samplers.mc import AbstractMC, MCCollection
+from csb.statistics.samplers.mc import AbstractMC, MCCollection, augment_state
 from csb.statistics.samplers.mc.propagators import MDPropagator
 from csb.numeric.integrators import FastLeapFrog
 from csb.numeric import InvertibleMatrix
@@ -246,15 +246,8 @@ class HMCSampler(AbstractSingleChainMC):
 
     def _propose(self):
 
-        if not self.mass_matrix.is_unity_multiple:
-            momentum = numpy.random.multivariate_normal(mean=numpy.zeros(self._d), 
-                                                       cov=self._momentum_covariance_matrix)
-        else:
-            mass = self.mass_matrix[0][0]
-            momentum = numpy.random.normal(size=self._d, scale=numpy.sqrt(self.temperature * mass))
-            
         current_state = self.state.clone()
-        current_state.momentum = momentum
+        current_state = augment_state(current_state, self.temperature, self.mass_matrix)
         proposal_state = self._propagator.generate(current_state, self._nsteps).final
         
         return SimpleProposalCommunicator(current_state, proposal_state)

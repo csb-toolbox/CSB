@@ -104,7 +104,7 @@ import csb.numeric
 from abc import ABCMeta, abstractmethod
 
 from csb.statistics.samplers import EnsembleState
-from csb.statistics.samplers.mc import AbstractMC, Trajectory, MCCollection
+from csb.statistics.samplers.mc import AbstractMC, Trajectory, MCCollection, augment_state
 from csb.statistics.samplers.mc.propagators import MDPropagator, ThermostattedMDPropagator
 from csb.statistics.samplers.mc.neqsteppropagator import NonequilibriumStepPropagator
 from csb.statistics.samplers.mc.neqsteppropagator import Protocol, Step, ReducedHamiltonian
@@ -593,39 +593,6 @@ class MDRENS(AbstractRENS):
         
         self._integrator = integrator
 
-    def _augment_state(self, state, temperature, mass_matrix):
-        """
-        Augments a state with only positions given by momenta drawn
-        from the Maxwell-Boltzmann distribution.
-
-        @param state: State to be augmented
-        @type state: L{State}
-
-        @param temperature: Temperature of the desired Maxwell-Boltzmann
-                            distribution
-        @type temperature: float
-
-        @param mass_matrix: Mass matrix to be used in the Maxwell-Boltzmann
-                            distribution
-        @type mass_matrix: L{InvertibleMatrix}
-
-        @return: The initial state augmented with a momentum
-        @rtype: L{State}
-        """
-
-        d = len(state.position)
-        if mass_matrix.is_unity_multiple:
-            momentum = numpy.random.normal(scale=numpy.sqrt(temperature * mass_matrix[0][0]),
-                                           size=d)
-        else:
-            covariance_matrix = temperature * mass_matrix
-            momentum = numpy.random.multivariate_normal(mean=numpy.zeros(d),
-                                                        cov=covariance_matrix)
-
-        state.momentum = momentum
-
-        return state
-
     def _run_traj_generator(self, traj_info):
 
         timestep = traj_info.param_info.timestep
@@ -642,9 +609,9 @@ class MDRENS(AbstractRENS):
 
         init_state = traj_info.init_state.clone()
         if init_state.momentum is None:
-            init_state = self._augment_state(init_state,
-                                             init_temperature,
-                                             traj_info.param_info.mass_matrix)
+            init_state = augment_state(init_state,
+                                       init_temperature,
+                                       traj_info.param_info.mass_matrix)
 
         tau = traj_length * timestep
         factory = InterpolationFactory(protocol, tau)
@@ -830,9 +797,9 @@ class ThermostattedMDRENS(MDRENS):
 
         init_state = traj_info.init_state
         if init_state.momentum is None:
-            init_state = self._augment_state(init_state,
-                                             init_temperature,
-                                             traj_info.param_info.mass_matrix)
+            init_state = augment_state(init_state,
+                                       init_temperature,
+                                       traj_info.param_info.mass_matrix)
                 
         gen = ThermostattedMDPropagator(grad,
                                         traj_info.param_info.timestep, temperature=temp, 
