@@ -555,7 +555,7 @@ class HMCPropagation(AbstractPropagation):
         
         if self.param.mass_matrix is None:
             d = len(state.position)
-            self.param.mass_matrix = InvertibleMatrix(numpy.eye(d), numpy.eye(d))
+            self.param.mass_matrix = InvertibleMatrix(numpy.eye(d))
             
         gen = HMCPropagator(self.sys.hamiltonian, self.param.gradient,
                             self.param.timestep, self.param.traj_length,
@@ -839,10 +839,3 @@ class NonequilibriumStepPropagator(AbstractPropagator):
     @protocol.setter
     def protocol(self, value):
         self._protocol = value
-
-    @property
-    def verbose(self):
-        return self._verbose
-    @verbose.setter
-    def verbose(self, value):
-        self._verbose = value
