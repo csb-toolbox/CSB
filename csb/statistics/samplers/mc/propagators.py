@@ -425,3 +425,34 @@ class HMCPropagator(AbstractMCPropagator):
     @mass_matrix.setter
     def mass_matrix(self, value):
         self._mass_matrix = value
+
+
+class AbstractNCMCPropagator(AbstractMCPropagator):
+
+    __metaclass__ = ABCMeta
+    
+    def __init__(self, protocol, reverse_protocol):
+
+        self._protocol = None
+        self.protocol = protocol
+        self._reverse_protocol = None
+        self.reverse_protocol = reverse_protocol
+
+        pdf = self.protocol.steps[0].perturbation.sys_before.hamiltonian
+        temperature = self.protocol.steps[0].perturbation.sys_before.hamiltonian.temperature
+
+        super(AbstractNCMCPropagator, self).__init__(pdf, temperature)
+
+    @property
+    def protocol(self):
+        return self._protocol
+    @protocol.setter
+    def protocol(self, value):
+        self._protocol = value
+
+    @property
+    def reverse_protocol(self):
+        return self._reverse_protocol
+    @reverse_protocol.setter
+    def reverse_protocol(self, value):
+        self._reverse_protocol = value

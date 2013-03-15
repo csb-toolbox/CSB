@@ -61,6 +61,7 @@ from abc import ABCMeta, abstractmethod
 from csb.statistics.samplers import State
 from csb.statistics.samplers.mc import AbstractMC, MCCollection, augment_state
 from csb.statistics.samplers.mc.propagators import MDPropagator
+from csb.statistics.samplers.mc.neqsteppropagator import NonequilibriumStepPropagator
 from csb.numeric.integrators import FastLeapFrog
 from csb.numeric import InvertibleMatrix
 
@@ -365,6 +366,81 @@ class RWMCSampler(AbstractSingleChainMC):
         self._stepsize = float(value)
 
 
+class AbstractNCMCSampler(AbstractSingleChainMC):
+    """
+    Implementation of the NCMC sampling algorithm (Nilmeier et al., "Nonequilibrium candidate Monte
+    Carlo is an efficient tool for equilibrium simulation", PNAS 2011) for sampling from one
+    ensemble only.
+    Subclasses have to specify the acceptance probability, which depends on the kind of
+    perturbations and propagations in the protocol.
+
+    @param state: Inital state
+    @type state: L{State}
+
+    @param protocol: Nonequilibrium protocol with alternating perturbations and propagations
+    @type protocol: L{Protocol}
+
+    @param reverse_protocol: The reversed version of the protocol, that is, the order of
+                             perturbations and propagations in each step is reversed
+    @type reverse_protocol: L{Protocol}
+    """
+
+    __metaclass__ = ABCMeta
+    
+    def __init__(self, state, protocol, reverse_protocol):
+
+        self._protocol = None
+        self.protocol = protocol
+        self._reverse_protocol = None
+        self.reverse_protocol = reverse_protocol
+
+        pdf = self.protocol.steps[0].perturbation.sys_before.hamiltonian
+        temperature = self.protocol.steps[0].perturbation.sys_before.hamiltonian.temperature
+
+        super(AbstractNCMCSampler, self).__init__(pdf, state, temperature)
+
+    def _propose(self):
+
+        protocol = None
+        if numpy.random.random() < 0.5:
+            protocol = self.protocol
+        else:
+            protocol = self.reverse_protocol
+        
+        gen = NonequilibriumStepPropagator(protocol)
+
+        traj = gen.generate(self.state)
+
+        return NCMCProposalCommunicator(traj)
+
+    def _accept(self, proposal_state, pacc):
+
+        accepted = super(AbstractNCMCSampler, self)._accept(proposal_state, pacc)
+
+        if self.state.momentum is None:
+            proposal_state.momentum = None
+        
+        if accepted == False:
+            if proposal_state.momentum is not None:
+                proposal_state.momentum *= -1.0
+
+        return accepted
+
+    @property
+    def protocol(self):
+        return self._protocol
+    @protocol.setter
+    def protocol(self, value):
+        self._protocol = value
+
+    @property
+    def reverse_protocol(self):
+        return self._reverse_protocol
+    @reverse_protocol.setter
+    def reverse_protocol(self, value):
+        self._reverse_protocol = value
+
+
 class SimpleProposalCommunicator(object):
     """
     This holds all the information needed to calculate the acceptance
@@ -394,3 +470,20 @@ class SimpleProposalCommunicator(object):
     @property
     def proposal_state(self):
         return self._proposal_state
+
+
+class NCMCProposalCommunicator(SimpleProposalCommunicator):
+    """
+    Holds all information (that is, the trajectory with heat, work, Hamiltonian difference
+    and jacbian) needed to calculate the acceptance probability in the AbstractNCMCSampler class.
+
+    @param traj: Non-equilibrium trajectory stemming from a stepwise protocol
+    @type traj: NCMCTrajectory
+    """
+
+    def __init__(self, traj):
+
+        self._traj = None
+        self.traj = traj
+
+        super(NCMCProposalCommunicator, self).__init__(traj.initial, traj.final)
