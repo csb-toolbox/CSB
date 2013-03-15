@@ -9,7 +9,7 @@ import csb
 import numpy
 
 from abc import ABCMeta, abstractmethod
-from csb.statistics.samplers.mc import TrajectoryBuilder, Trajectory
+from csb.statistics.samplers.mc import TrajectoryBuilder, Trajectory, augment_state
 from csb.statistics.samplers.mc.propagators import AbstractPropagator, MDPropagator, HMCPropagator
 from csb.numeric import InvertibleMatrix
 from csb.numeric.integrators import FastLeapFrog
@@ -496,10 +496,11 @@ class MDPerturbation(AbstractPerturbation):
         
         if self.param.mass_matrix is None:
             d = len(init_state.position)
-            self.param.mass_matrix = InvertibleMatrix(numpy.eye(d), numpy.eye(d))
-        
-        init_state = augment_state(init_state, self.sys_before.hamiltonian.temperature,
-                                   self.param.mass_matrix)
+            self.param.mass_matrix = InvertibleMatrix(numpy.eye(d))
+
+        if init_state.momentum == None:
+            init_state = augment_state(init_state, self.sys_before.hamiltonian.temperature,
+                                       self.param.mass_matrix)
 
         gen = MDPropagator(self.param.gradient, self.param.timestep,
                            mass_matrix=self.param.mass_matrix,
@@ -698,16 +699,15 @@ class MDPerturbationParam(MDParam, AbstractPerturbationParam):
     @type mass_matrix: L{InvertibleMatrix}
     """
 
+    ## Not neccessary, but if one puts a pass statement here, epydoc complains
     def __init__(self, timestep, traj_length, gradient, integrator=FastLeapFrog,
                  mass_matrix=None):
 
-        super(MDPerturbationParam, self).__init__(self, timestep, traj_length,
+        super(MDPerturbationParam, self).__init__(timestep, traj_length,
                                                   gradient, integrator=integrator,
                                                   mass_matrix=mass_matrix)
 
-    pass
-        
-                                             
+
 class HMCPropagationParam(MDParam, AbstractPropagationParam):
     """
     Holds all required information for propagating a system by HMC.
