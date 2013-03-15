@@ -9,7 +9,7 @@ import csb
 import numpy
 
 from abc import ABCMeta, abstractmethod
-from csb.statistics.samplers.mc import TrajectoryBuilder, Trajectory, augment_state
+from csb.statistics.samplers.mc import TrajectoryBuilder, Trajectory, augment_state, PropagationResult
 from csb.statistics.samplers.mc.propagators import AbstractPropagator, MDPropagator, HMCPropagator
 from csb.numeric import InvertibleMatrix
 from csb.numeric.integrators import FastLeapFrog
@@ -219,7 +219,7 @@ class ReducedHamiltonian(object):
     @type mass_matrix: L{InvertibleMatrix}
     """                 
 
-    def __init__(self, log_prob, gradient=None, temperature=1.0, mass_matrix=1.0):
+    def __init__(self, log_prob, gradient=None, temperature=1.0, mass_matrix=None):
         self._log_prob = None
         self.log_prob = log_prob
         self._gradient = None
@@ -248,10 +248,13 @@ class ReducedHamiltonian(object):
         """
         
         if p is not None:
-            if self.mass_matrix == 1.0:
+            if self.mass_matrix is None:
                 return 0.5 * sum(p ** 2)
             else:
-                return 0.5 * numpy.dot(p, numpy.dot(self.mass_matrix.inverse, p))
+                if self.mass_matrix.is_unity_multiple:
+                    return 0.5 * sum(p ** 2) / self.mass_matrix[0][0]
+                else:
+                    return 0.5 * numpy.dot(p, numpy.dot(self.mass_matrix.inverse, p))
         else:
             return 0.0
 
@@ -549,8 +552,6 @@ class HMCPropagation(AbstractPropagation):
             self.param.gradient = self.sys.hamiltonian.gradient
 
     def _evaluate(self, state):
-
-        from csb.statistics.samplers.mc import PropagationResult
         
         if self.param.mass_matrix is None:
             d = len(state.position)
@@ -572,6 +573,7 @@ class HMCPropagation(AbstractPropagation):
     @param.setter
     def param(self, value):
         self._param = value
+
 
 class AbstractPerturbationParam(object):
     """
@@ -673,8 +675,8 @@ class MDParam(object):
     @mass_matrix.setter
     def mass_matrix(self, value):
         self._mass_matrix = value
-
-
+        
+        
 class MDPerturbationParam(MDParam, AbstractPerturbationParam):
     """
     Holds all required information for perturbing a system by
@@ -788,14 +790,14 @@ class NonequilibriumStepPropagator(AbstractPropagator):
 
     def generate(self, init_state, return_trajectory=False):
 
+        estate = init_state.clone()
+        
         builder = TrajectoryBuilder.create(full=return_trajectory)
-        builder.add_initial_state(init_state)
+        builder.add_initial_state(estate)
             
         work = 0.
         heat = 0.
         total_jacobian = 1.
-
-        estate = init_state.clone()
 
         for i in range(len(self.protocol.steps)):
             shorttraj = self.protocol.steps[i].perform(estate)
@@ -825,6 +827,9 @@ class NonequilibriumStepPropagator(AbstractPropagator):
             result = NonequilibriumTrajectory([traj.initial, traj.final], heat=red_heat,
                                               work=red_work, deltaH=red_deltaH, 
                                               jacobian=total_jacobian)
+
+        if init_state.momentum is None:
+            result.final.momentum = None
 
         return result
 
