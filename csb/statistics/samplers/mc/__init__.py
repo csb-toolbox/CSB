@@ -118,6 +118,10 @@ class PropagationResult(AbstractPropagationResult):
         self._heat = None
         
         self.heat = heat
+
+    def __iter__(self):
+
+        return iter([self._initial, self.final])
         
     @property
     def initial(self):

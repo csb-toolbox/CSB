@@ -925,6 +925,8 @@ class AbstractStepRENS(AbstractRENS):
 
         super(AbstractStepRENS, self).__init__(samplers, param_infos)
 
+        self._evaluate_im_works = True
+
     @abstractmethod
     def _setup_propagations(self, im_sys_infos, param_info):
         """
@@ -987,6 +989,9 @@ class AbstractStepRENS(AbstractRENS):
                         for i in range(traj_length + 1)]
         perturbations = [ReducedHamiltonianPerturbation(im_sys_infos[i], im_sys_infos[i+1])
                         for i in range(traj_length)]
+        if self._evaluate_im_works == False:
+            for p in perturbations:
+                p.evaluate_work = False
         im_sys_infos = self._add_gradients(im_sys_infos, traj_info.param_info, t_prot)
         propagations = self._setup_propagations(im_sys_infos, traj_info.param_info)
         
@@ -1027,7 +1032,7 @@ class HMCStepRENS(AbstractStepRENS):
 
     def __init__(self, samplers, param_infos):
 
-        super(AbstractStepRENS, self).__init__(samplers, param_infos)
+        super(HMCStepRENS, self).__init__(samplers, param_infos)
 
     def _add_gradients(self, im_sys_infos, param_info, t_prot):
 
@@ -1049,7 +1054,7 @@ class HMCStepRENS(AbstractStepRENS):
                                                   integrator=param_info.integrator)
                               for i in range(param_info.intermediate_steps + 1)]
 
-        propagations = [HMCPropagation(im_sys_infos[i], propagation_params[i])
+        propagations = [HMCPropagation(im_sys_infos[i], propagation_params[i], evaluate_heat=False)
                         for i in range(param_info.intermediate_steps)]
 
         return propagations        

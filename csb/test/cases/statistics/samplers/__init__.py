@@ -217,8 +217,8 @@ class TestMultichain(test.Case):
     def testHMCStepRENS(self):
 
         self.set1pParams()
-        params = [HMCStepRENSSwapParameterInfo(self.samplers[0], self.samplers[1], 0.05, 1, 1,
-                                               self.grad, 15)]
+        params = [HMCStepRENSSwapParameterInfo(self.samplers[0], self.samplers[1], 0.05, 3, 1,
+                                               self.grad, 5)]
 
         algorithm = HMCStepRENS(self.samplers, params)
 

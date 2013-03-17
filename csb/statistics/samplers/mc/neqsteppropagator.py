@@ -329,16 +329,23 @@ class AbstractPerturbation(object):
 
     @param param: parameters neccessary for system perturbation
     @type param: L{AbstractPerturbationParam}
+
+    @param evaluate_work: Allows to switch off the work evaluation,
+                          which might not always be needed, in order to
+                          save computation time.
+    @type evaluate_work: boolean
     """
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, sys_before, sys_after, param=None):
+    def __init__(self, sys_before, sys_after, param=None, evaluate_work=True):
         self._sys_before = None
         self.sys_before = sys_before
         self._sys_after = None
         self.sys_after = sys_after
         self.param = param
+        self._evaluate_work = None
+        self.evaluate_work = evaluate_work
 
     @abstractmethod
     def _evaluate(self, state):
@@ -389,6 +396,13 @@ class AbstractPerturbation(object):
     @param.setter
     def param(self, value):
         self._param = value
+
+    @property
+    def evaluate_work(self):
+        return self._evaluate_work
+    @evaluate_work.setter
+    def evaluate_work(self, value):
+        self._evaluate_work = value
         
         
 class AbstractPropagation(object):
@@ -400,14 +414,21 @@ class AbstractPropagation(object):
 
     @param param: parameters neccessary for propagating the system
     @type param: L{AbstractPropagationParam}
+
+    @param evaluate_heat: Allows to switch off the heat evaluation,
+                          which might not always be needed, in order to
+                          save computation time.
+    @type evaluate_heat: boolean
     """
 
-    def __init__(self, sys, param):
+    def __init__(self, sys, param, evaluate_heat=True):
 
         self._sys = None
         self.sys = sys
         self._param = None
         self.param = param
+        self._evaluate_heat = None
+        self.evaluate_heat = evaluate_heat
 
     def _evaluate(self, state):
         """
@@ -442,8 +463,15 @@ class AbstractPropagation(object):
     @param.setter
     def param(self, value):
         self._param = value
+    
+    @property
+    def evaluate_heat(self):
+        return self._evaluate_heat
+    @evaluate_heat.setter
+    def evaluate_heat(self, value):
+        self._evaluate_heat = value
 
-
+    
 class ReducedHamiltonianPerturbation(AbstractPerturbation):
     """
     System perturbation by changing the reduced Hamiltonian
@@ -453,17 +481,25 @@ class ReducedHamiltonianPerturbation(AbstractPerturbation):
 
     @param sys_after: information about the system after the perturbation
     @type sys_after: L{AbstractSystemInfo}
+
+    @param evaluate_work: Allows to switch off the work evaluation,
+                          which might not always be needed, in order to
+                          save computation time.
+    @type evaluate_work: boolean
     """
 
-    def __init__(self, sys_before, sys_after):
+    def __init__(self, sys_before, sys_after, evaluate_work=True):
 
-        super(ReducedHamiltonianPerturbation, self).__init__(sys_before, sys_after)
+        super(ReducedHamiltonianPerturbation, self).__init__(sys_before, sys_after,
+                                                             evaluate_work=evaluate_work)
 
     def _evaluate(self, state):
 
-        return PerturbationResult(state, self.sys_after,
-                                  work=self.sys_after.hamiltonian(state) - \
-                                       self.sys_before.hamiltonian(state))
+        work = 0.0
+        if self.evaluate_work == True:
+            work = self.sys_after.hamiltonian(state) - self.sys_before.hamiltonian(state)
+
+        return PerturbationResult(state, self.sys_after, work=work)
 
     def reverse(self):
 
@@ -484,14 +520,21 @@ class MDPerturbation(AbstractPerturbation):
 
     @param param: parameters neccessary for system perturbation
     @type param: L{MDPerturbationParam}
+
+    @param evaluate_work: Allows to switch off the work evaluation,
+                          which might not always be needed, in order to
+                          save computation time.
+    @type evaluate_work: boolean
     """
     
-    def __init__(self, sys_before, sys_after, param):
+    def __init__(self, sys_before, sys_after, param, evaluate_work=True):
 
         super(MDPerturbation, self).__init__(sys_before, sys_after)
 
         self._param = None
         self.param = param
+        self._evaluate_work = None
+        self.evaluate_work = True
         
     def _evaluate(self, state):
 
@@ -513,9 +556,11 @@ class MDPerturbation(AbstractPerturbation):
 
         final = traj.final
 
-        return PerturbationResult(final, self.sys_after,
-                                  work=self.sys_after.hamiltonian(final) - \
-                                       self.sys_before.hamiltonian(state))
+        work = 0.0
+        if self.evaluate_work == True:
+            work = self.sys_after.hamiltonian(final) - self.sys_before.hamiltonian(state)
+
+        return PerturbationResult(final, self.sys_after, work=work)
 
     def reverse(self):
 
@@ -529,7 +574,7 @@ class MDPerturbation(AbstractPerturbation):
     @param.setter
     def param(self, value):
         self._param = value
-
+    
     
 class HMCPropagation(AbstractPropagation):
     """
@@ -540,14 +585,17 @@ class HMCPropagation(AbstractPropagation):
 
     @param param: parameters neccessary for propagating the system
     @type param: L{HMCPropagationParam}
+
+    @param evaluate_heat: Allows to switch off the heat evaluation,
+                          which might not always be needed, in order to
+                          save computation time.
+    @type evaluate_heat: boolean
     """
     
-    def __init__(self, sys, param):
+    def __init__(self, sys, param, evaluate_heat=True):
 
-        self._param = None
-        self.param = param
-        self._sys = None
-        self.sys = sys
+        super(HMCPropagation, self).__init__(sys, param, evaluate_heat)
+        
         if self.param.gradient is None:
             self.param.gradient = self.sys.hamiltonian.gradient
 
@@ -564,8 +612,11 @@ class HMCPropagation(AbstractPropagation):
         
         final = gen.generate(state, self.param.iterations).final
 
-        return PropagationResult(state, final, heat=self.sys.hamiltonian.E(final.position) - \
-                                                    self.sys.hamiltonian.E(state.position))
+        heat = 0.0
+        if self.evaluate_heat == True:
+            heat = self.sys.hamiltonian.E(final.position) - self.sys.hamiltonian.E(state.position)
+
+        return PropagationResult(state, final, heat=heat)
 
     @property
     def param(self):
@@ -575,6 +626,52 @@ class HMCPropagation(AbstractPropagation):
         self._param = value
 
 
+class MDPropagation(AbstractPropagation):
+    """
+    System propagation by MD
+
+    @param sys: information about the current system setup
+    @type sys: L{AbstractSystemInfo}
+
+    @param param: parameters neccessary for propagating the system
+    @type param: L{MDPropagationParam}
+
+    @param evaluate_heat: Allows to switch off the heat evaluation,
+                          which might not always be needed, in order to
+                          save computation time.
+    @type evaluate_heat: boolean
+    """
+
+    ## Not neccessary, but otherwise epydoc is complaining
+    def __init__(self, sys, param, evaluate_heat=True):
+
+        super(MDPropagation, self).__init__(sys, param, evaluate_heat=evaluate_heat)
+
+    def _evaluate(self, state):
+
+        if self.param.mass_matrix is None:
+            d = len(state.position)
+            self.param.mass_matrix = InvertibleMatrix(numpy.eye(d))
+
+        if state.momentum == None:
+            state = augment_state(state, self.sys.hamiltonian.temperature,
+                                  self.param.mass_matrix)
+
+        gen = MDPropagator(self.param.gradient, self.param.timestep,
+                           mass_matrix=self.param.mass_matrix,
+                           integrator=self.param.integrator)
+        
+        traj = gen.generate(state, self.param.traj_length)
+
+        final = traj.final
+
+        heat = 0.0
+        if self.evaluate_heat == True:
+            heat = self.sys.hamiltonian(final) - self.sys.hamiltonian(state)
+
+        return PropagationResult(state, final, heat=heat)
+        
+        
 class AbstractPerturbationParam(object):
     """
     Subclasses hold informations required for different kinds
@@ -701,7 +798,6 @@ class MDPerturbationParam(MDParam, AbstractPerturbationParam):
     @type mass_matrix: L{InvertibleMatrix}
     """
 
-    ## Not neccessary, but if one puts a pass statement here, epydoc complains
     def __init__(self, timestep, traj_length, gradient, integrator=FastLeapFrog,
                  mass_matrix=None):
 
@@ -753,6 +849,36 @@ class HMCPropagationParam(MDParam, AbstractPropagationParam):
         self._iterations = value
 
 
+class MDPropagationParam(MDParam, AbstractPropagationParam):
+    """
+    Holds all required information for propagating a system by MD.
+    The system temperature is taken from the 
+    MDPropagation.sys.hamiltonian.temperature property.
+    
+    @param timestep: integration timestep
+    @type timestep: float
+
+    @param traj_length: MD trajectory length
+    @type traj_length: int
+
+    @param gradient: gradient governing the equations of motion, function of
+                     position array and time
+    @type gradient: callable
+
+    @param integrator: Integration scheme to be utilized
+    @type integrator: l{AbstractIntegrator}
+
+    @param mass_matrix: mass matrix for kinetic energy definition
+    @type mass_matrix: L{InvertibleMatrix}
+    """
+    
+    def __init__(self, timestep, traj_length, gradient,
+                 integrator=FastLeapFrog, mass_matrix=None):
+
+        super(MDPropagationParam, self).__init__(timestep, traj_length, gradient,
+                                                 integrator=integrator, mass_matrix=mass_matrix)
+
+
 class HamiltonianSysInfo(AbstractSystemInfo):
     """
     Holds information describing a system by its Hamiltonian only.
@@ -791,19 +917,32 @@ class NonequilibriumStepPropagator(AbstractPropagator):
     def generate(self, init_state, return_trajectory=False):
 
         estate = init_state.clone()
-        
+
+        reduced_work = 0.
+        reduced_heat = 0.
+
+        accumulate_heat = True
+        if False in [s.propagation.evaluate_heat for s in self.protocol.steps]:
+            accumulate_heat = False
+
+        accumulate_work = True
+        if False in [s.perturbation.evaluate_work for s in self.protocol.steps]:
+            accumulate_work = False
+
         builder = TrajectoryBuilder.create(full=return_trajectory)
-        builder.add_initial_state(estate)
+        # builder.add_initial_state(estate)
             
-        work = 0.
-        heat = 0.
         total_jacobian = 1.
 
         for i in range(len(self.protocol.steps)):
             shorttraj = self.protocol.steps[i].perform(estate)
+            if i == 0:
+                builder.add_initial_state(shorttraj.initial)
 
-            heat += shorttraj.heat
-            work += shorttraj.work
+            if accumulate_heat == True:
+                reduced_heat += shorttraj.heat
+            if accumulate_work == True:
+                reduced_work += shorttraj.work
             total_jacobian *= shorttraj.jacobian
 
             estate = shorttraj.final
@@ -815,18 +954,25 @@ class NonequilibriumStepPropagator(AbstractPropagator):
         traj = builder.product
         result = None
 
-        red_heat = heat
-        red_work = work
-        red_deltaH = self.protocol.steps[-1].perturbation.sys_after.hamiltonian(traj.final) -\
-                     self.protocol.steps[0].perturbation.sys_before.hamiltonian(traj.initial)
+        reduced_deltaH = self.protocol.steps[-1].perturbation.sys_after.hamiltonian(traj.final) - \
+                         self.protocol.steps[0].perturbation.sys_before.hamiltonian(traj.initial)
 
-        if return_trajectory:
-            result = NonequilibriumTrajectory([x for x in traj], heat=red_heat, work=red_work,
-                                              deltaH=red_deltaH, jacobian=total_jacobian)
-        else:
-            result = NonequilibriumTrajectory([traj.initial, traj.final], heat=red_heat,
-                                              work=red_work, deltaH=red_deltaH, 
+        if init_state.momentum is None:
+            for s in traj:
+                s.momentum = None
+        
+        if True:#return_trajectory:
+            result = NonequilibriumTrajectory([x for x in traj],
+                                              heat=reduced_heat,
+                                              work=reduced_work,
+                                              deltaH=reduced_deltaH,
                                               jacobian=total_jacobian)
+        # else:
+        #     result = NonequilibriumTrajectory([traj.initial, traj.final],
+        #                                       heat=reduced_heat,
+        #                                       work=reduced_work, 
+        #                                       deltaH=reduced_deltaH, 
+        #                                       jacobian=total_jacobian)
 
         if init_state.momentum is None:
             result.final.momentum = None
