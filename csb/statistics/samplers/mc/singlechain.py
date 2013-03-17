@@ -421,8 +421,8 @@ class AbstractNCMCSampler(AbstractSingleChainMC):
             proposal_state.momentum = None
         
         if accepted == False:
-            if proposal_state.momentum is not None:
-                proposal_state.momentum *= -1.0
+            if self.state.momentum is not None:
+                self.state.momentum *= -1.0
 
         return accepted
 
