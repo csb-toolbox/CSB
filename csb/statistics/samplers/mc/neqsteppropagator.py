@@ -505,76 +505,6 @@ class ReducedHamiltonianPerturbation(AbstractPerturbation):
 
         self.sys_before, self.sys_after = self.sys_after, self.sys_before
 
-
-class MDPerturbation(AbstractPerturbation):
-    """
-    System perturbation by letting the system evolve deterministically
-    under the action of a parametrically switched Hamiltonian at constant
-    temperature.
-        
-    @param sys_before: information about the system before the perturbation
-    @type sys_before: L{AbstractSystemInfo}
-
-    @param sys_after: information about the system after the perturbation
-    @type sys_after: L{AbstractSystemInfo}
-
-    @param param: parameters neccessary for system perturbation
-    @type param: L{MDPerturbationParam}
-
-    @param evaluate_work: Allows to switch off the work evaluation,
-                          which might not always be needed, in order to
-                          save computation time.
-    @type evaluate_work: boolean
-    """
-    
-    def __init__(self, sys_before, sys_after, param, evaluate_work=True):
-
-        super(MDPerturbation, self).__init__(sys_before, sys_after)
-
-        self._param = None
-        self.param = param
-        self._evaluate_work = None
-        self.evaluate_work = True
-        
-    def _evaluate(self, state):
-
-        init_state = state.clone()
-        
-        if self.param.mass_matrix is None:
-            d = len(init_state.position)
-            self.param.mass_matrix = InvertibleMatrix(numpy.eye(d))
-
-        if init_state.momentum == None:
-            init_state = augment_state(init_state, self.sys_before.hamiltonian.temperature,
-                                       self.param.mass_matrix)
-
-        gen = MDPropagator(self.param.gradient, self.param.timestep,
-                           mass_matrix=self.param.mass_matrix,
-                           integrator=self.param.integrator)
-        
-        traj = gen.generate(init_state, self.param.traj_length)
-
-        final = traj.final
-
-        work = 0.0
-        if self.evaluate_work == True:
-            work = self.sys_after.hamiltonian(final) - self.sys_before.hamiltonian(state)
-
-        return PerturbationResult(final, self.sys_after, work=work)
-
-    def reverse(self):
-
-        self.sys_before, self.sys_after = self.sys_after, self.sys_before
-        self.param.gradient = lambda x, t: self.param.gradient(x,
-                                                               self.traj_length * self.timestep - t)
-
-    @property
-    def param(self):
-        return self._param
-    @param.setter
-    def param(self, value):
-        self._param = value
-    
     
 class HMCPropagation(AbstractPropagation):
     """
@@ -773,38 +703,6 @@ class MDParam(object):
     def mass_matrix(self, value):
         self._mass_matrix = value
         
-        
-class MDPerturbationParam(MDParam, AbstractPerturbationParam):
-    """
-    Holds all required information for perturbing a system by
-    calculating a MD trajectory with time-dependent Hamiltonian, but
-    constant temperature defined in 
-    MDPerturbation.sys_before.hamiltonian.temperature.
-
-    @param timestep: integration timestep
-    @type timestep: float
-
-    @param traj_length: MD trajectory length
-    @type traj_length: int
-
-    @param gradient: gradient governing the equations of motion, function of
-                     position array and time
-    @type gradient: callable
-    
-    @param integrator: Integration scheme to be utilized
-    @type integrator: L{AbstractIntegrator}
-
-    @param mass_matrix: mass matrix for kinetic energy definition
-    @type mass_matrix: L{InvertibleMatrix}
-    """
-
-    def __init__(self, timestep, traj_length, gradient, integrator=FastLeapFrog,
-                 mass_matrix=None):
-
-        super(MDPerturbationParam, self).__init__(timestep, traj_length,
-                                                  gradient, integrator=integrator,
-                                                  mass_matrix=mass_matrix)
-
 
 class HMCPropagationParam(MDParam, AbstractPropagationParam):
     """
@@ -917,7 +815,7 @@ class NonequilibriumStepPropagator(AbstractPropagator):
     def generate(self, init_state, return_trajectory=False):
 
         estate = init_state.clone()
-
+        
         reduced_work = 0.
         reduced_heat = 0.
 
@@ -930,7 +828,6 @@ class NonequilibriumStepPropagator(AbstractPropagator):
             accumulate_work = False
 
         builder = TrajectoryBuilder.create(full=return_trajectory)
-        # builder.add_initial_state(estate)
             
         total_jacobian = 1.
 
@@ -961,19 +858,12 @@ class NonequilibriumStepPropagator(AbstractPropagator):
             for s in traj:
                 s.momentum = None
         
-        if True:#return_trajectory:
-            result = NonequilibriumTrajectory([x for x in traj],
-                                              heat=reduced_heat,
-                                              work=reduced_work,
-                                              deltaH=reduced_deltaH,
-                                              jacobian=total_jacobian)
-        # else:
-        #     result = NonequilibriumTrajectory([traj.initial, traj.final],
-        #                                       heat=reduced_heat,
-        #                                       work=reduced_work, 
-        #                                       deltaH=reduced_deltaH, 
-        #                                       jacobian=total_jacobian)
-
+        result = NonequilibriumTrajectory([x for x in traj],
+                                           heat=reduced_heat,
+                                           work=reduced_work,
+                                           deltaH=reduced_deltaH,
+                                           jacobian=total_jacobian)
+    
         if init_state.momentum is None:
             result.final.momentum = None
 

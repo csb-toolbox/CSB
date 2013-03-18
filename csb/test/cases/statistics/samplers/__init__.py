@@ -14,8 +14,6 @@ from csb.statistics.samplers.mc.multichain import ReplicaExchangeMC, Thermostatt
 from csb.statistics.samplers.mc.multichain import HMCStepRENS, HMCStepRENSSwapParameterInfo
 from csb.statistics.samplers.mc.singlechain import HMCSampler, RWMCSampler
 from csb.statistics.samplers.mc.propagators import RWMCPropagator, HMCPropagator
-from csb.statistics.samplers.mc.neqsteppropagator import HamiltonianSysInfo, ReducedHamiltonian
-from csb.statistics.samplers.mc.neqsteppropagator import MDPerturbation, MDPerturbationParam
 
 class SamplePDF(Normal):
     
@@ -100,7 +98,6 @@ class TestMCPropagators(test.Case):
         gen = HMCPropagator(self.pdf, self.gradient, self.timestep * 1.5, self.nsteps, mass_matrix=mm)
 
         self.checkResult(gen.generate(init_state, self.nits))
-        
         
 @test.functional
 class TestMultichain(test.Case):
@@ -224,40 +221,7 @@ class TestMultichain(test.Case):
 
         self._run(algorithm)
 
-@test.functional
-class TestPerturbationsPropagations(test.Case):
 
-    def setUp(self):
-
-        super(TestPerturbationsPropagations, self).setUp()
-
-        self.init_state = State(np.array([1.0]), np.array([1.0]))
-        self.integration_steps = 50
-        self.timestep = 0.1
-        self.pdf = SamplePDF()
-
-    def testMDPerturbation(self):
-
-        tau = self.timestep * self.integration_steps
-        
-        t_grad = lambda x, t: 3.0 * self.pdf.grad(x, 0.0) * t / tau + \
-                              (1.0 - t / tau) * self.pdf.grad(x, 0.0)
-        grad1 = lambda x, t: t_grad(x, 0)
-        grad2 = lambda x, t: t_grad(x, tau)
-        logprob1 = self.pdf.log_prob
-        logprob2 = lambda x: self.pdf.log_prob(x) * 3.0
-        
-        sys_before = HamiltonianSysInfo(ReducedHamiltonian(logprob1, grad1, 1.0))
-        sys_after = HamiltonianSysInfo(ReducedHamiltonian(logprob2, grad2, 1.0))
-        pert = MDPerturbation(sys_before, sys_after,
-                              MDPerturbationParam(self.timestep, self.integration_steps, t_grad))
-
-        res = pert(self.init_state)
-
-        self.assertAlmostEqual(res.state.position[0], 1.12245790, delta=1e-7)
-        self.assertAlmostEqual(res.work, 2.733563189, delta=1e-7)
-        
-                
 if __name__ == '__main__':
 
     test.Console()
