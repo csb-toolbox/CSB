@@ -7,18 +7,23 @@ from csb.numeric.integrators import AbstractGradient, VelocityVerlet, LeapFrog, 
 from csb.numeric import InvertibleMatrix
 
 from csb.statistics.samplers import State
+from csb.statistics.samplers.mc import Trajectory
 from csb.statistics.samplers.mc.multichain import MDRENSSwapParameterInfo, MDRENS
 from csb.statistics.samplers.mc.multichain import ThermostattedMDRENSSwapParameterInfo
 from csb.statistics.samplers.mc.multichain import RESwapParameterInfo, AlternatingAdjacentSwapScheme
 from csb.statistics.samplers.mc.multichain import ReplicaExchangeMC, ThermostattedMDRENS
 from csb.statistics.samplers.mc.multichain import HMCStepRENS, HMCStepRENSSwapParameterInfo
 from csb.statistics.samplers.mc.singlechain import HMCSampler, RWMCSampler, AbstractNCMCSampler
-from csb.statistics.samplers.mc.propagators import RWMCPropagator, HMCPropagator
-from csb.statistics.samplers.mc.propagators import AbstractNCMCPropagator
+from csb.statistics.samplers.mc.propagators import RWMCPropagator, HMCPropagator, MDPropagator
+from csb.statistics.samplers.mc.propagators import AbstractNCMCPropagator, AbstractPropagator
 from csb.statistics.samplers.mc.neqsteppropagator import ReducedHamiltonian, HamiltonianSysInfo
-from csb.statistics.samplers.mc.neqsteppropagator import MDPropagation, MDPropagationParam
-from csb.statistics.samplers.mc.neqsteppropagator import Protocol, Step
-from csb.statistics.samplers.mc.neqsteppropagator import ReducedHamiltonianPerturbation
+from csb.statistics.samplers.mc.neqsteppropagator import PlainMDPropagation, PlainMDPropagationParam
+from csb.statistics.samplers.mc.neqsteppropagator import AbstractMDPropagation, HMCPropagation
+from csb.statistics.samplers.mc.neqsteppropagator import Protocol, Step, AbstractPerturbation
+from csb.statistics.samplers.mc.neqsteppropagator import ReducedHamiltonianPerturbation, AbstractPropagation
+from csb.statistics.samplers.mc.neqsteppropagator import NonequilibriumStepPropagator
+from csb.statistics.samplers.mc.neqsteppropagator import NonequilibriumTrajectory
+from csb.statistics.samplers.mc.neqsteppropagator import HMCPropagationParam
 
 class SamplePDF(Normal):
     
@@ -53,7 +58,7 @@ class Multimodal2DPDF(AbstractDensity):
         return np.array([(-6.25 * np.sin(2.5 * x[0]) + 0.08 * x[0]) * self._E2(x),
                          self._E1(x) * self.k * x[1]])
 
-    
+
 @test.functional
 class TestMCPropagators(test.Case):
 
@@ -104,11 +109,12 @@ class TestMCPropagators(test.Case):
 
         self.checkResult(gen.generate(init_state, self.nits))
 
+    @test.skip("Takes quite a long time to run.")
     def testNCMCPropagator(self):
 
-        Nhalf = 30
-        dt = 0.3
-        md_tl = 1
+        Nhalf = 5
+        dt = 0.1
+        md_tl = 5
         
         ks = np.linspace(1.0, 0.2, Nhalf).tolist()
         sigmas = [1/np.sqrt(k) for k in ks]
@@ -120,14 +126,16 @@ class TestMCPropagators(test.Case):
         
         steps = [Step(ReducedHamiltonianPerturbation(sys_infos[i], sys_infos[i+1],
                                                      evaluate_work=False),
-                      MDPropagation(sys_infos[i+1], MDPropagationParam(dt, md_tl, pdfs[i+1].grad),
-                                    evaluate_heat=False))
-                      for i in range(N - 1)]
+                      PlainMDPropagation(sys_infos[i+1], 
+                                         PlainMDPropagationParam(dt, md_tl, pdfs[i+1].grad),
+                                         evaluate_heat=False))
+                 for i in range(N - 1)]
         rv_steps = [Step(ReducedHamiltonianPerturbation(sys_infos[i], sys_infos[i+1],
                                                         evaluate_work=False),
-                         MDPropagation(sys_infos[i], MDPropagationParam(dt, md_tl, pdfs[i].grad),
-                                       evaluate_heat=False))
-                   for i in range(N - 1)]
+                         PlainMDPropagation(sys_infos[i],
+                                            PlainMDPropagationParam(dt, md_tl, pdfs[i].grad),
+                                            evaluate_heat=False))
+                    for i in range(N - 1)]
         
         for s in rv_steps:
             s.set_propagation_first()
@@ -145,19 +153,11 @@ class TestMCPropagators(test.Case):
 
         gen = MDPropStepNCMCPropagator(protocol, rv_protocol)
 
-        init_state = State(np.array([1.0]), np.array([-0.5]))
-        
+        init_state = State(np.array([1.0]))
         traj = gen.generate(init_state, self.nits, return_trajectory=True)
-
         self.checkResult(traj)
 
-        self.assertAlmostEqual(np.mean([x.momentum[0] for x in traj]), 0.0, delta=0.15)
-        self.assertAlmostEqual(np.std([x.momentum[0] for x in traj]), 1.0, delta=0.15)
 
-
-
-
-        
 @test.functional
 class TestMultichain(test.Case):
 
@@ -279,6 +279,390 @@ class TestMultichain(test.Case):
         algorithm = HMCStepRENS(self.samplers, params)
 
         self._run(algorithm)
+
+class HO(object):
+
+    def __init__(self, k1=1.0, k2=1.0, x1=0.0, x2=0.0, tau=1.0):
+        self.k1 = k1
+        self.k2 = k2
+        self.x1 = x1
+        self.x2 = x2
+        self.tau = tau
+        self.kt = lambda t: self.k2 * t / self.tau + (1 - t / self.tau) * self.k1
+        self.xt = lambda t: self.x2 * t / self.tau + (1 - t / self.tau) * self.x1
+
+    def log_prob(self, x, t=0.0):
+        return -0.5 * self.kt(t) * sum((x - self.xt(t)) ** 2)
+
+    def gradient(self, x, t):
+        return self.kt(t) * (x - self.xt(t))
+
+class MockPropagator(AbstractPropagator):
+
+    def __init__(self):
+        pass
+
+    def generate(self, init_state, length, return_trajectory=False):
+
+        final_state = State(init_state.position * 2, init_state.momentum * 2)
+        
+        return Trajectory([init_state, final_state])
+
+class MDPropagationMocked(AbstractMDPropagation):
+
+    def _propagator_factory(self):
+
+        return MockMDPropagator()
+    
+class PlainMDPropagationMocked(PlainMDPropagation):
+
+    def _propagator_factory(self):
+
+        return MockPropagator()
+
+class HMCPropagationMocked(HMCPropagation):
+
+    def _propagator_factory(self):
+
+        return MockPropagator()
+
+class MockPerturbation(AbstractPerturbation):
+
+    @property
+    def sys_before(self):
+
+        pdf = HO()
+
+        return HamiltonianSysInfo(ReducedHamiltonian(pdf.log_prob, pdf.gradient))
+
+    @property
+    def sys_after(self):
+
+        pdf = HO()
+
+        return HamiltonianSysInfo(ReducedHamiltonian(pdf.log_prob, pdf.gradient))
+
+    def __init__(self):
+        pass
+    
+    def _run_perturbator(self, state):
+
+        final = State(state.position * 2, state.momentum * 2)
+        
+        return Trajectory([state, final])
+
+    def _calculate_work(self, traj):
+
+        return 42.0
+
+    def _calculate_jacobian(self, traj):
+
+        return 1.1
+
+    
+class MockPropagation(AbstractPropagation):
+
+    def __init__(self):
+        pass
+
+    @property
+    def sys(self):
+
+        pdf = HO()
+
+        return HamiltonianSysInfo(pdf.log_prob, pdf.gradient)
+
+    def _run_propagator(self, state):
+
+        final = State(state.position * 2, state.momentum * 2)
+
+        return Trajectory([state, final])
+
+    def _calculate_heat(self, traj):
+
+        return -42.0
+
+    def _propagator_factory(self):
+
+        return None
+
+
+class MockStep(Step):
+
+    def __init__(self, return_momentum=True):
+
+        self._return_momentum = return_momentum
+        self._perform = None
+        self.perform = self._perform_pert_prop
+
+    @property
+    def perturbation(self):
+
+        return MockPerturbation()
+
+    def _perform_pert_prop(self, state):
+
+        if self._return_momentum == True:
+            final = State(state.position * 2, state.momentum * 2)
+        else:
+            final = State(state.position * 2)
+
+        return NonequilibriumTrajectory([state, final], heat=-42.0, work=42.0, jacobian=1.1)
+
+    def _perform_prop_pert(self, state):
+
+        if self._return_momentum == True:
+            final = State(state.position * 2, state.momentum * 2)
+        else:
+            final = State(state.position * 2)
+
+        return NonequilibriumTrajectory([state, final], heat=42.0, work=-42.0, jacobian=1.1)
+
+
+class MockProtocol(Protocol):
+
+    def __init__(self, momentum=True):
+
+        self._momentum = momentum
+        self.steps = [MockStep(self._momentum), MockStep(self._momentum)]
+
+
+@test.unit
+class TestNeqsteppropagator(test.Case):
+
+    def testReducedHamiltonian(self):
+        pdf = HO(k1=2.0, k2=2.0)
+        init = State(np.array([2.0]), np.array([-2.0]))
+        ham = ReducedHamiltonian(lambda x: pdf.log_prob(x, 0.0), pdf.gradient, temperature=4.0)
+
+        self.assertEqual(4.0, ham.E(init.position))
+        self.assertEqual(2.0, ham.kinetic_energy(init.momentum))
+        self.assertEqual(0.0, ham.kinetic_energy(None))
+        self.assertEqual(-1.0, ham.rlog_prob(init.position))
+        self.assertEqual(0.5, ham.rkinetic_energy(init.momentum))
+        self.assertEqual(1.5, ham(init))
+
+    def testHMCPropagation(self):
+
+        pdf = HO()
+        sys = HamiltonianSysInfo(ReducedHamiltonian(pdf.log_prob, pdf.gradient))
+        param = HMCPropagationParam(None, None, None)
+        hmcprop = HMCPropagationMocked(sys, param)
+
+        init = State(np.array([2.0]), np.array([2.0]))
+
+        ## Test _set_mass_matrix
+        d = len(init.position)
+        param = HMCPropagationParam(None, None, None, mass_matrix=InvertibleMatrix(np.eye(d)))
+        hmcprop = HMCPropagationMocked(sys, param)
+        hmcprop._set_mass_matrix(init)
+        self.assertEqual(hmcprop.param.mass_matrix,
+                         InvertibleMatrix(np.eye(len(init.position))))
+
+        
+        param = HMCPropagationParam(None, None, None)
+        hmcprop = HMCPropagationMocked(sys, param)
+        hmcprop._set_mass_matrix(init)
+        self.assertEqual(hmcprop.param.mass_matrix,
+                         InvertibleMatrix(np.eye(len(init.position))))
+        
+        ## Test _calculate_heat
+        final = State(init.position * 2, init.momentum * 2)
+        traj = Trajectory([init, final])
+        self.assertEqual(hmcprop._calculate_heat(traj), 6.0)
+
+        ## Test __call__
+        result = hmcprop(init)
+        self.assertEqual(init.position, result.initial.position)
+        self.assertEqual(init.momentum, result.initial.momentum)
+        self.assertEqual(result.final.position, init.position * 2)
+        self.assertEqual(result.final.momentum, init.momentum * 2)
+        self.assertEqual(result.heat, 6.0)
+
+    def testPlainMDPropagation(self):
+
+        pdf = HO()
+        sys = HamiltonianSysInfo(ReducedHamiltonian(pdf.log_prob, pdf.gradient))
+
+        init = State(np.array([2.0]), np.array([2.0]))
+
+        ## Test _set_mass_matrix
+        d = len(init.position)
+        param = PlainMDPropagationParam(None, None, None, 
+                                        mass_matrix=InvertibleMatrix(np.eye(d)))
+        mdprop = PlainMDPropagationMocked(sys, param)
+        mdprop._set_mass_matrix(init)
+        self.assertEqual(mdprop.param.mass_matrix,
+                         InvertibleMatrix(np.eye(d)))
+
+        param = PlainMDPropagationParam(None, None, None)
+        mdprop = PlainMDPropagationMocked(sys, param)
+        mdprop._set_mass_matrix(init)
+        self.assertEqual(mdprop.param.mass_matrix,
+                         InvertibleMatrix(np.eye(d)))
+
+        ## Test _calculate_heat
+        final = State(init.position * 2, init.momentum * 2)
+        traj = Trajectory([init, final])
+        self.assertEqual(mdprop._calculate_heat(traj), 12.0)
+
+        ## Test __call__
+        result = mdprop(init)
+        self.assertEqual(init.position, result.initial.position)
+        self.assertEqual(init.momentum, result.initial.momentum)
+        self.assertEqual(result.final.position, init.position * 2)
+        self.assertEqual(result.final.momentum, init.momentum * 2)
+        self.assertEqual(result.heat, 12.0)
+        
+        
+    def testReducedHamiltonianPerturbation(self):
+
+        pdf = HO(k1=1.0, k2=2.0)
+        redham1 = ReducedHamiltonian(lambda x: pdf.log_prob(x, 0.0))
+        redham2 = ReducedHamiltonian(lambda x: pdf.log_prob(x, 1.0))
+        sys1 = HamiltonianSysInfo(redham1)
+        sys2 = HamiltonianSysInfo(redham2)
+        init = State(np.array([2.0]), np.array([2.0]))
+        traj = Trajectory([init, init])
+        
+        hampert = ReducedHamiltonianPerturbation(sys1, sys2)
+
+        ## Test _calculate_work
+        self.assertEqual(hampert._calculate_work(traj), 2.0)
+
+        ## Test __call__
+        result = hampert(init)
+        self.assertEqual(result.initial.position[0], init.position[0])
+        self.assertEqual(result.initial.momentum[0], init.momentum[0])
+        self.assertEqual(result.initial.position[0], result.final.position[0])
+        self.assertEqual(result.initial.momentum[0], result.final.momentum[0])
+        self.assertEqual(result.work, 2.0)
+        self.assertEqual(result.jacobian, 1.0)
+        
+
+    def testStep(self):
+
+        step = Step(MockPerturbation(), MockPropagation())
+        init = State(np.array([2.0]), np.array([2.0]))
+
+        ## Test step with first perturbation, then propagation
+        res = step.perform(init)
+
+        self.assertEqual(res.final.position, init.position * 4)
+        self.assertEqual(res.final.momentum, init.momentum * 4)
+        self.assertEqual(res.heat, -42.0)
+        self.assertEqual(res.work, 42.0)
+        self.assertEqual(res.jacobian, 1.1)
+
+        ## Test step with first perturbation, then propagation
+        step.set_propagation_first()
+        res = step.perform(init)
+
+        self.assertEqual(step.perform, step._perform_prop_pert)
+        self.assertEqual(res.final.position, init.position * 4)
+        self.assertEqual(res.final.momentum, init.momentum * 4)
+        self.assertEqual(res.heat, -42.0)
+        self.assertEqual(res.work, 42.0)
+        self.assertEqual(res.jacobian, 1.1)
+        
+    def testNonequilibriumStepPropagator(self):
+
+        protocol = Protocol([MockStep(True) for i in range(10)])
+
+        gen = NonequilibriumStepPropagator(protocol)
+
+        ## Test generate()
+        init = State(np.array([2.0]), np.array([2.0]))
+
+        res = gen.generate(init)
+
+        self.assertEqual(res.final.position, init.position * (2 ** 10))
+        self.assertEqual(res.final.momentum, init.momentum * (2 ** 10))    
+        self.assertEqual(res.work, 10 * 42)
+        self.assertEqual(res.heat, -10 * 42)
+        self.assertEqual(res.jacobian, 1.1 ** 10)
+
+
+class MockedNCMCSampler(AbstractNCMCSampler):
+
+    def _calc_pacc(self, proposal_communicator):
+        
+        return proposal_communicator.traj.final.position[0]
+
+
+@test.unit
+class TestNCMCSampler(test.Case):
+
+    def testProposeWithMomentum(self):
+
+        self.protocol = MockProtocol(True)
+        self.reverse_protocol = MockProtocol(True)
+        for s in self.reverse_protocol.steps:
+            s.set_propagation_first()
+        
+        ## Test with momentum
+        init = State(np.array([2.0]), np.array([2.0]))
+
+        sampler = MockedNCMCSampler(init, self.protocol, self.reverse_protocol)
+
+        ## Test _propose
+        # Make sure the first random number is < 0.5
+        np.random.seed(5)
+        result = sampler._propose()
+
+        self.assertEqual(result.traj.heat, - 2 * 42)
+        self.assertEqual(result.traj.work, 2 * 42)
+        self.assertEqual(result.traj.initial.position[0], init.position[0])
+        self.assertEqual(result.traj.final.position[0],  init.position[0] * 4)
+        self.assertEqual(result.traj.initial.momentum[0], init.momentum[0])
+        self.assertEqual(result.traj.final.momentum[0],  init.momentum[0] * 4)
+
+        # Make sure the first random number is > 0.5
+        np.random.seed(4)
+        result = sampler._propose()
+
+        self.assertEqual(result.traj.heat, 2 * 42)
+        self.assertEqual(result.traj.work, - 2 * 42)
+        self.assertEqual(result.traj.initial.position[0], init.position[0])
+        self.assertEqual(result.traj.final.position[0],  init.position[0] * 4)
+        self.assertEqual(result.traj.initial.momentum[0], init.momentum[0])
+        self.assertEqual(result.traj.final.momentum[0],  init.momentum[0] * 4)
+
+
+    def testProposeWithoutMomentum(self):
+
+        self.protocol = MockProtocol(False)
+        self.reverse_protocol = MockProtocol(False)
+        for s in self.reverse_protocol.steps:
+            s.set_propagation_first()
+        
+        ## Test without momentum
+        init = State(np.array([2.0]))
+
+        sampler = MockedNCMCSampler(init, self.protocol, self.reverse_protocol)
+
+        ## Test _propose
+        # Make sure the first random number is < 0.5
+        np.random.seed(5)
+        result = sampler._propose()
+
+        self.assertEqual(result.traj.heat, - 2 * 42)
+        self.assertEqual(result.traj.work, 2 * 42)
+        self.assertEqual(result.traj.initial.position[0], init.position[0])
+        self.assertEqual(result.traj.final.position[0],  init.position[0] * 4)
+        self.assertEqual(result.traj.initial.momentum, None)
+        self.assertEqual(result.traj.final.momentum, None)
+
+        # Make sure the first random number is > 0.5
+        np.random.seed(4)
+        result = sampler._propose()
+
+        self.assertEqual(result.traj.heat, 2 * 42)
+        self.assertEqual(result.traj.work, - 2 * 42)
+        self.assertEqual(result.traj.initial.position[0], init.position[0])
+        self.assertEqual(result.traj.final.position[0],  init.position[0] * 4)
+        self.assertEqual(result.traj.initial.momentum, None)
+        self.assertEqual(result.traj.final.momentum, None)
 
 
 if __name__ == '__main__':

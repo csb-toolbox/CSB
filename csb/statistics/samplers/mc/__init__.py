@@ -305,7 +305,7 @@ def augment_state(state, temperature=1.0, mass_matrix=None):
     d = len(state.position)
     mm_unity = None
     
-    if mass_matrix == None:
+    if mass_matrix is None:
         mm_unity = True
 
     if mm_unity == None:

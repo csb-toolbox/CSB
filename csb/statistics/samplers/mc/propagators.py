@@ -428,6 +428,17 @@ class HMCPropagator(AbstractMCPropagator):
 
 
 class AbstractNCMCPropagator(AbstractMCPropagator):
+    """
+    Draws a number of samples from a PDF using the L{AbstractNCMCSampler}.
+
+    @param protocol: The nonequilibrium protocol specifying a sequence of
+                     perturbation and propagation steps
+    @type protocol: L{Protocol}
+
+    @param reverse_protocol: The protocol with the order of perturbation and
+                             propagation reversed in each step.
+    @type reverse_protocol: L{Protocol}
+    """
 
     __metaclass__ = ABCMeta
     

@@ -103,13 +103,25 @@ class AbstractSingleChainMC(AbstractMC):
     def sample(self):
         """
         Draw a sample.
+        
         @rtype: L{State}
         """
         
         proposal_communicator = self._propose()
         pacc = self._calc_pacc(proposal_communicator)
-        self._accept(proposal_communicator.proposal_state, pacc)
 
+        accepted = None
+        if numpy.random.random() < pacc:
+            accepted = True
+        else:
+            accepted = False
+            
+        if accepted == True:
+            self._accept_proposal(proposal_communicator.proposal_state)
+            
+        self._update_statistics(accepted)
+        self._last_move_accepted = accepted
+            
         return self.state
 
     @abstractmethod
@@ -134,27 +146,27 @@ class AbstractSingleChainMC(AbstractMC):
         """
         pass
 
-    def _accept(self, proposal_state, pacc):
+    def _accept_proposal(self, proposal_state):
         """
-        Accept / reject proposal with given acceptance probability pacc.
+        Accept the proposal state by setting it as the current state of the sampler
+        object
 
-        @param proposal_state: proposal state
+        @param proposal_state: The proposal state
         @type proposal_state: L{State}
-
-        @param pacc: acceptance probability
-        @type pacc: float
         """
+
+        self.state = proposal_state
         
+    def _update_statistics(self, accepted):
+        """
+        Update the sampling statistics.
+
+        @param accepted: Whether or not the proposal state has been accepted
+        @type accepted: boolean
+        """
+
         self._nmoves += 1
-        
-        if numpy.random.random() < pacc:
-            self.state = proposal_state
-            self._accepted += 1
-            self._last_move_accepted = True
-            return True
-        else:
-            self._last_move_accepted = False
-            return False
+        self._accepted += int(accepted)
 
     @property
     def energy(self):
@@ -399,13 +411,22 @@ class AbstractNCMCSampler(AbstractSingleChainMC):
 
         super(AbstractNCMCSampler, self).__init__(pdf, state, temperature)
 
+    def _pick_protocol(self):
+        """
+        Picks either the protocol or the reversed protocol with equal probability.
+
+        @return: Either the protocol or the reversed protocol
+        @rtype: L{Protocol}
+        """
+        
+        if numpy.random.random() < 0.5:
+            return self.protocol
+        else:
+            return self.reverse_protocol
+
     def _propose(self):
 
-        protocol = None
-        if numpy.random.random() < 0.5:
-            protocol = self.protocol
-        else:
-            protocol = self.reverse_protocol
+        protocol = self._pick_protocol()
         
         gen = NonequilibriumStepPropagator(protocol)
 
@@ -413,18 +434,14 @@ class AbstractNCMCSampler(AbstractSingleChainMC):
 
         return NCMCProposalCommunicator(traj)
 
-    def _accept(self, proposal_state, pacc):
+    def _accept_proposal(self, proposal_state):
 
-        accepted = super(AbstractNCMCSampler, self)._accept(proposal_state, pacc)
-
-        if self.state.momentum is None:
+        if self.state.momentum is not None:
+            proposal_state.momentum *= -1.0
+        else:
             proposal_state.momentum = None
         
-        if accepted == False:
-            if self.state.momentum is not None:
-                self.state.momentum *= -1.0
-
-        return accepted
+        super(AbstractNCMCSampler, self)._accept_proposal(proposal_state)
 
     @property
     def protocol(self):

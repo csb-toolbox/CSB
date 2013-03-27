@@ -706,6 +706,16 @@ class InvertibleMatrix(object):
 
     __idiv__ = __itruediv__
 
+    def __eq__(self, other):
+
+        if self._matrix is not None and other._matrix is not None:
+
+            return self._matrix == other._matrix
+
+        if self._inverse_matrix is not None and other._inverse_matrix is not None:
+
+            return self._inverse_matrix == other._inverse_matrix
+
     def __str__(self):
         if self._matrix is not None and self._inverse_matrix is not None:
             return "csb.numeric.InvertibleMatrix object holding the following numpy matrix:\n"\
