@@ -1084,7 +1084,7 @@ class HMCStepRENSSwapParameterInfo(AbstractRENSSwapParameterInfo):
     @type hmc_iterations: int
 
     @param gradient: gradient governing the equations of motion, function of
-                     position array and time
+                     position array and switching protocol
     @type gradient: callable
     
     @param intermediate_steps: number of steps in the protocol; this is a discrete version

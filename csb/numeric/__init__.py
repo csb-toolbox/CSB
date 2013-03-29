@@ -608,7 +608,9 @@ class InvertibleMatrix(object):
             
     def _check_diagonal(self, matrix):
 
-        return (matrix.T == matrix).all()
+        i, j = numpy.nonzero(matrix)
+
+        return numpy.array_equal(i, j)
 
     def _check_unity_multiple(self, matrix):
 
