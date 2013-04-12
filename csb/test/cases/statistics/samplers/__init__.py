@@ -1,5 +1,6 @@
 import numpy as np
 import csb.test as test
+import csb
 
 from csb.statistics.pdf import Normal, AbstractDensity
 
@@ -13,7 +14,8 @@ from csb.statistics.samplers.mc.multichain import ThermostattedMDRENSSwapParamet
 from csb.statistics.samplers.mc.multichain import RESwapParameterInfo, AlternatingAdjacentSwapScheme
 from csb.statistics.samplers.mc.multichain import ReplicaExchangeMC, ThermostattedMDRENS
 from csb.statistics.samplers.mc.multichain import HMCStepRENS, HMCStepRENSSwapParameterInfo
-from csb.statistics.samplers.mc.singlechain import HMCSampler, RWMCSampler, AbstractNCMCSampler
+from csb.statistics.samplers.mc.multichain import AbstractSwapCommunicator, AbstractExchangeMC, AbstractSwapParameterInfo
+from csb.statistics.samplers.mc.singlechain import HMCSampler, RWMCSampler, AbstractNCMCSampler, AbstractSingleChainMC
 from csb.statistics.samplers.mc.propagators import RWMCPropagator, HMCPropagator, MDPropagator
 from csb.statistics.samplers.mc.propagators import AbstractNCMCPropagator, AbstractPropagator
 from csb.statistics.samplers.mc.neqsteppropagator import ReducedHamiltonian, HamiltonianSysInfo
@@ -57,7 +59,6 @@ class Multimodal2DPDF(AbstractDensity):
     def grad(self, x, t):
         return np.array([(-6.25 * np.sin(2.5 * x[0]) + 0.08 * x[0]) * self._E2(x),
                          self._E1(x) * self.k * x[1]])
-
 
 @test.functional
 class TestMCPropagators(test.Case):
@@ -157,7 +158,6 @@ class TestMCPropagators(test.Case):
         traj = gen.generate(init_state, self.nits, return_trajectory=True)
         self.checkResult(traj)
 
-
 @test.functional
 class TestMultichain(test.Case):
 
@@ -228,7 +228,7 @@ class TestMultichain(test.Case):
         
         self.assertAlmostEqual(p_occ_sampled1, p_occ, delta=4.0 * 0.035)
         self.assertAlmostEqual(p_occ_sampled2, p_occ, delta=4.0 * 0.035)
-        
+    @test.skip("Takes some time, rendered optional by a unit test.")
     def testReplicaExchangeMC(self):
         self.set1pParams()
         params = [RESwapParameterInfo(self.samplers[0], self.samplers[1])]
@@ -279,6 +279,128 @@ class TestMultichain(test.Case):
         algorithm = HMCStepRENS(self.samplers, params)
 
         self._run(algorithm)
+
+class MockSwapCommunicator(AbstractSwapCommunicator):
+    
+    pass
+
+class MockSwapParameterInfo(AbstractSwapParameterInfo):
+
+    pass
+
+class MockSampler(AbstractSingleChainMC):
+
+    def __init__(self, pdf, state, temperature=1.0):
+        
+        self._state = state
+        self._pdf = pdf
+        self._temperature = temperature
+
+    def _propose(self):
+        
+        pass
+
+    def _calc_pacc(self):
+
+        pass
+
+class MockedAbstractExchangeMC(AbstractExchangeMC):
+    
+    def _propose_swap(self, param_info):
+
+        return MockSwapCommunicator(param_info, Trajectory([State(np.array([1.0])),
+                                                           State(np.array([2.0]))]),
+                                                Trajectory([State(np.array([2.0])),
+                                                           State(np.array([1.0]))]))
+
+    def _calc_pacc_swap(self, swapcom):
+        
+        swapcom.acceptance_probability = 0.75
+
+        return swapcom
+
+@test.unit
+class TestAbstractExchangeMC(test.Case):
+
+    def setUp(self):
+
+        self.samplers = [MockSampler(None, State(np.array([3.0]))),
+                         MockSampler(None, State(np.array([5.0])))]
+
+        self.param_info = MockSwapParameterInfo(self.samplers[0], self.samplers[1])
+
+        self.algo = MockedAbstractExchangeMC(self.samplers, [self.param_info])
+
+    
+    def testAcceptSwap(self):
+
+        swapcom = MockSwapCommunicator(self.param_info,
+                                       Trajectory([State(np.array([1.0])),
+                                                   State(np.array([2.0]))]),
+                                       Trajectory([State(np.array([2.0])),
+                                                   State(np.array([1.0]))]))
+
+        np.random.seed(5)
+
+        swapcom.acceptance_probability = 0.75
+        res = self.algo._accept_swap(swapcom)
+        assert(res)
+
+        swapcom.acceptance_probability = 0.15
+        res = self.algo._accept_swap(swapcom)
+        assert(not res)
+
+    def testSwap(self):
+
+        np.random.seed(5)
+
+        res = self.algo.swap(0)
+
+        assert(res)
+        self.assertEqual(self.samplers[0].state.position[0], 1.0)
+        self.assertEqual(self.samplers[1].state.position[0], 2.0)
+        self.assertEqual(self.algo.statistics.stats[0].total_swaps, 1)
+        self.assertEqual(self.algo.statistics.stats[0].accepted_swaps, 1)
+
+        np.random.seed(4)
+
+        res = self.algo.swap(0)
+
+        assert(not res)
+        self.assertEqual(self.samplers[0].state.position[0], 1.0)
+        self.assertEqual(self.samplers[1].state.position[0], 2.0)
+        self.assertEqual(self.algo.statistics.stats[0].total_swaps, 2)
+        self.assertEqual(self.algo.statistics.stats[0].accepted_swaps, 1)
+
+@test.unit
+class TestReplicaExchangeMC(test.Case):
+
+    def setUp(self):
+
+        pdf1 = HO()
+        pdf2 = HO(k1=2.0, k2=2.0)
+
+        self.samplers = [MockSampler(pdf1, State(np.array([3.0]))),
+                         MockSampler(pdf2, State(np.array([5.0])))]
+
+        self.param_info = RESwapParameterInfo(self.samplers[0], self.samplers[1])
+
+        self.algo = ReplicaExchangeMC(self.samplers, [self.param_info])
+
+    def testProposeSwap(self):
+        
+        res = self.algo._propose_swap(self.param_info)
+        self.assertEqual(res.traj12.initial.position[0], 3.0)
+        self.assertEqual(res.traj12.final.position[0], 3.0)
+        self.assertEqual(res.traj21.initial.position[0], 5.0)
+        self.assertEqual(res.traj21.final.position[0], 5.0)
+
+    def testCalcPaccSwap(self):
+
+        swapcom = self.algo._propose_swap(self.param_info)
+        res = self.algo._calc_pacc_swap(swapcom)
+
+        self.assertEqual(res.acceptance_probability, csb.numeric.exp(-12.5 + 4.5 - 9.0 + 25.0))
 
 class HO(object):
 
