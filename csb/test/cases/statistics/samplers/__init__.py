@@ -228,13 +228,14 @@ class TestMultichain(test.Case):
         
         self.assertAlmostEqual(p_occ_sampled1, p_occ, delta=4.0 * 0.035)
         self.assertAlmostEqual(p_occ_sampled2, p_occ, delta=4.0 * 0.035)
+    
     @test.skip("Takes some time, rendered optional by a unit test.")
     def testReplicaExchangeMC(self):
         self.set1pParams()
         params = [RESwapParameterInfo(self.samplers[0], self.samplers[1])]
         algorithm = ReplicaExchangeMC(self.samplers, params)
         self._run(algorithm)
-
+    
     def testMDRENS(self):
 
         self.set1pParams()
@@ -242,7 +243,7 @@ class TestMultichain(test.Case):
                                           0.025, 15, self.grad)]
         algorithm = MDRENS(self.samplers, params, integrator=VelocityVerlet)
         self._run(algorithm)
-
+    
     def testThermostattedMDRens(self):
         
         self.set1pParams()
@@ -251,7 +252,7 @@ class TestMultichain(test.Case):
                                                        temperature=self.Ts[0])]
         algorithm = ThermostattedMDRENS(self.samplers, params)
         self._run(algorithm)
-
+    
     def testThermostattedMDRensMM(self):
 
         self.set2pParams()
@@ -269,7 +270,7 @@ class TestMultichain(test.Case):
         algorithm = ThermostattedMDRENS(self.samplers, params)
 
         self._run(algorithm)
-
+    
     def testHMCStepRENS(self):
 
         self.set1pParams()

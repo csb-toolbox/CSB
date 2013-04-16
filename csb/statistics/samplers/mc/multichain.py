@@ -452,6 +452,36 @@ class AbstractRENS(AbstractExchangeMC):
 
         return RENSSwapCommunicator(param_info, traj12, traj21)
 
+    def _setup_protocol(self, traj_info):
+        """
+        Sets the protocol lambda(t) to either the forward or the reverse protocol.
+
+        @param traj_info: TrajectoryInfo object holding information neccessary to
+                          calculate the rens trajectories.
+        @type traj_info: L{RENSTrajInfo}
+        """
+
+        if traj_info.direction == "fw":
+            return traj_info.param_info.protocol
+        else:
+            return lambda t, tau: traj_info.param_info.protocol(tau - t, tau)
+        
+        return protocol
+
+    def _get_init_temperature(self, traj_info):
+        """
+        Determine the initial temperature of a RENS trajectory.
+
+        @param traj_info: TrajectoryInfo object holding information neccessary to
+                          calculate the RENS trajectory.
+        @type traj_info: L{RENSTrajInfo}
+        """
+        
+        if traj_info.direction == "fw":
+            return traj_info.param_info.sampler1.temperature
+        else:
+            return traj_info.param_info.sampler2.temperature
+
     @abstractmethod
     def _calc_works(self, swapcom):
         """
@@ -476,7 +506,18 @@ class AbstractRENS(AbstractExchangeMC):
 
         return swapcom
 
-    @abstractmethod
+    def _propagator_factory(self, traj_info):
+        """
+        Factory method which produces the propagator object used to calculate
+        the RENS trajectories.
+
+        @param traj_info: TrajectoryInfo object holding information neccessary to
+                          calculate the rens trajectories.
+        @type traj_info: L{RENSTrajInfo}
+        @rtype: L{AbstractPropagator}
+        """
+        pass
+
     def _run_traj_generator(self, traj_info):
         """
         Run the trajectory generator which generates a trajectory
@@ -488,7 +529,20 @@ class AbstractRENS(AbstractExchangeMC):
         
         @rtype: L{Trajectory}
         """
-        pass
+        
+        init_temperature = self._get_init_temperature(traj_info)
+        
+        init_state = traj_info.init_state.clone()
+        if init_state.momentum is None:
+            init_state = augment_state(init_state,
+                                       init_temperature,
+                                       traj_info.param_info.mass_matrix)
+            
+        gen = self._propagator_factory(traj_info)
+
+        traj = gen.generate(init_state, int(traj_info.param_info.traj_length))
+        
+        return traj
 
 
 class AbstractRENSSwapParameterInfo(RESwapParameterInfo):
@@ -593,37 +647,17 @@ class MDRENS(AbstractRENS):
         
         self._integrator = integrator
 
-    def _run_traj_generator(self, traj_info):
-
-        timestep = traj_info.param_info.timestep
-        traj_length = traj_info.param_info.traj_length
-
-        protocol = None
-
-        if traj_info.direction == "fw":
-            init_temperature = traj_info.param_info.sampler1.temperature
-            protocol = traj_info.param_info.protocol
-        else:
-            init_temperature = traj_info.param_info.sampler2.temperature
-            protocol = lambda t, tau: traj_info.param_info.protocol(tau - t, tau)
-
-        init_state = traj_info.init_state.clone()
-        if init_state.momentum is None:
-            init_state = augment_state(init_state,
-                                       init_temperature,
-                                       traj_info.param_info.mass_matrix)
-
-        tau = traj_length * timestep
+    def _propagator_factory(self, traj_info):
+        
+        protocol = self._setup_protocol(traj_info)
+        tau = traj_info.param_info.traj_length * traj_info.param_info.timestep
         factory = InterpolationFactory(protocol, tau)
-        
         gen = MDPropagator(factory.build_gradient(traj_info.param_info.gradient),
-                           timestep,
-						   mass_matrix=traj_info.param_info.mass_matrix,
-						   integrator=self._integrator)
+                           traj_info.param_info.timestep,
+                           mass_matrix=traj_info.param_info.mass_matrix,
+                           integrator=self._integrator)
 
-        traj = gen.generate(init_state, int(traj_length))
-        
-        return traj
+        return gen
 
     def _calc_works(self, swapcom):
 
@@ -778,41 +812,23 @@ class ThermostattedMDRENS(MDRENS):
         
         super(ThermostattedMDRENS, self).__init__(samplers, param_infos, integrator)
 
-    def _run_traj_generator(self, traj_info):
+    def _propagator_factory(self, traj_info):
 
-        protocol = None
-
-        if traj_info.direction == "fw":
-            init_temperature = traj_info.param_info.sampler1.temperature
-            protocol = traj_info.param_info.protocol
-        else:
-            init_temperature = traj_info.param_info.sampler2.temperature
-            protocol = lambda t, tau: traj_info.param_info.protocol(tau - t, tau)
-
+        protocol = self._setup_protocol(traj_info)
         tau = traj_info.param_info.traj_length * traj_info.param_info.timestep
         factory = InterpolationFactory(protocol, tau)
         
         grad = factory.build_gradient(traj_info.param_info.gradient)
         temp = factory.build_temperature(traj_info.param_info.temperature)
 
-        init_state = traj_info.init_state
-        if init_state.momentum is None:
-            init_state = augment_state(init_state,
-                                       init_temperature,
-                                       traj_info.param_info.mass_matrix)
-                
         gen = ThermostattedMDPropagator(grad,
                                         traj_info.param_info.timestep, temperature=temp, 
-										collision_probability=traj_info.param_info.collision_probability,
+                                        collision_probability=traj_info.param_info.collision_probability,
                                         update_interval=traj_info.param_info.collision_interval,
-										mass_matrix=traj_info.param_info.mass_matrix,
+                                        mass_matrix=traj_info.param_info.mass_matrix,
                                         integrator=self._integrator)
 
-        
-        traj = gen.generate(init_state, traj_info.param_info.traj_length)
-
-        return traj
-
+        return gen
 
 class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
     """
@@ -860,8 +876,8 @@ class ThermostattedMDRENSSwapParameterInfo(MDRENSSwapParameterInfo):
                  collision_probability=0.1, collision_interval=1):
         
         super(ThermostattedMDRENSSwapParameterInfo, self).__init__(sampler1, sampler2, timestep,
-																   traj_length, gradient,
-																   mass_matrix=mass_matrix,
+                                                                   traj_length, gradient,
+                                                                   mass_matrix=mass_matrix,
                                                                    protocol=protocol)
         
         self._collision_probability = None
@@ -961,21 +977,25 @@ class AbstractStepRENS(AbstractRENS):
         """
         
         pass
-    
-    def _run_traj_generator(self, traj_info):
 
-        t_prot = None
-        if traj_info.direction == "fw":
-            t_prot = lambda i: traj_info.param_info.protocol(float(i), float(traj_length))
-        else:
-            t_prot = lambda i: traj_info.param_info.protocol(float(traj_length) - float(i), 
-                                                             float(traj_length))
+    def _setup_stepwise_protocol(self, traj_info):
+        """
+        Sets up the stepwise protocol consisting of perturbation and relaxation steps.
+
+        @param traj_info: TrajectoryInfo instance holding information
+                          needed to generate a nonequilibrium trajectory   
+        @type traj_info: L{RENSTrajInfo}
+        
+        @rtype: L{Protocol}
+        """
 
         pdf1 = traj_info.param_info.sampler1._pdf
         pdf2 = traj_info.param_info.sampler2._pdf
         T1 = traj_info.param_info.sampler1.temperature
         T2 = traj_info.param_info.sampler2.temperature
         traj_length = traj_info.param_info.intermediate_steps
+        prot = self._setup_protocol(traj_info)
+        t_prot = lambda i: prot(float(i), float(traj_length))
 
         im_log_probs = [lambda x, i=i: pdf2.log_prob(x) * t_prot(i) + \
                                        (1 - t_prot(i)) * pdf1.log_prob(x)
@@ -997,13 +1017,30 @@ class AbstractStepRENS(AbstractRENS):
         
         steps = [Step(perturbations[i], propagations[i]) for i in range(traj_length)]
 
-        gen = NonequilibriumStepPropagator(Protocol(steps))
+        return Protocol(steps)
+
+    def _propagator_factory(self, traj_info):
+
+        protocol = self._setup_stepwise_protocol(traj_info)
+        gen = NonequilibriumStepPropagator(protocol)
+        
+        return gen
+
+    def _run_traj_generator(self, traj_info):
+        
+        init_temperature = self._get_init_temperature(traj_info)
         
         init_state = traj_info.init_state.clone()
-        
+        if init_state.momentum is None:
+            init_state = augment_state(init_state,
+                                       init_temperature,
+                                       traj_info.param_info.mass_matrix)
+            
+        gen = self._propagator_factory(traj_info)
+
         traj = gen.generate(init_state)
 
-        return NonequilibriumTrajectory([init_state, traj.final], jacobian=1.0,
+        return NonequilibriumTrajectory([traj_info.init_state, traj.final], jacobian=1.0,
                                         heat=traj.heat, work=traj.work, deltaH=traj.deltaH)       
 
 
