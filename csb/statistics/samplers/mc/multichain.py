@@ -533,6 +533,7 @@ class AbstractRENS(AbstractExchangeMC):
         init_temperature = self._get_init_temperature(traj_info)
         
         init_state = traj_info.init_state.clone()
+
         if init_state.momentum is None:
             init_state = augment_state(init_state,
                                        init_temperature,
@@ -1030,15 +1031,9 @@ class AbstractStepRENS(AbstractRENS):
         
         init_temperature = self._get_init_temperature(traj_info)
         
-        init_state = traj_info.init_state.clone()
-        if init_state.momentum is None:
-            init_state = augment_state(init_state,
-                                       init_temperature,
-                                       traj_info.param_info.mass_matrix)
-            
         gen = self._propagator_factory(traj_info)
 
-        traj = gen.generate(init_state)
+        traj = gen.generate(traj_info.init_state)
 
         return NonequilibriumTrajectory([traj_info.init_state, traj.final], jacobian=1.0,
                                         heat=traj.heat, work=traj.work, deltaH=traj.deltaH)       
@@ -1073,7 +1068,7 @@ class HMCStepRENS(AbstractStepRENS):
 
     def _add_gradients(self, im_sys_infos, param_info, t_prot):
 
-        im_gradients = [lambda x, t: param_info.gradient(x, t_prot(i))
+        im_gradients = [lambda x, t, i=i: param_info.gradient(x, t_prot(i))
                         for i in range(param_info.intermediate_steps + 1)]
 
         for i, s in enumerate(im_sys_infos):
@@ -1089,7 +1084,7 @@ class HMCStepRENS(AbstractStepRENS):
                                                   param_info.hmc_iterations,
                                                   mass_matrix=param_info.mass_matrix,
                                                   integrator=param_info.integrator)
-                              for i in range(param_info.intermediate_steps + 1)]
+                              for i in range(param_info.intermediate_steps)]
 
         propagations = [HMCPropagation(im_sys_infos[i], propagation_params[i], evaluate_heat=False)
                         for i in range(param_info.intermediate_steps)]
