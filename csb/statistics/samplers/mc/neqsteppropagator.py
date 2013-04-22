@@ -634,8 +634,9 @@ class AbstractMCPropagation(AbstractPropagation):
     def _run_propagator(self, state):
             
         gen = self._propagator_factory()
-        
+
         return gen.generate(state, self.param.iterations)
+
     
 class HMCPropagation(AbstractMCPropagation):
     """
@@ -1045,6 +1046,7 @@ class NonequilibriumStepPropagator(AbstractPropagator):
             total_jacobian *= shorttraj.jacobian
 
             estate = shorttraj.final
+            
             if i != len(self.protocol.steps) - 1:
                 builder.add_intermediate_state(estate)
             else:
