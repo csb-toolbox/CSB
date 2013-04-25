@@ -1001,6 +1001,7 @@ class AbstractStepRENS(AbstractRENS):
         im_log_probs = [lambda x, i=i: pdf2.log_prob(x) * t_prot(i) + \
                                        (1 - t_prot(i)) * pdf1.log_prob(x)
                         for i in range(traj_length + 1)]
+        
         im_temperatures = [T2 * t_prot(i) + (1 - t_prot(i)) * T1 
                            for i in range(traj_length + 1)]
         im_reduced_hamiltonians = [ReducedHamiltonian(im_log_probs[i],
@@ -1080,13 +1081,13 @@ class HMCStepRENS(AbstractStepRENS):
                         
         propagation_params = [HMCPropagationParam(param_info.timestep,
                                                   param_info.hmc_traj_length,
-                                                  im_sys_infos[i].hamiltonian.gradient,
+                                                  im_sys_infos[i+1].hamiltonian.gradient,
                                                   param_info.hmc_iterations,
                                                   mass_matrix=param_info.mass_matrix,
                                                   integrator=param_info.integrator)
                               for i in range(param_info.intermediate_steps)]
 
-        propagations = [HMCPropagation(im_sys_infos[i], propagation_params[i], evaluate_heat=False)
+        propagations = [HMCPropagation(im_sys_infos[i+1], propagation_params[i], evaluate_heat=False)
                         for i in range(param_info.intermediate_steps)]
 
         return propagations        
