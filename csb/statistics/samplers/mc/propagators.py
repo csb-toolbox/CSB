@@ -242,7 +242,7 @@ class ThermostattedMDPropagator(MDPropagator):
 
         integrator = self._integrator(self.timestep, self.gradient)
         builder = TrajectoryBuilder.create(full=return_trajectory)
-
+        
         builder.add_initial_state(init_state)
 
         heat = 0.
