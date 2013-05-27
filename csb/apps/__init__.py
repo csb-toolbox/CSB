@@ -88,6 +88,8 @@ class AppExit(Exception):
         self.message = message
         self.code = code
         self.usage = usage
+        
+        super(AppExit, self).__init__(message, code, usage)
 
 class Application(object):
     """
@@ -97,9 +99,6 @@ class Application(object):
     @type args: argparse.Namespace
     """
     __metaclass__ = ABCMeta
-    
-    USAGE = ''
-    HELP = ''
     
     def __init__(self, args, log=sys.stdout):
         
