@@ -138,7 +138,7 @@ class LibrarySuperimposer(object):
         self._library = library
         self._output = os.path.abspath(output)
         self._tab = os.path.join(self._output, native.entry_id + '.fragments.tab')
-        self._figure = os.path.join(self._output, native.entry_id + '.precision.png')
+        self._figure = os.path.join(self._output, native.entry_id + '.precision.pdf')
         self._out = open(self._tab, 'w')
         self._save = bool(save)
         self._cutoff = float(cutoff)
@@ -229,8 +229,8 @@ class LibrarySuperimposer(object):
         
         with csb.io.plots.Chart() as chart:
                         
-            chart.plot.bar(residues, background, color='#FFB0B0', linewidth=None, edgecolor='#FFB0B0')
-            chart.plot.bar(residues, precision2, color='#50A6DA', linewidth=None, edgecolor='#50A6DA')            
+            chart.plot.bar(residues, background, color='#f5f5f5', linewidth=None, edgecolor='#f5f5f5')
+            chart.plot.bar(residues, precision2, color='#5ba9da', linewidth=None, edgecolor='#5ba9da')            
 
             chart.plot.set_title(self._native.entry_id)
             chart.plot.set_xlabel('Residue')
@@ -238,15 +238,28 @@ class LibrarySuperimposer(object):
             chart.plot.set_ylabel('Precision, %')
             chart.plot.set_ylim(0, 100)
 
-            xaxis = chart.plot.axes.xaxis            
-            xaxis.set_minor_locator(matplotlib.ticker.IndexLocator(1, 0))
-            xaxis.set_major_locator(matplotlib.ticker.IndexLocator(5, 0))   
-            
+            xaxis = chart.plot.axes.xaxis
+            yaxis = chart.plot.axes.yaxis            
+            #xaxis.set_minor_locator(matplotlib.ticker.IndexLocator(1, 0))
+            xaxis.set_major_locator(matplotlib.ticker.IndexLocator(10, 0))   
+            xaxis.tick_bottom()
+            yaxis.tick_left()
+            for t in xaxis.get_major_ticks(): 
+                t.tick1On = False 
+                t.tick2On = False
+            for t in xaxis.get_ticklabels():
+                t.set_fontsize(16)
+            for t in yaxis.get_ticklabels():
+                t.set_fontsize(16)
+                                    
+            chart.plot.spines["right"].set_visible(False)
+            chart.plot.spines["top"].set_visible(False)                             
+                        
             try:
                 chart.width = 15
                 chart.height = 5.5
                 
-                chart.save(self._figure)
+                chart.save(self._figure, chart.formats.PDF)
                 
             except IOError as io:
                 raise ArgumentIOError("Can't save figure: " + str(io))
