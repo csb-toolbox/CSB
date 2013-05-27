@@ -44,6 +44,10 @@ from csb.bio.sequence import SequenceAlignment, StructureAlignment, A3MAlignment
 from csb.bio.sequence import SequenceCollection, AbstractSequence, Sequence, RichSequence, ChainSequence
 
 
+class SequenceFormatError(ValueError):
+    pass
+
+
 class BaseSequenceParser(object):
     """
     FASTA parser template. Subclasses must implement the way FASTA strings are
@@ -92,6 +96,8 @@ class BaseSequenceParser(object):
         
         @return: a new sequence, created with L{BaseSequenceParser.product_factory}
         @rtype: L{AbstractSequence}
+        
+        @raise SequenceFormatError: on parse error
         """
         pass
 
@@ -104,6 +110,8 @@ class BaseSequenceParser(object):
 
         @return: a list of L{Sequence}s
         @rtype: L{SequenceCollection}
+        
+        @raise SequenceFormatError: on parse error        
         """
 
         stream = csb.io.MemoryStream()
@@ -120,6 +128,8 @@ class BaseSequenceParser(object):
 
         @return: a list of L{Sequence}s
         @rtype: L{SequenceCollection}
+        
+        @raise SequenceFormatError: on parse error        
         """
         if isinstance(fasta_file, csb.core.string):
             stream = open(fasta_file)
@@ -143,6 +153,8 @@ class BaseSequenceParser(object):
 
         @return: efficient cursor over all L{Sequence}s (parse on demand)
         @rtype: iterator
+        
+        @raise SequenceFormatError: on parse error        
         """
         if isinstance(fasta_file, csb.core.string):
             stream = open(fasta_file)
@@ -166,7 +178,7 @@ class SequenceParser(BaseSequenceParser):
         if not lines[0].startswith(AbstractSequence.DELIMITER):
             lines = [''] + lines
         if len(lines) < 2:
-            raise ValueError('Empty FASTA entry')
+            raise SequenceFormatError('Empty FASTA entry')
 
         header = lines[0]
         id = header[1:].split()[0]
@@ -185,7 +197,7 @@ class PDBSequenceParser(SequenceParser):
         seq = super(PDBSequenceParser, self).read_sequence(string)
 
         if not (seq.header and seq.id) or not (len(seq.id) in(5, 6) and seq.header.find('mol:') != -1):
-            raise ValueError('Does not look like a PDB header: {0}'.format(seq.header))
+            raise SequenceFormatError('Does not look like a PDB header: {0}'.format(seq.header))
 
         seq.id = seq.id.replace('_', '')
         stype = seq.header.partition('mol:')[2].partition(' ')[0]
