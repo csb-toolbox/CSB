@@ -266,10 +266,9 @@ class HHsearch(object):
             for c in pool.map(_task, taskargs):
                 results.append(c)
         except KeyboardInterrupt:
+            pass
+        finally:
             pool.terminate()
-        except:
-            pool.terminate()
-            raise
         
         return results
     

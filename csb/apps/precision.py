@@ -184,6 +184,7 @@ class LibrarySuperimposer(object):
                     self._out.write(line)
                     matches.append(match)
         
+        pool.terminate()
         return matches
                     
     def plot(self, matches):
