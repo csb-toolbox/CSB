@@ -48,7 +48,7 @@ class SampleTarget(object):
                 
             rmsd = chain.subregion(start, end).rmsd(source.subregion(start, end))
             
-            a = Assignment(source, start, end, id, start, end, probability=1.0, rmsd=rmsd)
+            a = Assignment(source, start, end, start, end, id=id, probability=1.0, rmsd=rmsd)
             a.secondary_structure = ss[start - 1: end]
             target.assign(a)
         
@@ -225,7 +225,7 @@ class TestTorsionAnglesPredictor(test.Case):
         # add more fragments at location 2..9; this will also alter the confidence
         for i in range(20):
             # these fragments come from 12..19 
-            target.assign(Assignment(source, 2 + 10, 9 + 10, 't', 2, 9, 1, 1))
+            target.assign(Assignment(source, 2 + 10, 9 + 10, 2, 9, 't', 1, 1))
         
         predictor = TorsionAnglesPredictor(target) 
         pred = predictor.flat_torsion_map()

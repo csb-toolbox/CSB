@@ -14,7 +14,7 @@ import csb.bio.fragments
 import csb.bio.fragments.rosetta as rosetta
 import csb.bio.structure
 
-import csb.io
+import csb.io.tsv
 import csb.core
 
 
@@ -44,14 +44,18 @@ class AppRunner(csb.apps.AppRunner):
         cmd.add_scalar_option('max', 'M', int, 'maximum query segment length', default=21)
         cmd.add_scalar_option('step', 's', int, 'query segmentation step', default=3)
         cmd.add_scalar_option('cpu', 'c', int, 'maximum degree of parallelism', default=cpu)
+        
+        cmd.add_scalar_option('gap-filling', 'g', str, 'path to a fragment file (e.g. CSfrag or Rosetta NNmake), which will be used '
+                              'to complement low-confidence regions (when specified, a hybrid fragment library be produced)')
+        cmd.add_scalar_option('filtered-filling', 'F', str, 'path to a filtered fragment file (e.g. filtered CSfrag-ments), which will '
+                              'be mixed with the  HHfrag-set and then filtered, resulting in a double-filtered library')
+        cmd.add_boolean_option('filtered-map', 'f', 'make an additional filtered fragment map of centroids and predict torsion angles', default=False)        
+        cmd.add_boolean_option('c-alpha', None, 'include also C-alpha vectors in the output', default=False)
+        cmd.add_scalar_option('confidence-threshold', 't', float, 'confidence threshold for gap filling', default=0.7)
 
         cmd.add_scalar_option('verbosity', 'v', int, 'verbosity level', default=2)        
-        cmd.add_scalar_option('output', 'o', str, 'output directory', default='.')        
-        cmd.add_scalar_option('gap-filling', 'g', str, 'path to a Rosetta 9-mer fragment file, that will be used '
-                              'to complement gaps in the fragment map (if specified, a joint fragment file will be produced)')
-        cmd.add_boolean_option('filtered-map', 'f', 'make an additional filtered fragment map', default=False)
-        cmd.add_boolean_option('c-alpha', None, 'include also C-alpha vectors in the output', default=False)
-                
+        cmd.add_scalar_option('output', 'o', str, 'output directory', default='.')
+                        
         cmd.add_positional_argument('QUERY', str, 'query profile HMM (e.g. created with csb.apps.buildhmm)')
                         
         return cmd
@@ -82,20 +86,29 @@ class HHfragApp(csb.apps.Application):
             fragmap.dump(output + '.hhfrags.09', builder)
             
             if self.args.filtered_map:
-                fragmap = hhf.build_filtered_map()
+                fragmap, events = hhf.build_filtered_map()
                 fragmap.dump(output + '.filtered.09', builder)
-                
+                tsv = PredictionBuilder.create(events).product
+                tsv.dump(output + '.centroids.tsv')
+
+            if self.args.filtered_filling:
+                fragmap, events = hhf.build_hybrid_filtered_map(self.args.filtered_filling)
+                fragmap.dump(output + '.hybrid.filtered.09', builder)
+                tsv = PredictionBuilder.create(events).product
+                tsv.dump(output + '.hybrid.centroids.tsv')
+                                                
             if self.args.gap_filling:
-                fragmap = hhf.build_combined_map(self.args.gap_filling)
+                fragmap = hhf.build_combined_map(self.args.gap_filling, self.args.confidence_threshold)
                 fragmap.dump(output + '.complemented.09', builder)
                 
+                                
             self.log('\nDONE.')
 
         except ArgumentIOError as ae:
             HHfragApp.exit(str(ae), code=ExitCodes.IO_ERROR)
                     
         except ArgumentError as ae:
-            HHfragApp.exit(str(ae), code=ExitCodes.INVALID_DATA, usage=True)
+            HHfragApp.exit(str(ae), code=ExitCodes.INVALID_DATA)
 
         except csb.io.InvalidCommandError as ose:
             msg = '{0!s}: {0.program}'.format(ose)
@@ -107,7 +120,9 @@ class HHfragApp(csb.apps.Application):
                               
         except csb.io.ProcessError as pe:
             message = 'Bad exit code from HHsearch: #{0.code}.\nSTDERR: {0.stderr}\nSTDOUT: {0.stdout}'.format(pe.context)
-            HHfragApp.exit(message, ExitCodes.HHSEARCH_FAILURE)            
+            HHfragApp.exit(message, ExitCodes.HHSEARCH_FAILURE)
+            
+              
         
     def log(self, message, ending='\n', level=1):
         
@@ -125,6 +140,18 @@ class InvalidOperationError(ValueError):
 
 
 class HHfrag(object):
+    """
+    The HHfrag dynamic fragment detection protocol.
+    
+    @param query: query HMM path and file name
+    @type query: str
+    @param binary: the HHsearch binary
+    @type binary: str
+    @param database: path to the PDBS25 directory
+    @type database: str
+    @param logger: logging client (needs to have a C{log} method)
+    @type logger: L{Application}
+    """
     
     PDBS = 'pdbs25.hhm'
     
@@ -140,11 +167,13 @@ class HHfrag(object):
         self._app = logger
         self._database = None
         self._pdbs25 = None
-        self._output = None
         self._aligner = None
         
         self.database = database
         self.aligner = hhsearch.HHsearch(binary, self.pdbs25, cpu=2)
+        
+        if self.query.layers.length < 1:
+            raise ArgumentError("Zero-length sequence profile")
 
     @property
     def query(self):
@@ -182,6 +211,20 @@ class HHfrag(object):
             self._app.log(*a, **ka)
         
     def slice_query(self, min=6, max=21, step=3, cpu=None):
+        """
+        Run the query slicer and collect the optimal query segments.
+        
+        @param min: min segment length
+        @type min: int
+        @param max: max segment length
+        @type max: int
+        @param step: slicing step
+        @type step: int
+        @param cpu: degree of parallelism
+        @type cpu: int
+                
+        @rtype: tuple of L{SliceContext}
+        """
 
         if not 0 < min <= max:
             raise ArgumentError('min and max must be positive numbers, with max >= min')
@@ -221,12 +264,17 @@ class HHfrag(object):
         return tuple(hsqs)
     
     def extract_fragments(self):
-
-        self.log('\n# Extracting fragments...')
+        """
+        Extract all matching fragment instances, given the list of optimal 
+        query slices, generated during the first stage.
+        
+        @rtype: tuple of L{Assignment}s
+        """
                         
         if self._hsqs is None:
-            raise InvalidOperationError('The query has to be sliced first')
-        
+            self.slice_query()
+
+        self.log('\n# Extracting fragments...')        
         fragments = []
         
         for si in self._hsqs:
@@ -249,8 +297,7 @@ class HHfrag(object):
                     
                     source.compute_torsion()
                     try:
-                        fragment = csb.bio.fragments.Assignment(source, 
-                                                                chunk.start, chunk.end, hit.id, 
+                        fragment = csb.bio.fragments.Assignment(source, chunk.start, chunk.end,  
                                                                 chunk.qstart, chunk.qend, chunk.probability, 
                                                                 rmsd=None, tm_score=None)
                         fragments.append(fragment)
@@ -282,46 +329,90 @@ class HHfrag(object):
             self.log(bar, level=2)
     
     def build_fragment_map(self):
+        """
+        Build a full Rosetta fragset.
+        @rtype: L{RosettaFragmentMap}
+        """
 
-        self.log('\n# Building dynamic fragment map...')
-                
         if self._matches is None:
-            raise InvalidOperationError('You need to extract some fragments first')
-        
+            self.extract_fragments()        
+
+        self.log('\n# Building dynamic fragment map...')        
         self._plot_lengths()
         
         target = csb.bio.fragments.Target.from_profile(self.query)
         target.assignall(self._matches)
-             
+            
         factory = csb.bio.fragments.RosettaFragsetFactory()
         return factory.make_fragset(target)
 
-    def _filter_event_handler(self, ri):
-        if ri.rep is None:
-            self.log('{0.rank:3}.     {0.confidence:5.3f}    {0.count:3}        -    -   -'.format(ri, ri.rep), level=2)            
+    def _filter_event_handler(self, ri):    
+               
+        if ri.gap is True or ri.confident is False:
+            self.log('{0.rank:3}.     {0.confidence:5.3f}         {0.count:3}'.format(ri), level=2)            
+        
         else:
-            self.log('{0.rank:3}.     {0.confidence:5.3f}    {0.count:3}    {1.id:5}  {1.start:3} {1.end:3}'.format(ri, ri.rep), level=2)
+            phi = PredictionBuilder.format_angle(ri.torsion.phi)
+            psi = PredictionBuilder.format_angle(ri.torsion.psi)
+            omega = PredictionBuilder.format_angle(ri.torsion.omega)
+        
+            pred = "{0.source_id:5}  {0.start:3} {0.end:3}    {1} {2} {3}".format(ri.rep, phi, psi, omega)
+            self.log('{0.rank:3}.     {0.confidence:5.3f}         {0.count:3}    {1}'.format(ri, pred), level=2)
             
     def build_filtered_map(self):
-
+        """
+        Build a filtered fragset of centroids.
+        @return: filtered fragset and a list of residue-wise predictions
+                 (centroid and torsion angles) 
+        @rtype: L{RosettaFragmentMap}, list of L{ResidueEventInfo}
+        """
+        
+        if self._matches is None:
+            self.extract_fragments()  
+            
         self.log('\n# Building filtered map...')
-        self.log('\n    Confidence  Count    Representative', level=2)
+        self.log('\n    Confidence  Recurrence    Representative       Phi    Psi  Omega', level=2)
+        
+        events = []
+        def logger(ri):
+            events.append(ri)
+            self._filter_event_handler(ri)
                 
         target = csb.bio.fragments.Target.from_profile(self.query)
         target.assignall(self._matches)
 
         factory = csb.bio.fragments.RosettaFragsetFactory()
-        return factory.make_filtered(target, extend=True,
-                                     callback=self._filter_event_handler)
+        fragset = factory.make_filtered(target, extend=True, callback=logger)
+        
+        return fragset, events
 
-    def _merge_event_handler(self, rei):
-        if rei.confidence is None:
-            self.log('{0.rank:3}.         -    {0.count:3}'.format(rei), level=2)
-        else:
-            self.log('{0.rank:3}.     {0.confidence:5.3f}    {0.count:3}'.format(rei), level=2)        
+    def _merge_event_handler(self, ri):
+        
+        marked = ""
+        
+        if ri.gap is True or ri.confident is False:
+            marked = "*"
+    
+        self.log('{0.rank:3}.     {0.confidence:5.3f}         {0.count:3}     {1:>3}'.format(ri, marked), level=2)        
                     
-    def build_combined_map(self, fragfile, top=25):
-
+    def build_combined_map(self, fragfile, threshold=0.7, top=25):
+        """
+        Build a hybrid map, where low-confidence regions are complemented
+        with the specified filling.
+        
+        @param threshold: confidence threshold
+        @type threshold: float
+        @param fragfile: filling fragset (Rosetta fragment file)
+        @type fragfile: str
+        
+        @return: filtered fragset and a list of residue-wise predictions
+                 (centroid and torsion angles) 
+        @rtype: L{RosettaFragmentMap}, list of L{ResidueEventInfo}
+        """
+        
+        if self._matches is None:
+            self.extract_fragments()  
+            
         self.log('\n# Building complemented map...')
         
         try:
@@ -329,17 +420,69 @@ class HHfrag(object):
         except IOError as io:
             raise ArgumentIOError(str(io))
 
-        self.log('\n  {0} rosetta fragments loaded'.format(filling.size))
-        self.log('    Confidence  Count', level=2)               
+        self.log('\n  {0} supplementary fragments loaded'.format(filling.size))
+        self.log('    Confidence  Recurrence   Fill?', level=2)               
    
         target = csb.bio.fragments.Target.from_profile(self.query)
         target.assignall(self._matches)
         
         factory = csb.bio.fragments.RosettaFragsetFactory()        
-        return factory.make_combined(target, filling, threshold=0.5,
+        return factory.make_combined(target, filling, threshold=threshold,
                                      callback=self._merge_event_handler)                
 
 
+    def build_hybrid_filtered_map(self, fragfile):
+        """
+        Mix the fragset with the specified (filtered)filling and then filter 
+        the mixture. If the filling is a filtered CSfrag library, this will 
+        produce a double-filtered map.
+        
+        @param fragfile: filtered filling (filtered CSfrag fragment file)
+        @type fragfile: str        
+        
+        @rtype: L{RosettaFragmentMap}
+        """
+        
+        if self._matches is None:
+            self.extract_fragments()  
+            
+        self.log('\n# Building hybrid filtered map...')
+        
+        filling = []
+        events = []
+
+        def logger(ri):
+            events.append(ri)
+            self._filter_event_handler(ri)
+        
+        try:
+            db = csb.bio.io.wwpdb.FileSystemStructureProvider(self.database)
+                        
+            for f in rosetta.RosettaFragmentMap.read(fragfile):
+                filling.append(csb.bio.fragments.Assignment.from_fragment(f, db))
+                
+        except IOError as io:
+            raise ArgumentIOError(str(io))
+        except csb.bio.io.wwpdb.StructureNotFoundError, sne:
+            msg = "{0} is not a PDBS25-derived fragset (template {1} not found)"
+            raise ArgumentIOError(msg.format(fragfile, str(sne)))
+
+        self.log('\n  {0} supplementary fragments loaded'.format(len(filling)))
+        self.log('\n    Confidence  Recurrence    Representative       Phi    Psi  Omega', level=2)
+        
+        if len(filling) > self.query.layers.length:
+            msg = "{0} does not look like a filtered fragset (too many centroids)"
+            raise ArgumentError(msg.format(fragfile))
+                
+        target = csb.bio.fragments.Target.from_profile(self.query)
+        target.assignall(self._matches)
+        target.assignall(filling)
+
+        factory = csb.bio.fragments.RosettaFragsetFactory()
+        fragset = factory.make_filtered(target, extend=False, callback=logger)
+        
+        return fragset, events
+        
 class SliceContext(hhsearch.Context):
     
     def __init__(self, segment, start, end):
@@ -372,8 +515,82 @@ class SliceContext(hhsearch.Context):
             return self.recurrence < other.recurrence
 
 
-
-
+class PredictionBuilder(object):
+    
+    NULL = '{0:>6}'.format("-")
+    HEADER = "rank:int residue:str confidence:float centroid:str phi:float psi:float omega:float" 
+    
+    @staticmethod
+    def format_angle(angle):
+        """
+        @param angle: torsion angle value
+        @type angle: float
+        """
+        
+        if angle is None:
+            return '{0:>6}'.format("-")
+        else:
+            return '{0:6.1f}'.format(angle)  
+        
+    @staticmethod
+    def create(ri):
+        """
+        @param ri: all predictions
+        @type ri: list of L{ResidueEventInfo}
+        """
+        builder = PredictionBuilder()
+        builder.addall(ri)
+        return builder
+    
+    def __init__(self):
+        self._tsv = csb.io.tsv.Table(PredictionBuilder.HEADER)
+        
+    @property
+    def product(self):
+        """
+        @rtype: L{Table}
+        """
+        return self._tsv
+    
+    def isnull(self, v):
+        if v is None:
+            return "-"
+        else:
+            return v
+        
+    def add(self, ri):
+        """
+        @param ri: single residue prediction
+        @type ri: L{ResidueEventInfo}
+        """
+        
+        row = [ri.rank, repr(ri.type), ri.confidence]
+        
+        if ri.rep:
+            row.append(ri.rep.id)
+            row.append(self.isnull(ri.torsion.phi))
+            row.append(self.isnull(ri.torsion.psi))
+            row.append(self.isnull(ri.torsion.omega))
+        
+        else:
+            row.extend([PredictionBuilder.NULL] * 4)
+        
+        self.product.insert(row)
+        
+    def addall(self, ri):
+        """
+        @param ri: all predictions
+        @type ri: list of L{ResidueEventInfo}
+        """
+                
+        ri = list(ri)
+        ri.sort(key=lambda i: i.rank)
+        
+        for i in ri:
+            self.add(i)
+            
+    
+    
 if __name__ == '__main__':
     
     AppRunner().run()

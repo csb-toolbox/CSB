@@ -156,7 +156,7 @@ class RosettaFragment(object):
         for rank, aa, torsion, calpha in zip(range(a.start, a.end + 1), a.sequence, a.torsion, a.backbone):
             residues.append(ResidueInfo(rank, aa, 'L', torsion, calpha))
             
-        return RosettaFragment(a.source_id, a.qstart, a.qend, a.start, a.end, 1 - a.probability, residues)
+        return RosettaFragment(a.source_id, a.qstart, a.qend, a.start, a.end, 1 - (a.probability or 0.0), residues)
     
     @property
     def length(self):
@@ -176,7 +176,7 @@ class RosettaFragment(object):
     
     @property
     def id(self):
-        return '{0.source_id}.{0.start}-{0.end}'.format(self)
+        return '{0.source_id}:{0.start}-{0.end}'.format(self)
 
     @property
     def qstart(self):
