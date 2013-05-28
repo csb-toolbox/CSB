@@ -1,0 +1,812 @@
+<!DOCTYPE connectivity SYSTEM "connectivity1.0.dtd">
+<connectivity>
+  <residue type="ALA">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="H"/>
+    <atom name="H1"/>
+    <atom name="H2"/>
+    <atom name="H3"/>
+    <atom name="HA"/>
+    <atom name="HB1"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <atom name="O'"/>
+    <atom name="O''"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="C" atom2="O'"/>
+    <bond atom1="C" atom2="O''"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="HB1"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="N" atom2="H1"/>
+    <bond atom1="N" atom2="H2"/>
+    <bond atom1="N" atom2="H3"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="HB1"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="ARG">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD"/>
+    <atom name="CG"/>
+    <atom name="CZ"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD2"/>
+    <atom name="HD3"/>
+    <atom name="HE"/>
+    <atom name="HG2"/>
+    <atom name="HG3"/>
+    <atom name="HH11"/>
+    <atom name="HH21"/>
+    <atom name="HH22"/>
+    <atom name="N"/>
+    <atom name="NE"/>
+    <atom name="NH1"/>
+    <atom name="NH2"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD" atom2="HD2"/>
+    <bond atom1="CD" atom2="HD3"/>
+    <bond atom1="CD" atom2="NE"/>
+    <bond atom1="CG" atom2="CD"/>
+    <bond atom1="CG" atom2="HG2"/>
+    <bond atom1="CG" atom2="HG3"/>
+    <bond atom1="CZ" atom2="NH1"/>
+    <bond atom1="CZ" atom2="NH2"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="NE" atom2="CZ"/>
+    <bond atom1="NE" atom2="HE"/>
+    <bond atom1="NH1" atom2="HH11"/>
+    <bond atom1="NH2" atom2="HH21"/>
+    <bond atom1="NH2" atom2="HH22"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="CD"/>
+    <dihedral name="chi3" atom1="CB" atom2="CG" atom3="CD" atom4="NE"/>
+    <dihedral name="chi4" atom1="CG" atom2="CD" atom3="NE" atom4="CZ"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="ASN">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CG"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD21"/>
+    <atom name="HD22"/>
+    <atom name="N"/>
+    <atom name="ND2"/>
+    <atom name="O"/>
+    <atom name="OD1"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CG" atom2="ND2"/>
+    <bond atom1="CG" atom2="OD1"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="ND2" atom2="HD21"/>
+    <bond atom1="ND2" atom2="HD22"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="ND2"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="ASP">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CG"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD2"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <atom name="OD1"/>
+    <atom name="OD2"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CG" atom2="OD1"/>
+    <bond atom1="CG" atom2="OD2"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="OD2" atom2="HD2"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="OD1"/>
+    <dihedral name="chi32" atom1="CB" atom2="CG" atom3="OD2" atom4="HD2"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="CYS">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HG"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <atom name="SG"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="CB" atom2="SG"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="SG" atom2="HG"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="SG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="SG" atom4="HG"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="GLN">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD"/>
+    <atom name="CG"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HE21"/>
+    <atom name="HE22"/>
+    <atom name="HG2"/>
+    <atom name="HG3"/>
+    <atom name="N"/>
+    <atom name="NE2"/>
+    <atom name="O"/>
+    <atom name="OE1"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD" atom2="NE2"/>
+    <bond atom1="CD" atom2="OE1"/>
+    <bond atom1="CG" atom2="CD"/>
+    <bond atom1="CG" atom2="HG2"/>
+    <bond atom1="CG" atom2="HG3"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="NE2" atom2="HE21"/>
+    <bond atom1="NE2" atom2="HE22"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="CD"/>
+    <dihedral name="chi3" atom1="CB" atom2="CG" atom3="CD" atom4="NE2"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="GLU">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD"/>
+    <atom name="CG"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HE2"/>
+    <atom name="HG2"/>
+    <atom name="HG3"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <atom name="OE1"/>
+    <atom name="OE2"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD" atom2="OE1"/>
+    <bond atom1="CD" atom2="OE2"/>
+    <bond atom1="CG" atom2="CD"/>
+    <bond atom1="CG" atom2="HG2"/>
+    <bond atom1="CG" atom2="HG3"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="OE2" atom2="HE2"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="CD"/>
+    <dihedral name="chi3" atom1="CB" atom2="CG" atom3="CD" atom4="OE1"/>
+    <dihedral name="chi42" atom1="CG" atom2="CD" atom3="OE2" atom4="HE2"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="GLY">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="H"/>
+    <atom name="HA2"/>
+    <atom name="HA3"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="HA3"/>
+    <bond atom1="CA" atom2="HA2"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="HIS">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD2"/>
+    <atom name="CE1"/>
+    <atom name="CG"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD1"/>
+    <atom name="HD2"/>
+    <atom name="HE1"/>
+    <atom name="N"/>
+    <atom name="ND1"/>
+    <atom name="NE2"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD2" atom2="HD2"/>
+    <bond atom1="CD2" atom2="CG"/>
+    <bond atom1="CE1" atom2="HE1"/>
+    <bond atom1="CE1" atom2="NE2"/>
+    <bond atom1="CG" atom2="ND1"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="ND1" atom2="CE1"/>
+    <bond atom1="ND1" atom2="HD1"/>
+    <bond atom1="NE2" atom2="CD2"/>
+    <cut atom1="CD2" atom2="CG"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="ND1"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="ILE">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD1"/>
+    <atom name="CG1"/>
+    <atom name="CG2"/>
+    <atom name="H"/>
+    <atom name="H1"/>
+    <atom name="H2"/>
+    <atom name="H3"/>
+    <atom name="HA"/>
+    <atom name="HB"/>
+    <atom name="HD11"/>
+    <atom name="HD12"/>
+    <atom name="HD13"/>
+    <atom name="HG12"/>
+    <atom name="HG13"/>
+    <atom name="HG21"/>
+    <atom name="HG22"/>
+    <atom name="HG23"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG1"/>
+    <bond atom1="CB" atom2="CG2"/>
+    <bond atom1="CB" atom2="HB"/>
+    <bond atom1="CD1" atom2="HD11"/>
+    <bond atom1="CD1" atom2="HD12"/>
+    <bond atom1="CD1" atom2="HD13"/>
+    <bond atom1="CG1" atom2="CD1"/>
+    <bond atom1="CG1" atom2="HG12"/>
+    <bond atom1="CG1" atom2="HG13"/>
+    <bond atom1="CG2" atom2="HG21"/>
+    <bond atom1="CG2" atom2="HG22"/>
+    <bond atom1="CG2" atom2="HG23"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="N" atom2="H1"/>
+    <bond atom1="N" atom2="H2"/>
+    <bond atom1="N" atom2="H3"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG1"/>
+    <dihedral name="chi21" atom1="CA" atom2="CB" atom3="CG1" atom4="CD1"/>
+    <dihedral name="chi22" atom1="CA" atom2="CB" atom3="CG2" atom4="HG21"/>
+    <dihedral name="chi31" atom1="CB" atom2="CG1" atom3="CD1" atom4="HD11"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="LEU">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD1"/>
+    <atom name="CD2"/>
+    <atom name="CG"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD11"/>
+    <atom name="HD12"/>
+    <atom name="HD13"/>
+    <atom name="HD21"/>
+    <atom name="HD22"/>
+    <atom name="HD23"/>
+    <atom name="HG"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD1" atom2="HD11"/>
+    <bond atom1="CD1" atom2="HD12"/>
+    <bond atom1="CD1" atom2="HD13"/>
+    <bond atom1="CD2" atom2="HD21"/>
+    <bond atom1="CD2" atom2="HD22"/>
+    <bond atom1="CD2" atom2="HD23"/>
+    <bond atom1="CG" atom2="CD1"/>
+    <bond atom1="CG" atom2="CD2"/>
+    <bond atom1="CG" atom2="HG"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="CD1"/>
+    <dihedral name="chi31" atom1="CB" atom2="CG" atom3="CD1" atom4="HD11"/>
+    <dihedral name="chi32" atom1="CB" atom2="CG" atom3="CD2" atom4="HD21"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="LYS">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD"/>
+    <atom name="CE"/>
+    <atom name="CG"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD2"/>
+    <atom name="HD3"/>
+    <atom name="HE2"/>
+    <atom name="HE3"/>
+    <atom name="HG2"/>
+    <atom name="HG3"/>
+    <atom name="HZ1"/>
+    <atom name="HZ2"/>
+    <atom name="N"/>
+    <atom name="NZ"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD" atom2="CE"/>
+    <bond atom1="CD" atom2="HD2"/>
+    <bond atom1="CD" atom2="HD3"/>
+    <bond atom1="CE" atom2="HE2"/>
+    <bond atom1="CE" atom2="HE3"/>
+    <bond atom1="CE" atom2="NZ"/>
+    <bond atom1="CG" atom2="CD"/>
+    <bond atom1="CG" atom2="HG2"/>
+    <bond atom1="CG" atom2="HG3"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="NZ" atom2="HZ1"/>
+    <bond atom1="NZ" atom2="HZ2"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="CD"/>
+    <dihedral name="chi3" atom1="CB" atom2="CG" atom3="CD" atom4="CE"/>
+    <dihedral name="chi4" atom1="CG" atom2="CD" atom3="CE" atom4="NZ"/>
+    <dihedral name="chi5" atom1="CD" atom2="CE" atom3="NZ" atom4="HZ1"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="MET">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CE"/>
+    <atom name="CG"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HE1"/>
+    <atom name="HE2"/>
+    <atom name="HE3"/>
+    <atom name="HG2"/>
+    <atom name="HG3"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <atom name="SD"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CE" atom2="HE1"/>
+    <bond atom1="CE" atom2="HE2"/>
+    <bond atom1="CE" atom2="HE3"/>
+    <bond atom1="CG" atom2="HG2"/>
+    <bond atom1="CG" atom2="HG3"/>
+    <bond atom1="CG" atom2="SD"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="SD" atom2="CE"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="SD"/>
+    <dihedral name="chi3" atom1="CB" atom2="CG" atom3="SD" atom4="CE"/>
+    <dihedral name="chi4" atom1="CG" atom2="SD" atom3="CE" atom4="HE1"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="PHE">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD1"/>
+    <atom name="CD2"/>
+    <atom name="CE1"/>
+    <atom name="CE2"/>
+    <atom name="CG"/>
+    <atom name="CZ"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD1"/>
+    <atom name="HD2"/>
+    <atom name="HE1"/>
+    <atom name="HE2"/>
+    <atom name="HZ"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD1" atom2="CE1"/>
+    <bond atom1="CD1" atom2="HD1"/>
+    <bond atom1="CD2" atom2="HD2"/>
+    <bond atom1="CD2" atom2="CG"/>
+    <bond atom1="CE1" atom2="CZ"/>
+    <bond atom1="CE1" atom2="HE1"/>
+    <bond atom1="CE2" atom2="CD2"/>
+    <bond atom1="CE2" atom2="HE2"/>
+    <bond atom1="CG" atom2="CD1"/>
+    <bond atom1="CZ" atom2="CE2"/>
+    <bond atom1="CZ" atom2="HZ"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <cut atom1="CD2" atom2="CG"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="CD1"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="PRO">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD"/>
+    <atom name="CG"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD2"/>
+    <atom name="HD3"/>
+    <atom name="HG2"/>
+    <atom name="HG3"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD" atom2="CG"/>
+    <bond atom1="CD" atom2="HD2"/>
+    <bond atom1="CD" atom2="HD3"/>
+    <bond atom1="CG" atom2="CB"/>
+    <bond atom1="CG" atom2="HG2"/>
+    <bond atom1="CG" atom2="HG3"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="CD"/>
+    <cut atom1="CA" atom2="CB"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+  </residue>
+  <residue type="SER">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HG"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <atom name="OG"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CB" atom2="OG"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="OG" atom2="HG"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="OG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="OG" atom4="HG"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="THR">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CG2"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB"/>
+    <atom name="HG1"/>
+    <atom name="HG21"/>
+    <atom name="HG22"/>
+    <atom name="HG23"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <atom name="OG1"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG2"/>
+    <bond atom1="CB" atom2="HB"/>
+    <bond atom1="CB" atom2="OG1"/>
+    <bond atom1="CG2" atom2="HG21"/>
+    <bond atom1="CG2" atom2="HG22"/>
+    <bond atom1="CG2" atom2="HG23"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="OG1" atom2="HG1"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="OG1"/>
+    <dihedral name="chi21" atom1="CA" atom2="CB" atom3="OG1" atom4="HG1"/>
+    <dihedral name="chi22" atom1="CA" atom2="CB" atom3="CG2" atom4="HG21"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="TRP">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD1"/>
+    <atom name="CD2"/>
+    <atom name="CE2"/>
+    <atom name="CE3"/>
+    <atom name="CG"/>
+    <atom name="CH2"/>
+    <atom name="CZ2"/>
+    <atom name="CZ3"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD1"/>
+    <atom name="HE1"/>
+    <atom name="HE3"/>
+    <atom name="HH2"/>
+    <atom name="HZ2"/>
+    <atom name="HZ3"/>
+    <atom name="N"/>
+    <atom name="NE1"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD1" atom2="HD1"/>
+    <bond atom1="CD1" atom2="NE1"/>
+    <bond atom1="CE2" atom2="CZ2"/>
+    <bond atom1="CE3" atom2="CD2"/>
+    <bond atom1="CE3" atom2="HE3"/>
+    <bond atom1="CG" atom2="CD1"/>
+    <bond atom1="CD2" atom2="CG"/>
+    <bond atom1="CD2" atom2="CE2"/>
+    <bond atom1="CH2" atom2="CZ3"/>
+    <bond atom1="CH2" atom2="HH2"/>
+    <bond atom1="CZ2" atom2="CH2"/>
+    <bond atom1="CZ2" atom2="HZ2"/>
+    <bond atom1="CZ3" atom2="CE3"/>
+    <bond atom1="CZ3" atom2="HZ3"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="NE1" atom2="CE2"/>
+    <bond atom1="NE1" atom2="HE1"/>
+    <cut atom1="CD2" atom2="CG"/>
+    <cut atom1="CD2" atom2="CE2"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="CD1"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="TYR">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CD1"/>
+    <atom name="CD2"/>
+    <atom name="CE1"/>
+    <atom name="CE2"/>
+    <atom name="CG"/>
+    <atom name="CZ"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB2"/>
+    <atom name="HB3"/>
+    <atom name="HD1"/>
+    <atom name="HD2"/>
+    <atom name="HE1"/>
+    <atom name="HE2"/>
+    <atom name="HH"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <atom name="OH"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG"/>
+    <bond atom1="CB" atom2="HB2"/>
+    <bond atom1="CB" atom2="HB3"/>
+    <bond atom1="CD1" atom2="CE1"/>
+    <bond atom1="CD1" atom2="HD1"/>
+    <bond atom1="CD2" atom2="HD2"/>
+    <bond atom1="CD2" atom2="CG"/>
+    <bond atom1="CE1" atom2="CZ"/>
+    <bond atom1="CE1" atom2="HE1"/>
+    <bond atom1="CE2" atom2="CD2"/>
+    <bond atom1="CE2" atom2="HE2"/>
+    <bond atom1="CG" atom2="CD1"/>
+    <bond atom1="CZ" atom2="CE2"/>
+    <bond atom1="CZ" atom2="OH"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <bond atom1="OH" atom2="HH"/>
+    <cut atom1="CD2" atom2="CG"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG"/>
+    <dihedral name="chi2" atom1="CA" atom2="CB" atom3="CG" atom4="CD1"/>
+    <dihedral name="chi6" atom1="CE1" atom2="CZ" atom3="OH" atom4="HH"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+  <residue type="VAL">
+    <atom name="C"/>
+    <atom name="CA"/>
+    <atom name="CB"/>
+    <atom name="CG1"/>
+    <atom name="CG2"/>
+    <atom name="H"/>
+    <atom name="HA"/>
+    <atom name="HB"/>
+    <atom name="HG11"/>
+    <atom name="HG12"/>
+    <atom name="HG13"/>
+    <atom name="HG21"/>
+    <atom name="HG22"/>
+    <atom name="HG23"/>
+    <atom name="N"/>
+    <atom name="O"/>
+    <bond atom1="C" atom2="O"/>
+    <bond atom1="CA" atom2="C"/>
+    <bond atom1="CA" atom2="CB"/>
+    <bond atom1="CA" atom2="HA"/>
+    <bond atom1="CB" atom2="CG1"/>
+    <bond atom1="CB" atom2="CG2"/>
+    <bond atom1="CB" atom2="HB"/>
+    <bond atom1="CG1" atom2="HG11"/>
+    <bond atom1="CG1" atom2="HG12"/>
+    <bond atom1="CG1" atom2="HG13"/>
+    <bond atom1="CG2" atom2="HG21"/>
+    <bond atom1="CG2" atom2="HG22"/>
+    <bond atom1="CG2" atom2="HG23"/>
+    <bond atom1="N" atom2="CA"/>
+    <bond atom1="N" atom2="H"/>
+    <dihedral name="chi1" atom1="N" atom2="CA" atom3="CB" atom4="CG1"/>
+    <dihedral name="chi21" atom1="CA" atom2="CB" atom3="CG1" atom4="HG11"/>
+    <dihedral name="chi22" atom1="CA" atom2="CB" atom3="CG2" atom4="HG21"/>
+    <dihedral name="omega" atom1="O-" atom2="C-" atom3="N" atom4="CA"/>
+    <dihedral name="phi" atom1="C-" atom2="N" atom3="CA" atom4="C"/>
+    <dihedral name="psi" atom1="N" atom2="CA" atom3="C" atom4="N+"/>
+  </residue>
+</connectivity>
