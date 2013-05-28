@@ -18,6 +18,8 @@ import csb.core
 import csb.bio.utils
 import csb.bio.structure
 import csb.bio.sequence
+import csb.bio.io.wwpdb
+
 from csb.bio.structure import SecondaryStructure
 
 
@@ -384,6 +386,17 @@ class AssignmentFactory(object):
     
     def assignment(self, *a, **k):
         return Assignment(*a, **k)
+    
+class ChemShiftAssignmentFactory(object):
+    
+    def target(self, *a, **k):
+        return ChemShiftTarget(*a, **k)
+    
+    def residue(self, *a, **k):
+        return ChemShiftTargetResidue(*a, **k)
+    
+    def assignment(self, *a, **k):
+        return ChemShiftAssignment(*a, **k)    
             
 class Target(csb.core.AbstractNIContainer):
     """
@@ -570,7 +583,28 @@ class Target(csb.core.AbstractNIContainer):
                                       overlap=self._overlap, segments=segments)
         
         return target        
-         
+
+class ChemShiftTarget(Target):
+
+    def __init__(self, id, length, residues, overlap=None):
+        
+        super(ChemShiftTarget, self).__init__(id, length, residues, overlap=overlap,
+                                              segments=None, factory=ChemShiftAssignmentFactory())
+            
+    def assign(self, fragment):
+
+        if not 1 <= fragment.qstart <= fragment.qend <= len(self._residues):
+            raise ValueError("Fragment out of range")
+        
+        self._assignments._append_item(fragment)
+        
+        rank = fragment.qstart
+        ai = ResidueAssignmentInfo(fragment, rank)
+        self._residues[rank].assign(ai)
+        
+    def clone(self):
+        return self._factory.target(self.id, self.length, [r.native for r in self.residues],
+                                    overlap=self._overlap)         
     
 class TargetResidue(object):
     """
@@ -683,6 +717,25 @@ class TargetResidue(object):
             pos = len(positive) * 100.0 / self.assignments.length
             
             return pos
+        
+class ChemShiftTargetResidue(TargetResidue):
+
+    def verybest(self):
+        
+        best = None
+        
+        for ai in self.assignments:
+            a = ai.fragment
+        
+            if a.score < ChemShiftAssignment.BIT_SCORE_THRESHOLD * a.window:
+                continue
+            
+            if best is None or a.score > best.score:
+                best = a
+            elif a.score == best.score and a.length > best.length:
+                best = a
+        
+        return best        
     
 class TargetSegment(object):
     
@@ -949,8 +1002,8 @@ class Assignment(FragmentMatch):
     @type rmsd: float
     """
     
-    def __init__(self, source, start, end, id, qstart, qend, probability, rmsd, tm_score=None,
-                 score=None, neff=None, segment=None, internal_id=None):
+    def __init__(self, source, start, end, qstart, qend, id=None, probability=None, rmsd=None,
+                 tm_score=None, score=None, neff=None, segment=None, internal_id=None):
 
         assert source.has_torsion
         sub = source.subregion(start, end, clone=True)
@@ -975,6 +1028,9 @@ class Assignment(FragmentMatch):
         self._segment_start = segment
         self.internal_id = internal_id
         
+        if id is None:
+            id = "{0}:{1}-{2}".format(self.source_id, self.start, self.end)
+        
         super(Assignment, self).__init__(id, qstart, qend, probability, rmsd, tm_score, None)
         
         self._ss = SecondaryStructure('-' * self.length)
@@ -991,14 +1047,17 @@ class Assignment(FragmentMatch):
         
         @rtype: L{Assignment}
         """
-        structure = provider.get(fragment.accession)
+        try:
+            structure = provider.get(fragment.accession)
+        except csb.bio.io.wwpdb.StructureNotFoundError:
+            structure = provider.get(fragment.source_id)
         source = structure.chains[fragment.chain]
         source.compute_torsion()
         
         id = "{0}:{1}-{2}".format(fragment.source_id, fragment.start, fragment.end)
         
-        return Assignment(source, fragment.start, fragment.end, id,
-                          fragment.qstart, fragment.qend, 0, 0)        
+        return Assignment(source, fragment.start, fragment.end,
+                          fragment.qstart, fragment.qend, id, 0, 0)        
 
     @property
     def backbone(self):
@@ -1251,6 +1310,22 @@ class Assignment(FragmentMatch):
             stream.write(' {0:4} {1:1} {2:>5} {3!s:1} {4!s:1} {5:>8.3f} {6:>8.3f} {7:>8.3f} {8:>8.3f}\n'.format(acc, ch, start, aa, ss, phi, psi, omega, weight))            
         
         return stream.getvalue()    
+    
+class ChemShiftAssignment(Assignment):
+    
+    BIT_SCORE_THRESHOLD = 1.1
+    
+    def __init__(self, source, start, end, qstart, qend, window, score, rmsd):
+                    
+        self._window = window
+        
+        super(ChemShiftAssignment, self).__init__(
+                            source, start, end, qstart, qend, id=None, probability=1.0,
+                            rmsd=rmsd, tm_score=None, score=score, neff=None, segment=None, internal_id=None)
+
+    @property
+    def window(self):
+        return self._window       
 
 class ClusterExhaustedError(ValueError):
     pass    
@@ -1291,21 +1366,26 @@ class FragmentCluster(object):
         self._matrix = {}        
         self._threshold = float(threshold)
         self._connectedness = float(connectedness)
+        self._weight = 0
+        self._edges = 0
            
         for i in items:
             
             self._matrix[i] = {}
-            conn = 0.0
+            #conn = 0.0
             
             for j in items:
                 distance = i.distance(j)
                 if distance is not None:
-                    conn += 1
+                    #conn += 1
                     self._matrix[i][j] = distance
+                    self._edges += 1
+                    self._weight += distance
+                    i.weight += distance
             
-            if conn / len(items) < self.connectedness:
-                # reject i as a first class node
-                del self._matrix[i]
+            #if conn / len(items) < self.connectedness:
+            #    # reject i as a first class node
+            #    del self._matrix[i]
                 
         self._items = set(self._matrix.keys())
                      
@@ -1363,14 +1443,21 @@ class FragmentCluster(object):
         @return: the current mean distance in the cluster
         @rtype: float
         """
-        
-        d = self._distances(skip=skip) 
-            
-        if len(d) > 0:
-            return numpy.mean(d)
-        else:
+        if self._edges == 0:
             raise ClusterExhaustedError()
-
+            
+        if not skip:
+            return float(self._weight) / self._edges
+        
+        else:
+            weight = self._weight - 2 * skip.weight
+            edges = self._edges - 2 * len(self._matrix[skip])
+            
+            if edges < 1:
+                return 0
+            else:  
+                return float(weight) / edges
+        
     def centroid(self):
         """
         @return: the current representative fragment
@@ -1388,9 +1475,10 @@ class FragmentCluster(object):
 
         for i in self._matrix:
             
-            curravg = numpy.mean(list(self._matrix[i].values()))
+            curravg = float(i.weight) / len(self._matrix[i])
+            conn = len(self._matrix[i]) / float(self.count)
             
-            if avg is None or curravg < avg:
+            if avg is None or (curravg < avg and conn >= self.connectedness):
                 avg = curravg
                 cen = i
             elif curravg == avg:
@@ -1418,16 +1506,21 @@ class FragmentCluster(object):
         @type item: L{ClusterNode}
         @raise ClusterExhaustedError: if this is the last remaining item
         """
-        
         if self.count == 1:
             raise ClusterExhaustedError()
         
         assert not item.fixed
         
         for i in self._matrix:
-            if item in self._matrix[i]:
+            if item in self._matrix[i]:                
+                distance = self._matrix[i][item]
+                self._weight -= 2 * distance
+                i.weight -= distance
+                
                 del self._matrix[i][item]
+                self._edges -= 1                
             
+        self._edges -= len(self._matrix[item])
         del self._matrix[item]
         self._items.remove(item)
 
@@ -1526,6 +1619,7 @@ class ClusterNode(object):
         
         self.fragment = fragment
         self.fixed = bool(fixed)
+        self.weight = 0
                 
         self._distance = getattr(self.fragment, distance)
         
@@ -1743,14 +1837,31 @@ class SmoothFragmentMap(csb.core.AbstractContainer):
 
 class ResidueEventInfo(object):
     
-    def __init__(self, rank, confidence=None, count=None, confident=True, rep=None):
+    def __init__(self, residue, confidence=0, count=0, confident=True, gap=False, rep=None):
         
-        self.rank = rank
+        self.residue = residue
         self.confidence = confidence
         self.confident = confident
+        self.gap = gap
         self.count = count
         self.rep = rep
+        
+    @property
+    def rank(self):
+        return self.residue.rank
     
+    @property
+    def type(self):
+        return self.residue.type
+        
+    @property
+    def torsion(self):
+        if self.rep:
+            return self.rep.torsion_at(self.rank, self.rank)[0]
+        else:
+            return None
+        
+            
 class RosettaFragsetFactory(object):
     """
     Simplifies the construction of fragment libraries.
@@ -1824,19 +1935,23 @@ class RosettaFragsetFactory(object):
             
             if r.assignments.length == 0:
                 if callback:
-                    callback(ResidueEventInfo(r.native.rank, None, 0, False))
+                    callback(ResidueEventInfo(r.native, gap=True))
                 continue
             
             cluster = r.filter()
             if cluster is None:
                 if callback:
-                    callback(ResidueEventInfo(r.native.rank, 0, 0, False))                
+                    callback(ResidueEventInfo(r.native, 0, 0, confident=False))                
                 continue
 
             if cluster.confidence >= threshold:
                 covered.add(r.native.rank)
-            elif callback:
-                callback(ResidueEventInfo(r.native.rank, cluster.confidence, cluster.count, False))
+                confident = True
+            else:
+                confident = False
+                
+            if callback:
+                callback(ResidueEventInfo(r.native, cluster.confidence, cluster.count, confident))
                 
         for r in target.residues:
             if r.native.rank not in covered:               # true for gaps and low-conf residues
@@ -1865,11 +1980,14 @@ class RosettaFragsetFactory(object):
         
         for r in target.residues:
             if r.assignments.length == 0:
-                continue    
+                if callback:
+                    callback(ResidueEventInfo(r.native, gap=True))
+                continue
             
             cluster = r.filter(extend=extend)
             if cluster is None:
-                continue
+                if callback:
+                    callback(ResidueEventInfo(r.native, 0, 0, confident=False))
             
             if extend and cluster.has_alternative:
                 best = cluster.alternative
@@ -1879,7 +1997,7 @@ class RosettaFragsetFactory(object):
             fragment = self.rosetta.RosettaFragment.from_object(best)
             fragments.append(fragment)
             if callback:
-                callback(ResidueEventInfo(r.native.rank, cluster.confidence, cluster.count, rep=cluster.centroid))
+                callback(ResidueEventInfo(r.native, cluster.confidence, cluster.count, rep=cluster.centroid))
         
         fragments.sort()
         return self.rosetta.RosettaFragmentMap(fragments, target.length)
