@@ -185,7 +185,7 @@ CSB is open source and distributed under OSI-approved MIT license::
     
 """
 
-__version__ = '1.1.1.{revision}'
+__version__ = '1.2.0.{revision}'
 
 
 class Version(object):
