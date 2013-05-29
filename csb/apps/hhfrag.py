@@ -297,9 +297,9 @@ class HHfrag(object):
                     
                     source.compute_torsion()
                     try:
-                        fragment = csb.bio.fragments.Assignment(source, chunk.start, chunk.end,  
-                                                                chunk.qstart, chunk.qend, chunk.probability, 
-                                                                rmsd=None, tm_score=None)
+                        fragment = csb.bio.fragments.Assignment(source, chunk.start, chunk.end,
+                                                                chunk.qstart, chunk.qend, 
+                                                                probability=chunk.probability)
                         fragments.append(fragment)
                         if cn > 1:
                             self.log('    (chunk #{0})'.format(cn), level=2)
@@ -517,7 +517,6 @@ class SliceContext(hhsearch.Context):
 
 class PredictionBuilder(object):
     
-    NULL = '{0:>6}'.format("-")
     HEADER = "rank:int residue:str confidence:float centroid:str phi:float psi:float omega:float" 
     
     @staticmethod
@@ -551,13 +550,7 @@ class PredictionBuilder(object):
         @rtype: L{Table}
         """
         return self._tsv
-    
-    def isnull(self, v):
-        if v is None:
-            return "-"
-        else:
-            return v
-        
+            
     def add(self, ri):
         """
         @param ri: single residue prediction
@@ -568,12 +561,12 @@ class PredictionBuilder(object):
         
         if ri.rep:
             row.append(ri.rep.id)
-            row.append(self.isnull(ri.torsion.phi))
-            row.append(self.isnull(ri.torsion.psi))
-            row.append(self.isnull(ri.torsion.omega))
+            row.append(ri.torsion.phi)
+            row.append(ri.torsion.psi)
+            row.append(ri.torsion.omega)
         
         else:
-            row.extend([PredictionBuilder.NULL] * 4)
+            row.extend([None] * 4)
         
         self.product.insert(row)
         
