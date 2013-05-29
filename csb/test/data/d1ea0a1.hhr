@@ -1,0 +1,293 @@
+Query         d1ea0a1 b.80.4.1 (A:1203-1472) Alpha subunit of glutamate synthase, C-terminal domain {Azospirillum brasilense [TaxId: 192]}
+Match_columns 270
+No_of_seqs    194 out of 1507
+Neff          5.2 
+Searched_HMMs 2936
+Date          Thu Jul 15 08:34:22 2010
+Command       ./hhsearch -i /ebio/abt1/kopec/projects/hhpred_on_cluster/split_fastas/d1ea0a1.hhm -d /ebio/abt1/kopec/projects/hhpred_on_cluster/astral_scop70_all_beta_only_v1.75_hhpred_database.hhm 
+
+ No Hit                             Prob E-value P-value  Score    SS Cols Query HMM  Template HMM
+  1 d1ea0a1 b.80.4.1 (A:1203-1472) 100.0       0       0  850.5  17.9  270    1-270     1-270 (270)
+  2 d1ofda1 b.80.4.1 (A:1240-1507) 100.0       0       0  758.3  23.2  263    3-266     2-266 (268)
+  3 d1ofda1 b.80.4.1 (A:1240-1507)  97.3 6.5E-05 2.2E-08   62.1   8.4  104   61-178    81-197 (268)
+  4 d1ea0a1 b.80.4.1 (A:1203-1472)  94.4  0.0042 1.4E-06   50.2   5.0   68  128-196    97-177 (270)
+  5 d1g3pa1 b.37.1.1 (A:1-65) N-te  35.1     1.2 0.00041   27.0   0.9   16  161-176    34-49  (65)
+  6 d1jv2a4 b.69.8.1 (A:1-438) Int  18.5      43   0.015   24.2   8.6    6  188-193   313-318 (438)
+  7 d1qvca_ b.40.4.3 (A:) ssDNA-bi   9.2      26  0.0089   21.8   3.5   32   60-91     53-84  (145)
+  8 d1yfba1 b.129.1.3 (A:3-53) Tra   9.1      13  0.0045   20.5   1.4   13  254-266    16-28  (51)
+  9 d1hf2a1 b.80.3.1 (A:100-206) C   8.4      20  0.0068   22.2   2.4   27  162-188    30-56  (107)
+ 10 d1v8qa_ b.84.4.1 (A:) Ribosoma   8.2      30    0.01   19.6   3.1   43   95-138     9-52  (66)
+10000 d1v8qa_ b.84.4.1 (A:) Riboso   8.2      30    0.01   19.6   3.1   43   95-138     9-52  (66)
+
+No 1  
+>d1ea0a1 b.80.4.1 (A:1203-1472) Alpha subunit of glutamate synthase, C-terminal domain {Azospirillum brasilense [TaxId: 192]}
+Probab=100.00  E-value=0  Score=850.47  Aligned_cols=270  Identities=100%  Similarity=1.461  Sum_probs=268.3
+
+Q ss_dssp             CCCCCCCCTHHHHHHHTHHHHHHCCCEEEEEEECTTCCSTTHHHHHHHHHHTTTTSSCTTSEEEEEEEEECSSTTTTCBT
+Q ss_pred             CCCCchhHHHHHHHHHHHHHHHcCCcEEEEEEEEecccchhHHHHHHHHHHhCcccCCCCcEEEEEecchhhhhhhhcCC
+Q d1ea0a1           1 GRNEVPDTLDARIVADARPLFEEGEKMQLAYNARNTQRAIGTRLSSMVTRKFGMFGLQPGHITIRLRGTAGQSLGAFAVQ   80 (270)
+Q Consensus         1 ~rh~~~~~LD~~li~~~~~ai~~~~~~~~~~~I~NtdRsvGa~Lsg~Iak~~G~~gL~~~~I~i~~~G~aGqsfgaf~~~   80 (270)
+                      |||++|++||++|+++++++|+++++++++|+|+||||||||||||+|+|+||++|||+++|+|+|+||||||||||+++
+T Consensus         1 ~rh~~~~~LD~~li~~~~~ai~~~~~~~~~~~I~NtdRsvGa~Lsg~Iak~~G~~gL~~~~I~i~~~G~aGqsfgaf~~~   80 (270)
+T d1ea0a1           1 GRNEVPDTLDARIVADARPLFEEGEKMQLAYNARNTQRAIGTRLSSMVTRKFGMFGLQPGHITIRLRGTAGQSLGAFAVQ   80 (270)
+T ss_dssp             CCCCCCCCTHHHHHHHTHHHHHHCCCEEEEEEECTTCCSTTHHHHHHHHHHTTTTSSCTTSEEEEEEEEECSSTTTTCBT
+T ss_pred             CCCCchhHHHHHHHHHHHHHHHcCCcEEEEEEEEecccchhHHHHHHHHHHhCcccCCCCcEEEEEecchhhhhhhhcCC
+Confidence            89999999999999999999999999999999999999999999999999999999999999999999999999999999
+
+
+Q ss_dssp             TEEEEEEEEECSCTTTTCEEEEEEEECCTTCCCCGGGSEEECSSTTTTCCEEEEEESSEECTTTTTTCEEEEEEESCBCS
+Q ss_pred             CcEEEEEccchhhhhhhccccceEEEcCccccccccccccccceeeeeeccceEEEcCCcccchhehhccceEEeccccc
+Q d1ea0a1          81 GIKLEVMGDANDYVGKGLSGGTIVVRPTTSSPLETNKNTIIGNTVLYGATAGKLFAAGQAGERFAVRNSGATVVVEGCGS  160 (270)
+Q Consensus        81 G~~l~~~G~anD~vgk~~~gg~i~i~~~~~~~~~~~~n~i~Gn~~lYGAt~G~~~~~G~aGeRf~VRnSGa~aVveG~Gd  160 (270)
+                      ||+|+|+|+||||||||||||+|+|+||+++++.+++|+|+|||||||||+|++|++|+||||||||||||+|||||+||
+T Consensus        81 G~~l~~~G~anD~vgk~~~gg~i~i~~~~~~~~~~~~n~i~Gn~~lYGAt~G~~~~~G~aGeRf~VRnSGa~aVveG~Gd  160 (270)
+T d1ea0a1          81 GIKLEVMGDANDYVGKGLSGGTIVVRPTTSSPLETNKNTIIGNTVLYGATAGKLFAAGQAGERFAVRNSGATVVVEGCGS  160 (270)
+T ss_dssp             TEEEEEEEEECSCTTTTCEEEEEEEECCTTCCCCGGGSEEECSSTTTTCCEEEEEESSEECTTTTTTCEEEEEEESCBCS
+T ss_pred             CcEEEEEccchhhhhhhccccceEEEcCccccccccccccccceeeeeeccceEEEcCCcccchhehhccceEEeccccc
+Confidence            99999999999999999999999999999999999999999999999999999999999999999999999999999999
+
+
+Q ss_dssp             STTTTCCEEEECCSSCBCSSBTTTCCSSEECCCCTTSCHHHHBCGGGEEEECCCSTTHHHHHHHHHHHHHHHHCCHHHHH
+Q ss_pred             cccceecCCEEEEecCCCcchhcccccceEEEeccccchhhhcCccceeeecCCCHHHHHHHHHHHHHHHHHHCCHHHHH
+Q d1ea0a1         161 NGCEYMTGGTAVILGRVGDNFAAGMTGGMAYVYDLDDSLPLYINDESVIFQRIEVGHYESQLKHLIEEHVTETQSRFAAE  240 (270)
+Q Consensus       161 h~cEYMtgG~vvvLG~~G~nfgAGMsGG~ayv~d~~~~f~~~vN~e~V~l~~i~~~~~e~~Lk~LIe~H~~~TgS~~Ak~  240 (270)
+                      |+|||||||+|||||++|+|||||||||+|||||++++|+++||+|||+++++++++|+++||+||++|+++|+|++|++
+T Consensus       161 h~cEYMtgG~vvvLG~~G~nfgAGMsGG~ayv~d~~~~f~~~vN~e~V~l~~i~~~~~e~~Lk~LIe~H~~~TgS~~Ak~  240 (270)
+T d1ea0a1         161 NGCEYMTGGTAVILGRVGDNFAAGMTGGMAYVYDLDDSLPLYINDESVIFQRIEVGHYESQLKHLIEEHVTETQSRFAAE  240 (270)
+T ss_dssp             STTTTCCEEEECCSSCBCSSBTTTCCSSEECCCCTTSCHHHHBCGGGEEEECCCSTTHHHHHHHHHHHHHHHHCCHHHHH
+T ss_pred             cccceecCCEEEEecCCCcchhcccccceEEEeccccchhhhcCccceeeecCCCHHHHHHHHHHHHHHHHHHCCHHHHH
+Confidence            99999999999999999999999999999999999999999999999999999988889999999999999999999999
+
+
+Q ss_dssp             HHHTHHHHHTTCCEEEEGGGGGGCSSCSCC
+Q ss_pred             HHHhHHHHhCcEEEEeCHHHHHhhccCCCC
+Q d1ea0a1         241 ILNDWAREVTKFWQVVPKEMLNRLEVPVHL  270 (270)
+Q Consensus       241 IL~nWd~~~~~FvkViPkey~~~Le~pi~~  270 (270)
+                      ||+||++++++||||+|+||+++||+||||
+T Consensus       241 IL~nWd~~~~~FvkViPkey~~~Le~pi~~  270 (270)
+T d1ea0a1         241 ILNDWAREVTKFWQVVPKEMLNRLEVPVHL  270 (270)
+T ss_dssp             HHHTHHHHHTTCCEEEEGGGGGGCSSCSCC
+T ss_pred             HHHhHHHHhCcEEEEeCHHHHHhhccCCCC
+Confidence            999999999999999999999999999997
+
+
+No 2  
+>d1ofda1 b.80.4.1 (A:1240-1507) Alpha subunit of glutamate synthase, C-terminal domain {Synechocystis sp. [TaxId: 1143]}
+Probab=100.00  E-value=0  Score=758.32  Aligned_cols=263  Identities=47%  Similarity=0.780  Sum_probs=257.9
+
+Q ss_dssp             CCCCCCTHHHHHHH--THHHHHHCCCEEEEEEECTTCCSTTHHHHHHHHHHTTTTSSCTTSEEEEEEEEECSSTTTTCBT
+Q ss_pred             CCchhHHHHHHHHH--HHHHHHcCCcEEEEEEEEecccchhHHHHHHHHHHhCcccCCCCcEEEEEecchhhhhhhhcCC
+Q d1ea0a1           3 NEVPDTLDARIVAD--ARPLFEEGEKMQLAYNARNTQRAIGTRLSSMVTRKFGMFGLQPGHITIRLRGTAGQSLGAFAVQ   80 (270)
+Q Consensus         3 h~~~~~LD~~li~~--~~~ai~~~~~~~~~~~I~NtdRsvGa~Lsg~Iak~~G~~gL~~~~I~i~~~G~aGqsfgaf~~~   80 (270)
+                      |.++.+||+++|.+  ++++|+++++++++++|+|+|||||||||++|+++||+.||| ++|+|+|+||||||||||+++
+T Consensus         2 h~~~~~lD~~~l~~~~~~~ai~~~~~~~~~~~I~N~dRsvGa~Lsg~Ia~~~g~~gl~-~~i~i~~~G~aGqsfgaf~~~   80 (268)
+T d1ofda1           2 HSNGPVLDDDILADPDIQEAINHQTTATKTYRLVNTDRTVGTRLSGAIAKKYGNNGFE-GNITLNFQGAAGQSFGAFNLD   80 (268)
+T ss_dssp             CCCCSCHHHHHHHSHHHHHHHHHCCEEEEEEEECTTCCSTTHHHHHHHHHHHTTTCCC-CEEEEEEEEEECTTTTTTCCT
+T ss_pred             CCCchhhhHHHHhHHHHHHHHHcCCcEEEEEEEEecCcchhHHHHHHHHHHhccccCC-CCEEEEEecCcchhhHhhCCC
+Confidence            78889999999984  589999999999999999999999999999999999999995 899999999999999999999
+
+
+Q ss_dssp             TEEEEEEEEECSCTTTTCEEEEEEEECCTTCCCCGGGSEEECSSTTTTCCEEEEEESSEECTTTTTTCEEEEEEESCBCS
+Q ss_pred             CcEEEEEccchhhhhhhccccceEEEcCccccccccccccccceeeeeeccceEEEcCCcccchhehhccceEEeccccc
+Q d1ea0a1          81 GIKLEVMGDANDYVGKGLSGGTIVVRPTTSSPLETNKNTIIGNTVLYGATAGKLFAAGQAGERFAVRNSGATVVVEGCGS  160 (270)
+Q Consensus        81 G~~l~~~G~anD~vgk~~~gg~i~i~~~~~~~~~~~~n~i~Gn~~lYGAt~G~~~~~G~aGeRf~VRnSGa~aVveG~Gd  160 (270)
+                      |++|+|+|+|||||||||+||+|+|+||+++++.+++|+|+|||||||||+|++|++|+||||||||||||+|||||+||
+T Consensus        81 G~~l~~~G~anD~vgk~~~gg~i~v~~~~~~~~~~~~~~i~Gn~~~yGAt~G~~~~~g~ag~Rf~VRnSGa~aVveG~Gd  160 (268)
+T d1ofda1          81 GMTLHLQGEANDYVGKGMNGGEIVIVPHPQASFAPEDNVIIGNTCLYGATGGNLYANGRAGERFAVRNSVGKAVIEGAGD  160 (268)
+T ss_dssp             TEEEEEEEEECSCTTTTCCSSEEEEECCTTCCSCGGGSBCSCSSTTTTCCSCEEEESSBCCSSTTTTCSSCEEEESCCCS
+T ss_pred             CCEEEEEeccchhhhhhccCceeEEEcCccccccccccccccccceeeeccceEEEcCCccceeeeeccccEEEEccccc
+Confidence            99999999999999999999999999999999999999999999999999999999999999999999999999999999
+
+
+Q ss_dssp             STTTTCCEEEECCSSCBCSSBTTTCCSSEECCCCTTSCHHHHBCGGGEEEECCCSTTHHHHHHHHHHHHHHHHCCHHHHH
+Q ss_pred             cccceecCCEEEEecCCCcchhcccccceEEEeccccchhhhcCccceeeecCCCHHHHHHHHHHHHHHHHHHCCHHHHH
+Q d1ea0a1         161 NGCEYMTGGTAVILGRVGDNFAAGMTGGMAYVYDLDDSLPLYINDESVIFQRIEVGHYESQLKHLIEEHVTETQSRFAAE  240 (270)
+Q Consensus       161 h~cEYMtgG~vvvLG~~G~nfgAGMsGG~ayv~d~~~~f~~~vN~e~V~l~~i~~~~~e~~Lk~LIe~H~~~TgS~~Ak~  240 (270)
+                      |+|||||||+|||||++|+|||||||||+||||||+++|++++|+|||+++++++++|+++||+||++|+++|+|.+|++
+T Consensus       161 ~~~EYMtgG~vvvlG~~G~nfgaGMtGG~ayvyD~~~~f~~~iN~e~V~l~~i~~~~d~~~Lk~LI~~H~~~TgS~~Ak~  240 (268)
+T d1ofda1         161 HCCEYMTGGVIVVLGPVGRNVGAGMTGGLAYFLDEVGDLPEKINPEIITLQRITASKGEEQLKSLITAHVEHTGSPKGKA  240 (268)
+T ss_dssp             STTTTCEEEEEEECSCCCSSBTTTCCEEEEEEECSSSCHHHHBCTTTCEEECCCCHHHHHHHHHHHHHHHHHHCCHHHHH
+T ss_pred             cccccccCCEEEEEecCCcccccceecceEEEeccccchhhhcCcceeEEEecCcHHHHHHHHHHHHHHHHHHCCHHHHH
+Confidence            99999999999999999999999999999999999999999999999999999988889999999999999999999999
+
+
+Q ss_dssp             HHHTHHHHHTTCCEEEEGGGGGGCSS
+Q ss_pred             HHHhHHHHhCcEEEEeCHHHHHhhcc
+Q d1ea0a1         241 ILNDWAREVTKFWQVVPKEMLNRLEV  266 (270)
+Q Consensus       241 IL~nWd~~~~~FvkViPkey~~~Le~  266 (270)
+                      ||+||++++++||||+|+||+++||.
+T Consensus       241 IL~nW~~~~~~FvKVvPk~yk~~LE~  266 (268)
+T d1ofda1         241 ILANWSDYLGKFWQAVPPSEKDSPEA  266 (268)
+T ss_dssp             HHHTHHHHHTTEEEEECTTSTTSTTT
+T ss_pred             HHHhHHHHhcCEEEECCHHHHhhhhc
+Confidence            99999999999999999999999985
+
+
+No 3  
+>d1ofda1 b.80.4.1 (A:1240-1507) Alpha subunit of glutamate synthase, C-terminal domain {Synechocystis sp. [TaxId: 1143]}
+Probab=97.30  E-value=6.5e-05  Score=62.07  Aligned_cols=104  Identities=27%  Similarity=0.419  Sum_probs=65.2
+
+Q ss_dssp             SEEEEEEEEECSSTTTTCBTTEEEEEEEEE------------CSCTTTTCEEEEEEEECCTTCCCCGGGSEEECSSTTTT
+Q ss_pred             cEEEEEecchhhhhhhhcCCCcEEEEEccc------------hhhhhhhccccceEEEcCccccccccccccccceeeee
+Q d1ea0a1          61 HITIRLRGTAGQSLGAFAVQGIKLEVMGDA------------NDYVGKGLSGGTIVVRPTTSSPLETNKNTIIGNTVLYG  128 (270)
+Q Consensus        61 ~I~i~~~G~aGqsfgaf~~~G~~l~~~G~a------------nD~vgk~~~gg~i~i~~~~~~~~~~~~n~i~Gn~~lYG  128 (270)
+                      -++|.++|.|.-.+|-=+ .|=++.+.+..            -+.++-|+.||++.|......+|.-+..          
+T Consensus        81 G~~l~~~G~anD~vgk~~-~gg~i~v~~~~~~~~~~~~~~i~Gn~~~yGAt~G~~~~~g~ag~Rf~VRnS----------  149 (268)
+T d1ofda1          81 GMTLHLQGEANDYVGKGM-NGGEIVIVPHPQASFAPEDNVIIGNTCLYGATGGNLYANGRAGERFAVRNS----------  149 (268)
+T ss_dssp             TEEEEEEEEECSCTTTTC-CSSEEEEECCTTCCSCGGGSBCSCSSTTTTCCSCEEEESSBCCSSTTTTCS----------
+T ss_pred             CCEEEEEeccchhhhhhc-cCceeEEEcCccccccccccccccccceeeeccceEEEcCCccceeeeecc----------
+Confidence            356777777755555444 44477776552            3344456677777777766666554322          
+
+
+Q ss_dssp             CCEEEEEESSEECTTTTTTCEEEEEEESC-BCSSTTTTCCEEEECCSSCBC
+Q ss_pred             eccceEEEcCCcccchhehhccceEEecc-ccccccceecCCEEEEecCCC
+Q d1ea0a1         129 ATAGKLFAAGQAGERFAVRNSGATVVVEG-CGSNGCEYMTGGTAVILGRVG  178 (270)
+Q Consensus       129 At~G~~~~~G~aGeRf~VRnSGa~aVveG-~Gdh~cEYMtgG~vvvLG~~G  178 (270)
+                        |..+-|.| +|+.+|=-+.|-.+||=| +|..+|.=||||.+-|+.+-+
+T Consensus       150 --Ga~aVveG-~Gd~~~EYMtgG~vvvlG~~G~nfgaGMtGG~ayvyD~~~  197 (268)
+T d1ofda1         150 --VGKAVIEG-AGDHCCEYMTGGVIVVLGPVGRNVGAGMTGGLAYFLDEVG  197 (268)
+T ss_dssp             --SCEEEESC-CCSSTTTTCEEEEEEECSCCCSSBTTTCCEEEEEEECSSS
+T ss_pred             --ccEEEEcc-ccccccccccCCEEEEEecCCcccccceecceEEEecccc
+Confidence              23445555 677777777777777777 577777777777777776654
+
+
+No 4  
+>d1ea0a1 b.80.4.1 (A:1203-1472) Alpha subunit of glutamate synthase, C-terminal domain {Azospirillum brasilense [TaxId: 192]}
+Probab=94.36  E-value=0.0042  Score=50.16  Aligned_cols=68  Identities=22%  Similarity=0.337  Sum_probs=28.9
+
+Q ss_dssp             TCCEEEEEESSEECTTTTTTCE------------EEEEEESC-BCSSTTTTCCEEEECCSSCBCSSBTTTCCSSEECCCC
+Q ss_pred             eeccceEEEcCCcccchhehhc------------cceEEecc-ccccccceecCCEEEEecCCCcchhcccccceEEEec
+Q d1ea0a1         128 GATAGKLFAAGQAGERFAVRNS------------GATVVVEG-CGSNGCEYMTGGTAVILGRVGDNFAAGMTGGMAYVYD  194 (270)
+Q Consensus       128 GAt~G~~~~~G~aGeRf~VRnS------------Ga~aVveG-~Gdh~cEYMtgG~vvvLG~~G~nfgAGMsGG~ayv~d  194 (270)
+                      |+.||++.|......+|.-+..            |-.+-|.| +|+-+|==+.|-.+||=| +|..+|-=||||.+-|+.
+T Consensus        97 ~~~gg~i~i~~~~~~~~~~~~n~i~Gn~~lYGAt~G~~~~~G~aGeRf~VRnSGa~aVveG-~Gdh~cEYMtgG~vvvLG  175 (270)
+T d1ea0a1          97 GLSGGTIVVRPTTSSPLETNKNTIIGNTVLYGATAGKLFAAGQAGERFAVRNSGATVVVEG-CGSNGCEYMTGGTAVILG  175 (270)
+T ss_dssp             TCEEEEEEEECCTTCCCCGGGSEEECSSTTTTCCEEEEEESSEECTTTTTTCEEEEEEESC-BCSSTTTTCCEEEECCSS
+T ss_pred             hccccceEEEcCccccccccccccccceeeeeeccceEEEcCCcccchhehhccceEEecc-ccccccceecCCEEEEec
+Confidence            4445555555444444332211            11222223 344444444444444444 455555555555555554
+
+
+Q ss_dssp             TT
+Q ss_pred             cc
+Q d1ea0a1         195 LD  196 (270)
+Q Consensus       195 ~~  196 (270)
+                      +-
+T Consensus       176 ~~  177 (270)
+T d1ea0a1         176 RV  177 (270)
+T ss_dssp             CB
+T ss_pred             CC
+Confidence            33
+
+
+No 5  
+>d1g3pa1 b.37.1.1 (A:1-65) N-terminal domains of the minor coat protein g3p {Bacteriophage M13 [TaxId: 10870]}
+Probab=35.11  E-value=1.2  Score=27.01  Aligned_cols=16  Identities=31%  Similarity=0.659  Sum_probs=13.1
+
+Q ss_dssp             STTTTCCEEEECCSSC
+Q ss_pred             cccceecCCEEEEecC
+Q d1ea0a1         161 NGCEYMTGGTAVILGR  176 (270)
+Q Consensus       161 h~cEYMtgG~vvvLG~  176 (270)
+                      .+|+||.-|++|.-|+
+T Consensus        34 eGC~y~AtGViV~~~d   49 (65)
+T d1g3pa1          34 EGCLWNATGVVVCTGD   49 (65)
+T ss_dssp             TTEEEEEEEEEEECTT
+T ss_pred             cCEEEEeeeEEEecCC
+Confidence            3699999999988763
+
+
+No 6  
+>d1jv2a4 b.69.8.1 (A:1-438) Integrin alpha N-terminal domain {Human (Homo sapiens), isoform V [TaxId: 9606]}
+Probab=18.45  E-value=43  Score=24.23  Aligned_cols=6  Identities=33%  Similarity=0.296  Sum_probs=2.4
+
+Q ss_dssp             SEECCC
+Q ss_pred             ceEEEe
+Q d1ea0a1         188 GMAYVY  193 (270)
+Q Consensus       188 G~ayv~  193 (270)
+                      |.+|||
+T Consensus       313 G~vyv~  318 (438)
+T d1jv2a4         313 GQVSVS  318 (438)
+T ss_dssp             CEEEEE
+T ss_pred             ceeeEe
+Confidence            344443
+
+
+No 7  
+>d1qvca_ b.40.4.3 (A:) ssDNA-binding protein {Escherichia coli [TaxId: 562]}
+Probab=9.18  E-value=26  Score=21.84  Aligned_cols=32  Identities=13%  Similarity=0.213  Sum_probs=27.3
+
+Q ss_dssp             TSEEEEEEEEECSSTTTTCBTTEEEEEEEEEC
+Q ss_pred             CcEEEEEecchhhhhhhhcCCCcEEEEEccch
+Q d1ea0a1          60 GHITIRLRGTAGQSLGAFAVQGIKLEVMGDAN   91 (270)
+Q Consensus        60 ~~I~i~~~G~aGqsfgaf~~~G~~l~~~G~an   91 (270)
+                      .-+++.+.|..++-+..++.+|..+.|+|...
+T Consensus        53 ~w~~v~~~g~~Ae~~~~~l~KG~~V~V~G~l~   84 (145)
+T d1qvca_          53 EWHRVVLFGKLAEVASEYLRKGSQVYIEGQLR   84 (145)
+T ss_dssp             EEEEEEEETHHHHHHHHHCCTTCEEEEEEEEE
+T ss_pred             eeeEeeeecccchhhhhheecCcEEEEEEEEE
+Confidence            34788889998999999999999999999643
+
+
+No 8  
+>d1yfba1 b.129.1.3 (A:3-53) Transcription-state regulator AbrB, the N-terminal DNA recognition domain {Bacillus subtilis [TaxId: 1423]}
+Probab=9.09  E-value=13  Score=20.52  Aligned_cols=13  Identities=31%  Similarity=0.542  Sum_probs=7.9
+
+Q ss_dssp             EEEEGGGGGGCSS
+Q ss_pred             EEeCHHHHHhhcc
+Q d1ea0a1         254 QVVPKEMLNRLEV  266 (270)
+Q Consensus       254 kViPkey~~~Le~  266 (270)
+                      -|+|+|.++.|..
+T Consensus        16 IViPkelR~~L~I   28 (51)
+T d1yfba1          16 VVIPIELRRTLGI   28 (51)
+T ss_dssp             EECCHHHHHHTTC
+T ss_pred             EEeeHHHHHhcCC
+Confidence            3566666666654
+
+
+No 9  
+>d1hf2a1 b.80.3.1 (A:100-206) Cell-division inhibitor MinC, C-terminal domain {Thermotoga maritima [TaxId: 2336]}
+Probab=8.43  E-value=20  Score=22.20  Aligned_cols=27  Identities=37%  Similarity=0.833  Sum_probs=11.9
+
+Q ss_dssp             TTTTCCEEEECCSSCBCSSBTTTCCSS
+Q ss_pred             ccceecCCEEEEecCCCcchhcccccc
+Q d1ea0a1         162 GCEYMTGGTAVILGRVGDNFAAGMTGG  188 (270)
+Q Consensus       162 ~cEYMtgG~vvvLG~~G~nfgAGMsGG  188 (270)
+                      +.|-.++|.|+|+|..-=..-||..|-
+T Consensus        30 GA~V~A~GnI~V~G~l~G~v~AG~~g~   56 (107)
+T d1hf2a1          30 GAEILAGGSVVVFGKAQGNIRAGLNEG   56 (107)
+T ss_dssp             TCEEEESSCEEEEEEECSEEEECTTTC
+T ss_pred             CCEEEeCCCEEEEeeecceEEECCCCC
+Confidence            333344555555554443444444333
+
+
+No 10 
+>d1v8qa_ b.84.4.1 (A:) Ribosomal protein L27 {Thermus thermophilus [TaxId: 274]}
+Probab=8.15  E-value=30  Score=19.62  Aligned_cols=43  Identities=23%  Similarity=0.407  Sum_probs=32.2
+
+Q ss_dssp             TTTCEEEEEEEECCTTCCCCGGGSEEEC-SSTTTTCCEEEEEESS
+Q ss_pred             hhhccccceEEEcCcccccccccccccc-ceeeeeeccceEEEcC
+Q d1ea0a1          95 GKGLSGGTIVVRPTTSSPLETNKNTIIG-NTVLYGATAGKLFAAG  138 (270)
+Q Consensus        95 gk~~~gg~i~i~~~~~~~~~~~~n~i~G-n~~lYGAt~G~~~~~G  138 (270)
+                      |.-...|.|+|+- ....|.+-+|+-+| +..||-...|.....-
+T Consensus         9 Gq~V~~G~IivRQ-RGtk~~pG~nVg~GkD~TLfAl~~G~V~F~~   52 (66)
+T d1v8qa_           9 GQVVRAGNILVRQ-RGTRFKPGKNVGMGRDFTLFALVDGVVEFQD   52 (66)
+T ss_dssp             TCEECTTCEEEEC-SSCSSEECTTEEECTTCCEEESSSEEEEEEE
+T ss_pred             CEEEeCCcEEEEe-ccCcEeCCCCeeecCCCeEEEecceEEEEEE
+Confidence            3344678888884 56788899998775 6789999999887643
+
+
+No 10000 
+>d1v8qa_ b.84.4.1 (A:) Ribosomal protein L27 {Thermus thermophilus [TaxId: 274]}
+Probab=8.15  E-value=30  Score=19.62  Aligned_cols=43  Identities=23%  Similarity=0.407  Sum_probs=32.2
+
+Q ss_dssp             TTTCEEEEEEEECCTTCCCCGGGSEEEC-SSTTTTCCEEEEEESS
+Q ss_pred             hhhccccceEEEcCcccccccccccccc-ceeeeeeccceEEEcC
+Q d1ea0a1          95 GKGLSGGTIVVRPTTSSPLETNKNTIIG-NTVLYGATAGKLFAAG  138 (270)
+Q Consensus        95 gk~~~gg~i~i~~~~~~~~~~~~n~i~G-n~~lYGAt~G~~~~~G  138 (270)
+                      |.-...|.|+|+- ....|.+-+|+-+| +..||-...|.....-
+T Consensus         9 Gq~V~~G~IivRQ-RGtk~~pG~nVg~GkD~TLfAl~~G~V~F~~   52 (66)
+T d1v8qa_           9 GQVVRAGNILVRQ-RGTRFKPGKNVGMGRDFTLFALVDGVVEFQD   52 (66)
+T ss_dssp             TCEECTTCEEEEC-SSCSSEECTTEEECTTCCEEESSSEEEEEEE
+T ss_pred             CEEEeCCcEEEEe-ccCcEeCCCCeeecCCCeEEEecceEEEEEE
+Confidence            3344678888884 56788899998775 6789999999887643
+
+Done!
