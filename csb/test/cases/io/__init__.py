@@ -177,7 +177,7 @@ class TestTable(test.Case):
     def testWhere(self):
         
         self.assertEqual(self.table.where('ID').equals(11).select('A').scalar(), 11.1)
-        self.assertEqual(self.table.where('ID').greater(12).select('A').scalar(), 13.3)        
+        self.assertEqual(self.table.where('ID').greater(12).select('A').scalar(), None)        
         self.assertEqual(self.table.where('ID').between(11, 12).select('A').scalar(), 11.1)        
         self.assertEqual(self.table.where('ID').in_(11).select('A').scalar(), 11.1)
         self.assertEqual(self.table.where('ID').in_(11, 12).select('A').scalar(), 11.1)                

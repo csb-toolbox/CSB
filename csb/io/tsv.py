@@ -366,7 +366,7 @@ class DataRow(object):
         @param delimiter: column separator (defaults to tab)
         @type delimiter: str 
         """
-        return delimiter.join(map(str, self._row))
+        return delimiter.join(map(Table._isnull, self._row))
     
     @property
     def columns(self):
@@ -412,6 +412,7 @@ class Table(object):
     Table header string, used when saving and restoring TSV files.
     """
     HEADER = '# @TSV '
+    NULL = ''
     
     def __init__(self, definition, name='TSV', backend=SQLiteRepository):
         
@@ -421,6 +422,7 @@ class Table(object):
         self._name = name
         self._backend = backend
         self._imp = backend(name)
+        self._metadata = []
         
         try:
             if isinstance(definition[0], ColumnInfo):
@@ -439,7 +441,8 @@ class Table(object):
         self._imp.create(self._metadata)
         
     @staticmethod
-    def from_tsv(tsv, definition=None, delimiter='\t', skip=0, name='TSV', backend=SQLiteRepository):
+    def from_tsv(tsv, definition=None, delimiter='\t', skip=0, name='TSV',
+                 backend=SQLiteRepository):
         """
         Table factory: build a L{Table} from a TSV file.
         
@@ -479,7 +482,8 @@ class Table(object):
             for i, line in enumerate(tsvfile, start=1):
                 if (skip and i <= skip) or line.startswith(Table.HEADER):
                     continue
-                table.insert(line.rstrip(os.linesep).split(delimiter))
+                data = line.rstrip(os.linesep).split(delimiter)
+                table.insert(data)
         
         return table
     
@@ -518,7 +522,32 @@ class Table(object):
             return Table.from_iterable(table, table._metadata, name=name, backend=backend)
         else:
             return Table(table._metadata, name=name, backend=backend)            
+
+    @staticmethod
+    def _isnull(value):
+        if value is None or str(value) == "":
+            return Table.NULL
+        else:
+            return str(value)
         
+    def _convert(self, row):
+        
+        if len(row) != len(self._metadata):
+            raise ValueError("{0} columns expected, got {1}".format(
+                                            len(self._metadata), len(row)))
+        
+        data = []
+        
+        for value, ci in zip(row, self._metadata):
+            if value == Table.NULL:
+                data.append(None)
+            elif isinstance(value, csb.core.string):
+                data.append(ci.type(value))
+            else:
+                data.append(value)
+                
+        return data
+                
     def __del__(self):
         self._imp.close()
         
@@ -739,7 +768,8 @@ class Table(object):
         @param row: a tuple of the appropriate length
         @type row: tuple 
         """
-        self._imp.insert(row)
+        data = self._convert(row)
+        self._imp.insert(data)
     
     def _project(self, columns):
         
