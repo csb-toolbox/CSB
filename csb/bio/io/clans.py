@@ -477,7 +477,7 @@ class ClansParser(object):
 
         groups = []
         for line in block:
-            p, v = line.split('=')
+            p, v = line.split('=', 1)
             if p == 'name':
                 groups.append({'name': v})
             elif p == 'numbers':
