@@ -348,7 +348,7 @@ class TestClansParser(test.Case):
         self.assertEqual(len(self.clans_instance.seqgroups), 2)
 
         seqgroup_names = ('insect hypoth. protein (2 copies, C term)',
-                          'allergens')
+                          'allergens = 3')
         seqgroup_sizes = (20, 17)
 
         for i, seqgroup in enumerate(self.clans_instance.seqgroups):
