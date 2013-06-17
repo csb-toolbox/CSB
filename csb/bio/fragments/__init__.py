@@ -18,7 +18,6 @@ import csb.core
 import csb.bio.utils
 import csb.bio.structure
 import csb.bio.sequence
-import csb.bio.io.wwpdb
 
 from csb.bio.structure import SecondaryStructure
 
@@ -1049,7 +1048,7 @@ class Assignment(FragmentMatch):
         """
         try:
             structure = provider.get(fragment.accession)
-        except csb.bio.io.wwpdb.StructureNotFoundError:
+        except KeyError:
             structure = provider.get(fragment.source_id)
         source = structure.chains[fragment.chain]
         source.compute_torsion()
