@@ -234,7 +234,7 @@ class HMCSampler(AbstractSingleChainMC):
 
     def __init__(self, pdf, state, gradient, timestep, nsteps,
 				 mass_matrix=None, integrator=FastLeapFrog, temperature=1.):
-        
+
         super(HMCSampler, self).__init__(pdf, state, temperature)
         
         self._timestep = None
@@ -310,6 +310,7 @@ class HMCSampler(AbstractSingleChainMC):
         self._mass_matrix = value
         if "_propagator" in dir(self):
            self._propagator.mass_matrix = self._mass_matrix
+
 
 class RWMCSampler(AbstractSingleChainMC):
     """
