@@ -314,7 +314,7 @@ class AbstractMCPropagator(AbstractPropagator):
         builder.add_final_state(self._sampler.state)
                 
         self._acceptance_rate = self._sampler.acceptance_rate
-        
+
         return builder.product
 
     @abstractmethod
@@ -333,6 +333,7 @@ class AbstractMCPropagator(AbstractPropagator):
         trajectory.
         """
         return self._acceptance_rate
+        
 
 class RWMCPropagator(AbstractMCPropagator):
     """
@@ -398,7 +399,7 @@ class HMCPropagator(AbstractMCPropagator):
     @param temperature: See documentation of L{AbstractSingleChainMC}
     @type temperature: float
     """
-    
+
     def __init__(self, pdf, gradient, timestep, nsteps, mass_matrix=None,
                  integrator=FastLeapFrog, temperature=1.):
 
@@ -413,7 +414,7 @@ class HMCPropagator(AbstractMCPropagator):
     def _init_sampler(self, init_state):
 
         from csb.statistics.samplers.mc.singlechain import HMCSampler
-
+        
         self._sampler = HMCSampler(self._pdf, init_state, self._gradient,
                                    self._timestep, self._nsteps,
                                    mass_matrix=self.mass_matrix,
