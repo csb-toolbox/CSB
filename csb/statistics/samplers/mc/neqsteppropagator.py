@@ -632,10 +632,10 @@ class AbstractMCPropagation(AbstractPropagation):
         return heat
 
     def _run_propagator(self, state):
-            
+
         gen = self._propagator_factory()
 
-        return gen.generate(state, self.param.iterations)
+        return gen.generate(state, self.param.iterations, False)
 
     
 class HMCPropagation(AbstractMCPropagation):
@@ -1023,7 +1023,6 @@ class NonequilibriumStepPropagator(AbstractPropagator):
 
         return self.protocol.steps[-1].perturbation.sys_after.hamiltonian(traj.final) - \
                self.protocol.steps[0].perturbation.sys_before.hamiltonian(traj.initial)
-        
 
     def generate(self, init_state, return_trajectory=False):
 
