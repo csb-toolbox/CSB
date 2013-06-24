@@ -1,0 +1,24 @@
+
+ +----------<<<  P  R  O  C  H  E  C  K     S  U  M  M  A  R  Y  >>>----------+
+ |                                                                            |
+ | 2JZC.pdb   1.5                                                201 residues |
+ |                                                                            |
+*| Ramachandran plot:   69.5% core   22.6% allow    5.6% gener    2.3% disall |
+ |                                                                            |
+*| All Ramachandrans:   37 labelled residues (out of 199)                     |
+*| Chi1-chi2 plots:      9 labelled residues (out of 123)                     |
++| Main-chain params:    4 better     0 inside      2 worse                   |
+ | Side-chain params:    5 better     0 inside      0 worse                   |
+ |                                                                            |
+*| Residue properties: Max.deviation:    42.0              Bad contacts: 5581 |
++|                     Bond len/angle:    3.3    Morris et al class:  2  2  2 |
+ |                                                                            |
+ | G-factors           Dihedrals:  -0.10  Covalent:   0.51    Overall:   0.14 |
+ |                                                                            |
+ | M/c bond lengths: 99.1% within limits   0.9% highlighted                   |
+ | M/c bond angles:  99.9% within limits   0.1% highlighted                   |
+ | Planar groups:   100.0% within limits   0.0% highlighted                   |
+ |                                                                            |
+ +----------------------------------------------------------------------------+
+   + May be worth investigating further.  * Worth investigating further.
+
