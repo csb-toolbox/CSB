@@ -14,8 +14,10 @@ from csb.statistics.samplers.mc.multichain import ThermostattedMDRENSSwapParamet
 from csb.statistics.samplers.mc.multichain import RESwapParameterInfo, AlternatingAdjacentSwapScheme
 from csb.statistics.samplers.mc.multichain import ReplicaExchangeMC, ThermostattedMDRENS
 from csb.statistics.samplers.mc.multichain import HMCStepRENS, HMCStepRENSSwapParameterInfo
-from csb.statistics.samplers.mc.multichain import AbstractSwapCommunicator, AbstractExchangeMC, AbstractSwapParameterInfo
-from csb.statistics.samplers.mc.singlechain import HMCSampler, RWMCSampler, AbstractNCMCSampler, AbstractSingleChainMC
+from csb.statistics.samplers.mc.multichain import AbstractSwapCommunicator, AbstractExchangeMC
+from csb.statistics.samplers.mc.multichain import AbstractSwapParameterInfo, ReplicaHistory
+from csb.statistics.samplers.mc.singlechain import HMCSampler, RWMCSampler, AbstractNCMCSampler
+from csb.statistics.samplers.mc.singlechain import AbstractSingleChainMC
 from csb.statistics.samplers.mc.propagators import RWMCPropagator, HMCPropagator, MDPropagator
 from csb.statistics.samplers.mc.propagators import AbstractNCMCPropagator, AbstractPropagator
 from csb.statistics.samplers.mc.neqsteppropagator import ReducedHamiltonian, HamiltonianSysInfo
@@ -786,6 +788,123 @@ class TestNCMCSampler(test.Case):
         self.assertEqual(result.traj.final.position[0],  init.position[0] * 4)
         self.assertEqual(result.traj.initial.momentum, None)
         self.assertEqual(result.traj.final.momentum, None)
+
+
+class HState(State):
+
+    def clone(self):
+        s = super(HState, self).clone()
+        s.history = self.history
+        
+        return s
+
+
+@test.functional
+class TestReplicaHistory(test.Case):
+
+    def setUp(self):
+
+        pass
+    
+    def _runSimulation(self, n_replicas, swap_interval, first_swap):
+
+        temperatures = np.linspace(1.0, 5.0, n_replicas)
+
+        init_states = [HState(np.array([1.0])) for T in temperatures]
+
+        for i, x in enumerate(init_states):
+            x.history = []
+
+        samplers = [RWMCSampler(SamplePDF(), init_states[i], stepsize=1.0, temperature=T) 
+                    for i, T in enumerate(temperatures)]
+
+        params = [RESwapParameterInfo(samplers[i], samplers[i+1]) for i in range(len(samplers) - 1)]
+
+        algo = ReplicaExchangeMC(samplers, params)
+        swapper = AlternatingAdjacentSwapScheme(algo)
+        samples = []
+
+        for i in range(500):
+            if (i - first_swap) % swap_interval == 0 and i > 0 and i >= first_swap:
+                swapper.swap_all()
+            else:
+                algo.sample()
+
+            for j, s in enumerate(algo.state):
+                s.history.append(j)
+
+            samples.append(algo.state)
+
+        return samples
+
+
+    def _assertIdenticalHistories(self, samples, interval, first_swap=None):
+
+        rh = ReplicaHistory(samples, interval, first_swap)
+
+        for i in range(len(samples[0])):
+            h = rh.calculate_history(i)
+            for j, x in enumerate(samples[-1]):
+                if x.history == h:
+                    return True
+
+        return False
+
+    def _assertIdenticalProjTrajs(self, samples, interval, first_swap=None):
+
+        rh = ReplicaHistory(samples, interval, first_swap)
+
+        ## Calculate projected trajectories directly from test data history
+        trajs1 = [Trajectory([x for x in [y[j] for y in samples] if x.history[0] == j]) 
+                  for j in range(len(samples[0]))]
+        
+        ok = []
+        for i in range(len(samples[0])):
+            trajs2 = rh.calculate_projected_trajectories(i)
+            ok.append(True in [np.all(np.array(t1) == np.array(t2)) for t1 in trajs1
+                               for t2 in trajs2])
+            
+        return np.all(ok)
+
+    def testTwoReplicas(self):
+
+        swap_interval = 5
+        first_swap = 5
+
+        samples = self._runSimulation(2, swap_interval, first_swap)
+
+        assert(self._assertIdenticalHistories(samples, swap_interval))
+        assert(self._assertIdenticalProjTrajs(samples, swap_interval))
+
+    def testFourReplicas(self):
+
+        swap_interval = 5
+        first_swap = 5
+
+        samples = self._runSimulation(4, swap_interval, first_swap)
+
+        assert(self._assertIdenticalHistories(samples, swap_interval))
+        assert(self._assertIdenticalProjTrajs(samples, swap_interval))
+
+    def testFiveReplicas(self):
+
+        swap_interval = 5
+        first_swap = 5
+        
+        samples = self._runSimulation(5, swap_interval, first_swap)
+
+        assert(self._assertIdenticalHistories(samples, swap_interval))
+        assert(self._assertIdenticalProjTrajs(samples, swap_interval))
+
+    def testFiveReplicasOffset(self):
+
+        swap_interval = 6
+        first_swap = 7
+
+        samples = self._runSimulation(5, swap_interval, first_swap)
+
+        assert(self._assertIdenticalHistories(samples, swap_interval, first_swap))
+        assert(self._assertIdenticalProjTrajs(samples, swap_interval, first_swap))
 
 
 if __name__ == '__main__':

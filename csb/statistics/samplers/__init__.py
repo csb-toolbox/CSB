@@ -76,6 +76,10 @@ class State(AbstractState):
         self.position = position
         self.momentum = momentum
 
+    def __eq__(self, other):
+
+        return self.position == other.position and self.momentum == other.momentum
+
     @property
     def position(self):        
         return self._position.copy()
@@ -101,9 +105,10 @@ class State(AbstractState):
         
     def clone(self):
         if self.momentum is not None:
-            return State(self.position.copy(), self.momentum.copy())
+            return self.__class__(self.position.copy(), self.momentum.copy())
         else:
-            return State(self.position.copy())
+            return self.__class__(self.position.copy())
+        
         
 class EnsembleState(csb.core.BaseCollectionContainer, AbstractState):
     """
