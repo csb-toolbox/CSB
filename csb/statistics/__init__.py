@@ -256,7 +256,9 @@ def histogram_nd(x, nbins=100, axes=None, nbatch=1000, normalize=True):
     shape = tuple(map(len, axes))
 
     H = np.zeros(shape)
-    s = np.multiply.accumulate(np.array((1,) + H.shape[:-1]))[::-1]
+    ## MH: was like that before...
+    ## s = np.multiply.accumulate(np.array((1,) + H.shape[:-1]))[::-1]
+    s = np.multiply.accumulate(np.array((1,) + H.shape[1:]))[::-1]
     H = H.flatten()
     
     while len(x):
