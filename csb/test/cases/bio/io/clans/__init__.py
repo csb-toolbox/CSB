@@ -345,11 +345,13 @@ class TestClansParser(test.Case):
         self.assertTrue(
             (self.clans_instance.rotmtx - correct_rotmtx < 1e-6).all())
 
-        self.assertEqual(len(self.clans_instance.seqgroups), 2)
+        self.assertEqual(len(self.clans_instance.seqgroups), 4)
 
         seqgroup_names = ('insect hypoth. protein (2 copies, C term)',
-                          'allergens = 3')
-        seqgroup_sizes = (20, 17)
+                          'allergens >= xyz',
+                          'empty group WITH terminal semicolon in numbers line',
+                          'empty group WITHOUT terminal semicolon in numbers line')
+        seqgroup_sizes = (20, 17, 0, 0)
 
         for i, seqgroup in enumerate(self.clans_instance.seqgroups):
             self.assertEqual(len(seqgroup), seqgroup_sizes[i])
@@ -384,6 +386,11 @@ class TestClansFileWriter(test.Case):
         in_hsps = False
         start_tag_hsp = '<hsp>\n'
         end_tag_hsp = '</hsp>\n'
+
+        in_seqgroups = False
+        start_tag_seqgroups = '<seqgroups>\n'
+        end_tag_seqgroups = '</seqgroups>\n'
+
         colorarr_tag = 'colorarr='
         color_tag = 'color='
         
@@ -394,6 +401,13 @@ class TestClansFileWriter(test.Case):
                 continue
             if original_line == end_tag_hsp:
                 in_hsps = False
+                continue
+
+            if original_line == start_tag_seqgroups:
+                in_seqgroups = True
+                continue
+            if original_line == end_tag_seqgroups:
+                in_seqgroups = False
                 continue
 
             if original_line.startswith(colorarr_tag):
@@ -438,6 +452,10 @@ class TestClansFileWriter(test.Case):
                                    = written_lines[i].strip().split(':')
                 self.assertEqual(original_start_end, written_start_end)
                 self.assertTrue((float(original_value) - float(written_value)) < 1e-6)
+
+            elif in_seqgroups and (original_line == 'numbers=\n'):
+                ## a terminal semicolon is added by the ClansWriter
+                self.assertEqual(original_line.strip() + ';', written_lines[i].strip())
 
             else:
                 self.assertEqual(original_line, written_lines[i])
