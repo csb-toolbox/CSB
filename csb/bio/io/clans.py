@@ -481,7 +481,8 @@ class ClansParser(object):
             if p == 'name':
                 groups.append({'name': v})
             elif p == 'numbers':
-                groups[-1][p] = [int(val) for val in v.split(';')[:-1]]
+                ## empty groups with terminal semicolon ("numbers=;") contained an empty string in v.split(';')
+                groups[-1][p] = [int(val) for val in [member for member in v.split(';')[:-1] if member != '']]
             else:
                 groups[-1][p] = v
         return groups
