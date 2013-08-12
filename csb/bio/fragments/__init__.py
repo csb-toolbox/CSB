@@ -1222,6 +1222,8 @@ class Assignment(FragmentMatch):
         
         @rtype: float
         """
+        if self is other:
+            return 0
 
         common = self.overlap(other)
         
@@ -1351,8 +1353,9 @@ class FragmentCluster(object):
     @param threshold: RMSD threshold; continue shrinking until the mean distance
                       drops below this value (default=1.5) 
     @type threshold: float
-    @param connectedness: use only nodes which are connected to at least c% of all
-                          initial nodes (default=0.5, that means 50%)
+    @param connectedness: when calculating centroids, consider only nodes 
+                          connected to at least c% of all surviving vertices 
+                          (default=0.5)
     @type connectedness: float
     """
     
@@ -1367,29 +1370,32 @@ class FragmentCluster(object):
         self._connectedness = float(connectedness)
         self._weight = 0
         self._edges = 0
-           
+        
+        visited = set()
+                       
         for i in items:
-            
-            self._matrix[i] = {}
-            #conn = 0.0
+            self._matrix.setdefault(i, {})
             
             for j in items:
-                distance = i.distance(j)
-                if distance is not None:
-                    #conn += 1
-                    self._matrix[i][j] = distance
-                    self._edges += 1
-                    self._weight += distance
-                    i.weight += distance
-            
-            #if conn / len(items) < self.connectedness:
-            #    # reject i as a first class node
-            #    del self._matrix[i]
+                self._matrix.setdefault(j, {})
                 
+                if (j, i) not in visited:
+                    visited.add((i, j))
+                    distance = i.distance(j)
+                    
+                    if distance is not None:                  
+                        self._matrix[i][j] = distance
+                        self._matrix[j][i] = distance
+                        i.weight += distance
+                        j.weight += distance
+                        
+                        self._weight += distance  
+                        self._edges += 1                      
+                                                        
         self._items = set(self._matrix.keys())
                      
         if len(self._items) < 1:
-            raise ClusterEmptyError()
+            raise ClusterEmptyError() 
         
         self._initcount = self.count 
                
@@ -1449,8 +1455,8 @@ class FragmentCluster(object):
             return float(self._weight) / self._edges
         
         else:
-            weight = self._weight - 2 * skip.weight
-            edges = self._edges - 2 * len(self._matrix[skip])
+            weight = self._weight - skip.weight
+            edges = self._edges - len(self._matrix[skip])
             
             if edges < 1:
                 return 0
@@ -1473,8 +1479,8 @@ class FragmentCluster(object):
         avg = None
 
         for i in self._matrix:
-            
-            curravg = float(i.weight) / len(self._matrix[i])
+            edges = len(self._matrix[i]) or (1.0 / self.count)
+            curravg = float(i.weight) / edges
             conn = len(self._matrix[i]) / float(self.count)
             
             if avg is None or (curravg < avg and conn >= self.connectedness):
@@ -1485,7 +1491,7 @@ class FragmentCluster(object):
                     cen = i
     
         d = self._distances()
-        mean = numpy.mean(d)
+        mean = numpy.mean(d) 
         cons = sum(1.0 for i in d if i <= self.threshold) / len(d)
         
         for i in self._matrix:
@@ -1512,14 +1518,13 @@ class FragmentCluster(object):
         
         for i in self._matrix:
             if item in self._matrix[i]:                
-                distance = self._matrix[i][item]
-                self._weight -= 2 * distance
+                distance = self._matrix[i][item]    
+                self._weight -= distance
                 i.weight -= distance
                 
                 del self._matrix[i][item]
                 self._edges -= 1                
-            
-        self._edges -= len(self._matrix[item])
+        
         del self._matrix[item]
         self._items.remove(item)
 
@@ -1987,6 +1992,7 @@ class RosettaFragsetFactory(object):
             if cluster is None:
                 if callback:
                     callback(ResidueEventInfo(r.native, 0, 0, confident=False))
+                continue
             
             if extend and cluster.has_alternative:
                 best = cluster.alternative
