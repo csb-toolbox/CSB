@@ -1,5 +1,5 @@
 """
-Build an HMM from a FASTA sequence. This program is a proxy to buildali.pl
+Build an HMM from a FASTA sequence. This program is a proxy to hhblits/addss.pl
 and hhmake from the HHpred package.
 
 @note: assuming you have the full HHpred package installed and configured.
@@ -40,7 +40,9 @@ class AppRunner(csb.apps.AppRunner):
                               'Used for naming the output files. Also, if the input is a PDB file with '
                               'multiple chains, CHAIN is used to pull the required chain from the file.',
                               required=True)
-        cmd.add_scalar_option('tk_root', 't', str, 'path to the ToolkitRoot folder in your HHpred setup', default='/ebio/abt1_toolkit/share/wye')
+        cmd.add_scalar_option('tk-root', 't', str, 'path to the ToolkitRoot folder in your HHsuite setup', default='/ebio/abt1_toolkit/share/wye')
+        cmd.add_scalar_option('database', 'd', str, 'custom HHblits database; if not defined, toolkit\'s unirpto20 will be used', default=None)        
+        cmd.add_scalar_option('tk-config', 'c', str, 'path to a folder containing custom HHsuite configs (e.g. HHPaths.pm)', default='.')
         cmd.add_scalar_option('cpu', None, int, 'maximum degree of parallelism', default=1)        
 
         cmd.add_boolean_option('no-ss', None, 'do not include secondary structure', default=False)        
@@ -54,7 +56,7 @@ class AppRunner(csb.apps.AppRunner):
 
 class BuildProfileApp(csb.apps.Application):
     
-    def main(self):
+    def main(self):            
         
         if os.path.isfile(self.args.query_id + '.hhm'):
             BuildProfileApp.exit('# Profile "{0}" already exists, skipping'.format(self.args.query_id),
@@ -62,11 +64,10 @@ class BuildProfileApp(csb.apps.Application):
         
         try:
             self.log('# Building profile HMM for {0}...'.format(self.args.query))
-            pb = ProfileBuilder.create(self.args.query, self.args.query_id, self.args.tk_root,
+            pb = ProfileBuilder.create(self.args.query, self.args.query_id, self.args.database, self.args.tk_root, self.args.tk_config,
                                        pseudo=not self.args.no_pseudo, ss=not self.args.no_ss, cpu=self.args.cpu)
             
             pb.build_alignment()
-            
             pb.make_hmm()
             
             if not self.args.no_calibration:                
@@ -119,7 +120,10 @@ class ProfileBuilder(object):
     TRANSITION_PSEUDO = '-gapb 1.0 -gapd 0.15 -gape 1.0 -gapf 0.6 -gapg 0.6 -gapi 0.6'
     
     @staticmethod
-    def create(query, target_id, tk_root, pseudo=True, ss=True, cpu=1):
+    def create(query, target_id, database, tk_root, tk_config, pseudo=True, ss=True, cpu=1):
+        
+        if database is None:
+            database = os.path.join(tk_root, "databases", "hhblits", "uniprot20")        
 
         if not os.path.isfile(query):
             raise BuildIOError('File not found: ' + query)
@@ -130,21 +134,28 @@ class ProfileBuilder(object):
                 continue
             
             if line.startswith('>'):
-                return FASTAProfileBuilder(query, target_id, tk_root, pseudo, ss, cpu)
+                return FASTAProfileBuilder(query, target_id, database, tk_root, tk_config, pseudo, ss, cpu)
             elif line.startswith('HEADER') or line.startswith('ATOM'): 
-                return PDBProfileBuilder(query, target_id, tk_root, pseudo, ss, cpu)
+                return PDBProfileBuilder(query, target_id, database, tk_root, tk_config, pseudo, ss, cpu)
             else:
                 raise BuildArgError('Unknown input file format')
                 
-    def __init__(self, query, target_id, tk_root, pseudo=True, ss=True, cpu=1):
+    def __init__(self, query, target_id, database, tk_root, tk_config, pseudo=True, ss=True, cpu=1):
         
         self.tk_root = tk_root
+        self.tk_config = tk_config
+        self.hhlib = os.path.join(tk_root, "bioprogs", "hhsuite")
+        
         if 'TK_ROOT' not in os.environ or not os.environ['TK_ROOT']:
-            os.putenv('TK_ROOT', tk_root)
-                    
+            os.putenv('TK_ROOT', self.tk_root)
+        if 'HHLIB' not in os.environ or not os.environ['HHLIB']:
+            os.putenv('HHLIB', self.hhlib)
+        os.environ["PATH"] += os.pathsep + os.path.join(self.hhlib, "bin")
+                                
         self.query = query
         self.accession = target_id[:-1]
         self.chain = target_id[-1]
+        self.database = database
         self.pseudo = bool(pseudo)
         self.ss = bool(ss)
         self.cpu = cpu
@@ -172,20 +183,32 @@ class ProfileBuilder(object):
     def build_alignment(self):
         assert self._input is not None
         
-        program = os.path.join(self.tk_root, 'bioprogs', 'hhpred', 'buildali.pl')
-        
-        if not self.ss:
-            noss = '-noss'
-        else:
-            noss = ''        
-        cmd = 'perl {0} {1} -cpu {2} {3}'.format(program, noss, self.cpu, self._input)
+        program = os.path.join(self.tk_root, 'bioprogs', 'hhsuite', 'bin', 'hhblits')
+            
+        ali = self.target_id + '.a3m'                    
+        cmd = '{0} -cpu {1} -i {2} -d {3} -nodiff -oa3m {4}'.format(
+                                program, self.cpu, self._input, self.database, ali)
         bali = csb.io.Shell.run(cmd)
         
-        ali = self.target_id + '.a3m'
         if bali.code != 0:
             raise csb.io.ProcessError(bali)
         if not os.path.isfile(ali):
-            raise NoOutputError(ali, bali)        
+            raise NoOutputError(ali, bali)
+        
+        if self.ss:
+            program2 = os.path.join(self.tk_root, 'bioprogs', 'hhsuite', 'scripts', 'addss.pl')
+            
+            with csb.io.TempFile() as patch:
+                for l in open(program2):
+                    if l.lstrip().startswith("use HHPaths"):
+                        patch.write('use lib "{0}";\n'.format(self.tk_config))
+                    patch.write(l);
+                patch.flush()
+                
+                cmd2 = "perl {0} {1}".format(patch.name, ali)
+                addss = csb.io.Shell.run(cmd2)            
+                if addss.code != 0:
+                    raise csb.io.ProcessError(addss)       
         
         self._ali = ali
         return ali
