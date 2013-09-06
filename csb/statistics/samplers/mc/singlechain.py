@@ -281,7 +281,7 @@ class HMCSampler(AbstractSingleChainMC):
             proposal_communicator.proposal_state.momentum = None
         else:
             proposal_communicator.proposal_state.momentum = self.state.momentum
-
+        
         return pacc
 
     @property

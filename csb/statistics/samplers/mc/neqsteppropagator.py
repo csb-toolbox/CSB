@@ -676,11 +676,14 @@ class HMCPropagation(AbstractMCPropagation):
 
     def _propagator_factory(self):
 
-        return HMCPropagator(self.sys.hamiltonian, self.param.gradient,
-                             self.param.timestep, self.param.traj_length,
-                             temperature=self.sys.hamiltonian.temperature,
-                             integrator=self.param.integrator, mass_matrix=self.param.mass_matrix)
-
+        gen = HMCPropagator(self.sys.hamiltonian, self.param.gradient,
+                            self.param.timestep, self.param.traj_length,
+                            temperature=self.sys.hamiltonian.temperature,
+                            integrator=self.param.integrator,
+                            mass_matrix=self.param.mass_matrix)
+        
+        return gen
+    
     def _evaluate(self, state):
         
         self._set_mass_matrix(state)
