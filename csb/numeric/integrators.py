@@ -67,7 +67,7 @@ class AbstractIntegrator(object):
         return builder.product
 
     @abstractmethod
-    def integrate_once(self, state, current_step, inverse_mass_matrix=None):
+    def integrate_once(self, state, current_step, mass_matrix=None):
         """
         Integrates one step starting from an initial state and an initial time
         given by the product of the timestep and the current_step parameter.
@@ -79,10 +79,10 @@ class AbstractIntegrator(object):
         @param current_step: Current integration step
         @type current_step: int
 
-        @param inverse_mass_matrix: Inverse mass matrix
-        @type inverse_mass_matrix:  n-dimensional numpy array with n being the dimension
-                                    of the configuration space, that is, the dimension of
-                                    the position / momentum vectors
+        @param mass_matrix: mass matrix
+        @type mass_matrix:  n-dimensional numpy array with n being the dimension
+                            of the configuration space, that is, the dimension of
+                            the position / momentum vectors
         @return: the altered state
         @rtype: L{State}
         """
