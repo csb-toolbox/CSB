@@ -1075,7 +1075,7 @@ class AbstractHeatWorkJacobianLogger(object):
 
         self._heat = 0.0
         self._work = 0.0
-        self._jacobian = 0.0
+        self._jacobian = 1.0
 
     @abstractmethod
     def accumulate(self, heat=0.0, work=0.0, jacobian=1.0):
@@ -1191,16 +1191,16 @@ class NonequilibriumStepPropagator(AbstractPropagator):
 
             step_stats.update(i, shorttraj, stats_data)
             hwj_logger.accumulate(shorttraj.heat, shorttraj.work, shorttraj.jacobian)
-            
+
+            estate = shorttraj.final
+                        
             if i == 0:
                 builder.add_initial_state(shorttraj.initial)
             elif i != len(self.protocol.steps) - 1:
                 builder.add_intermediate_state(estate)
             else:
                 builder.add_final_state(estate)
-
-            estate = shorttraj.final
-
+        
         return builder.product
 
 
