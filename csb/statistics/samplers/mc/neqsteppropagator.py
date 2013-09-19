@@ -36,7 +36,7 @@ class NonequilibriumTrajectory(Trajectory):
     @type jacobian: float
     """
 
-    def __init__(self, items, heat=0.0, work=0.0, deltaH=0.0, jacobian=1.0):
+    def __init__(self, items, heat=0.0, work=0.0, deltaH=0.0, jacobian=1.0, stats=None):
         
         super(NonequilibriumTrajectory, self).__init__(items, heat=heat, work=work)
 
@@ -44,6 +44,8 @@ class NonequilibriumTrajectory(Trajectory):
         self.deltaH = deltaH
         self._jacobian = None
         self.jacobian = jacobian
+        self._stats = None
+        self.stats = stats
 
     @property
     def jacobian(self):
@@ -59,7 +61,14 @@ class NonequilibriumTrajectory(Trajectory):
     def deltaH(self, value):
         self._deltaH = value
 
+    @property
+    def stats(self):
+        return self._stats
+    @stats.setter
+    def stats(self, value):
+        self._stats = value
 
+        
 class AbstractSystemInfo(object):
     """
     Subclasses hold all information describing a current system setup
@@ -153,29 +162,68 @@ class Step(object):
         self._perform = None
         self.perform = self._perform_pert_prop
 
-    def _perform_pert_prop(self, state):
+    def _perform_pert_prop(self, state, extra_info=None):
+        '''
+        First, perform the perturbation, and then the propagation.
+        Override this in a subclass if you want to pass on extra
+        information to the next step in the protocol or if you want
+        to gather some statistics on what happens in the intermediate steps.
+        
+        @param state: state to be evolved
+        @type state: L{State}
+        @param extra_info: possible extra information resulting 
+                           from previous steps
+        @type extra_info: any type
 
+        @rtype: L{list} containing a short trajectory consisting of
+                the initial and the evolved state, possible extra information
+                which will be passed on to the next step in the protocol and
+                possible subclasses of L{AbstractStepStatistics} containing 
+                information on what happend in the step.
+        '''
+        
         perturbation_result = self.perturbation(state)
         propagation_result = self.propagation(perturbation_result.final)
-
         result_state = propagation_result.final
 
-        return NonequilibriumTrajectory([state, result_state],
-                                        heat=propagation_result.heat,
-                                        work=perturbation_result.work,
-                                        jacobian=perturbation_result.jacobian)
+        shorttraj = NonequilibriumTrajectory([state, result_state],
+                                             heat=propagation_result.heat,
+                                             work=perturbation_result.work,
+                                             jacobian=perturbation_result.jacobian)
+        
+        return shorttraj, None, None
+    
+    def _perform_prop_pert(self, state, extra_info=None):
+        '''
+        First, perform the propagation, and then the perturbation.
+        Override this in a subclass if you want to pass on extra
+        information to the next step in the protocol or if you want
+        to gather some statistics on what happens in the intermediate steps.
 
-    def _perform_prop_pert(self, state):
+        @param state: state to be evolved
+        @type state: L{State}
+        @param extra_info: possible extra information resulting 
+                           from previous steps
+        @type extra_info: any type
 
+        @rtype: L{list} containing a short trajectory consisting of
+                the initial and the evolved state, possible extra information
+                which will be passed on to the next step in the protocol and
+                possible subclasses of L{AbstractStepStatistics} containing 
+                information on what happend in the step.
+        '''
+        
         propagation_result = self.propagation(state)
         perturbation_result = self.perturbation(propagation_result.final)
         result_state = perturbation_result.final
 
-        return NonequilibriumTrajectory([state, result_state],
-                                        heat=propagation_result.heat,
-                                        work=perturbation_result.work,
-                                        jacobian=perturbation_result.jacobian)
-
+        shorttraj = NonequilibriumTrajectory([state, result_state],
+                                             heat=propagation_result.heat,
+                                             work=perturbation_result.work,
+                                             jacobian=perturbation_result.jacobian)
+        
+        return shorttraj, None, None
+    
     def set_perturbation_first(self):
         """
         Perform first perturbation, then propagation
@@ -1000,6 +1048,65 @@ class HamiltonianSysInfo(AbstractSystemInfo):
         self._hamiltonian = value
 
 
+class AbstractStepStatistics(object):
+    '''
+    Abstract class defining a minimal interface for objects allowing to store statistics
+    of what happens in L{Step} instances.
+    '''
+
+    @abstractmethod
+    def update(self, step_index, shorttraj, stats_data):
+        pass
+
+    
+class DummyStepStatistics(AbstractStepStatistics):
+
+    def update(self, step_index, shorttraj, stats_data):
+        pass
+
+
+class AbstractHeatWorkJacobianLogger(object):
+    '''
+    Abstract class defining the interface for objects keeping track of and accumulating
+    heat, work and the Jacobian during a nonequilibrium trajectory.
+    '''
+
+    def __init__(self):
+
+        self._heat = 0.0
+        self._work = 0.0
+        self._jacobian = 0.0
+
+    @abstractmethod
+    def accumulate(self, heat=0.0, work=0.0, jacobian=1.0):
+        '''
+        Adds heat and work contribution to the so far accumulated values and
+        "multiply-accumulates" the Jacobian to the so far "multiply-accumulated" values.
+        '''
+        pass
+
+    @property
+    def heat(self):
+        return self._heat
+    
+    @property
+    def work(self):
+        return self._work
+
+    @property
+    def jacobian(self):
+        return self._jacobian
+
+
+class TrivialHeatWorkJacobianLogger(AbstractHeatWorkJacobianLogger):
+
+    def accumulate(self, heat=0.0, work=0.0, jacobian=1.0):
+
+        self._heat += heat
+        self._work += work
+        self._jacobian *= jacobian
+
+    
 class NonequilibriumStepPropagator(AbstractPropagator):
     """
     Propagator class which propagates a system using NCMC-like
@@ -1027,34 +1134,87 @@ class NonequilibriumStepPropagator(AbstractPropagator):
         return self.protocol.steps[-1].perturbation.sys_after.hamiltonian(traj.final) - \
                self.protocol.steps[0].perturbation.sys_before.hamiltonian(traj.initial)
 
-    def generate(self, init_state, return_trajectory=False):
+    def _create_heat_work_jacobian_logger(self):
+        '''
+        Factory method for the L{AbstractHeatWorkJacobianLogger} subclass instance
+        which keeps track of work, heat and Jacobian contributions during the nonequilibrium
+        trajectory.
 
-        estate = init_state.clone()
+        @rtype: instance of an L{AbstractHeatWorkJacobianLogger}-derived class
+        '''
+
+        return TrivialHeatWorkJacobianLogger()
+
+    def _create_step_stats(self):
+        '''
+        Factory method for the L{AbstractStepStatistics} subclass instance
+        which can be used to collect statistics of what happens during steps.
+
+        @rtype: instance of an L{AbstractStepStatistics}-derived class
+        '''
         
-        reduced_work = 0.
-        reduced_heat = 0.
+        return DummyStepStatistics()
 
-        builder = TrajectoryBuilder.create(full=return_trajectory)
-            
-        total_jacobian = 1.
+    def _set_initial_extra_info(self, init_state):
+        '''
+        Provides additional information for the first step in the protocol.
+
+        @rtype: any type
+        '''
+
+        return None
+
+    def _perform_step_iteration(self, estate, hwj_logger, step_stats, builder, extra_info):
+        '''
+        Performs the iteration over all steps in the nonequilibrium protocol.
+
+        @param estate: the state which will be evolved
+        @type estate: L{State}
+        @param hwj_logger: an instance of an L{AbstractHeatWorkJacobianLogger}-derived class,
+                           which keeps track of work, heat and Jacobian contributions
+        @type hwj_logger: subclass of L{AbstractHeatWorkJacobianLogger}
+        @param step_stats: an instance of an L{AbstractStepStatistics}-derived class,
+                           which may collect some statistics of what happens during steps
+        @type step_stats: subclass of L{AbstractStepStatistics}
+        @param builder: L{TrajectoryBuilder} instance in charge of building the L{Trajectory} object
+        @type builder: L{TrajectoryBuilder}
+        @param extra_info: Dictionary containing eventual additional information, which needs to
+                           be passed on from one step to the following
+        @type extra_info: any type
+
+        @rtype: L{Trajectory}
+        '''
 
         for i in range(len(self.protocol.steps)):
-            shorttraj = self.protocol.steps[i].perform(estate)
+
+            shorttraj, extra_info, stats_data = self.protocol.steps[i].perform(estate, extra_info)
+
+            step_stats.update(i, shorttraj, stats_data)
+            hwj_logger.accumulate(shorttraj.heat, shorttraj.work, shorttraj.jacobian)
+            
             if i == 0:
                 builder.add_initial_state(shorttraj.initial)
-
-            reduced_heat += shorttraj.heat
-            reduced_work += shorttraj.work
-            total_jacobian *= shorttraj.jacobian
-
-            estate = shorttraj.final
-            
-            if i != len(self.protocol.steps) - 1:
+            elif i != len(self.protocol.steps) - 1:
                 builder.add_intermediate_state(estate)
             else:
                 builder.add_final_state(estate)
 
-        traj = builder.product
+            estate = shorttraj.final
+
+        return builder.product
+
+
+    def generate(self, init_state, return_trajectory=False):
+
+        estate = init_state.clone()
+
+        hwj_logger = self._create_heat_work_jacobian_logger()
+        step_stats = self._create_step_stats()
+        builder = TrajectoryBuilder.create(full=return_trajectory)
+        extra_info = self._set_initial_extra_info(estate)
+
+        traj = self._perform_step_iteration(estate, hwj_logger, step_stats, 
+                                            builder, extra_info)
 
         reduced_deltaH = self._calculate_deltaH(traj)
         
@@ -1063,11 +1223,12 @@ class NonequilibriumStepPropagator(AbstractPropagator):
                 s.momentum = None
         
         result = NonequilibriumTrajectory([x for x in traj],
-                                           heat=reduced_heat,
-                                           work=reduced_work,
-                                           deltaH=reduced_deltaH,
-                                           jacobian=total_jacobian)
-    
+                                          heat=hwj_logger.heat,
+                                          work=hwj_logger.work,
+                                          deltaH=reduced_deltaH,
+                                          jacobian=hwj_logger.jacobian, 
+                                          stats=step_stats)
+        
         return result
 
     @property
