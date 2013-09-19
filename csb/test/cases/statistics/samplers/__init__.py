@@ -525,23 +525,27 @@ class MockStep(Step):
 
         return MockPerturbation()
 
-    def _perform_pert_prop(self, state):
+    def _perform_pert_prop(self, state, extra_info=None):
 
         if self._return_momentum == True:
             final = State(state.position * 2, state.momentum * 2)
         else:
             final = State(state.position * 2)
 
-        return NonequilibriumTrajectory([state, final], heat=-42.0, work=42.0, jacobian=1.1)
+        res = NonequilibriumTrajectory([state, final], heat=-42.0, work=42.0, jacobian=1.1)
 
-    def _perform_prop_pert(self, state):
+        return res, None, None
+
+    def _perform_prop_pert(self, state, extra_info=None):
 
         if self._return_momentum == True:
             final = State(state.position * 2, state.momentum * 2)
         else:
             final = State(state.position * 2)
 
-        return NonequilibriumTrajectory([state, final], heat=42.0, work=-42.0, jacobian=1.1)
+        res = NonequilibriumTrajectory([state, final], heat=42.0, work=-42.0, jacobian=1.1)
+        
+        return res, None, None
 
 
 class MockProtocol(Protocol):
@@ -671,7 +675,7 @@ class TestNeqsteppropagator(test.Case):
         init = State(np.array([2.0]), np.array([2.0]))
 
         ## Test step with first perturbation, then propagation
-        res = step.perform(init)
+        res = step.perform(init)[0]
 
         self.assertEqual(res.final.position, init.position * 4)
         self.assertEqual(res.final.momentum, init.momentum * 4)
@@ -681,7 +685,7 @@ class TestNeqsteppropagator(test.Case):
 
         ## Test step with first perturbation, then propagation
         step.set_propagation_first()
-        res = step.perform(init)
+        res = step.perform(init)[0]
 
         self.assertEqual(step.perform, step._perform_prop_pert)
         self.assertEqual(res.final.position, init.position * 4)
