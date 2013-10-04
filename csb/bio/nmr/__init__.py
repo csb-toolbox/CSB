@@ -579,7 +579,7 @@ class ContactMap(object):
         @type min_distance: int
         
         @return: precision and coverage
-        @rtype: L{ContactMapComparsonInfo}  
+        @rtype: L{ContactMapComparisonInfo}  
         """
         if query.chain is not reference.chain:
             raise ValueError("Contact maps are not comparable")
@@ -605,12 +605,12 @@ class ContactMap(object):
         try:
             precision = true_pos / (true_pos + false_pos)
             coverage = true_pos / (true_pos + false_neg)
-            return ContactMapComparsonInfo(precision, coverage)
+            return ContactMapComparisonInfo(precision, coverage)
         
         except ZeroDivisionError:
-            return ContactMapComparsonInfo(0, 0)
+            return ContactMapComparisonInfo(0, 0)
         
-class ContactMapComparsonInfo(object):
+class ContactMapComparisonInfo(object):
     
     def __init__(self, precision, coverage):
         
