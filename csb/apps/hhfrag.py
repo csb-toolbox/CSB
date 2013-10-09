@@ -463,7 +463,7 @@ class HHfrag(object):
                 
         except IOError as io:
             raise ArgumentIOError(str(io))
-        except csb.bio.io.wwpdb.StructureNotFoundError, sne:
+        except csb.bio.io.wwpdb.StructureNotFoundError as sne:
             msg = "{0} is not a PDBS25-derived fragset (template {1} not found)"
             raise ArgumentIOError(msg.format(fragfile, str(sne)))
 
