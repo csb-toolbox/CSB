@@ -298,7 +298,9 @@ Options:
         sys.argv = argv    
         
     def _compile(self):
-        
+        """
+        Byte-compile all modules and packages.
+        """
         self.log('\n# Byte-compiling all *.py files...')
         
         quiet = self.verbosity <= 1
