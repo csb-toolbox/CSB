@@ -28,6 +28,7 @@ import os
 import sys
 import getopt
 import traceback
+import compileall
         
 if os.path.basename(__file__) == '__init__.py':
     PARENT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -128,6 +129,8 @@ Options:
         if os.path.join(SOURCETREE, ROOT) != PARENT:
             raise IOError('{0} must be a sub-package or sub-module of {1}'.format(__file__, ROOT))
         self._input = SOURCETREE
+        
+        self._success = True
                 
         self.output = output
         self.verbosity = verbosity
@@ -165,9 +168,15 @@ Options:
         v = self._revision()
         self._doc(v)
         self._test()
+        
+        self._compile()        
         vn = self._package()     
         
-        self.log('\n# Done ({0}).\n'.format(vn.full))         
+        if self._success:
+            self.log('\n# Done ({0}).\n'.format(vn.full))
+        else:
+            self.log('\n# Build failed.\n')
+                 
 
     def log(self, message, level=1, ending='\n'):
 
@@ -283,9 +292,21 @@ Options:
                     self.log('\n  DID NOT PASS: The docs might be broken')                    
                 else:
                     self.log('\n  FAIL: Epydoc returned "#{0.code}: {0}"'.format(ex))
+                    self._success = False
 
         self.log('\n# Restoring the previous ARGV...', level=2)    
         sys.argv = argv    
+        
+    def _compile(self):
+        
+        self.log('\n# Byte-compiling all *.py files...')
+        
+        quiet = self.verbosity <= 1
+        valid = compileall.compile_dir(self._root, quiet=quiet, force=True)
+        
+        if not valid:
+            self.log('\n  FAIL: Compilation error(s)\n')
+            self._success = False
                         
     def _package(self):
         """
@@ -314,8 +335,9 @@ Options:
             
         except SystemExit as ex:
             if ex.code is not 0:
-                package = 'FAIL'
                 self.log('\n  FAIL: Setup returned: \n\n{0}\n'.format(ex))
+                self._success = False
+                package = 'FAIL'
             
         self.log('\n# Restoring the previous CWD and ARGV...', level=2)
         os.chdir(cwd)
