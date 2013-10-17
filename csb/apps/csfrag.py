@@ -536,7 +536,6 @@ def _task(helper, subject, qs, qe, qcs, scs):
 
 
 if __name__ == '__main__':
-    
-    args = "cs.py -v 1 -f -t 12 -d /home/ivan/Desktop/cstest/db -s /home/ivan/Desktop/cstest/t.str -o /home/ivan/Desktop/cstest /home/ivan/Desktop/cstest/t.fa".split() 
+     
     AppRunner().run()
     
