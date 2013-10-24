@@ -14,22 +14,22 @@ L{AbstractParameter.value}:
     >>>     def _compute(self, base_value):                
     >>>         return 1.0 / base_value ** 0.5
     >>>                            
-    >>> s = Sigma(3)
-    >>> s.name, s.value
+    >>> sigma = Sigma(3)
+    >>> sigma.name, sigma.value
     sigma, 3
 
 L{AbstractParameter}s holding a single float value are indistinguishable from 
 the simple float parameters used in L{csb.statistics.pdf.BaseDensity}. 
 However, each L{AbstractParameter} supports the concept of binding:
 
-    >>> s.is_virtual
+    >>> sigma.is_virtual
     False
-    >>> p = Precision(1) 
-    >>> s.bind_to(precision)
-    >>> s.is_virtual
+    >>> precision = Precision(1) 
+    >>> sigma.bind_to(precision)
+    >>> sigma.is_virtual
     True    
-    >>> base_parameter.set(2)  # triggers implicit update in s
-    >>> s.set(1)
+    >>> precision.set(2)  # triggers an implicit, lazy update in sigma
+    >>> sigma.set(1)
     ParameterizationError: Virtual parameters can't be updated explicitly
     
 The instance of Sigma is now a virtual parameter which receives automatic updates 
