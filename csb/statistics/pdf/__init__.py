@@ -265,11 +265,12 @@ class GumbelMaxMomentsEstimator(AbstractEstimator):
         
         return GumbelMaximum(mu, beta)    
     
-                
+
 class AbstractDensity(object):
     """
     Defines the interface and common operations for all probability density
-    functions.
+    functions. This is a generic class which can operate on parameters of
+    any type (e.g. simple floats or custom parameter objects).
     
     Subclasses must complete the implementation by implementing the
     L{AbstractDensity.log_prob} method. Subclasses could also consider--but
@@ -281,8 +282,8 @@ class AbstractDensity(object):
     discouraged.
     """
 
-    __metaclass__ = ABCMeta
-    
+    __metaclass__ = ABCMeta                  
+
 
     def __init__(self):
 
@@ -300,16 +301,17 @@ class AbstractDensity(object):
         
     def __setitem__(self, param, value):
         
-        if param in self._params: 
-            if csb.core.iterable(value):
-                value = array(value)
-            else:
-                value = float(value)
-            
+        if param in self._params:            
             self._validate(param, value)
-            self._params[param] = value
+            self._set(param, value)
         else:
             raise ParameterNotFoundError(param)
+        
+    def _set(self, param, value):
+        """
+        Update the C{value} of C{param}.
+        """
+        self._params[param] = value
         
     @property
     def estimator(self):
@@ -418,7 +420,27 @@ class AbstractDensity(object):
         except ParameterValueError as e:
             raise EstimationFailureError(e.param, e.value)
 
-class Laplace(AbstractDensity):
+
+class BaseDensity(AbstractDensity):
+    """
+    Base abstract class for all PDFs, which operate on simple float
+    or array-of-float parameters. Parameters of any other type will trigger
+    TypeError-s.
+    """
+    
+    def _set(self, param, value):
+        
+        try:
+            if csb.core.iterable(value):
+                value = array(value)
+            else:
+                value = float(value)
+        except ValueError:
+            raise TypeError(value)
+        
+        super(BaseDensity, self)._set(param, value)
+    
+class Laplace(BaseDensity):
         
     def __init__(self, mu=0, b=1):
         
@@ -463,7 +485,7 @@ class Laplace(AbstractDensity):
         
         return numpy.random.laplace(loc, scale, size)
     
-class Normal(AbstractDensity):
+class Normal(BaseDensity):
     
     def __init__(self, mu=0, sigma=1):
         
@@ -503,7 +525,7 @@ class Normal(AbstractDensity):
                 
         return numpy.random.normal(mu, sigma, size)
 
-class InverseGaussian(AbstractDensity):
+class InverseGaussian(BaseDensity):
 
     def __init__(self, mu=1, shape=1):
 
@@ -563,7 +585,7 @@ class InverseGaussian(AbstractDensity):
 
         return m * X + (1 - m) * mu ** 2 / X
  
-class GeneralizedNormal(AbstractDensity):
+class GeneralizedNormal(BaseDensity):
     
     def __init__(self, mu=0, alpha=1, beta=1):
         
@@ -610,7 +632,7 @@ class GeneralizedNormal(AbstractDensity):
              
         return log(beta / (2.0 * alpha)) - gammaln(1. / beta) - power(fabs(x - mu) / alpha, beta)
 
-class GeneralizedInverseGaussian(AbstractDensity):
+class GeneralizedInverseGaussian(BaseDensity):
 
     def __init__(self, a=1, b=1, p=1):
         super(GeneralizedInverseGaussian, self).__init__()
@@ -691,7 +713,7 @@ class GeneralizedInverseGaussian(AbstractDensity):
 
         return numpy.array(rvs)
         
-class Gamma(AbstractDensity):
+class Gamma(BaseDensity):
 
     def __init__(self, alpha=1, beta=1):
         super(Gamma, self).__init__()
@@ -731,7 +753,7 @@ class Gamma(AbstractDensity):
     def random(self, size=None):
         return numpy.random.gamma(self['alpha'], 1 / self['beta'], size)
 
-class InverseGamma(AbstractDensity):
+class InverseGamma(BaseDensity):
 
     def __init__(self, alpha=1, beta=1):
         super(InverseGamma, self).__init__()
@@ -825,7 +847,7 @@ class MultivariateGaussian(Normal):
         
         return MultivariateGaussian((mu, Sigma))
 
-class Dirichlet(AbstractDensity):
+class Dirichlet(BaseDensity):
 
     def __init__(self, alpha):
         super(Dirichlet, self).__init__()
@@ -853,7 +875,7 @@ class Dirichlet(AbstractDensity):
         return numpy.random.mtrand.dirichlet(self.alpha, size)
 
 
-class GumbelMinimum(AbstractDensity):
+class GumbelMinimum(BaseDensity):
     
     def __init__(self, mu=0, beta=1):
         super(GumbelMinimum, self).__init__()

@@ -5,10 +5,10 @@ Reference: Rowicka and Otwinowski 2004
 
 import numpy
 
-from csb.statistics.pdf import AbstractDensity
+from csb.statistics.pdf import BaseDensity
 
 
-class MaxentModel(AbstractDensity):
+class MaxentModel(BaseDensity):
     """
     Fourier expansion of a biangular log-probability density
     """
