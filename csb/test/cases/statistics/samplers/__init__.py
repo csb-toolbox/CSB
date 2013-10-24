@@ -1,8 +1,9 @@
 import numpy as np
-import csb.test as test
-import csb
 
-from csb.statistics.pdf import Normal, AbstractDensity
+import csb.test as test
+import csb.numeric
+
+from csb.statistics.pdf import Normal, BaseDensity
 
 from csb.numeric.integrators import AbstractGradient, VelocityVerlet, LeapFrog, FastLeapFrog
 from csb.numeric import InvertibleMatrix
@@ -37,7 +38,7 @@ class SamplePDF(Normal):
     def grad(self, x, t):
         return x / (self.sigma ** 2)
 
-class MultimodalPDF(AbstractDensity):
+class MultimodalPDF(BaseDensity):
 
     def log_prob(self, x):
         return sum(-2.5 * np.cos(2.5 * x) - 0.04 * x ** 2)
@@ -45,7 +46,7 @@ class MultimodalPDF(AbstractDensity):
     def grad(self, x, t):
         return -6.25 * np.sin(2.5 * x) + 0.08 * x
 
-class Multimodal2DPDF(AbstractDensity):
+class Multimodal2DPDF(BaseDensity):
 
     k = 0.5
 
@@ -432,12 +433,6 @@ class MockPropagator(AbstractPropagator):
         final_state = State(init_state.position * 2, init_state.momentum * 2)
         
         return Trajectory([init_state, final_state])
-
-class MDPropagationMocked(AbstractMDPropagation):
-
-    def _propagator_factory(self):
-
-        return MockMDPropagator()
     
 class PlainMDPropagationMocked(PlainMDPropagation):
 

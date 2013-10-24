@@ -85,7 +85,7 @@ def sample_dirichlet(alpha, n_samples=1):
     Sample points from a dirichlet distribution with parameter alpha.
 
     @param alpha: alpha parameter of a dirichlet distribution
-    @type alpha:
+    @type alpha: array
     """
     from numpy import array, sum, transpose, ones
     from numpy.random import gamma

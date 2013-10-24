@@ -8,13 +8,14 @@ import csb.core
 import csb.statistics.ars
 import csb.statistics.rand
 
-from csb.core import typedproperty, validatedproperty
+from csb.core import typedproperty
 from abc import abstractmethod, ABCMeta
 
 from csb.numeric import log, exp, approx_psi, inv_psi, d_approx_psi
 from scipy.special import  psi, kve
 from csb.statistics import harmonic_mean, geometric_mean
-from csb.statistics.pdf import AbstractEstimator, AbstractDensity, Gamma, InverseGamma, NullEstimator
+from csb.statistics.pdf import AbstractEstimator, AbstractDensity, BaseDensity
+from csb.statistics.pdf import Gamma, InverseGamma, NullEstimator
 
 
 def inv_digamma_minus_log(y, tol=1e-10, n_iter=100):
@@ -81,7 +82,7 @@ class ScaleMixturePrior(object):
             self._scale_estimator = NullEstimator()
 
 
-class ScaleMixture(AbstractDensity):
+class ScaleMixture(BaseDensity):
     """
     Robust probabilistic superposition and comparison of protein structures
     Martin Mechelke and Michael Habeck
