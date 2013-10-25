@@ -250,9 +250,9 @@ class AbstractParameter(object):
             path = self._nearest_consistent_base()
         
             for parameter in reversed(path):
-                parameter._recompute(mark_consistent=True)
+                parameter._recompute(consistent=True)
 
-    def _recompute(self, mark_consistent=True):
+    def _recompute(self, consistent=True):
         """
         If self is virtual, force the current parameter to recompute itself from 
         its immediate base. This operation has no side effects and does not 
@@ -262,7 +262,7 @@ class AbstractParameter(object):
             value = self._compute(self._base._value)
             self._update(value)
         
-        if mark_consistent:
+        if consistent:
             self._consistent = True
         
     def _recompute_derivatives(self):
@@ -270,11 +270,7 @@ class AbstractParameter(object):
         Recompute all derived parameters starting from self and mark 
         them consistent.
         """
-        if self.is_virtual:
-            value = self._compute(self._base._value)
-            self._update(value)
-        
-        self._consistent = True
+        self._recompute(consistent=True)
         
         for p in self._derivatives:
             p._recompute_derivatives()
