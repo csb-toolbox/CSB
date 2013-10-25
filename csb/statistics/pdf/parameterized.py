@@ -86,7 +86,12 @@ class AbstractParameter(object):
     to other parameters upon request. Virtual/coupled/derived parameters cannot
     be overwritten explicitly, but their values will get recomputed once their
     corresponding base parameters get updated. This is a lazy process - parameter
-    recalculation happens only when an out of date parameter is requested. 
+    recalculation happens only when an out of date parameter is requested. This 
+    triggers a real-time cascaded update which affects all parameters from the
+    nearest consistent base down to the current inconsistent node.
+    
+    Implementing subclasses must override L{AbstractParameter._validate} 
+    and virtual parameters should additionally override L{AbstractParameter._compute}.
     
     @param value: initial value (defaults to None / AbstractParameter.NULL)
     @type value: object
@@ -114,9 +119,6 @@ class AbstractParameter(object):
         
         if base is not None:
             self.bind_to(base)
-            
-    #def __repr__(self):
-    #    return "<Parameter {0._name}={0._value}>".format(self)
     
     @property
     def name(self):
@@ -237,18 +239,31 @@ class AbstractParameter(object):
         """
         return base_value
             
-    def _ensure_consistency(self, force=False):
+    def _ensure_consistency(self):
         """
         Make sure that the current value is up to date. If it isn't,
-        trigger a real-time cascaded update from the non-virtual root 
-        to all virtual nodes. Also mark all nodes consistent in the course of
-        doing this update. 
+        trigger a real-time cascaded update following the path from the 
+        nearest consistent base down to self. Also mark all nodes consistent 
+        in the course of doing this update. 
         """        
-        if self._consistent and not force:
-            return
+        if not self._consistent:
+            path = self._nearest_consistent_base()
         
-        root = self.find_base_parameter()
-        root._recompute_derivatives()
+            for parameter in reversed(path):
+                parameter._recompute(mark_consistent=True)
+
+    def _recompute(self, mark_consistent=True):
+        """
+        If self is virtual, force the current parameter to recompute itself from 
+        its immediate base. This operation has no side effects and does not 
+        propagate.
+        """
+        if self.is_virtual:
+            value = self._compute(self._base._value)
+            self._update(value)
+        
+        if mark_consistent:
+            self._consistent = True
         
     def _recompute_derivatives(self):
         """
@@ -262,7 +277,24 @@ class AbstractParameter(object):
         self._consistent = True
         
         for p in self._derivatives:
-            p._recompute_derivatives()        
+            p._recompute_derivatives()
+            
+    def _nearest_consistent_base(self):
+        """
+        Compute and return the path from self to the nearest consistent 
+        base parameter.
+        
+        @return: path, leaf-to-root
+        @rtype: list of L{AbstractParameter}
+        """
+        root = self
+        path = [self]
+        
+        while not root._consistent:
+            root = root._base
+            path.append(root)
+            
+        return path        
         
     def find_base_parameter(self):
         """

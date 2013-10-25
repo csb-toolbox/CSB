@@ -2,7 +2,6 @@ import numpy
 import csb.test as test
 
 from csb.numeric import log
-from numpy import sqrt, pi
 
 from csb.statistics.pdf.parameterized import ParameterizedDensity
 from csb.statistics.pdf.parameterized import ParameterValueError, ParameterizationError
@@ -33,6 +32,14 @@ class Scale(Parameter):
             raise ValueError(base)
                 
         super(Scale, self).bind_to(base)
+        
+class DoubleScale(Parameter):    
+       
+    def _validate(self, value):
+        return float(value)
+    
+    def _compute(self, base_value):
+        return base_value * 2.0     
     
 class Precision(Parameter):
 
@@ -77,7 +84,7 @@ class FancyGaussian(ParameterizedDensity):
         mu = self.mu
         sigma = self.sigma
         
-        return log(1.0 / sqrt(2 * pi * sigma ** 2)) - (x - mu) ** 2 / (2 * sigma ** 2)
+        return log(1.0 / numpy.sqrt(2 * numpy.pi * sigma ** 2)) - (x - mu) ** 2 / (2 * sigma ** 2)
 
 
 @test.unit
@@ -113,14 +120,21 @@ class TestAbstractGenericParameter(test.Case):
 class TestParameter(test.Case):
     """
     This is the main test case with complete coverage for AbstractParameter's
-    methods and behavior. Covers also Parameter. 
+    methods and behavior. Covers also Parameter.
+    
+              computed -- leaf
+             /
+        base -- computed2
+            \
+             computed3
     """
     
     def setUp(self):        
         self.base = Precision(1.2)
-        self.computed = Scale(1, base=self.base)
-        self.computed2 = Scale(1, base=self.base)
-        self.computed3 = Scale(1, base=self.base)
+        self.computed = Scale(100, base=self.base)
+        self.computed2 = Scale(200, base=self.base)
+        self.computed3 = Scale(300, base=self.base)
+        self.leaf = DoubleScale(400, base=self.computed)
         
     def testConstrucor(self):
         # make sure newly constructed parameters are left in a consistent state 
@@ -138,6 +152,8 @@ class TestParameter(test.Case):
         
         self.assertEqual(self.base.value, 1.2)
         self.assertEqual(self.computed.value, 1.0 / numpy.sqrt(self.base.value))
+        self.assertEqual(self.computed2.value, 1.0 / numpy.sqrt(self.base.value))
+        self.assertEqual(self.leaf.value, self.computed.value * 2)
         
         # turn self.base into a virtual parameter
         self.base.bind_to(Precision(12.2))
@@ -153,7 +169,13 @@ class TestParameter(test.Case):
         
     def testSet(self):
         
-        self.computed._ensure_consistency(force=True)
+        base_initial_value = self.base._value
+        
+        # recompute all derivatives from the initial value of base
+        self.assertEqual(self.computed._value, 100)
+        self.leaf._ensure_consistency()
+        self.computed2._ensure_consistency()
+        self.computed3._ensure_consistency()
         
         # set self.base - it should remain consistent because it is not computed
         self.assertTrue(self.base._consistent)
@@ -161,17 +183,32 @@ class TestParameter(test.Case):
         self.assertTrue(self.base._consistent)        
         self.assertEqual(self.base.value, 2.2)
         
-        # self.computed should be inconsistent now that its base is updated
+        # self.computed and self.leaf should be inconsistent now that their base is updated
         self.assertFalse(self.computed._consistent)   
-        self.assertEqual(self.computed._value, 1.0 / numpy.sqrt(1.2))
-        # retrieving its value should trigger cascaded updates and consistency
+        self.assertFalse(self.leaf._consistent)
+        self.assertEqual(self.computed._value, 1.0 / numpy.sqrt(base_initial_value))
+        self.assertEqual(self.leaf._value, 2.0 / numpy.sqrt(base_initial_value))
+        # retrieving self.computed's value should trigger updates up to self.computed
         recomputed = self.computed.value
-        self.assertTrue(self.computed._consistent)          
-        self.assertEqual(recomputed, 1.0 / numpy.sqrt(self.base.value))
-        
-        # make sure all dependent parameters are recomputed, not just self.computed
-        self.assertEqual(self.computed2.value, 1.0 / numpy.sqrt(self.base.value))
-        self.assertEqual(self.computed3.value, 1.0 / numpy.sqrt(self.base.value))             
+        self.assertTrue(self.computed._consistent)
+        self.assertEqual(recomputed, 1.0 / numpy.sqrt(self.base._value))
+        # self.leaf is still inconsistent
+        self.assertFalse(self.leaf._consistent)
+        self.assertEqual(self.leaf._value, 2.0 / numpy.sqrt(base_initial_value))
+        self.assertIs(self.leaf._nearest_consistent_base()[-1], self.computed)
+        # until we request its value       
+        recomputed = self.leaf.value
+        self.assertTrue(self.leaf._consistent)
+        self.assertEqual(recomputed, 2.0 / numpy.sqrt(self.base._value))
+        self.assertEqual(recomputed, 2.0 * self.computed._value)
+        # make sure the other two branches are still inconsistent
+        initial_value = 1.0 / numpy.sqrt(base_initial_value)
+        self.assertEqual(self.computed2._value, initial_value)
+        self.assertEqual(self.computed3._value, initial_value)
+        # until they get used
+        recomputed = self.computed2.value
+        self.assertTrue(self.computed2._consistent)
+        self.assertEqual(recomputed, 1.0 / numpy.sqrt(self.base._value))               
         
         # attempt to set self.computed - not allowed
         self.assertRaises(ParameterizationError, self.computed.set, 2)
