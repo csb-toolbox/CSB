@@ -2,7 +2,7 @@ import random
 import csb.test as test
 import csb.test.cases.bio.hmm
 
-from csb.bio.fragments import Target, Assignment, TorsionAnglesPredictor
+from csb.bio.fragments import Target, Assignment, TorsionAnglePredictor
 from csb.bio.fragments import FragmentCluster, ClusterNode, ClusterDivergingError, ClusterExhaustedError
 from csb.bio.fragments import RosettaFragsetFactory
 from csb.bio.fragments.rosetta import RosettaFragment, RosettaFragmentMap
@@ -148,8 +148,8 @@ class TestTargetResidue(test.Case):
     def testAssign(self):
         pass # implicitly covered
         
-    def testVeryBest(self):
-        b = self.residue.verybest()
+    def testClosest(self):
+        b = self.residue.closest()
         self.assertEqual(b, self.residue.assignments[0].fragment)
         
     def testLongest(self):
@@ -167,14 +167,14 @@ class TestTargetResidue(test.Case):
 
         
 @test.unit
-class TestTorsionAnglesPredictor(test.Case):
+class TestTorsionAnglePredictor(test.Case):
 
     def setUp(self):
         
-        super(TestTorsionAnglesPredictor, self).setUp()
+        super(TestTorsionAnglePredictor, self).setUp()
         
         self.target = SampleTarget.get()
-        self.predictor = TorsionAnglesPredictor(self.target)
+        self.predictor = TorsionAnglePredictor(self.target)
         
     def testTarget(self):
         self.assertEqual(self.predictor.target, self.target)
@@ -227,7 +227,7 @@ class TestTorsionAnglesPredictor(test.Case):
             # these fragments come from 12..19 
             target.assign(Assignment(source, 2 + 10, 9 + 10, 2, 9, 't', 1, 1))
         
-        predictor = TorsionAnglesPredictor(target) 
+        predictor = TorsionAnglePredictor(target) 
         pred = predictor.flat_torsion_map()
         
         self.assertEqual(len(pred), target.length)
@@ -565,6 +565,5 @@ class TestRosettaFragmentMap(test.Case):
     
                                  
 if __name__ == '__main__':
-    TestFragmentCluster.execute()
-    #test.Console()
+    test.Console()
     

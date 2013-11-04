@@ -5,9 +5,6 @@ This package contains the nuts and bolts of HHfrag. Everything here revolves
 around the L{Target} class, which describes a protein structure prediction
 target. One typically assigns fragments (L{Assignment}s) to the target and then
 builds a fragment library with L{RosettaFragsetFactory}.
-
-@note: Internal or legacy objects are intentionally left undocumented.
-       This typically indicates experimental code.
 """
 
 import os
@@ -20,15 +17,15 @@ import csb.bio.structure
 import csb.bio.sequence
 
 from csb.bio.structure import SecondaryStructure
+from csb.bio.io.wwpdb import FileSystemStructureProvider, StructureParser
 
 
 class FragmentTypes(object):
     
+    HHfrag = 'TH'
+    Rosetta = 'NN'
     ISites = 'IS'
-    HMMFragments = 'HH'
-    HHThread = 'TH'
-    HHfrag = HHThread
-    Rosetta = 'NN'   
+    StaticHH = 'HH'
     
 class Metrics(object):
     
@@ -103,26 +100,10 @@ class FragmentMatch(object):
 
     @property
     def end(self):
-        raise NotImplementedError()      
-    
-class PredictionContainer(object):
-    
-    def __init__(self, target, isites_prediction, hmm_prediction, combined_prediction):
+        raise NotImplementedError()
+
         
-        self.target = target
-        
-        self.isites = isites_prediction
-        self.hmm = hmm_prediction
-        self.combined = combined_prediction 
-        
-class Prediction(object):
-    
-    def __init__(self, alignment, coordinates):
-        
-        self.alignment = alignment
-        self.coordinates = coordinates  
-        
-class TorsionAnglesPredictor(object):
+class TorsionAnglePredictor(object):
     """
     Fragment-based phi/psi angles predictor.
     
@@ -410,7 +391,7 @@ class Target(csb.core.AbstractNIContainer):
     @type residues: iterable of L{csb.bio.structure.ProteinResidue}s
     """
     
-    def __init__(self, id, length, residues, overlap=None, segments=None, factory=AssignmentFactory()):
+    def __init__(self, id, length, residues, overlap=None, factory=AssignmentFactory()):
     
         self._id = id
         self._accession = id[:-1]
@@ -425,10 +406,6 @@ class Target(csb.core.AbstractNIContainer):
         resi = [factory.residue(native) for native in residues]
         self._residues = csb.core.ReadOnlyCollectionContainer(items=resi,
                                             type=TargetResidue, start_index=1)
-        
-        if segments is not None:
-            segments = dict([(s.start, s) for s in segments])
-        self._segments = csb.core.ReadOnlyDictionaryContainer(items=segments)
         
     @staticmethod
     def from_sequence(id, sequence):
@@ -511,10 +488,6 @@ class Target(csb.core.AbstractNIContainer):
     @property
     def residues(self):
         return self._residues
-
-    @property
-    def segments(self):
-        return self._segments
         
     def assign(self, fragment):
         """
@@ -531,12 +504,6 @@ class Target(csb.core.AbstractNIContainer):
         for rank in range(fragment.qstart, fragment.qend + 1):
             ai = ResidueAssignmentInfo(fragment, rank)
             self._residues[rank].assign(ai)
-         
-        if fragment.segment is not None:
-            try:
-                self._segments[fragment.segment].assign(fragment)
-            except KeyError:
-                raise ValueError("Undefined segment starting at {0}".format(fragment.segment))
             
     def assignall(self, fragments):
         """
@@ -574,13 +541,9 @@ class Target(csb.core.AbstractNIContainer):
         @return: a deep copy of the target
         @rtype: L{Target}
         """
-
-        segments = [self.segments[start] for start in self.segments]
-        segments = [TargetSegment(s.start, s.end, s.count) for s in segments]
-
-        target = self._factory.target(self.id, self.length, [r.native for r in self.residues],
-                                      overlap=self._overlap, segments=segments)
-        
+        residues = [r.native for r in self.residues]
+        target = self._factory.target(self.id, self.length, residues,
+                                      overlap=self._overlap)
         return target        
 
 class ChemShiftTarget(Target):
@@ -588,7 +551,7 @@ class ChemShiftTarget(Target):
     def __init__(self, id, length, residues, overlap=None):
         
         super(ChemShiftTarget, self).__init__(id, length, residues, overlap=overlap,
-                                              segments=None, factory=ChemShiftAssignmentFactory())
+                                              factory=ChemShiftAssignmentFactory())
             
     def assign(self, fragment):
 
@@ -602,7 +565,8 @@ class ChemShiftTarget(Target):
         self._residues[rank].assign(ai)
         
     def clone(self):
-        return self._factory.target(self.id, self.length, [r.native for r in self.residues],
+        return self._factory.target(self.id, self.length, 
+                                    [r.native for r in self.residues],
                                     overlap=self._overlap)         
     
 class TargetResidue(object):
@@ -633,25 +597,6 @@ class TargetResidue(object):
     
     def assign(self, assignment_info):
         self._assignments._append_item(assignment_info)
-        
-    def verybest(self):
-        """
-        @return: the fragment with the lowest RMSD at this position in the L{Target}
-        @rtype: L{Assignment}
-        """
-        
-        best = None
-        
-        for ai in self.assignments:
-            a = ai.fragment
-            if a.length < FragmentCluster.MIN_LENGTH:
-                continue
-            if best is None or a.rmsd < best.rmsd:
-                best = a
-            elif a.rmsd == best.rmsd and a.length > best.length:
-                best = a
-        
-        return best
                 
     def filter(self, method=Metrics.RMSD, threshold=1.5, extend=False):
         """
@@ -685,6 +630,25 @@ class TargetResidue(object):
         
         except (ClusterExhaustedError, ClusterDivergingError):
             return None
+        
+    def closest(self):
+        """
+        @return: the fragment with the lowest RMSD at this position in the L{Target}
+        @rtype: L{Assignment}
+        """
+        
+        best = None
+        
+        for ai in self.assignments:
+            a = ai.fragment
+            if a.length < FragmentCluster.MIN_LENGTH:
+                continue
+            if best is None or a.rmsd < best.rmsd:
+                best = a
+            elif a.rmsd == best.rmsd and a.length > best.length:
+                best = a
+        
+        return best        
     
     def longest(self):
         """
@@ -719,7 +683,7 @@ class TargetResidue(object):
         
 class ChemShiftTargetResidue(TargetResidue):
 
-    def verybest(self):
+    def closest(self):
         
         best = None
         
@@ -735,230 +699,7 @@ class ChemShiftTargetResidue(TargetResidue):
                 best = a
         
         return best        
-    
-class TargetSegment(object):
-    
-    def __init__(self, start, end, count):
-        
-        self._start = start
-        self._end = end
-        self._count = count
-        
-        self._assignments = csb.core.ReadOnlyCollectionContainer(type=Assignment)
-    
-    @property
-    def count(self):
-        return self._count
-    
-    @property
-    def start(self):
-        return self._start
-    
-    @property
-    def end(self):
-        return self._end
 
-    @property
-    def length(self):
-        return (self._end - self._start + 1)
-        
-    @property
-    def assignments(self):
-        return self._assignments
-    
-    def assign(self, fragment):
-        if fragment.segment != self.start:
-            raise ValueError('Segment origin mismatch: {0} vs {1}'.format(fragment.segment, self.start))
-        else:
-            self._assignments._append_item(fragment)
-                
-    def verybest(self):
-        
-        best = None
-        
-        for a in self.assignments:
-            if a.length < FragmentCluster.MIN_LENGTH:
-                continue
-            if best is None or a.rmsd < best.rmsd:
-                best = a
-            elif a.rmsd == best.rmsd and a.length > best.length:
-                best = a
-        
-        return best
-                
-    def best(self, method=Metrics.RMSD):
-        
-        try:
-            cluster = FragmentCluster(self.assignments, threshold=1.5,
-                                      connectedness=0.5, method=method)          
-            centroid = cluster.shrink(minitems=1)
-            return centroid
-                  
-        except ClusterExhaustedError:
-            return None
-        finally:
-            del cluster
-    
-    def longest(self):
-    
-        best = None        
-        
-        for q in self.assignments:
-            if best is None or (q.length > best.length):
-                best = q
-                
-        return best
-            
-    def pairwise_rmsd(self, min_overlap=5):
-        
-        rmsds = []
-        
-        for q in self.assignments:
-            for s in self.assignments:
-                if q is not s:
-                    r = q.rmsd_to(s, min_overlap)
-                    if r is not None:
-                        rmsds.append(r)
-                else:
-                    assert q.rmsd_to(s, 1) < 0.01
-        
-        return rmsds
-    
-    def pairwise_mda(self, min_overlap=5):
-        
-        mdas = []
-        
-        for q in self.assignments:
-            for s in self.assignments:
-                if q is not s:
-                    m = q.mda_to(s, min_overlap)
-                    if m is not None:
-                        mdas.append(m)
-        return mdas
-
-    def pairwise_sa_rmsd(self, profiles='.', min_overlap=5):
-        
-        from csb.bio.hmm import RELATIVE_SA
-        from csb.bio.io.hhpred import ScoreUnits, HHProfileParser
-
-        def convert_sa(sa):
-            return numpy.array([ RELATIVE_SA[i] for i in sa ])
-            
-        sources = {}        
-        scores = []
-        
-        for q in self.assignments:
-            for s in self.assignments:
-                
-                if s.source_id not in sources:
-                    hmm = HHProfileParser(os.path.join(profiles, s.source_id + '.hhm')).parse()
-                    sources[s.source_id] = hmm.dssp_solvent
-                    
-                if q is not s:
-                    
-                    common = q.overlap(s)
-                    if len(common) >= min_overlap:
-                        
-                        qsa = q.solvent_at(sources[q.source_id], min(common), max(common))
-                        ssa = s.solvent_at(sources[s.source_id], min(common), max(common))
-                        
-                        if '-' in qsa + ssa:
-                            continue
-                        
-                        qsa = convert_sa(qsa)
-                        ssa = convert_sa(ssa)
-                        assert len(qsa) == len(ssa)
-                        sa_rmsd = numpy.sqrt(numpy.sum((qsa - ssa) ** 2) / float(len(qsa)))
-                        
-                        scores.append(sa_rmsd)        
-        return scores           
-    
-    def pairwise_scores(self, profiles='.', min_overlap=5):
-        
-        from csb.bio.hmm import BACKGROUND
-        back = numpy.sqrt(numpy.array(BACKGROUND))
-
-        sources = {}        
-        scores = []
-        
-        for q in self.assignments:
-            for s in self.assignments:
-                
-                if s.source_id not in sources:
-                    # hmm = HHProfileParser(os.path.join(hmm_path, s.source_id + '.hhm')).parse(ScoreUnits.Probability)
-                    sources[s.source_id] = csb.io.Pickle.load(open(os.path.join(profiles, s.source_id + '.pkl'), 'rb'))
-                    
-                if q is not s:
-                    
-                    common = q.overlap(s)
-                    if len(common) >= min_overlap:
-                        
-                        qprof = q.profile_at(sources[q.source_id], min(common), max(common))
-                        sprof = s.profile_at(sources[s.source_id], min(common), max(common))
-                        
-                        #score = qhmm.emission_similarity(shmm)
-                        assert len(qprof) == len(sprof)
-                        dots = [ numpy.dot(qprof[i] / back, sprof[i] / back) for i in range(len(qprof)) ]
-                        score = numpy.log(numpy.prod(dots))
-                        if score is not None:
-                            scores.append(score)        
-        return scores       
-    
-    def _entropy(self, data, binsize):
-        
-        binsize = float(binsize)
-        bins = numpy.ceil(numpy.array(data) / binsize)
-
-        hist = dict.fromkeys(bins, 0)
-        for bin in bins:
-            hist[bin] += (1.0 / len(bins))
-        
-        freq = numpy.array(hist.values())
-        return - numpy.sum(freq * numpy.log(freq))
-    
-    def rmsd_entropy(self, binsize=0.1):
-        
-        rmsds = self.pairwise_rmsd()
-        return self._entropy(rmsds, binsize)
-    
-    def score_entropy(self, profiles='.', binsize=1):
-        
-        scores = self.pairwise_scores(profiles)
-        return self._entropy(scores, binsize)    
-    
-    def rmsd_consistency(self, threshold=1.5):
-
-        rmsds = self.pairwise_rmsd()
-        
-        if len(rmsds) < 1:
-            return None
-        
-        return sum([1 for i in rmsds if i <= threshold]) / float(len(rmsds))
-
-    def sa_rmsd_consistency(self, threshold=0.4, profiles='.'):
-
-        sa_rmsds = self.pairwise_sa_rmsd(profiles=profiles)
-        
-        if len(sa_rmsds) < 1:
-            return None
-        
-        return sum([1 for i in sa_rmsds if i <= threshold]) / float(len(sa_rmsds))
-        
-    def true_positives(self, threshold=1.5):
-        
-        if self.assignments.length < 1:
-            return None
-        
-        return sum([1 for i in self.assignments if i.rmsd <= threshold]) / float(self.assignments.length)
-    
-    def confidence(self):
-        
-        cons = self.rmsd_consistency()
-        
-        if cons is None:
-            return 0
-        else:
-            return numpy.log10(self.count) * cons
             
 class ResidueAssignmentInfo(object):
     
@@ -1002,7 +743,7 @@ class Assignment(FragmentMatch):
     """
     
     def __init__(self, source, start, end, qstart, qend, id=None, probability=None, rmsd=None,
-                 tm_score=None, score=None, neff=None, segment=None, internal_id=None):
+                 tm_score=None, score=None, neff=None, internal_id=None):
 
         assert source.has_torsion
         sub = source.subregion(start, end, clone=True)
@@ -1024,7 +765,6 @@ class Assignment(FragmentMatch):
         self._neff = neff
         self._ss = None 
     
-        self._segment_start = segment
         self.internal_id = internal_id
         
         if id is None:
@@ -1088,11 +828,7 @@ class Assignment(FragmentMatch):
 
     @property
     def neff(self):
-        return self._neff
-        
-    @property
-    def segment(self):
-        return self._segment_start    
+        return self._neff    
     
     @property
     def secondary_structure(self):
@@ -1109,7 +845,7 @@ class Assignment(FragmentMatch):
     
     def transform(self, rotation, translation):
         """
-        Apply rotation/translation to fragment's coordinates in place.
+        Apply rotation/translation to fragment's coordinates in place
         """
         
         for ca in self.backbone:
@@ -1124,7 +860,7 @@ class Assignment(FragmentMatch):
         
     def anchored_around(self, rank):
         """
-        @return: True if the fragment is centered around position=C{rank}.
+        @return: True if the fragment is centered around position=C{rank}
         @rtype: bool
         """
         
@@ -1149,10 +885,9 @@ class Assignment(FragmentMatch):
     
     def torsion_at(self, qstart, qend):
         """
-        @return: the torsion angles of the fragment at the specified subregion.
+        @return: torsion angles of the fragment at the specified subregion
         @rtype: list
         """
-                
         self._check_range(qstart, qend)
         
         relstart = qstart - self.qstart
@@ -1160,44 +895,18 @@ class Assignment(FragmentMatch):
         
         return self.torsion[relstart : relend]    
     
-    def solvent_at(self, sa_string, qstart, qend):
-        
-        self._check_range(qstart, qend)
-        
-        relstart = qstart - self.qstart
-        relend = qend - self.qstart + 1
-        
-        return sa_string[relstart : relend] 
-    
     def sec_structure_at(self, qstart, qend):
-                
+        """
+        @return: secondary structure of the fragment at the specified subregion
+        @rtype: list
+        """
+                        
         self._check_range(qstart, qend)
         start = qstart - self.qstart + 1
         end = qend - self.qstart + 1
         
         return self.secondary_structure.scan(start, end, loose=True, cut=True)      
-    
-    def profile_at(self, source, qstart, qend):
-        
-        self._check_range(qstart, qend)
-        
-        start = qstart - self.qstart + self.start
-        end = qend - self.qstart + self.start
-        
-        if hasattr(source, 'subregion'):
-            return source.subregion(start, end)
-        else:
-            return source[start - 1 : end]
-        
-    def chain_at(self, source, qstart, qend):
-        
-        self._check_range(qstart, qend)
-        
-        start = qstart - self.qstart + self.start
-        end = qend - self.qstart + self.start
-        
-        return source.subregion(start, end)
-    
+            
     def overlap(self, other):
         """
         @type other: L{Assignment} 
@@ -1240,6 +949,17 @@ class Assignment(FragmentMatch):
         return None
     
     def nrmsd_to(self, other, min_overlap=5):
+        """
+        @return: the normalized CA RMSD between C{self} and C{other}.
+        
+        @param other: another fragment
+        @type other: L{Assignment}
+        @param min_overlap: require at least that number of overlapping residues
+                            (return None if not satisfied)
+        @type min_overlap: int
+        
+        @rtype: float
+        """        
         
         common = self.overlap(other)
         
@@ -1256,7 +976,18 @@ class Assignment(FragmentMatch):
         return None
     
     def mda_to(self, other, min_overlap=5):
-
+        """
+        @return: the MDA (maximum deviation in torsion angles) between 
+        C{self} and C{other}.
+        
+        @param other: another fragment
+        @type other: L{Assignment}
+        @param min_overlap: require at least that number of overlapping residues
+                            (return None if not satisfied)
+        @type min_overlap: int
+        
+        @rtype: float
+        """
         common = self.overlap(other)
         
         if len(common) >= min_overlap:
@@ -1274,43 +1005,7 @@ class Assignment(FragmentMatch):
                 return max(maxphi, maxpsi)
             
         return None  
-    
-    def to_rosetta(self, source, qstart=None, qend=None, weight=None):
-        """
-        @deprecated: this method will be deleted soon. Use
-        L{csb.bio.fragments.rosetta.OutputBuilder} instead.
-        """
-        stream = csb.io.MemoryStream()
-        
-        if weight is None:
-            weight = self.probability
-        if not qstart:
-            qstart = self.qstart
-        if not qend:
-            qend = self.qend            
-        
-        source.compute_torsion()
-        chain = self.chain_at(source, qstart, qend)
-        
-        for i, r in enumerate(chain.residues):
-                
-            acc = self.source_id[:4]
-            ch = self.source_id[4].upper()
-
-            start = qstart - self.qstart + self.start + i
-            aa = r.type
-            ss = 'L'
-            phi, psi, omega = 0, 0, 0
-            if r.torsion.phi:
-                phi = r.torsion.phi
-            if r.torsion.psi:
-                psi = r.torsion.psi
-            if r.torsion.omega:
-                omega = r.torsion.omega
-            
-            stream.write(' {0:4} {1:1} {2:>5} {3!s:1} {4!s:1} {5:>8.3f} {6:>8.3f} {7:>8.3f} {8:>8.3f}\n'.format(acc, ch, start, aa, ss, phi, psi, omega, weight))            
-        
-        return stream.getvalue()    
+ 
     
 class ChemShiftAssignment(Assignment):
     
@@ -1322,7 +1017,7 @@ class ChemShiftAssignment(Assignment):
         
         super(ChemShiftAssignment, self).__init__(
                             source, start, end, qstart, qend, id=None, probability=1.0,
-                            rmsd=rmsd, tm_score=None, score=score, neff=None, segment=None, internal_id=None)
+                            rmsd=rmsd, tm_score=None, score=score, neff=None, internal_id=None)
 
     @property
     def window(self):
@@ -1717,126 +1412,6 @@ class ClusterRep(object):
             centroid = self._centroid
             self._centroid = self._alternative
             self._alternative = centroid
-
-    def to_rosetta(self, source):
-        """
-        @deprecated: this method is obsolete and will be deleted soon
-        """
-        return self.centroid.to_rosetta(source, weight=self.confidence)
-            
-class AdaptedAssignment(object):
-    
-    @staticmethod
-    def with_overhangs(center, start, end, overhang=1):
-        
-        if center.centroid.qstart <= (start - overhang):
-            start -= overhang
-        elif center.centroid.qstart < start:
-            start = center.centroid.qstart
-            
-        if center.centroid.qend >= (end + overhang):
-            end += overhang
-        elif center.centroid.qend > end:
-            end = center.centroid.end
-                        
-        return AdaptedAssignment(center, start, end)
-    
-    def __init__(self, center, qstart, qend):
-        
-        if qstart < center.centroid.qstart:
-            raise ValueError(qstart)
-        if qend > center.centroid.qend:
-            raise ValueError(qend)
-                
-        self._qstart = qstart
-        self._qend = qend
-        self._center = center
-        
-    @property
-    def fragment(self):
-        return self._center.centroid
-
-    @property
-    def center(self):
-        return self._center
-        
-    @property
-    def confidence(self):
-        return self._center.confidence
-    
-    @property
-    def qstart(self):
-        return self._qstart
-    
-    @property
-    def qend(self):
-        return self._qend
-    
-    @property
-    def backbone(self):
-        return self.fragment.backbone_at(self.qstart, self.qend)
-    
-    def chain(self, source):
-        return self.fragment.chain_at(source, self.qstart, self.qend) 
-    
-    def to_rosetta(self, source):
-        return self.fragment.to_rosetta(source, self.qstart, self.qend, self.confidence)
-        
-class SmoothFragmentMap(csb.core.AbstractContainer):
-    
-    def __init__(self, length, centroids):
-        
-        if not length > 0:
-            raise ValueError(length)
-        
-        self._length = int(length)  
-        self._slots = set(range(1, self._length + 1))
-        self._map = {}
-    
-        centers = list(centroids)
-        centers.sort(key=lambda i: i.confidence, reverse=True)
-        
-        for c in centers:
-            self.assign(c)
-        
-    @property
-    def _children(self):
-        return self._map
-    
-    def assign(self, center):
-        
-        for r in range(center.centroid.qstart, center.centroid.qend + 1):
-            if r in self._slots:
-                self._map[r] = center
-                self._slots.remove(r)
-    
-    def patches(self):            
-            
-        center = None
-        start = None
-        end = None
-        
-        for r in range(1, self._length + 1):
-            
-            if center is None:
-                if r in self._map:
-                    center = self._map[r]
-                    start = end = r
-                else:
-                    center = None
-                    start = end = None
-            else:
-                if r in self._map:
-                    if self._map[r] is center:
-                        end = r
-                    else:
-                        yield AdaptedAssignment(center, start, end)
-                        center = self._map[r]
-                        start = end = r
-                else:
-                    yield AdaptedAssignment(center, start, end)
-                    center = None
-                    start = end = None
     
 
 class ResidueEventInfo(object):
@@ -2063,12 +1638,10 @@ class BenchmarkAdapter(object):
 
     def __init__(self, pdb_paths, connection_string=None, factory=AssignmentFactory()):
                 
-        self._pdb = pdb_paths
         self._connection = None
         
-        from csb.bio.io.wwpdb import find, StructureParser
         self._parser = StructureParser
-        self._find = find
+        self._pdb = FileSystemStructureProvider(pdb_paths)
         self._factory = factory
     
         try:    
@@ -2137,21 +1710,12 @@ class BenchmarkAdapter(object):
             db.cursor.callproc('reporting."GetCentroids"', (benchmark_id,))
             return db.cursor.fetchall() 
             
-    def target_segments(self, target_id):
-        
-        with BenchmarkAdapter.Connection() as db:
-            
-            db.cursor.callproc('reporting."GetTargetSegments"', (target_id,))
-            data = db.cursor.fetchall()
-            
-            return [ TargetSegment(row['Start'], row['End'], row['Count']) for row in data ]
-            
     def structure(self, accession, chain=None):
 
-        pdbfile = self._find(accession, self._pdb)
+        pdbfile = self._pdb.find(accession)
         
         if not pdbfile and chain:
-            pdbfile = self._find(accession + chain, self._pdb)
+            pdbfile = self._pdb.find(accession + chain)
                     
         if not pdbfile:
             raise IOError('{0} not found here: {1}'.format(accession, self._pdb))
@@ -2170,8 +1734,7 @@ class BenchmarkAdapter(object):
         overlap = float(row["MaxOverlap"]) / (length or 1.)
         
         native = self.structure(id[:4], id[4]).chains[id[4]]
-        segments = self.target_segments(target_id)
-        target = self._factory.target(id, length, native.residues, overlap, segments)        
+        target = self._factory.target(id, length, native.residues, overlap)        
         
         source = None
         
@@ -2206,7 +1769,6 @@ class BenchmarkAdapter(object):
                                         neff=row['Neff'],
                                         rmsd=row['RMSD'],
                                         tm_score=row['TMScore'],
-                                        segment=row['SegmentStart'],
                                         internal_id=row['InternalID'])
                             
             target.assign(fragment)
