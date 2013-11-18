@@ -171,17 +171,21 @@ class AbstractSingleChainMC(AbstractMC):
     @property
     def energy(self):
         """
-        Log-likelihood of the current state.
+        Negative log-likelihood of the current state.
         @rtype: float
         """
-        return self._pdf.log_prob(self.state.position)
+        return -self._pdf.log_prob(self.state.position)
 
     @property
     def acceptance_rate(self):
         """
         Acceptance rate.
         """
-        return float(self._accepted) / float(self._nmoves)
+
+        if self._nmoves > 0:
+            return float(self._accepted) / float(self._nmoves)
+        else:
+            return 0.0
 
     @property
     def last_move_accepted(self):
@@ -241,6 +245,16 @@ class HMCSampler(AbstractSingleChainMC):
         self.timestep = timestep
         self._nsteps = None
         self.nsteps = nsteps
+        self._mass_matrix = None
+        self._momentum_covariance_matrix = None
+        self._integrator = integrator
+        self._gradient = gradient
+        
+        self._setup_matrices(mass_matrix)
+        
+        self._propagator = self._propagator_factory()
+
+    def _setup_matrices(self, mass_matrix):
 
         self._d = len(self.state.position)
 
@@ -250,12 +264,18 @@ class HMCSampler(AbstractSingleChainMC):
             
         self._momentum_covariance_matrix = self._temperature * self.mass_matrix
 
-        self._integrator = integrator
-        self._gradient = gradient
+    def _propagator_factory(self):
+        """
+        Factory which produces a L{MDPropagator} object initialized with
+        the MD parameters given in __init__().
 
-        self._propagator = MDPropagator(self._gradient, self._timestep,
-                                        mass_matrix=self._mass_matrix,
-                                        integrator=self._integrator)
+        @return: L{MDPropagator} instance
+        @rtype: L{MDPropagator}
+        """
+
+        return MDPropagator(self._gradient, self._timestep,
+                            mass_matrix=self._mass_matrix,
+                            integrator=self._integrator)
 
     def _propose(self):
 
@@ -265,16 +285,29 @@ class HMCSampler(AbstractSingleChainMC):
         
         return SimpleProposalCommunicator(current_state, proposal_state)
 
+    def _hamiltonian(self, state):
+        """
+        Evaluates the Hamiltonian consisting of the negative log-probability
+        and a quadratic kinetic term.
+
+        @param state: State on which the Hamiltonian should be evaluated
+        @type state: L{State}
+
+        @return: Value of the Hamiltonian (total energy)
+        @rtype: float
+        """
+
+        V = lambda q: -self._pdf.log_prob(q)
+        T = lambda p: 0.5 * numpy.dot(p.T, numpy.dot(self.mass_matrix.inverse, p))
+
+        return T(state.momentum) + V(state.position)
+
     def _calc_pacc(self, proposal_communicator):
 
-        current_state = proposal_communicator.current_state
-        proposal_state = proposal_communicator.proposal_state
+        cs = proposal_communicator.current_state
+        ps = proposal_communicator.proposal_state
         
-        E = lambda x: -self._pdf.log_prob(x)
-        K = lambda x: 0.5 * numpy.dot(x.T, numpy.dot(self.mass_matrix.inverse, x))
-
-        pacc = csb.numeric.exp((-K(proposal_state.momentum) - E(proposal_state.position)
-                               + K(current_state.momentum) + E(current_state.position)) / 
+        pacc = csb.numeric.exp(-(self._hamiltonian(ps) - self._hamiltonian(cs)) / 
                                self.temperature)
 
         if self.state.momentum is None:
@@ -348,7 +381,8 @@ class RWMCSampler(AbstractSingleChainMC):
         self.stepsize = stepsize
         if proposal_density == None:
             self._proposal_density = lambda x, s: x.position + \
-                                     s * numpy.random.uniform(size=x.position.shape, low=-1., high=1.)
+                                     s * numpy.random.uniform(size=x.position.shape,
+                                                              low=-1., high=1.)
         else:
             self._proposal_density = proposal_density
 
@@ -364,10 +398,11 @@ class RWMCSampler(AbstractSingleChainMC):
 
         current_state = proposal_communicator.current_state
         proposal_state = proposal_communicator.proposal_state
-        E = lambda x:-self._pdf.log_prob(x)
+        E = lambda x: -self._pdf.log_prob(x)
         
         pacc = csb.numeric.exp((-(E(proposal_state.position) - E(current_state.position))) /
                                self.temperature)
+        
         return pacc
 
     @property

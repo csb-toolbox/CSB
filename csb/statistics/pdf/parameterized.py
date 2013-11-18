@@ -317,7 +317,7 @@ class Parameter(AbstractParameter):
         super(Parameter, self).__init__(value, name, base)
             
     def _validate(self, value):
-        
+    
         try:
             return float(value)
         except (ValueError, TypeError):
