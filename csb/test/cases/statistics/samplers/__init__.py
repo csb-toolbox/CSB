@@ -18,14 +18,15 @@ from csb.statistics.samplers.mc.multichain import HMCStepRENS, HMCStepRENSSwapPa
 from csb.statistics.samplers.mc.multichain import AbstractSwapCommunicator, AbstractExchangeMC
 from csb.statistics.samplers.mc.multichain import AbstractSwapParameterInfo, ReplicaHistory
 from csb.statistics.samplers.mc.singlechain import HMCSampler, RWMCSampler, AbstractNCMCSampler
-from csb.statistics.samplers.mc.singlechain import AbstractSingleChainMC
+from csb.statistics.samplers.mc.singlechain import AbstractSingleChainMC, SimpleProposalCommunicator
 from csb.statistics.samplers.mc.propagators import RWMCPropagator, HMCPropagator, MDPropagator
 from csb.statistics.samplers.mc.propagators import AbstractNCMCPropagator, AbstractPropagator
 from csb.statistics.samplers.mc.neqsteppropagator import ReducedHamiltonian, HamiltonianSysInfo
 from csb.statistics.samplers.mc.neqsteppropagator import PlainMDPropagation, PlainMDPropagationParam
 from csb.statistics.samplers.mc.neqsteppropagator import AbstractMDPropagation, HMCPropagation
 from csb.statistics.samplers.mc.neqsteppropagator import Protocol, Step, AbstractPerturbation
-from csb.statistics.samplers.mc.neqsteppropagator import ReducedHamiltonianPerturbation, AbstractPropagation
+from csb.statistics.samplers.mc.neqsteppropagator import ReducedHamiltonianPerturbation
+from csb.statistics.samplers.mc.neqsteppropagator import AbstractPropagation
 from csb.statistics.samplers.mc.neqsteppropagator import NonequilibriumStepPropagator
 from csb.statistics.samplers.mc.neqsteppropagator import NonequilibriumTrajectory
 from csb.statistics.samplers.mc.neqsteppropagator import HMCPropagationParam
@@ -62,6 +63,7 @@ class Multimodal2DPDF(BaseDensity):
     def grad(self, x, t):
         return np.array([(-6.25 * np.sin(2.5 * x[0]) + 0.08 * x[0]) * self._E2(x),
                          self._E1(x) * self.k * x[1]])
+
 
 @test.functional
 class TestMCPropagators(test.Case):
@@ -160,6 +162,7 @@ class TestMCPropagators(test.Case):
         init_state = State(np.array([1.0]))
         traj = gen.generate(init_state, self.nits, return_trajectory=True)
         self.checkResult(traj)
+
 
 @test.functional
 class TestMultichain(test.Case):
@@ -296,17 +299,17 @@ class MockSampler(AbstractSingleChainMC):
 
     def __init__(self, pdf, state, temperature=1.0):
         
-        self._state = state
-        self._pdf = pdf
-        self._temperature = temperature
-
-    def _propose(self):
+        super(MockSampler, self).__init__(pdf, state, temperature)
         
-        pass
+    def _propose(self):
 
-    def _calc_pacc(self):
+        pcom = SimpleProposalCommunicator(self._state, State(self._state.position * 2.0))
+        
+        return pcom
 
-        pass
+    def _calc_pacc(self, proposal_communicator):
+
+        return 0.42
 
 class MockedAbstractExchangeMC(AbstractExchangeMC):
     
@@ -906,6 +909,160 @@ class TestReplicaHistory(test.Case):
         assert(self._assertIdenticalProjTrajs(samples, swap_interval, first_swap))
 
 
+@test.unit
+class TestAbstractSingleChainMC(test.Case):
+
+    def setUp(self):
+
+        self._sampler = MockSampler(pdf=SamplePDF(), state=State(np.array([1.0])))
+
+    def testAcceptProposal(self):
+
+        proposal_state = State(np.array([1.234]))
+        res = self._sampler._accept_proposal(proposal_state)
+
+        assert(self._sampler.state == proposal_state)
+
+    def testUpdateStatistics(self):
+
+        nmoves_old = self._sampler._nmoves
+        accepted_old = self._sampler._accepted
+
+        self._sampler._update_statistics(True)
+
+        assert(self._sampler._nmoves == nmoves_old + 1)
+        assert(self._sampler._accepted == accepted_old + 1)
+
+        nmoves_old = self._sampler._nmoves
+        accepted_old = self._sampler._accepted
+
+        self._sampler._update_statistics(False)
+
+        assert(self._sampler._nmoves == nmoves_old + 1)
+        assert(self._sampler._accepted == accepted_old)
+
+    def testEnergy(self):
+
+        E = -self._sampler._pdf.log_prob(self._sampler.state.position)
+
+        assert(E == self._sampler.energy)
+
+    def testAcceptanceRate(self):
+
+        self._sampler._nmoves = 6
+        self._sampler._accepted = 3
+
+        assert(self._sampler.acceptance_rate == 0.5)
+        
+        self._sampler._nmoves = 0
+        self._sampler._accepted = 0
+
+        assert(self._sampler.acceptance_rate == 0.0)
+
+    def testLastMoveAccepted(self):
+
+        self._sampler._last_move_accepted = False
+        
+        np.random.seed(5)
+
+        self._sampler.sample()
+        
+        assert(self._sampler.last_move_accepted == True)
+
+    def testTemperature(self):
+
+        assert(self._sampler.temperature == self._sampler._temperature)
+
+    def testSample(self):
+
+        np.random.seed(5)
+
+        ipos = np.array([2.0])
+        self._sampler.state = State(ipos)
+                
+        res = self._sampler.sample()
+
+        assert(res.position == ipos * 2.0)
+        assert(res.momentum == None)
+
+        assert(self._sampler.state.position == ipos * 2.0)
+        assert(self._sampler.state.momentum == None)
+
+
+class MockedHMCSampler(HMCSampler):
+
+    def _propagator_factory(self):
+
+        return MockPropagator()
+
+    # def _propose(self):
+
+    #     print np.random.normal(size=2)
+
+        
+        
+@test.unit
+class TestHMCSampler(test.Case):
+
+    def setUp(self):
+        
+        self._mass_matrix = InvertibleMatrix(np.array([[2.0, 0.0], [1.0, 3.0]]))
+        self._initstate = State(np.array([1.0, 2.0]))
+        self._sampler = MockedHMCSampler(pdf=SamplePDF(), state=self._initstate.clone(),
+                                         gradient=SamplePDF().grad, 
+                                         timestep=0.3, nsteps=25, mass_matrix=self._mass_matrix)
+
+    def testPropose(self):
+
+        np.random.seed(5)
+        initmom = np.random.multivariate_normal(mean=np.zeros(len(self._initstate.position)),
+                                                cov=self._mass_matrix)
+
+        self._sampler.state = self._initstate.clone()
+
+        np.random.seed(5)
+        res = self._sampler._propose()
+        
+        assert(np.all(res.current_state.position == self._initstate.position))
+        assert(np.all(res.current_state.momentum == initmom))
+
+        assert(np.all(res.proposal_state.position == self._initstate.position * 2.0))
+        assert(np.all(res.proposal_state.momentum == initmom * 2))
+
+    def testHamiltonian(self):
+
+        state = State(np.array([1.0, 2.0]), np.array([2.0, 1.0]))
+        
+        assert(self._sampler._hamiltonian(state) == 3.5 - np.log(1.0 / (2.0 * np.pi)))
+
+    def testCalcPacc(self):
+
+        istate = State(np.array([1.0, 2.0]), np.array([2.0, 1.0]))
+        fstate = State(np.array([1.0, 2.0]) * 2.0, np.array([2.0, 1.0]) * 2.0)
+        pcom_fstate = fstate.clone()
+        pcom = SimpleProposalCommunicator(istate.clone(), pcom_fstate)
+        self._sampler.state.momentum = None
+        
+        pacc = self._sampler._calc_pacc(pcom)
+
+        dH = self._sampler._hamiltonian(fstate) - self._sampler._hamiltonian(istate)
+        
+        assert(csb.numeric.exp(-dH / self._sampler.temperature) == pacc)
+        assert(pcom_fstate.momentum == None)
+
+
+        pcom_fstate = fstate.clone()
+        pcom = SimpleProposalCommunicator(istate.clone(), pcom_fstate)
+        self._sampler.state.momentum = np.array([1.0, 4.0])
+        
+        pacc = self._sampler._calc_pacc(pcom)
+
+        dH = self._sampler._hamiltonian(fstate) - self._sampler._hamiltonian(istate)
+        
+        assert(csb.numeric.exp(-dH / self._sampler.temperature) == pacc)
+        assert(np.all(pcom_fstate.momentum == np.array([1.0, 4.0])))
+        
+        
 if __name__ == '__main__':
 
     test.Console()
