@@ -166,9 +166,9 @@ import sys
 import imp
 import types
 import time
-import getopt
 import tempfile
 import traceback
+import argparse
 
 import csb.io
 import csb.core
@@ -758,30 +758,6 @@ class Console(object):
                 'custom': CustomTestBuilder, 'any': AnyTestBuilder, 
                 'regression': RegressionTestBuilder}
     
-    USAGE = r"""
-CSB Test Runner Console. Usage:
- 
-     python {0.program} [-u] [-t type] [-v verbosity] namespace(s) 
- 
-Options:
-      namespace(s)       A list of CSB test dotted namespaces, from which to
-                         load tests. '__main__' and '.' are interpreted as the
-                         current module. If a namespace ends with an asterisk
-                         '.*', all sub-packages will be scanned as well.
-                          
-                         Examples:
-                             "csb.test.cases.bio.*"
-                             "csb.test.cases.bio.io" "csb.test.cases.bio.utils"
-                             "."
-                             
-      -t  type           Type of tests to load from each namespace. Possible
-                         values are:
-                             {0.builders}
-                             
-      -v  verbosity      Verbosity level passed to unittest.TextTestRunner.
-      
-      -u  update-files   Force update of the test pickles in csb/test/data.
-    """
 
     def __init__(self, namespace=('__main__',), builder=AnyTestBuilder, verbosity=1,
                  update=False, argv=None):
@@ -853,44 +829,38 @@ Options:
         suite = builder.loadMultipleTests(self.namespace)
 
         runner = unittest.TextTestRunner(verbosity=self.verbosity)        
-        runner.run(suite)
-    
-    def exit(self, message=None, code=0, usage=True):
-        
-        if message:
-            print(message)
-        if usage:
-            print(Console.USAGE.format(self))    
-                
-        sys.exit(code)        
+        runner.run(suite)       
         
     def parseArguments(self, argv):
         
-        try:
-            
-            options, args = getopt.getopt(argv, 'hut:v:', ['help', 'update-files', 'type=', 'verbosity='])
-            
-            for option, value in options:
-                if option in('-h', '--help'):
-                    self.exit(message=None, code=0)
-                if option in('-t', '--type'):
-                    try:
-                        self.builder = Console.BUILDERS[value]
-                    except KeyError:
-                        self.exit(message='E: Invalid test type "{0}".'.format(value), code=2)                  
-                if option in('-v', '--verbosity'):
-                    try:
-                        self.verbosity = int(value)
-                    except ValueError:
-                        self.exit(message='E: Verbosity must be an integer.', code=3)
-                if option in('-u', '--update-files'):
-                    self.update = True
-                                
-            if len(args) > 0:
-                self.namespace = list(args)
-                      
-        except getopt.GetoptError as oe:
-            self.exit(message='E: ' + str(oe), code=1)
+        parser = argparse.ArgumentParser(prog=self.program, description="CSB Test Runner Console.")
+        
+        parser.add_argument("-t", "--type", type=str, default="any", choices=list(Console.BUILDERS),
+                            help="Type of tests to load from each namespace.")
+        parser.add_argument("-v", "--verbosity", type=int, default=1,
+                            help="Verbosity level passed to unittest.TextTestRunner.")
+        parser.add_argument("-u", "--update-files", default=False, action="store_true",
+                            help="Force update of the test pickles in csb/test/data.")
+        
+        parser.add_argument("namespaces", nargs='*', 
+                            help="""A list of CSB test dotted namespaces, from which to
+                                    load tests. '__main__' and '.' are interpreted as the
+                                    current module. If a namespace ends with an asterisk
+                                    '.*', all sub-packages will be scanned as well.
+                                      
+                                    Examples:
+                                        "csb.test.cases.bio.*"
+                                        "csb.test.cases.bio.io" "csb.test.cases.bio.utils"
+                                        ".")""")
+        
+        args = parser.parse_args(argv)
+        
+        self.builder = Console.BUILDERS[args.type]
+        self.verbosity = args.verbosity
+        self.update = args.update_files
+        
+        if args.namespaces:
+            self.namespace = args.namespaces
 
 
 if __name__ == '__main__':
