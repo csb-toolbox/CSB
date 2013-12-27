@@ -159,8 +159,6 @@ decorators you would need in order to write tests for CSB.
           is missing some features, that's why csb.test will take care of
           replacing it with unittest2 instead. 
 """
-from __future__ import print_function
-
 import os
 import sys
 import imp
@@ -202,16 +200,14 @@ class Config(object):
     """
     @cvar: path to the default test data directory: <install dir>/csb/test/data 
     """
+    GENERATED_DATA = DATA
+    """
+    @cvar: path to the default data directory for generated test files 
+    """    
     TEMP = os.path.abspath(tempfile.gettempdir())
     """
     @cvar: path to the default system's temp directory
     """
-    
-    def __init__(self):
-        
-        self.__config = Config
-        self.__data = Config.DATA
-        self.__temp = Config.TEMP
 
     @staticmethod
     def setDefaultDataRoot(path):
@@ -225,6 +221,19 @@ class Config(object):
             raise IOError('Path not found: {0}'.format(path))
         
         Config.DATA = os.path.abspath(path)
+        
+    @staticmethod
+    def setDefaultGeneratedDataRoot(path):
+        """
+        Override the default L{Config.GENERATED_DATA} with a new data root directory.
+        
+        @param path: full directory path
+        @type path: str
+        """
+        if not os.path.isdir(path):
+            raise IOError('Path not found: {0}'.format(path))
+        
+        Config.GENERATED_DATA = os.path.abspath(path)        
     
     @property
     def data(self):
@@ -232,19 +241,28 @@ class Config(object):
         Test data directory
         @rtype: str
         """
-        return self.__data
-    
+        return Config.DATA
+
+    @property
+    def generated_data(self):
+        """
+        Test data directory for generated files
+        @rtype: str
+        """
+        return Config.GENERATED_DATA
+        
     @property
     def temp(self):
         """
         Test temp directory
         @rtype: str
         """        
-        return self.__temp
+        return Config.TEMP
         
     def getTestFile(self, fileName, subDir=''):
         """
-        Search for C{fileName} in the L{Config.DATA} directory.
+        Search for C{fileName} in the L{Config.DATA} directory. If not found,
+        try also L{Config.GENERATED_DATA} (if different).
         
         @param fileName: the name of a test file to retrieve
         @type fileName: str
@@ -255,20 +273,27 @@ class Config(object):
         @rtype: str
         
         @raise IOError: if no such file is found
-        """     
-        file = os.path.join(self.data, subDir, fileName)
-        if not os.path.isfile(file):
-            raise IOError('Test file not found: {0}'.format(file))
-        return file          
+        """
+        for data in [self.data, self.generated_data]:
+            file = os.path.join(data, subDir, fileName)
+            
+            if os.path.isfile(file):
+                return file
+            
+        raise IOError('Test file not found: {0}'.format(fileName))          
     
     def getPickle(self, fileName, subDir=''):
         """
-        Same as C{self.getTestFile}, but try to unpickle the data in the file.
+        Same as C{self.getTestFile}, but try to unpickle the the file
+        and return the unpickled object. Pickles are usually stored in
+        L{Config.GENERATED_DATA}.        
 
         @param fileName: the name of a test file to retrieve
         @type fileName: str
         @param subDir: scan a sub-directory of L{Config.DATA}
-        @type subDir: str           
+        @type subDir: str
+        
+        @rtype: object           
         """
         file = self.getTestFile(fileName, subDir)
         return csb.io.Pickle.load(open(file, 'rb'))
@@ -281,7 +306,9 @@ class Config(object):
         @param fileName: the name of a test file to retrieve
         @type fileName: str
         @param subDir: scan a sub-directory of L{Config.DATA}
-        @type subDir: str           
+        @type subDir: str
+        
+        @rtype: str           
         """
         with open(self.getTestFile(fileName, subDir)) as f:
             return f.read()
@@ -327,13 +354,13 @@ class Config(object):
         ensemble = Ensemble()
         ensemble.models.append(model1)
         ensemble.models.append(model2)
-        Pickle.dump(ensemble, open(os.path.join(self.data, '1nz9.full.pickle'), 'wb'))
+        Pickle.dump(ensemble, open(os.path.join(self.generated_data, '1nz9.full.pickle'), 'wb'))
         
         mse = model1.chains['A'].find(164)
         mse.label = 'MSE'
         mse.atoms['SD']._element = ChemElements.Se
         mse.atoms['SD']._full_name = 'SE  '
-        Pickle.dump(model1, open(os.path.join(self.data, '1nz9.model1.pickle'), 'wb'))    
+        Pickle.dump(model1, open(os.path.join(self.generated_data, '1nz9.model1.pickle'), 'wb'))    
 
 class Case(unittest.TestCase):
     """
@@ -752,6 +779,8 @@ class Console(object):
     @type verbosity: int
     @param update: if True, refresh all pickles in csb/test/data
     @type update: bool
+    @param generated_data: where to cache generated test files (directory)
+    @type generated_data: str
     """
     
     BUILDERS = {'unit': UnitTestBuilder, 'functional': FunctionalTestBuilder, 
@@ -760,7 +789,7 @@ class Console(object):
     
 
     def __init__(self, namespace=('__main__',), builder=AnyTestBuilder, verbosity=1,
-                 update=False, argv=None):
+                 update=False, generated_data=Config.GENERATED_DATA, argv=None):
         
         if not argv:
             argv = sys.argv
@@ -769,12 +798,14 @@ class Console(object):
         self._builder = None
         self._verbosity = 1
         self._update = False
+        self._gendata = str(generated_data)  
         self._program = os.path.basename(argv[0])
         
         self.namespace = namespace
         self.builder = builder
         self.verbosity = verbosity
         self.update = update
+        self.generated_data = generated_data
         
         self.parseArguments(argv[1:])
         self.run()
@@ -817,8 +848,17 @@ class Console(object):
     @update.setter
     def update(self, value):
         self._update = bool(value)
+        
+    @property
+    def generated_data(self):
+        return self._gendata
+    @generated_data.setter
+    def generated_data(self, value):
+        self._gendata = os.path.abspath(value)        
                     
     def run(self):
+        
+        Config.setDefaultGeneratedDataRoot(self.generated_data)
         
         if self.update:
             Config().updateDataFiles()
@@ -836,14 +876,17 @@ class Console(object):
         parser = argparse.ArgumentParser(prog=self.program, description="CSB Test Runner Console.")
         
         parser.add_argument("-t", "--type", type=str, default="any", choices=list(Console.BUILDERS),
-                            help="Type of tests to load from each namespace.")
+                            help="Type of tests to load from each namespace (default=any)")
         parser.add_argument("-v", "--verbosity", type=int, default=1,
-                            help="Verbosity level passed to unittest.TextTestRunner.")
+                            help="Verbosity level passed to unittest.TextTestRunner (default=1).")
         parser.add_argument("-u", "--update-files", default=False, action="store_true",
-                            help="Force update of the test pickles in csb/test/data.")
+                            help="Force update of the test pickles in " + Config.GENERATED_DATA)
+        parser.add_argument("-g", "--generated-resources", type=str, default=Config.GENERATED_DATA,
+                            help="Generate, store and load additional test resources in this directory"
+                            " (default=" + Config.GENERATED_DATA + ")")
         
         parser.add_argument("namespaces", nargs='*', 
-                            help="""A list of CSB test dotted namespaces, from which to
+                            help="""An optional list of CSB test dotted namespaces, from which to
                                     load tests. '__main__' and '.' are interpreted as the
                                     current module. If a namespace ends with an asterisk
                                     '.*', all sub-packages will be scanned as well.
@@ -858,6 +901,7 @@ class Console(object):
         self.builder = Console.BUILDERS[args.type]
         self.verbosity = args.verbosity
         self.update = args.update_files
+        self.generated_data = args.generated_resources
         
         if args.namespaces:
             self.namespace = args.namespaces
