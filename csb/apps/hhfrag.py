@@ -581,10 +581,11 @@ class PredictionBuilder(object):
         
         for i in ri:
             self.add(i)
-            
+
+
+def main():
+    AppRunner().run()
     
     
 if __name__ == '__main__':
-    
-    AppRunner().run()
-    
+    main()

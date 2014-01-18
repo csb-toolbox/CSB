@@ -533,9 +533,9 @@ def _task(helper, subject, qs, qe, qcs, scs):
         return []
 
 
-
-
-if __name__ == '__main__':
-     
+def main():
     AppRunner().run()
     
+    
+if __name__ == '__main__':
+    main()
