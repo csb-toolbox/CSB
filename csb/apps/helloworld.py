@@ -48,8 +48,11 @@ class HelloWorldApp(csb.apps.Application):
         
         self.log(text)
         self.log('HW: done.')        
-        
 
-if __name__ == '__main__':
+
+def main():
+    AppRunner(sys.argv).run()
     
-    AppRunner(sys.argv).run()        
+    
+if __name__ == '__main__':
+    main()

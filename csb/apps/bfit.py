@@ -114,6 +114,10 @@ class BFitApp(csb.apps.Application):
         m.to_pdb(self.args.outfile)
         
 
-
-if __name__ == '__main__':
+def main():
     AppRunner().run()
+    
+    
+if __name__ == '__main__':
+    main()
+    

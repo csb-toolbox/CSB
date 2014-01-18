@@ -7,7 +7,6 @@ files, each superposed on different components.
 Reference: Hirsch M, Habeck M. - Bioinformatics. 2008 Oct 1;24(19):2184-92
 """
 
-import sys
 import numpy
 
 import csb.apps
@@ -102,7 +101,10 @@ class ProMixApp(csb.apps.Application):
 
             ek.to_pdb(outfile)
 
-if __name__ == '__main__':
-    AppRunner(sys.argv).run()
 
-# vi:expandtab:smarttab:sw=4
+def main():
+    AppRunner().run()
+    
+    
+if __name__ == '__main__':
+    main()

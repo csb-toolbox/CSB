@@ -271,9 +271,11 @@ class HHsearch(object):
             pool.terminate()
         
         return results
-    
+
+
+def main():
+    AppRunner().run()
     
     
 if __name__ == '__main__':
-    
-    AppRunner().run()    
+    main()

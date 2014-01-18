@@ -297,7 +297,9 @@ class PDBProfileBuilder(ProfileBuilder):
         return pdb             
 
 
-
-if __name__ == '__main__':
+def main():
+    AppRunner().run()
     
-    AppRunner().run()    
+    
+if __name__ == '__main__':
+    main()

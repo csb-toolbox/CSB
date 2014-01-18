@@ -313,9 +313,11 @@ def rmsd(target, source, fragments, pdb, save=None):
                 continue
                 
     return matches         
-     
 
 
-if __name__ == '__main__':
-    
+def main():
     AppRunner().run()
+    
+    
+if __name__ == '__main__':
+    main()

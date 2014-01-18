@@ -275,9 +275,11 @@ class Deconvolution(object):
         """
         for i in range(iterations):
             self.run_once()
-    
 
 
-if __name__ == '__main__':
-    
+def main():
     AppRunner().run()
+    
+    
+if __name__ == '__main__':
+    main()

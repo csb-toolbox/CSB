@@ -109,8 +109,11 @@ class BFitApp(csb.apps.Application):
             out_ensemble.models.append(model)
 
         out_ensemble.to_pdb(self.args.outfile)
-        
 
 
-if __name__ == '__main__':
+def main():
     AppRunner().run()
+    
+    
+if __name__ == '__main__':
+    main()
