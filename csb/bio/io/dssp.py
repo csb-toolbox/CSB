@@ -40,6 +40,7 @@ class DSSPParser(object):
         data = {}
         start = False
         offset = 0                  # assume old DSSP format
+        accession = None
         
         for line in open(dssp_file):
             
