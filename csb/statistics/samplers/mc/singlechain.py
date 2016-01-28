@@ -391,7 +391,7 @@ class RWMCSampler(AbstractSingleChainMC):
         current_state = self.state.clone()
         proposal_state = self.state.clone()
         proposal_state.position = self._proposal_density(current_state, self.stepsize)
-        
+
         return SimpleProposalCommunicator(current_state, proposal_state)
 
     def _calc_pacc(self, proposal_communicator):
