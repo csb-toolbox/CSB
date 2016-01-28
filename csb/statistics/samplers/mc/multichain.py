@@ -534,14 +534,13 @@ class AbstractRENS(AbstractExchangeMC):
         init_temperature = self._get_init_temperature(traj_info)
         
         init_state = traj_info.init_state.clone()
-
+        
         if init_state.momentum is None:
             init_state = augment_state(init_state,
                                        init_temperature,
                                        traj_info.param_info.mass_matrix)
             
         gen = self._propagator_factory(traj_info)
-
         traj = gen.generate(init_state, int(traj_info.param_info.traj_length))
         
         return traj
@@ -669,6 +668,7 @@ class MDRENS(AbstractRENS):
         heat12 = swapcom.traj12.heat
         heat21 = swapcom.traj21.heat
         
+        
         proposal1 = swapcom.traj21.final
         proposal2 = swapcom.traj12.final
         
@@ -688,7 +688,7 @@ class MDRENS(AbstractRENS):
               (K(state1.momentum) + E1(state1.position)) / T1 - heat12 
         w21 = (K(proposal1.momentum) + E1(proposal1.position)) / T1 - \
               (K(state2.momentum) + E2(state2.position)) / T2 - heat21
-
+              
         return w12, w21
 
 
@@ -1034,7 +1034,7 @@ class AbstractStepRENS(AbstractRENS):
         init_temperature = self._get_init_temperature(traj_info)
 
         gen = self._propagator_factory(traj_info)
-
+        
         traj = gen.generate(traj_info.init_state)
         
         return NonequilibriumTrajectory([traj_info.init_state, traj.final], jacobian=1.0,
@@ -1068,7 +1068,8 @@ class HMCStepRENS(AbstractStepRENS):
 
         super(HMCStepRENS, self).__init__(samplers, param_infos)
 
-    def _add_gradients(self, im_sys_infos, param_info, t_prot):
+    @staticmethod
+    def _add_gradients(im_sys_infos, param_info, t_prot):
 
         im_gradients = [lambda x, t, i=i: param_info.gradient(x, t_prot(i))
                         for i in range(param_info.intermediate_steps + 1)]
@@ -1077,8 +1078,9 @@ class HMCStepRENS(AbstractStepRENS):
             s.hamiltonian.gradient = im_gradients[i]
 
         return im_sys_infos
-            
-    def _setup_propagations(self, im_sys_infos, param_info):
+
+    @staticmethod
+    def _setup_propagations(im_sys_infos, param_info):
                         
         propagation_params = [HMCPropagationParam(param_info.timestep,
                                                   param_info.hmc_traj_length,
@@ -1090,7 +1092,7 @@ class HMCStepRENS(AbstractStepRENS):
 
         propagations = [HMCPropagation(im_sys_infos[i+1], propagation_params[i], evaluate_heat=False)
                         for i in range(param_info.intermediate_steps)]
-
+        
         return propagations        
 
     def _calc_works(self, swapcom):
