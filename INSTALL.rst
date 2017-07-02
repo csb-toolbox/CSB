@@ -18,7 +18,13 @@ Install csb from PyPi::
 
     $ pip install csb
 
-This will take care of all necessary dependencies.
+pip will take care of all necessary dependencies. However, on Windows this might
+fail. If this is the case, install numpy and scipy manually and rerun the pip
+installation shown above. The easiest way to get numpy and scipy on Windows is 
+to install Anaconda::
+
+    $ conda install numpy scipy
+    $ pip install csb
 
 
 Developer Installation
@@ -28,14 +34,14 @@ ABOUT DEPENDENCIES
 
 CSB depends on 2 very well-known and readily available python packages:
 
-    * numpy -- required (numpy.scipy.org)
-    * scipy -- required (scipy.org)
-    * matplotlib and wxPython -- optional, needed only if you want to use csb.io.plots
+* numpy - required (numpy.scipy.org)
+* scipy - required (scipy.org)
+* matplotlib and wxPython - optional, needed only if you want to use csb.io.plots
 
 On python 2.6 you will need these two as well:
 
-    * unittest2
-    * argparse
+* unittest2
+* argparse
 
 both of which are standard, simple and available for download from PyPi (pypi.python.org).
 
@@ -53,8 +59,16 @@ Then install the project in editable mode::
 
     $ pip install --editable .[dev]
 
-PIP will take care of all runtime and development dependencies and make the source
+pip will take care of all runtime and development dependencies and make the source
 code location importable. No need to modify your $PYTHONPATH.
+
+If dependencies cannot be resolved on your system - this is often the case on
+Windows - the best way to go from here is to install Anaconda. Then use the conda
+package manager to install all missing packages::
+
+    $ conda install --file requirements.txt
+    $ pip install --editable .[dev]
+
 
 
 Testing
@@ -64,17 +78,6 @@ Running the CSB test suite may be useful in order to check if your installation 
 All CSB tests are executed with the csb.test.Console. A typical way to run the console is::
 
     $ csb-test "csb.test.cases.*"
-
-or just::
-
-    $ csb-test
-
-For help try::
-
-    $ csb-test -h
-
-For more details on our test framework, including guidelines for writing
-unit test, please refer to the API documentation, package csb.test.
 
 
 API Documentation
