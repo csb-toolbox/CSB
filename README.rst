@@ -7,14 +7,14 @@ you are a bioinformatician, software engineer or a researcher working
 in this field, chances are you may find something useful here. Our
 package consists of a few major components:
 
-    1. Core class library -- object-oriented, granular, with an emphasis
-       on design and clean interfaces. 
-       
-    2. Application framework -- console applications ("protocols"),
-       which consume objects from the core library in order to build
-       something executable (and hopefully useful).
-       
-    3. Test framework -- ensures that the library *actually* works.
+1. Core class library - object-oriented, granular, with an emphasis
+   on design and clean interfaces.
+
+2. Application framework - console applications ("protocols"),
+   which consume objects from the core library in order to build
+   something executable (and hopefully useful).
+
+3. Test framework - ensures that the library *actually* works.
 
 
 Installation 
@@ -49,13 +49,13 @@ Documentation
 The project's web site at `GitHub <http://github.com/csb-toolbox>`_ contains
 online documentation and samples. Be sure to check out:
     
-    http://github.com/csb-toolbox/CSB/docs
+http://github.com/csb-toolbox/CSB/docs
 
 Detailed API documentation can be found in the "docs/api" directory in the
 distribution package (docs/api/index.html). This documentaiton is also hosted
 on PyPi:
 
-    http://pythonhosted.org/csb/
+http://pythonhosted.org/csb/
 
 Many packages contain introductory module level documentation and samples/tutorials.
 These are also available in the HTML docs, but a quick way to access them is by using
@@ -79,7 +79,7 @@ CSB is developed by Michael Habeck's Computational Structural Biology
 For complete source code, contributions, support or bug reports please visit
 us on GitHub:
   
-    `github.com/csb-toolbox <http://github.com/csb-toolbox>`_
+`github.com/csb-toolbox <http://github.com/csb-toolbox>`_
     
 
 License

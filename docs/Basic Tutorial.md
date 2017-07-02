@@ -97,11 +97,11 @@ exploring _csb.bio.io_ right now. As we have already seen, _csb.bio.io.wwpdb_
 provides PDB Structure parsers, for example _csb.bio.io.wwpdb.RegularStructureParser_ 
 and _csb.bio.io.wwpdb.LegacyStructureParser_.
 
-_csb.bio.io.fasta_ is all about reading FASTA Sequences and _SequenceAlignment_s. 
+_csb.bio.io.fasta_ is all about reading FASTA Sequences and _SequenceAlignment_-s. 
 Be sure to check out _csb.bio.io.fasta.SequenceParser_, 
 _csb.bio.io.fasta.SequenceAlignmentReader_ and _csb.bio.io.fasta.StructureAlignmentFactory_.
 
-If you are working with HHpred (_ProfileHMM_s, _HHpredHit_s), then 
+If you are working with HHpred (_ProfileHMM_-s, _HHpredHit_-s), then 
 _csb.bio.io.hhpred_ is for you. This package provides _csb.bio.io.hhpred.HHProfileParser_ 
 and _csb.bio.io.hhpred.HHOutputParser_, which are used to read _.hhm_ and _.hhr_ files.
 
