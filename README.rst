@@ -36,9 +36,9 @@ Running CSB Applications
 CSB is bundled with a number of executable console csb.apps. Each app
 provides a standard command line interface. To run any app, try::
 
-    $ csb-appname --help
+    $ csb-app --help
     
-where *csb-appname* is the name of the application, such as csb-hhfrag or csb-embd.
+where *csb-app* is the name of the application, such as ``csb-hhfrag``.
 For more details on our app framework, including guidelines for writing new
 applications, please refer to the API documentation, package "csb.apps".
 
@@ -49,7 +49,7 @@ Documentation
 The project's web site at `GitHub <http://github.com/csb-toolbox>`_ contains
 online documentation and samples. Be sure to check out:
     
-http://github.com/csb-toolbox/CSB/docs
+http://csb-toolbox.github.io/CSB
 
 Detailed API documentation can be found in the "docs/api" directory in the
 distribution package (docs/api/index.html). This documentaiton is also hosted
@@ -79,7 +79,7 @@ CSB is developed by Michael Habeck's Computational Structural Biology
 For complete source code, contributions, support or bug reports please visit
 us on GitHub:
   
-`github.com/csb-toolbox <http://github.com/csb-toolbox>`_
+http://github.com/csb-toolbox/CSB
     
 
 License

@@ -1,22 +1,22 @@
 
 ## Hidden Markov Model API
 
-The _csb.bio.hmm_ package defines abstractions for working with HHpred's 
-HMMs and hit lists. _ProfileHMM_ is the most important object of this 
+The ``csb.bio.hmm`` package defines abstractions for working with HHpred's 
+HMMs and hit lists. ``ProfileHMM`` is the most important object of this 
 module. It describes a sequence profile hidden Markov model in the 
 way HHpred sees this concept:
 
-* a profile is composed of a list of _HMMLayers_, which contain a 
-  number of _States_
-* these States can be of different types: _Match_, _Insertion_, 
-  _Deletion_, etc.
+* a profile is composed of a list of ``HMMLayers``, which contain a 
+  number of ``States``
+* these States can be of different types: ``Match``, ``Insertion``, 
+  ``Deletion``, etc.
 * a profile contains a multiple alignment, from which it is derived
-* this multiple alignment is an A3M (condensed) _Alignment_, where the 
+* this multiple alignment is an A3M (condensed) ``Alignment``, where the 
   first sequence is a master sequence
 * the match states in all layers correspond to the residues of the master 
   sequence
 
-_ProfileHMM_ objects provide list-like access to their layers:
+``ProfileHMM`` objects provide list-like access to their layers:
 
 ```python
 >>> hmm.layers[1](1)
@@ -54,15 +54,15 @@ at various places:
 >>> hmm.layers.append(layer)
 ```
 
-See _HMMLayersCollection_, _HMMLayer_, _EmissionTable_ and _TransitionTable_ 
+See ``HMMLayersCollection``, ``HMMLayer``, ``EmissionTable`` and ``TransitionTable`` 
 in our API docs for details.
 
 ## HHpred I/O
 
 CSB provides python bindings for working with HHpred's .hhm (HMM) and .hhr 
-(HHsearch result) files. These are part of the _csb.bio.io.hhpred_ module, 
-which exposes two HHpred format parsers: _HHProfileParser_ and 
-_HHOutputParser_. The first one is used to read HMM (.hhm) files:
+(HHsearch result) files. These are part of the ``csb.bio.io.hhpred`` module, 
+which exposes two HHpred format parsers: ``HHProfileParser`` and 
+``HHOutputParser``. The first one is used to read HMM (.hhm) files:
 
 ```python
 >>> HHProfileParser("profile.hhm", "profile.pdb").parse()
@@ -76,6 +76,6 @@ while the latter parses HHsearch results files (.hhr):
 <HHpredHitList>        # collection of HHpredHit-s
 ```
 
-See _ProfileHMM_, _HHpredHitList_ and _HHpredHit_ from _csb.bio.hmm_ 
-for details. For text serialization of HMM profiles, see _HHMFileBuilder_ 
-from _csb.bio.io.hhpred_ in our API docs.
+See ``ProfileHMM``, ``HHpredHitList`` and ``HHpredHit`` from ``csb.bio.hmm`` 
+for details. For text serialization of HMM profiles, see ``HHMFileBuilder`` 
+from ``csb.bio.io.hhpred`` in our API docs.

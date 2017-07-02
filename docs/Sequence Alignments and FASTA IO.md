@@ -1,23 +1,23 @@
 ## Overview
 
-The _csb.bio.sequence_ module defines the base interfaces of our sequence 
-and sequence alignment objects: _AbstractSequence_ and _AbstractAlignment_. 
+The ``csb.bio.sequence`` module defines the base interfaces of our sequence 
+and sequence alignment objects: ``AbstractSequence`` and ``AbstractAlignment``. 
 This module provides also a number of useful enumerations, like 
-_SequenceTypes_ and _SequenceAlphabets_.
+``SequenceTypes`` and ``SequenceAlphabets``.
 
 ## Sequences
 
-_AbstractSequence_ has a number of implementations. These are of course 
+``AbstractSequence`` has a number of implementations. These are of course 
 interchangeable, but have different intents and may differ significantly 
-in performance. The standard _Sequence_ implementation is what you are 
+in performance. The standard ``Sequence`` implementation is what you are 
 after if all you need is high performance and efficient storage (e.g. 
-when you are parsing big files). _Sequence_ objects store their underlying 
-sequences as strings. _RichSequence_-s on the other hand will store their 
-residues as _ResidueInfo_ objects, which have the same basic interface as 
-the _csb.bio.structure.Residue_ objects. This of course comes at the 
-expense of degraded performance. A _ChainSequence_ is a special case of a 
+when you are parsing big files). ``Sequence`` objects store their underlying 
+sequences as strings. ``RichSequence``-s on the other hand will store their 
+residues as ``ResidueInfo`` objects, which have the same basic interface as 
+the ``csb.bio.structure.Residue`` objects. This of course comes at the 
+expense of degraded performance. A ``ChainSequence`` is a special case of a 
 rich sequence, whose residue objects are actually real 
-_csb.bio.structure.Residue_-s.
+``csb.bio.structure.Residue``-s.
 
 Basic usage:
 
@@ -30,11 +30,11 @@ Basic usage:
 SEQUENCE
 ``` 
 
-See _AbstractSequence_ in the API docs for details.
+See ``AbstractSequence`` in the API docs for details.
 
 ## Alignments
 
-_AbstractAlignment_ defines a table-like interface to access the data 
+``AbstractAlignment`` defines a table-like interface to access the data 
 in an alignment:
 
 ```python
@@ -54,20 +54,20 @@ which is just a shorthand for using the standard 1-based interface:
 (<ColumnInfo a [1](1)(1): ALA>, <ColumnInfo b [1](1)(1): ALA>)    # residues at column #1
 ```
 
-See _AbstractAlignment_ in our API docs for all details and more examples.
+See ``AbstractAlignment`` in our API docs for all details and more examples.
 
-There are a number of _AbstractAlignment_ implementations defined here. 
-_SequenceAlignment_ is the default one, nothing surprising. _A3MAlignment_ 
+There are a number of ``AbstractAlignment`` implementations defined here. 
+``SequenceAlignment`` is the default one, nothing surprising. ``A3MAlignment`` 
 is a more special one: the first sequence in the alignment is a master 
 sequence. This alignment is usually used in the context of HHpred. More 
 important is the StructureAlignment, which is an alignment of 
-_csb.bio.structure.Chain_ objects. The residues in every aligned sequence 
-are really the _csb.bio.structure.Residue_ objects taken from those chains.
+``csb.bio.structure.Chain`` objects. The residues in every aligned sequence 
+are really the ``csb.bio.structure.Residue`` objects taken from those chains.
 
 ## Sequence and Alignment I/O
 
 CSB provides parsers and writers for sequences and alignments in FASTA 
-format, defined in _csb.bio.io.fasta_. The most basic usage is:
+format, defined in ``csb.bio.io.fasta``. The most basic usage is:
 
 ```python
 >>> parser = SequenceParser()
@@ -83,16 +83,16 @@ then you could efficiently read the file sequence by sequence:
         ...            # seq is an L{AbstractSequence}
 ```
 
-_BaseSequenceParser_ is the central class in this module, which defines 
-a common infrastructure for all sequence readers. _SequenceParser_ is a 
-standard implementation, and _PDBSequenceParser_ is specialized to read 
+``BaseSequenceParser`` is the central class in this module, which defines 
+a common infrastructure for all sequence readers. ``SequenceParser`` is a 
+standard implementation, and ``PDBSequenceParser`` is specialized to read 
 FASTA sequences with PDB headers.
 
-For parsing alignments, have a look at _SequenceAlignmentReader_ and 
-_StructureAlignmentFactory_.
+For parsing alignments, have a look at ``SequenceAlignmentReader`` and 
+``StructureAlignmentFactory``.
 
-Finally, this module provides a number of _OutputBuilder_-s, which know 
-how to write _AbstractSequence_ and _AbstractAlignment_ objects to FASTA 
+Finally, this module provides a number of ``OutputBuilder``-s, which know 
+how to write ``AbstractSequence`` and ``AbstractAlignment`` objects to FASTA 
 files:
 
 ```python
@@ -103,4 +103,4 @@ files:
         ...
 ```
 
-or you could instantiate any of the _OutputBuilder_-s directly.
+or you could instantiate any of the ``OutputBuilder``-s directly.

@@ -1,9 +1,9 @@
 ## Single Chain
 
 Various Monte Carlo equilibrium sampling algorithms, which simulate 
-only one Markov chain, are defined in _csb.statistics.samplers.mc.singlechain_.
+only one Markov chain, are defined in ``csb.statistics.samplers.mc.singlechain``.
 
-Here is how to sample from a PDF using the _HMCSampler_ class. In the 
+Here is how to sample from a PDF using the ``HMCSampler`` class. In the 
 following snippet we draw 5000 samples from a 1D normal distribution 
 and plot them:
 
@@ -43,8 +43,8 @@ In the following lines, several parameters are set:
 * the number of samples to be drawn
 
 The empty list states is initialized. It will serve to store the samples 
-drawn. In the loop, _sampler.sample()_ is repeatedly called. After each 
-call of _sampler.sample()_, the current state of the Markov Chain is 
+drawn. In the loop, ``sampler.sample()`` is repeatedly called. After each 
+call of ``sampler.sample()``, the current state of the Markov Chain is 
 stored in sampler.state and this state is appended to the sample storage list.
 
 Then the acceptance rate is printed, the numeric values are being 
@@ -54,7 +54,7 @@ finally plotted.
 
 ## Multi Chain
 
-_csb.statistics.samplers.mc.multichain_ implements several extended-ensemble 
+``csb.statistics.samplers.mc.multichain`` implements several extended-ensemble 
 Monte Carlo sampling algorithms.
 
 Here is a short example which shows how to sample from a PDF using the 

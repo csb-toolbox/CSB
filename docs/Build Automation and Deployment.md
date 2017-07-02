@@ -36,10 +36,10 @@ Make sure it works:
     
     $ python -c "import smtplib; smtplib.SMTP('localhost').sendmail('your@email.here', 'your@email.here', 'test')"
 
-If you can't install or use a local SMTP, just register a new gmail account, e.g. _csb.build@gmail.com_.
+If you can't install or use a local SMTP, just register a new gmail account, e.g. ``csb.build@gmail.com``.
 
 * Open [build.sh](build.sh) and set the build directory ($ROOT)
-* Configure also $BOTMAIL (the email address of the build bot, e.g. _csb.build@gmail.com_), 
+* Configure also $BOTMAIL (the email address of the build bot, e.g. ``csb.build@gmail.com``), 
   $SMTP (smtp host, e.g. smtp.gmail.com) and $OPERATORS (list of recipients)
 * If $SMTP requires authentication, configure also $BOTPWD; otherwise, leave it blank
 * Save your changes

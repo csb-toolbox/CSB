@@ -63,7 +63,7 @@ the repository to make sure that all test cases and docstring checks pass.
 
 We have embraced a Test-driven development (TDD) approach. That is, all 
 new features and bug fixes must be accompanied by corresponding test 
-cases in a subpackage of _csb.test.cases_. For more details on this 
+cases in a subpackage of ``csb.test.cases``. For more details on this 
 opic please read the [API documentation](http://pythonhosted.org/csb/), 
 package [csb.test](http://pythonhosted.org/csb/csb.test-module.html).
 
@@ -81,8 +81,8 @@ by following these guidelines:
 
 * you shouldn't feel the need to use ``print`` in CSB (even in apps); 
   but if really necessary, import and use the print function (``print()``)
-* use _csb.io.Pickle_, _csb.io.MemoryStream_ and _csb.io.urllib_ instead of importing the standard library modules (details in [csb.io](http://pythonhosted.org/csb/csb.io-module.html))
-* use _csb.core.string_ for string ``isinstance`` checks and _csb.core.metaclass()_ to define metaclass inheritance (details in [csb.core](http://pythonhosted.org/csb/csb.core-module.html))
+* use ``csb.io.Pickle``, ``csb.io.MemoryStream`` and ``csb.io.urllib`` instead of importing the standard library modules (details in [csb.io](http://pythonhosted.org/csb/csb.io-module.html))
+* use ``csb.core.string`` for string ``isinstance`` checks and ``csb.core.metaclass()`` to define metaclass inheritance (details in [csb.core](http://pythonhosted.org/csb/csb.core-module.html))
 
 #### Commit Messages
 

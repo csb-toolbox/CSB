@@ -6,6 +6,7 @@ source code, official releases and documentation of the project.
 This is also the right place to get in touch with the developers, 
 suggest a feature or report an issue in our bug tracker.
 
+
 ## Overview
 
 With our API you can:
@@ -17,12 +18,14 @@ alignments, HMMs and more
 * draw charts
 * run or reuse components from a number of pre-installed applications
 
+
 ## Documentation
 
 CSB comes with detailed offline 
 [API documentation](http://pythonhosted.org/csb), which comes with every 
 release package (directory ``docs``). For getting started, try reading 
 our [Documentation](Documentation.md) and [Tutorials](Documentation.md#tutorials).
+
 
 ## Download
 
@@ -33,18 +36,20 @@ the latest release with pip:
 
     $ pip install csb 
     
+
 ## Batteries Included
 
 CSB is bundled with a number of executable console ``csb.apps``. 
 Each app provides a standard command line interface. To run any app, try:
 
 
-    $ python csb/apps/app.py --help
+    $ python csb-app --help
 
-where ``app`` is the name of the application. For more details on 
-our application framework, including guidelines for writing your 
-own applications, please refer to the API docs in the release package, 
-namespace ``csb.apps``.
+where ``csb-app`` is the name of the application, e.g. ``csb-hhfrag``. 
+For more details on our application framework, including guidelines 
+for writing your own applications, please refer to the API docs in 
+the release package, namespace ``csb.apps``.
+
 
 ## Contact
 
@@ -52,8 +57,9 @@ This project is developed by Michael Habeck's Computational Structural
 Biology [research group](http://www.stochastik.math.uni-goettingen.de/index.php?id=172),
 in Germany.
 
-    * Ivan Kalev <ivan.kalev@gmail.com>
-    * Michel Habeck <mhabeck@gwdg.de>
+* Ivan Kalev <ivan.kalev@gmail.com>
+* Michel Habeck <mhabeck@gwdg.de>
+
 
 ## Citation
 

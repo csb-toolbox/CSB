@@ -1,12 +1,12 @@
 ## Basic Tutorial
 
 Perhaps one of the most frequently used parts of the library is 
-the _csb.bio.structure_ module, which provides the _Structure_, 
-_Chain_, _Residue_ and _Atom_ objects. You could easily build a 
-_Structure_ from scratch, but a far more common scenario is parsing 
-a structure from a PDB file using one of the _AbstractStructureParsers_. 
-All bio IO objects, including the _StructureParser_ factory, are 
-defined in _csb.bio.io_ and sub-packages:
+the ``csb.bio.structure`` module, which provides the ``Structure``, 
+``Chain``, ``Residue`` and ``Atom`` objects. You could easily build a 
+``Structure`` from scratch, but a far more common scenario is parsing 
+a structure from a PDB file using one of the ``AbstractStructureParsers``. 
+All bio IO objects, including the ``StructureParser`` factory, are 
+defined in ``csb.bio.io`` and sub-packages:
 
 ```python
 >>> from csb.bio.io.wwpdb import StructureParser
@@ -16,7 +16,7 @@ defined in _csb.bio.io_ and sub-packages:
 <Structure: 1x80, 2 chains>
 ```
      
-The last statement will return a _csb.bio.structure.Structure_ instance, 
+The last statement will return a ``csb.bio.structure.Structure`` instance, 
 which is a composite hierarchical object:
 
 ```python
@@ -47,7 +47,7 @@ Others behave like collections:
 ```
 
 But all entities are iterable because they inherit the items iterator from 
-_AbstractEntity_. The above loop can be shortened:
+``AbstractEntity``. The above loop can be shortened:
 
 ```python
 >>> for chain in s.items:
@@ -88,24 +88,24 @@ Finally, you would probably want to save your structure back to a PDB file:
 
 ## Where to go from here
 
-If you want to dive into statistics, you could peek inside _csb.statistics_ 
-and its sub-packages. For example, _csb.statistics.pdf_ contains a collection 
-of probability density objects, like _Gaussian_ or _Gamma_.
+If you want to dive into statistics, you could peek inside ``csb.statistics`` 
+and its sub-packages. For example, ``csb.statistics.pdf`` contains a collection 
+of probability density objects, like ``Gaussian`` or ``Gamma``.
 
 But chances are you would first like to try reading some files, so you could start 
-exploring _csb.bio.io_ right now. As we have already seen, _csb.bio.io.wwpdb_ 
-provides PDB Structure parsers, for example _csb.bio.io.wwpdb.RegularStructureParser_ 
-and _csb.bio.io.wwpdb.LegacyStructureParser_.
+exploring ``csb.bio.io`` right now. As we have already seen, ``csb.bio.io.wwpdb`` 
+provides PDB Structure parsers, for example ``csb.bio.io.wwpdb.RegularStructureParser`` 
+and ``csb.bio.io.wwpdb.LegacyStructureParser``.
 
-_csb.bio.io.fasta_ is all about reading FASTA Sequences and _SequenceAlignment_-s. 
-Be sure to check out _csb.bio.io.fasta.SequenceParser_, 
-_csb.bio.io.fasta.SequenceAlignmentReader_ and _csb.bio.io.fasta.StructureAlignmentFactory_.
+``csb.bio.io.fasta`` is all about reading FASTA Sequences and ``SequenceAlignment``-s. 
+Be sure to check out ``csb.bio.io.fasta.SequenceParser``, 
+``csb.bio.io.fasta.SequenceAlignmentReader`` and ``csb.bio.io.fasta.StructureAlignmentFactory``.
 
-If you are working with HHpred (_ProfileHMM_-s, _HHpredHit_-s), then 
-_csb.bio.io.hhpred_ is for you. This package provides _csb.bio.io.hhpred.HHProfileParser_ 
-and _csb.bio.io.hhpred.HHOutputParser_, which are used to read _.hhm_ and _.hhr_ files.
+If you are working with HHpred (``ProfileHMM``-s, ``HHpredHit``-s), then 
+``csb.bio.io.hhpred`` is for you. This package provides ``csb.bio.io.hhpred.HHProfileParser`` 
+and ``csb.bio.io.hhpred.HHOutputParser``, which are used to read ``.hhm`` and ``.hhr`` files.
 
 Finally, if you want to make some nice plots with matplotlib, you may like the clean 
-object-oriented interface of our _Chart_. See _csb.io.plots_ and maybe also 
-_csb.io.tsv_ to get started.
+object-oriented interface of our ``Chart``. See ``csb.io.plots`` and maybe also 
+``csb.io.tsv`` to get started.
 

@@ -1,8 +1,8 @@
 ## Probability Density Functions
 
-The _csb.statistics.pdf_ module defines _AbstractDensity_: a common interface 
-for all PDFs. Each _AbstractDensity_ describes a specific type of probability
-distribution, for example _Normal_ is an implementation of the Gaussian 
+The ``csb.statistics.pdf`` module defines ``AbstractDensity``: a common interface 
+for all PDFs. Each ``AbstractDensity`` describes a specific type of probability
+distribution, for example ``Normal`` is an implementation of the Gaussian 
 distribution:
 
 ```python
@@ -11,7 +11,7 @@ distribution:
 10.0, 1.1
 ``` 
 
-Every PDF provides an implementation of the _AbstractDensity.evaluate()_ 
+Every PDF provides an implementation of the ``AbstractDensity.evaluate()`` 
 method, which evaluates the PDF for a list of input data points:
 
 ```python
@@ -45,8 +45,8 @@ set of observed data points:
 <csb.statistics.pdf.GaussianMLEstimator>
 ``` 
 
-Estimators implement the _AbstractEstimator_ interface. They are treated 
+Estimators implement the ``AbstractEstimator`` interface. They are treated 
 as pluggable tools, which can be exchanged through the 
-_AbstractDensity.estimator_ property (you could create, initialize and plug in 
+``AbstractDensity.estimator`` property (you could create, initialize and plug in 
 your own estimator as well). This is a classic Strategy.
 
