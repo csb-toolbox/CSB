@@ -17,65 +17,17 @@ package consists of a few major components:
     3. Test framework -- ensures that the library *actually* works.
 
 
-Compatibility
--------------
-
-In short: CSB requires python 2.6 or higher.
-
-CSB is being developed on Linux, under python 2.7. However, compatibility
-is a design goal and the package works on any platform, on any modern python
-interpreter since version 2.6 (that includes python 3 support out of
-the box). If you found any issues on a platform/interpreter different from
-our development environment, please let us know.
-
-
 Installation 
 ------------
+CSB is being developed on Linux with Python 2.7. However, compatibility
+is a design goal and the package works on any platform, on any modern python
+interpreter since version 2.6 (that includes python 3 support out of
+the box). If you find any issues on a platform/interpreter different from
+our development environment, please let us know.
 
-Full installation instructions can be found in the INSTALL file packaged with
-this release, as well as on the project's web site:
+CSB and all of its dependencies can be installed with pip::
 
-    http://csb.codeplex.com/documentation
-
-Here we provide only a brief summary of the installation procedure.
-First, make sure all required dependencies are installed:
-    
-    1. numpy, scipy -- required
-    2. matplotlib and wxPython -- optional, needed only if you want to use csb.io.plots
-    3. unittest2, argparse -- needed only if you are running python 2.6
-    
-Next, install CSB::     
-
-    $ python setup.py install
-    
-CSB has just been installed at the following location::
-
-    $ python -c "import csb, os; print(os.path.abspath(os.path.join(csb.__path__[0], '..')))"
-
-Let us call this path *$LIB*.
-            
-
-Testing
--------
-
-Running the CSB test suite may be useful if you made any modifications to
-the source code, or if you simply want to check if your installation works.
-
-All CSB tests are executed with the csb.test.Console. A typical way to run 
-the console is::
-
-    $ python $LIB/csb/test/app.py "csb.test.cases.*"
-    
-or just::
-
-    $ python $LIB/csb/test/app.py         
-
-For help try::
-
-    $ python $LIB/csb/test/app.py -h    
-
-For more details on our test framework, including guidelines for writing
-unit tests, please refer to the API documentation, package "csb.test".
+    $ pip install csb
 
 
 Running CSB Applications
@@ -84,25 +36,29 @@ Running CSB Applications
 CSB is bundled with a number of executable console csb.apps. Each app
 provides a standard command line interface. To run any app, try::
 
-    $ python $LIB/csb/apps/appname.py --help
+    $ csb-appname --help
     
-where *appname* is the name of the application. For more details on
-our app framework, including guidelines for writing new applications,
-please refer to the API documentation, package "csb.apps".
+where *csb-appname* is the name of the application, such as csb-hhfrag or csb-embd.
+For more details on our app framework, including guidelines for writing new
+applications, please refer to the API documentation, package "csb.apps".
 
 
 Documentation
 -------------
 
-The project's web site at `CodePlex <http://csb.codeplex.com>`_ contains
-online documentation and samples. Be sure to check
+The project's web site at `GitHub <http://github.com/csb-toolbox>`_ contains
+online documentation and samples. Be sure to check out:
     
-    http://csb.codeplex.com/documentation
+    http://github.com/csb-toolbox/CSB/docs
 
 Detailed API documentation can be found in the "docs/api" directory in the
-distribution package (docs/api/index.html). Many packages contain
-introductory module level documentation and samples/tutorials. These are also
-available in the HTML docs, but a quick way to access them is by using
+distribution package (docs/api/index.html). This documentaiton is also hosted
+on PyPi:
+
+    http://pythonhosted.org/csb/
+
+Many packages contain introductory module level documentation and samples/tutorials.
+These are also available in the HTML docs, but a quick way to access them is by using
 the built-in python help system. For example, for a general introduction
 see the module documentation of the root package::
 
@@ -118,12 +74,12 @@ Contact
 -------
 
 CSB is developed by Michael Habeck's Computational Structural Biology
-`research group <http://www.eb.tuebingen.mpg.de/research/research-groups/michael-habeck.html>`_.
+`research group <http://www.stochastik.math.uni-goettingen.de/index.php?id=172>`_.
     
-For complete source code, contribution, support or bug reports please visit
-our web site at CodePlex:
+For complete source code, contributions, support or bug reports please visit
+us on GitHub:
   
-    `csb.codeplex.com <http://csb.codeplex.com>`_
+    `github.com/csb-toolbox <http://github.com/csb-toolbox>`_
     
 
 License
