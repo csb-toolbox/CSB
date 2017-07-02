@@ -1,8 +1,5 @@
 language: python
-addons:
-  apt:
-    packages:
-      - libssl1.0.0
+dist: trusty
 python:
   - "2.7"
 install:
