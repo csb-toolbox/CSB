@@ -2074,8 +2074,8 @@ class RemoteStructureProvider(StructureProvider):
         
         try:
             return csb.io.urllib.urlopen(self.prefix + id + self.suffix)
-        except:
-            raise StructureNotFoundError(id)
+        except Exception as e:
+            raise StructureNotFoundError(id + ": " + str(e))
         
     def find(self, id):
         
