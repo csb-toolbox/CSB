@@ -22,7 +22,7 @@ alignments, HMMs and more
 CSB comes with detailed offline 
 [API documentation](http://pythonhosted.org/csb), which comes with every 
 release package (directory ``docs``). For getting started, try reading 
-our [Documentation](Documentation) and [Tutorials](Documentation#tutorials).
+our [Documentation](Documentation.md) and [Tutorials](Documentation.md#tutorials).
 
 ## Download
 
