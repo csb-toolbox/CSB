@@ -608,7 +608,7 @@ class GitHandler(RevisionHandler):
             
             for line in self._run(cmd):
                 if line.strip():
-                    changeset = line.strip()
+                    revision = line.strip()
                     break
     
             if revision is None:
