@@ -13,7 +13,7 @@ except IOError:
 NAME = ROOT
 AUTHOR = "Michael Habeck et al."
 EMAIL = "ivan.kalev@gmail.com"
-URL = "http://csb.codeplex.com"
+URL = "http://github.com/csb-toolbox"
 SUMMARY = "Computational Structural Biology Toolbox"
 DESCRIPTION = __doc__
 LICENSE = 'MIT'

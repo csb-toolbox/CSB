@@ -26,7 +26,7 @@ Use ``csb.build`` to build, test and package the entire project:
 
     $ python csb/build.py -o <output directory>
     
-Full details are provided [here](Build Automation and Deployment.md).
+Full details are provided [here](Build Automation and Deployment).
 
 ## Testing
 
