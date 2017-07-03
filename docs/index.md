@@ -22,12 +22,10 @@ alignments, HMMs and more
 
 
 ## Documentation
-
-CSB comes with detailed offline 
-[API documentation](http://pythonhosted.org/csb), which comes with every 
-release package (directory ``docs``). For getting started, try reading 
-our [Documentation](Documentation) and [Tutorials](Documentation#tutorials).
-
+ 
+* [Documentation](Documentation)
+* [Tutorials](Documentation#tutorials)
+* [API docs](http://pythonhosted.org/csb)
 
 ## Download
 
