@@ -19,11 +19,14 @@ DESCRIPTION = __doc__
 LICENSE = 'MIT'
 
 REQUIREMENTS = open("requirements.txt").readlines()
-DEV_REQUIREMENTS = open("requirements-dev.txt").readlines()
+DEV_REQUIREMENTS = []
 
 if sys.version_info[:2] == (2, 6):
     REQUIREMENTS.append("argparse")
     DEV_REQUIREMENTS.append("unittest2")
+
+if sys.version_info.major == 2:
+    DEV_REQUIREMENTS.append("epydoc")
 
 for line in open(ROOT + "/__init__.py"):
     if line.startswith("__version__ ="):

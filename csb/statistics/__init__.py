@@ -26,7 +26,7 @@ class Cumulative(object):
             total_size = len(x) * len(self.data)
             nchunks = total_size / self.total_mem + int(total_size % self.total_mem != 0)
             
-        size = len(x) / nchunks + int(len(x) % nchunks != 0)
+        size = int(len(x) / nchunks + int(len(x) % nchunks != 0))
         
         while len(x):
 

@@ -35,7 +35,7 @@ class TestDensityMapReader(test.Case):
         
         density = self.reader.read()
 
-        self.assertNotEqual(density.data, None)
+        self.assertIsNotNone(density.data)
         self.assertEqual(density.header, self.rawheader)
         self.assertEqual(density.origin, [-36.0, -36.0, -36.0])
         self.assertEqual(density.shape, (72, 72, 72))
