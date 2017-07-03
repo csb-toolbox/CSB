@@ -17,3 +17,4 @@ deploy:
   file: "csb-*.*"
   on:
     tags: true
+    python: "2.7"
