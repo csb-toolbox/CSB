@@ -174,9 +174,10 @@ Options:
         
         if self._success:
             self.log('\n# Done ({0}).\n'.format(vn.full))
-        else:
-            self.log('\n# Build failed.\n')
-                 
+            return True
+
+        self.log('\n# Build failed.\n')
+        return False
 
     def log(self, message, level=1, ending='\n'):
 
@@ -190,7 +191,7 @@ Options:
         Collect all required stuff in the output folder.
         """
         self.log('# Preparing the file system...')
-                
+
         if not os.path.exists(self._output):
             self.log('Creating output directory {0}'.format(self._output), level=2)
             os.mkdir(self._output)
@@ -242,8 +243,9 @@ Options:
                         
         newdata = os.path.join(self._temp, ROOT, 'test', 'data')
         csb.test.Config.setDefaultDataRoot(newdata)
+        csb.test.Config.setDefaultGeneratedDataRoot(newdata)
 
-        self.log('\n# Updating all test pickles in {0} if necessary...'.format(newdata), level=2)        
+        self.log('\n# Updating all test pickles in {0} if necessary...'.format(newdata), level=2)
         csb.test.Config().ensureDataConsistency()
 
         self.log('\n# Running the Test Console...')
@@ -256,7 +258,8 @@ Options:
         if result.wasSuccessful():
             self.log('\n  Passed all unit tests')
         else:
-            self.log('\n  DID NOT PASS: The build might be broken')                             
+            self.log('\n  DID NOT PASS: This build might be broken')
+            self._success = False
         
     def _doc(self, version):
         """
@@ -289,7 +292,8 @@ Options:
                 self.log('\n  Passed all doc tests')
             else:
                 if ex.code == 2:
-                    self.log('\n  DID NOT PASS: The docs might be broken')                    
+                    self.log('\n  DID NOT PASS: Generated docs might be broken')
+                    self._success = False
                 else:
                     self.log('\n  FAIL: Epydoc returned "#{0.code}: {0}"'.format(ex))
                     self._success = False
@@ -326,6 +330,8 @@ Options:
         sys.argv = ['setup.py', verbosity, self._dist, '-d', self._output]        
             
         self.log('\n# Building {0} distribution...'.format(self._type))
+        version = package = None
+
         try:       
             setup = imp.load_source('setupcsb', 'setup.py')
             d = setup.build()
@@ -434,7 +440,8 @@ Options:
             Console.exit(code=1, usage=True)
         else:
             try:
-                Console(output, verbosity=verb, buildtype=buildtype).build()
+                ok = Console(output, verbosity=verb, buildtype=buildtype).build()
+                Console.exit(code=0 if ok else 66, usage=False)
             except Exception as ex:
                 msg = 'Unexpected Error: {0}\n\n{1}'.format(ex, traceback.format_exc())
                 Console.exit(message=msg, code=99, usage=False)
