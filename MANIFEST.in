@@ -2,5 +2,6 @@ recursive-include csb/bio/nmr/resources *.*
 recursive-include csb/test/data *.*
 recursive-include docs *.*
 include README.rst INSTALL.rst LICENSE.rst
+include requirements.txt
 
 recursive-exclude csb/test/data *.pickle
