@@ -268,4 +268,3 @@ class Version(object):
     @property
     def package(self):
         return self._package
-

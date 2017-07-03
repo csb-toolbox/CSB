@@ -2040,7 +2040,7 @@ class RemoteStructureProvider(StructureProvider):
     @type suffix: str
     """
     
-    def __init__(self, prefix='http://www.rcsb.org/pdb/files/pdb', suffix='.ent'):
+    def __init__(self, prefix='https://files.rcsb.org/download/', suffix='.pdb'):
         
         self._prefix = None
         self._suffix = None
@@ -2074,8 +2074,8 @@ class RemoteStructureProvider(StructureProvider):
         
         try:
             return csb.io.urllib.urlopen(self.prefix + id + self.suffix)
-        except:
-            raise StructureNotFoundError(id)
+        except Exception as e:
+            raise StructureNotFoundError(id + ": " + str(e))
         
     def find(self, id):
         
@@ -2172,7 +2172,7 @@ class CustomStructureProvider(StructureProvider):
         else:
             return None
     
-def get(accession, model=None, prefix='http://www.rcsb.org/pdb/files/pdb'):
+def get(accession, model=None, prefix='https://files.rcsb.org/download/'):
     """
     Download and parse a PDB entry.
 

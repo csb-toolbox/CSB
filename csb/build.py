@@ -219,7 +219,7 @@ Options:
         root = os.path.join(self._root, '__init__.py')
         
         self.log('Retrieving revision number from {0}'.format(root), level=2)               
-        rh = MercurialHandler(root)        
+        rh = GitHandler(root)        
         revision = rh.read().revision
         
         self.log('Writing back revision number {0}'.format(revision), level=2)        
@@ -278,8 +278,8 @@ Options:
                     '--fail-on-error', '--fail-on-warning', '--fail-on-docstring-warning',
                     self._root]
         
-        if self._verbosity > 0:                
-            sys.argv.append('-v')
+        if self._verbosity <= 1:
+            sys.argv.append('-q')
         
         try:
             epydoc.cli.cli()
@@ -586,7 +586,39 @@ class MercurialHandler(RevisionHandler):
         
         finally:
             os.chdir(wd)
-                    
+
+
+class GitHandler(RevisionHandler):  
+
+    def __init__(self, path, sc='git'):
+        
+        if os.path.isfile(path):
+            path = os.path.dirname(path)
+                         
+        super(GitHandler, self).__init__(path, sc)
+        
+    def read(self):
+        
+        wd = os.getcwd()
+        os.chdir(self.path)
+        
+        try:
+            cmd = '{0.sc} rev-parse --short HEAD'.format(self)
+            revision = None
+            
+            for line in self._run(cmd):
+                if line.strip():
+                    revision = line.strip()
+                    break
+    
+            if revision is None:
+                raise RevisionError('No revision number found', code=0, cmd=cmd)
+            
+            return RevisionInfo(self.path, revision, revision)  
+        
+        finally:
+            os.chdir(wd)
+
 class RevisionInfo(object):
     
     def __init__(self, item, revision, id=None):
