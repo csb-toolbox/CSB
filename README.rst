@@ -108,4 +108,7 @@ CSB is open source and distributed under OSI-approved MIT license.
     CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
     TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
     SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    
 
+
+.. image:: https://travis-ci.org/csb-toolbox/CSB.svg?branch=master
