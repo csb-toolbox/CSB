@@ -242,7 +242,7 @@ class Config(object):
         return Config.DATA
 
     @property
-    def generated_data(self):
+    def generatedData(self):
         """
         Test data directory for generated files
         @rtype: str
@@ -272,7 +272,7 @@ class Config(object):
         
         @raise IOError: if no such file is found
         """
-        for data in [self.data, self.generated_data]:
+        for data in [self.data, self.generatedData]:
             file = os.path.join(data, subDir, fileName)
             
             if os.path.isfile(file):
@@ -352,13 +352,13 @@ class Config(object):
         ensemble = Ensemble()
         ensemble.models.append(model1)
         ensemble.models.append(model2)
-        Pickle.dump(ensemble, open(os.path.join(self.generated_data, '1nz9.full.pickle'), 'wb'))
+        Pickle.dump(ensemble, open(os.path.join(self.generatedData, '1nz9.full.pickle'), 'wb'))
         
         mse = model1.chains['A'].find(164)
         mse.label = 'MSE'
         mse.atoms['SD']._element = ChemElements.Se
         mse.atoms['SD']._full_name = 'SE  '
-        Pickle.dump(model1, open(os.path.join(self.generated_data, '1nz9.model1.pickle'), 'wb'))    
+        Pickle.dump(model1, open(os.path.join(self.generatedData, '1nz9.model1.pickle'), 'wb'))
 
 class Case(unittest.TestCase):
     """

@@ -2,6 +2,7 @@ language: python
 dist: trusty
 python:
   - "2.7"
+  - "3.6"
 install:
   - pip install --upgrade pip
   - pip install --editable .[dev]
