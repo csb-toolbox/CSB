@@ -28,13 +28,9 @@ if sys.version_info[:2] == (2, 6):
 if sys.version_info.major == 2:
     DEV_REQUIREMENTS.append("epydoc")
 
-for line in open(ROOT + "/__init__.py"):
-    if line.startswith("__version__ ="):
-        exec(line)
-
-VERSION = ".".join(
-    globals()["__version__"].split(".")[:3]
-)
+v = {}
+exec(open(ROOT + "/__init__.py").read(), v)
+VERSION = v["Version"]()
 
 
 def build():
@@ -43,7 +39,7 @@ def build():
         name=NAME,
         packages=find_packages(),
         include_package_data=True,
-        version=VERSION,
+        version=VERSION.short,
         author=AUTHOR,
         author_email=EMAIL,
         url=URL,
