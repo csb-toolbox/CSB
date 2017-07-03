@@ -10,8 +10,9 @@ script:
 - python csb/build.py -o .
 deploy:
   provider: releases
+  skip_cleanup: true
   api_key:
     secure: QE+OlJEfZm/u2SnFU40uRwRFrQrbevCRn1PyFGvKUze5JmUVBCJpWG5QJRIvCvkW5A34YF9kK802lWAHOnSk5luTh8N84gGEI+/vgX/cEE5DyNf3lCkoXJXCrcVIUcVCWnZ3S17gyWQsdFmUniAyrHGkOsU/HbkwwolCIAahmEKlP3vR2HGzHtnW2Q3XAoDNY/6BhxFlKdcmrstiWyzrh8mVFyF94/hBdGD0FEsUPye4vTN5z1iaLCtjiO2jzBsB3g3wvvPeRu/R/dxMVyBX3CG7hwKIVNH8vL/O8RE0wHHG0M3f77qw7I4GTg9xd6ODI3sjPgeEP3l4l2CK88XEAXamNo8xxfvUOGCTqxxUID3dU1ueut28vC/3iRCOqTJSzClFPfFAkDhZ1ReaTSxRuGpM86dQkQ9AVMWFc8lTzI1DdZlrCyStFySwYRGdZmPeq8o6tJDHel7OWObVh2UXBhQHjORgDskpxDtWuohS18A4NoWPC6j3Ct3PUPbCnSOzwXQCpHGE2ufGhHEAWNUgJHPK9yNCGRsaGcUnTlA/uU/Q02X7dEq1u2SdNs4f8FMEkOS/4DlCuHWvnmUvs6Zu4d7zk2+wpKb4cY5JM5eWTMH82r576Id8HH33nrOwZThJw5CJSrijx8flWMDfX0qPsbHCP91OXH2zDvD42/IamCA=
   file: csb-*.*
   on:
-    repo: csb-toolbox/CSB
+    tags: true
