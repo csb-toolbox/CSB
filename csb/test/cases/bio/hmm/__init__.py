@@ -285,7 +285,7 @@ class TestState(test.Case):
         self.assertEqual(self.m.emission.length, 3)
         self.assertEqual(set(self.m.emission), set([ProteinAlphabet.ALA, ProteinAlphabet.CYS, ProteinAlphabet.GLU]))
         self.assertEqual(self.m.emission[ProteinAlphabet.CYS], 0.5)
-        self.assertRaises(lambda: self.m.emission[ProteinAlphabet.GAP])
+        self.assertRaises(KeyError, lambda: self.m.emission[ProteinAlphabet.GAP])
         self.assertRaises(UnobservableStateError, lambda: self.d.emission)
         
         self.m.emission.append(ProteinAlphabet.ILE, 0.5)
@@ -303,13 +303,13 @@ class TestState(test.Case):
         self.assertEqual(self.m.background.length, 3)
         self.assertEqual(set(self.m.background), set([ProteinAlphabet.ALA, ProteinAlphabet.CYS, ProteinAlphabet.GLU]))
         self.assertEqual(self.m.background[ProteinAlphabet.CYS], 0.00325358)
-        self.assertRaises(lambda: self.m.background[ProteinAlphabet.GAP])
+        self.assertRaises(KeyError, lambda: self.m.background[ProteinAlphabet.GAP])
         
         self.m.background.append(ProteinAlphabet.ILE, 0.5)
         self.assertEqual(self.m.background[ProteinAlphabet.ILE], 0.5)
         self.m.background.append('L', 0)
         self.assertRaises(EmissionExistsError, lambda:self.m.background.append('I', 0))
-        self.assertRaises(KeyError, lambda:self.m.background.append('BUG', 0))
+        self.assertRaises(KeyError, lambda: self.m.background.append('BUG', 0))
 
 
 @test.unit

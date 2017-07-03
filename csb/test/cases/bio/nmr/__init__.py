@@ -97,9 +97,11 @@ class TestAtomConnectivity(test.Case):
 @test.unit
 class TestContactMap(test.Case):
 
-    CHAIN = get_chain()
-    MAP = ContactMap(CHAIN, cutoff=1.75, filter=Filters.HYDROGENS)
-    MAP.build()
+    @classmethod
+    def setUpClass(cls):
+        cls.CHAIN = get_chain()
+        cls.MAP = ContactMap(cls.CHAIN, cutoff=1.75, filter=Filters.HYDROGENS)
+        cls.MAP.build()
 
     def setUp(self):
         super(TestContactMap, self).setUp()
