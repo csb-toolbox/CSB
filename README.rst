@@ -112,3 +112,4 @@ CSB is open source and distributed under OSI-approved MIT license.
 
 
 .. image:: https://travis-ci.org/csb-toolbox/CSB.svg?branch=master
+   :target: https://travis-ci.org/csb-toolbox
