@@ -155,9 +155,7 @@ decorators you would need in order to write tests for CSB.
 
 @warning: for compatibility reasons do NOT import and use the unittest module
           directly. Always import unittest from csb.test, which is guaranteed
-          to be python 2.7+ compatible. The standard unittest under python 2.6
-          is missing some features, that's why csb.test will take care of
-          replacing it with unittest2 instead. 
+          to be python 2.7+ compatible.
 """
 import os
 import sys

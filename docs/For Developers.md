@@ -72,11 +72,11 @@ package [csb.test](http://pythonhosted.org/csb/csb.test-module.html).
 #### Compatibility
 
 * make sure your code is cross-platform (Windows, Linux, Mac)
-* make sure your code is cross-interpreter compatible (python 2.6+: 2.6, 
-2.7, 3.1, 3.2...)
+* make sure your code is cross-interpreter compatible (python 2.7+:  
+2.7, 3.5, 3.6, ...)
 To ensure cross-interpreter compatibility, please write Python 3 
 compatible code. In the rare event that a given construct in Python 3 
-is not backwards compatible with Python 2.6, please ensure portability 
+is not backwards compatible with Python 2.7, please ensure portability 
 by following these guidelines:
 
 * you shouldn't feel the need to use ``print`` in CSB (even in apps); 

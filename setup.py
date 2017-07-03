@@ -21,10 +21,6 @@ LICENSE = 'MIT'
 REQUIREMENTS = open("requirements.txt").readlines()
 DEV_REQUIREMENTS = []
 
-if sys.version_info[:2] == (2, 6):
-    REQUIREMENTS.append("argparse")
-    DEV_REQUIREMENTS.append("unittest2")
-
 if sys.version_info[0] == 2:
     DEV_REQUIREMENTS.append("epydoc")
 
@@ -73,7 +69,6 @@ def build():
             'License :: OSI Approved :: MIT License',
             'Operating System :: OS Independent',
             'Programming Language :: Python',
-            'Programming Language :: Python :: 2.6',
             'Programming Language :: Python :: 2.7',
             'Programming Language :: Python :: 3.1',
             'Programming Language :: Python :: 3.2',

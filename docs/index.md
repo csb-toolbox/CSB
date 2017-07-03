@@ -30,7 +30,7 @@ our [Documentation](Documentation.md) and [Tutorials](Documentation.md#tutorials
 ## Download
 
 CSB runs on any platform, but requires a sane python interpreter: 
-python 2.6 or higher / 3.1 or higher. If you already have 
+python 2.7 or higher / 3.1 or higher. If you already have 
 [pip](pip-installer.org) installed on your system, you can install 
 the latest release with pip:
 
