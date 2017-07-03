@@ -25,7 +25,7 @@ if sys.version_info[:2] == (2, 6):
     REQUIREMENTS.append("argparse")
     DEV_REQUIREMENTS.append("unittest2")
 
-if sys.version_info.major == 2:
+if sys.version_info[0] == 2:
     DEV_REQUIREMENTS.append("epydoc")
 
 v = {}

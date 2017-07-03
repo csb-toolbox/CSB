@@ -278,8 +278,8 @@ Options:
                     '--fail-on-error', '--fail-on-warning', '--fail-on-docstring-warning',
                     self._root]
         
-        #if self._verbosity > 0:                
-        #    sys.argv.append('-v')
+        if self._verbosity <= 1:
+            sys.argv.append('-q')
         
         try:
             epydoc.cli.cli()
