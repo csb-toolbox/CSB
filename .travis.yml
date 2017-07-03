@@ -9,4 +9,4 @@ install:
   - pip install --upgrade pip
   - pip install --editable .[dev]
 script:
-        - python csb/build -o .
+        - python csb/build.py: -o .
