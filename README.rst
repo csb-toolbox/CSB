@@ -19,8 +19,8 @@ package consists of a few major components:
 
 Installation 
 ------------
-CSB is being developed on Linux with Python 2.7. However, compatibility
-is a design goal and the package works on any platform, on any modern python
+CSB is being developed on Linux with Python 2.7 and 3.6. However, compatibility
+is a design goal and the package works on any platform, on any modern Python
 interpreter since version 2.6 (that includes python 3 support out of
 the box). If you find any issues on a platform/interpreter different from
 our development environment, please let us know.
@@ -28,6 +28,8 @@ our development environment, please let us know.
 CSB and all of its dependencies can be installed with pip::
 
     $ pip install csb
+
+See http://csb-toolbox.github.io/Installation for more details.
 
 
 Running CSB Applications
@@ -47,13 +49,13 @@ Documentation
 -------------
 
 The project's web site at `GitHub <http://github.com/csb-toolbox>`_ contains
-online documentation and samples. Be sure to check out:
+online documentation and samples. Visit us at:
     
-http://csb-toolbox.github.io/CSB
+http://csb-toolbox.github.io
 
 Detailed API documentation can be found in the "docs/api" directory in the
 distribution package (docs/api/index.html). This documentaiton is also hosted
-on PyPi:
+on our web site:
 
 https://csb-toolbox.github.io/api-docs/
 
@@ -79,7 +81,7 @@ CSB is developed by Michael Habeck's Computational Structural Biology
 For complete source code, contributions, support or bug reports please visit
 us on GitHub:
   
-http://github.com/csb-toolbox/CSB
+http://github.com/csb-toolbox/
     
 
 License
