@@ -58,7 +58,7 @@ def build():
                 'csb-buildhmm = csb.apps.buildhmm:main',
                 'csb-hhsearch = csb.apps.hhsearch:main',
                 'csb-precision = csb.apps.precision:main',
-                'csb-promix = csb.apps.promix:main'
+                'csb-promix = csb.apps.promix:main',
                 'csb-embd = csb.apps.embd:main'
             ]
         },
