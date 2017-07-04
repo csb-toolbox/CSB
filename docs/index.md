@@ -25,7 +25,7 @@ alignments, HMMs and more
  
 * [Documentation](Documentation)
 * [Tutorials](Documentation#tutorials)
-* [API docs](http://pythonhosted.org/csb)
+* [API docs](https://csb-toolbox.github.io/api-docs/)
 
 ## Download
 

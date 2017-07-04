@@ -23,6 +23,7 @@ automate this task, we provide a Travis CI job configuration, which performs the
   artifacts and API docs
 * Collect and analyze the output build log (success, failure, crash)
 * Notify the specified operators (send email)
+* If this is a tagged commit, publish the build artifact as a new release on GitHub
 
 ## Release Management
 
@@ -43,12 +44,13 @@ Follow these steps to build and deploy a new release:
 	* Run the entire test suite with different python versions on at least one platform (e.g. Linux)
 	* Bump the version number stored in ``csb.__version__`` and commit
 	* Add a new repository tag matching the new version: ``R-x.y.z``; commit and push
-	* Run a new build
+	* Wait for the CI build to finish 
 2. Push to GitHub
 	* Login with your GitHub credentials
-	* Go to [Releases](https://github.com/csb-toolbox/CSB/releases) and click "Draft a new release"
+	* Go to [Releases](https://github.com/csb-toolbox/CSB/releases) and find the draft release
+	  created by Travis
 	* Fill in the Name (CSB x.y.z) and Release Notes (e.g. change log, fixed issues, etc)
-	* Browse and upload the release package (tar.gz) 
+	* Download the release package (tar.gz) and perform a tet installation in a virtual env
 3. Push to PyPi
 	* Login with your PyPi credentials, Gmail or OpenID
 	* Go to [PyPi](https://pypi.python.org/pypi?%3Aaction=submit_form)

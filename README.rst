@@ -55,7 +55,7 @@ Detailed API documentation can be found in the "docs/api" directory in the
 distribution package (docs/api/index.html). This documentaiton is also hosted
 on PyPi:
 
-http://pythonhosted.org/csb/
+https://csb-toolbox.github.io/api-docs/
 
 Many packages contain introductory module level documentation and samples/tutorials.
 These are also available in the HTML docs, but a quick way to access them is by using

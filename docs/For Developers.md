@@ -48,8 +48,8 @@ To execute test suites for specific modules only:
 
 Run with "-h" for help. For more details on our test framework, 
 including guidelines for writing unit test, please refer to the 
-[API documentation](http://pythonhosted.org/csb/), package 
-[csb.test](http://pythonhosted.org/csb/csb.test-module.html).
+[API documentation](https://csb-toolbox.github.io/api-docs/), package 
+[csb.test](https://csb-toolbox.github.io/api-docs/csb.test-module.html).
 
 You should also test the syntax of your docstrings before each commit:
 
@@ -64,8 +64,8 @@ the repository to make sure that all test cases and docstring checks pass.
 We have embraced a Test-driven development (TDD) approach. That is, all 
 new features and bug fixes must be accompanied by corresponding test 
 cases in a subpackage of ``csb.test.cases``. For more details on this 
-opic please read the [API documentation](http://pythonhosted.org/csb/), 
-package [csb.test](http://pythonhosted.org/csb/csb.test-module.html).
+opic please read the [API documentation](https://csb-toolbox.github.io/api-docs/), 
+package [csb.test](https://csb-toolbox.github.io/api-docs/csb.test-module.html).
 
 ## Style Guide
 
@@ -81,8 +81,8 @@ by following these guidelines:
 
 * you shouldn't feel the need to use ``print`` in CSB (even in apps); 
   but if really necessary, import and use the print function (``print()``)
-* use ``csb.io.Pickle``, ``csb.io.MemoryStream`` and ``csb.io.urllib`` instead of importing the standard library modules (details in [csb.io](http://pythonhosted.org/csb/csb.io-module.html))
-* use ``csb.core.string`` for string ``isinstance`` checks and ``csb.core.metaclass()`` to define metaclass inheritance (details in [csb.core](http://pythonhosted.org/csb/csb.core-module.html))
+* use ``csb.io.Pickle``, ``csb.io.MemoryStream`` and ``csb.io.urllib`` instead of importing the standard library modules (details in [csb.io](https://csb-toolbox.github.io/api-docs/csb.io-module.html))
+* use ``csb.core.string`` for string ``isinstance`` checks and ``csb.core.metaclass()`` to define metaclass inheritance (details in [csb.core](https://csb-toolbox.github.io/api-docs/csb.core-module.html))
 
 #### Commit Messages
 
@@ -93,7 +93,7 @@ You should always provide a message for each commit. Commit comments should foll
 * if resolving an issue, include the issue number
 Here is a sample commit comment:
 
-``
+```
 Fixed issue #00010: SomeObject crashes with an exception for structures with no title
 
 csb.bio.structure:
@@ -104,7 +104,7 @@ csb.bio.io.wwpdb:
 
 csb.test.cases.bio.io.wwpdb:
  - added regression tests	
-``
+```
 
 #### Coding Style, Commenting and Formatting
 

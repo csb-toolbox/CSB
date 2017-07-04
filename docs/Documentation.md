@@ -21,7 +21,7 @@ Here we present a brief tutorial on some of the most fundamental parts of
 CSB. It will help you to get started and explore the scope of the library. 
 After going through these examples you will get enough confidence in order 
 to start experimenting with the APIs and reading the comprehensive 
-[API docs](http://pythonhosted.org/csb/), packaged with every release.
+[API docs](https://csb-toolbox.github.io/api-docs/), packaged with every release.
 
 ## Overview
 
@@ -35,7 +35,7 @@ in the development of the library:
 which consume objects from the core library. The framework ensures that each 
 CSB application is also reusable and can be instantiated as a regular python 
 object without any ugly side effects (sys.exit() and friends). See ``csb.apps`` 
-in our [API docs](http://pythonhosted.org/csb/) for more details.
+in our [API docs](https://csb-toolbox.github.io/api-docs/) for more details.
 * Test framework -- built on top of the standard unittest as a thin wrapping 
 layer. Provides some sugar like transparent management of test data files, 
 and modular test execution. ``csb.test`` will give you all the details.
@@ -66,5 +66,5 @@ Documentation for developers can be found [here](For%20Developers).
 ## More Documentation
 
 Be sure to check our tutorials and ultimately our comprehensive 
-[API docs](http://pythonhosted.org/csb/), bundled with each release package.
+[API docs](https://csb-toolbox.github.io/api-docs/), bundled with each release package.
 
