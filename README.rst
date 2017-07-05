@@ -29,7 +29,7 @@ CSB and all of its dependencies can be installed with pip::
 
     $ pip install csb
 
-See http://csb-toolbox.github.io/Installation for more details.
+See http://csb-toolbox.github.io/installation for more details.
 
 
 Running CSB Applications
@@ -111,7 +111,8 @@ CSB is open source and distributed under OSI-approved MIT license.
     TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
     SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     
-
+------------
 
 .. image:: https://travis-ci.org/csb-toolbox/CSB.svg?branch=master
    :target: https://travis-ci.org/csb-toolbox
+
