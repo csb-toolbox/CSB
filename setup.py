@@ -2,10 +2,10 @@ import sys
 
 from setuptools import setup, find_packages
 from csb.build import ROOT 
-
+from io import open
 
 try:
-    __doc__ = open('README.rst').read()
+    __doc__ = open('README.rst', encoding="utf-8").read()
 except IOError:
     __doc__ = ""
 
@@ -18,14 +18,14 @@ SUMMARY = "Computational Structural Biology Toolbox"
 DESCRIPTION = __doc__
 LICENSE = 'MIT'
 
-REQUIREMENTS = open("requirements.txt").readlines()
+REQUIREMENTS = open("requirements.txt", encoding="utf-8").readlines()
 DEV_REQUIREMENTS = []
 
 if sys.version_info[0] == 2:
     DEV_REQUIREMENTS.append("epydoc")
 
 v = {}
-exec(open(ROOT + "/__init__.py").read(), v)
+exec(open(ROOT + "/__init__.py", encoding="utf-8").read(), v)
 VERSION = v["Version"]()
 
 
