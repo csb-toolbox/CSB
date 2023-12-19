@@ -19,7 +19,7 @@ DESCRIPTION = __doc__
 LICENSE = 'MIT'
 
 REQUIREMENTS = open("requirements.txt", encoding="utf-8").readlines()
-DEV_REQUIREMENTS = []
+DEV_REQUIREMENTS = ["setuptools"]
 
 v = {}
 exec(open(ROOT + "/__init__.py", encoding="utf-8").read(), v)
