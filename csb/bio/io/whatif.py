@@ -29,11 +29,11 @@ class WhatCheckParser(object):
         text = f_handler.read()
 
         info = dict()
-        re_ramachandran = re.compile('Ramachandran\s*Z-score\s*:\s*([0-9.Ee-]+)')
-        re_1st = re.compile('1st\s*generation\s*packing\s*quality\s*:\s*([0-9.Ee-]+)')
-        re_2nd = re.compile('2nd\s*generation\s*packing\s*quality\s*:\s*([0-9.Ee-]+)')
-        re_backbone = re.compile('Backbone\s*conformation\s*Z-score\s*:\s*([0-9.Ee-]+)')
-        re_rotamer = re.compile('chi-1\S*chi-2\s*rotamer\s*normality\s*:\s*([0-9.Ee-]+)')
+        re_ramachandran = re.compile(r'Ramachandran\s*Z-score\s*:\s*([0-9.Ee-]+)')
+        re_1st = re.compile(r'1st\s*generation\s*packing\s*quality\s*:\s*([0-9.Ee-]+)')
+        re_2nd = re.compile(r'2nd\s*generation\s*packing\s*quality\s*:\s*([0-9.Ee-]+)')
+        re_backbone = re.compile(r'Backbone\s*conformation\s*Z-score\s*:\s*([0-9.Ee-]+)')
+        re_rotamer = re.compile(r'chi-1\S*chi-2\s*rotamer\s*normality\s*:\s*([0-9.Ee-]+)')
         
 
         info['rama_z_score'] = float(re_ramachandran.search(text).groups(0)[0])

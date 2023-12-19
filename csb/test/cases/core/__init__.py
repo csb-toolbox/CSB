@@ -18,7 +18,7 @@ class TestDeepCopy(test.Case):
         copy = utils.deepcopy(obj, recursion=(rec + 1))
         
         self.assertEqual(obj, copy)
-        self.assertNotEquals(id(obj), id(copy))
+        self.assertNotEqual(id(obj), id(copy))
 
 @test.unit
 class TestIterable(test.Case):
@@ -70,7 +70,8 @@ class TestEnum(test.Case):
     def testComparison(self):
         self.assertEqual(self.enum.A, 0)
         self.assertEqual(self.enum.C, 66)
-        self.assertFalse(self.enum.C is 66)
+        int_66 = 66
+        self.assertFalse(self.enum.C is int_66)
         self.assertFalse(isinstance(self.enum.A, int))
         
     def testStr(self):

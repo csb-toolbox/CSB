@@ -207,7 +207,7 @@ class HHProfileParser(object):
                 hmm.family = line[6:].strip()
 
             elif line.startswith('LENG '):
-                m = re.search('(\d+)\D+(\d+)', line).groups()
+                m = re.search(r'(\d+)\D+(\d+)', line).groups()
                 m = tuple(map(int, m))
                 hmm.length = ProfileLength(m[0], m[1])
 
@@ -257,7 +257,7 @@ class HHProfileParser(object):
             if header_token in ['>ss_dssp', '>sa_dssp', '>ss_pred', '>ss_conf', '>Consens']:
 
                 lines = entry.strip().splitlines()
-                seq = re.sub('\s+', '', ''.join(lines[1:]))
+                seq = re.sub(r'\s+', '', ''.join(lines[1:]))
 
                 if header_token == '>ss_dssp':
                     hmm.dssp = structure.SecondaryStructure(seq)
@@ -304,7 +304,7 @@ class HHProfileParser(object):
         start_probs = None
 
         lines = iter(self._profile)
-        pattern = re.compile('^[A-Z\-]\s[0-9]+\s+')
+        pattern = re.compile(r'^[A-Z\-]\s[0-9]+\s+')
 
         if units == ScoreUnits.LogScales:
 

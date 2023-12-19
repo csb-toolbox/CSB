@@ -563,7 +563,7 @@ class Sequence(AbstractSequence):
     
     def _append(self, string):
         # this seems to be the fastest method for sanitization and storage        
-        self._residues += re.sub('([^\w\-\.])+', '', string)
+        self._residues += re.sub(r'([^\w\-\.])+', '', string)
         
     def _add(self, char):
         self._append(char)

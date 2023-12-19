@@ -28,16 +28,16 @@ class ProcheckParser():
         f_handler = open(os.path.expanduser(fn))
         text = f_handler.read()
         
-        input_file_name = re.compile('>>>-----.*?\n.*?\n\s*\|\s*(\S+)\s+')
-        residues = re.compile('(\d+)\s*residues\s\|')
-        ramachandran_plot = re.compile('Ramachandran\splot:\s*(\d+\.\d+)' + 
-                                      '%\s*core\s*(\d+\.\d+)%\s*allow\s*(\d+\.\d+)' + 
-                                      '%\s*gener\s*(\d+\.\d+)%\s*disall')
-        labelled_all = re.compile('Ramachandrans:\s*(\d+)\s*.*?out\sof\s*(\d+)')
-        labelled_chi = re.compile('Chi1-chi2\splots:\s*(\d+)\s*.*?out\sof\s*(\d+)')
-        bad_contacts = re.compile('Bad\scontacts:\s*(\d+)')
-        g_factors = re.compile('G-factors\s*Dihedrals:\s*([0-9-+.]+)' + 
-                              '\s*Covalent:\s*([0-9-+.]+)\s*Overall:\s*([0-9-+.]+)')
+        input_file_name = re.compile('>>>-----.*?\n.*?\n' r'\s*\|\s*(\S+)\s+')
+        residues = re.compile(r'(\d+)\s*residues\s\|')
+        ramachandran_plot = re.compile(r'Ramachandran\splot:\s*(\d+\.\d+)' + 
+                                      r'%\s*core\s*(\d+\.\d+)%\s*allow\s*(\d+\.\d+)' + 
+                                      r'%\s*gener\s*(\d+\.\d+)%\s*disall')
+        labelled_all = re.compile(r'Ramachandrans:\s*(\d+)\s*.*?out\sof\s*(\d+)')
+        labelled_chi = re.compile(r'Chi1-chi2\splots:\s*(\d+)\s*.*?out\sof\s*(\d+)')
+        bad_contacts = re.compile(r'Bad\scontacts:\s*(\d+)')
+        g_factors = re.compile(r'G-factors\s*Dihedrals:\s*([0-9-+.]+)' + 
+                              r'\s*Covalent:\s*([0-9-+.]+)\s*Overall:\s*([0-9-+.]+)')
 
         info['input_file'] = input_file_name.search(text).groups()[0]
         info['#residues'] = int(residues.search(text).groups()[0])

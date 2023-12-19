@@ -479,7 +479,7 @@ class TestDumpLoad(test.Case):
                         "Although that way may not be" + \
                         "obvious at first" + \
                         "unless you're Dutch.",
-                        "([0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])"]
+                        r"([0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])"]
 
         # Completly connnected graph
         

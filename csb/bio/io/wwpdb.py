@@ -1219,7 +1219,7 @@ class RegularStructureParser(AbstractStructureParser):
         @return: resolution
         @rtype: float or None
         """
-        res = re.search("(\d+(?:\.\d+)?)\s+ANGSTROM", line)
+        res = re.search(r"(\d+(?:\.\d+)?)\s+ANGSTROM", line)
         
         if res and res.groups():
             return float(res.group(1))

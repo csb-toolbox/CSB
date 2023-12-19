@@ -19,10 +19,9 @@ package consists of a few major components:
 
 Installation 
 ------------
-CSB is being developed on Linux with Python 2.7 and 3.6. However, compatibility
+CSB is being developed on Linux. However, compatibility
 is a design goal and the package works on any platform, on any modern Python
-interpreter since version 2.6 (that includes python 3 support out of
-the box). If you find any issues on a platform/interpreter different from
+interpreter. If you find any issues on a platform/interpreter different from
 our development environment, please let us know.
 
 CSB and all of its dependencies can be installed with pip::
