@@ -22,7 +22,6 @@ by the Console itself, belong to the same CSB package.
        source trees.
 @see: [CSB 0000038]
 """
-from __future__ import print_function
 
 import os
 import sys
@@ -55,7 +54,7 @@ if __name__ == '__main__':
 """
 It is now safe to import any modules  
 """
-import imp
+import importlib
 import shutil
 import tarfile
 
@@ -63,6 +62,13 @@ import csb
 
 from abc import ABCMeta, abstractmethod
 from csb.io import Shell
+
+
+def _load_source(name, pathname):
+    spec = importlib.util.spec_from_file_location(name, pathname)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class BuildTypes(object):
@@ -288,7 +294,7 @@ Options:
             epydoc.cli.cli()
             sys.exit(0)
         except SystemExit as ex:
-            if ex.code is 0:
+            if ex.code == 0:
                 self.log('\n  Passed all doc tests')
             else:
                 if ex.code == 2:
@@ -333,7 +339,7 @@ Options:
         version = package = None
 
         try:       
-            setup = imp.load_source('setupcsb', 'setup.py')
+            setup = _load_source('setupcsb', 'setup.py')
             d = setup.build()
             version = setup.VERSION
             package = d.dist_files[0][2]
@@ -342,7 +348,7 @@ Options:
                 self._strip_source(package)
             
         except SystemExit as ex:
-            if ex.code is not 0:
+            if ex.code != 0:
                 self.log('\n  FAIL: Setup returned: \n\n{0}\n'.format(ex))
                 self._success = False
                 package = 'FAIL'
@@ -474,7 +480,7 @@ class RevisionHandler(object):
             self._path = path
         else:
             raise IOError('Path not found: {0}'.format(path))
-        if Shell.run([sc, 'help']).code is 0:
+        if Shell.run([sc, 'help']).code == 0:
             self._sc = sc
         else:
             raise RevisionError('Source control binary probe failed', None, None)
@@ -518,7 +524,7 @@ class RevisionHandler(object):
                     src.write(line)
 
         self._delcache(sourcefile)
-        return imp.load_source('____source', sourcefile).__version__      
+        return _load_source('____source', sourcefile).__version__
     
     def _run(self, cmd):
         

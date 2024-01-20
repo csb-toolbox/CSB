@@ -2126,9 +2126,9 @@ class SecondaryStructure(csb.core.CollectionContainer):
         if not isinstance(string, csb.core.string):
             raise TypeError(string)
                 
-        string = ''.join(re.split('\s+', string))
+        string = ''.join(re.split(r'\s+', string))
         if conf_string is not None:
-            conf_string = ''.join(re.split('\s+', conf_string))
+            conf_string = ''.join(re.split(r'\s+', conf_string))
             if not len(string) == len(conf_string):
                 raise ValueError('The confidence string has unexpected length.')
         motifs = [ ]

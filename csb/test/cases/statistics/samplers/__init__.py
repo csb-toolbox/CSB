@@ -801,6 +801,12 @@ class HState(State):
         return s
 
 
+def _arrays_equal(a1, a2) -> bool:
+    if a1.shape != a2.shape:
+        return False
+    return (a1 == a2).all()
+
+
 @test.functional
 class TestReplicaHistory(test.Case):
 
@@ -863,7 +869,7 @@ class TestReplicaHistory(test.Case):
         ok = []
         for i in range(len(samples[0])):
             trajs2 = rh.calculate_projected_trajectories(i)
-            ok.append(True in [np.all(np.array(t1) == np.array(t2)) for t1 in trajs1
+            ok.append(True in [_arrays_equal(np.array(t1), np.array(t2)) for t1 in trajs1
                                for t2 in trajs2])
             
         return np.all(ok)

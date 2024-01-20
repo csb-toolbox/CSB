@@ -19,10 +19,7 @@ DESCRIPTION = __doc__
 LICENSE = 'MIT'
 
 REQUIREMENTS = open("requirements.txt", encoding="utf-8").readlines()
-DEV_REQUIREMENTS = []
-
-if sys.version_info[0] == 2:
-    DEV_REQUIREMENTS.append("epydoc")
+DEV_REQUIREMENTS = ["setuptools"]
 
 v = {}
 exec(open(ROOT + "/__init__.py", encoding="utf-8").read(), v)
@@ -69,13 +66,13 @@ def build():
             'License :: OSI Approved :: MIT License',
             'Operating System :: OS Independent',
             'Programming Language :: Python',
-            'Programming Language :: Python :: 2.7',
-            'Programming Language :: Python :: 3.1',
-            'Programming Language :: Python :: 3.2',
-            'Programming Language :: Python :: 3.3',
-            'Programming Language :: Python :: 3.4',
-            'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8',
+            'Programming Language :: Python :: 3.9',
+            'Programming Language :: Python :: 3.10',
+            'Programming Language :: Python :: 3.11',
+            'Programming Language :: Python :: 3.12',
             'Topic :: Scientific/Engineering',
             'Topic :: Scientific/Engineering :: Bio-Informatics',
             'Topic :: Scientific/Engineering :: Mathematics',

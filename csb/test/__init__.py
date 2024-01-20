@@ -159,7 +159,7 @@ decorators you would need in order to write tests for CSB.
 """
 import os
 import sys
-import imp
+import importlib
 import types
 import time
 import tempfile
@@ -443,7 +443,7 @@ class Case(unittest.TestCase):
                 
         return runner.run(suite)            
 
-class InvalidNamespaceError(NameError, ImportError):
+class InvalidNamespaceError(ImportError):
     pass
     
 class AbstractTestBuilder(object):
@@ -567,7 +567,11 @@ class AbstractTestBuilder(object):
         name = os.path.splitext(os.path.abspath(path))[0]
         name = name.replace('.', '-').rstrip('__init__').strip(os.path.sep)
         
-        return imp.load_source(name, path)        
+        spec = importlib.util.spec_from_file_location(name, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        return module
     
     def _recurse(self, obj):
         """
